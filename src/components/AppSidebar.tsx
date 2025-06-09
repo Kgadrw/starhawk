@@ -1,14 +1,14 @@
 
 import { useState } from "react";
 import { 
-  layout-dashboard, 
-  clipboard-list, 
-  activity, 
-  file-text, 
-  database, 
-  bell, 
-  settings, 
-  users 
+  LayoutDashboard, 
+  ClipboardList, 
+  Activity, 
+  FileText, 
+  Database, 
+  Bell, 
+  Settings, 
+  Users 
 } from "lucide-react";
 
 import {
@@ -23,14 +23,14 @@ import {
 } from "@/components/ui/sidebar";
 
 const menuItems = [
-  { title: "Dashboard", icon: layout-dashboard, key: "dashboard" },
-  { title: "Claims", icon: clipboard-list, key: "claims" },
-  { title: "P&L Assessment", icon: activity, key: "assessment" },
-  { title: "Underwriting", icon: file-text, key: "underwriting" },
-  { title: "Reports", icon: database, key: "reports" },
-  { title: "Notifications", icon: bell, key: "notifications" },
-  { title: "Settings", icon: settings, key: "settings" },
-  { title: "Profile", icon: users, key: "profile" },
+  { title: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
+  { title: "Claims", icon: ClipboardList, key: "claims" },
+  { title: "P&L Assessment", icon: Activity, key: "assessment" },
+  { title: "Underwriting", icon: FileText, key: "underwriting" },
+  { title: "Reports", icon: Database, key: "reports" },
+  { title: "Notifications", icon: Bell, key: "notifications" },
+  { title: "Settings", icon: Settings, key: "settings" },
+  { title: "Profile", icon: Users, key: "profile" },
 ];
 
 interface AppSidebarProps {
