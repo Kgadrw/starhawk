@@ -37,9 +37,9 @@ export function DashboardContent() {
   };
 
   return (
-    <div className="flex w-full">
+    <div className="flex w-full h-screen">
       <AppSidebar onPageChange={setActivePage} activePage={activePage} />
-      <div className="flex-1">
+      <div className="flex-1 overflow-hidden">
         {renderPage()}
       </div>
     </div>

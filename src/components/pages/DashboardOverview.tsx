@@ -28,171 +28,175 @@ const riskData = [
 const recentClaims = [
   { id: "PCL-2024-001", type: "Crop Damage", location: "Kiambu", status: "Pending", date: "Jan 15, 2024" },
   { id: "PCL-2024-002", type: "Flood Damage", location: "Nairobi", status: "Approved", date: "Jan 14, 2024" },
+  { id: "PCL-2024-003", type: "Drought", location: "Mombasa", status: "Under Review", date: "Jan 13, 2024" },
+  { id: "PCL-2024-004", type: "Pest Damage", location: "Kisumu", status: "Rejected", date: "Jan 12, 2024" },
 ];
 
 export function DashboardOverview() {
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Hi, Welcome back</h1>
-          <p className="text-gray-600">Insurer Dashboard</p>
+    <div className="flex-1 h-full overflow-auto bg-background">
+      <div className="p-4 md:p-6 space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Hi, Welcome back</h1>
+            <p className="text-muted-foreground">Insurer Dashboard</p>
+          </div>
+          <div className="w-12 h-12 md:w-16 md:h-16 bg-orange-200 rounded-full flex items-center justify-center">
+            <span className="text-xl md:text-2xl">👨‍💼</span>
+          </div>
         </div>
-        <div className="w-16 h-16 bg-orange-200 rounded-full flex items-center justify-center">
-          <span className="text-2xl">👨‍💼</span>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Claims</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">2,451</div>
+              <p className="text-xs text-green-600">+1% from last month</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Claims Value</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">8,392</div>
+              <p className="text-xs text-green-600">+8% from last month</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Success Rate</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">76.4%</div>
+              <p className="text-xs text-red-600">-2% from last month</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Risk Level</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">Medium</div>
+              <p className="text-xs text-muted-foreground">Moderate</p>
+            </CardContent>
+          </Card>
         </div>
-      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Claims</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">2,451</div>
-            <p className="text-xs text-green-600">+1% from last month</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Claims Value</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">8,392</div>
-            <p className="text-xs text-green-600">+8% from last month</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Success Rate</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">76.4%</div>
-            <p className="text-xs text-red-600">-2% from last month</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Risk Level</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">Medium</div>
-            <p className="text-xs text-gray-600">Moderate</p>
-          </CardContent>
-        </Card>
-      </div>
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
+          {/* Risk Zone Map */}
+          <Card className="xl:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Risk Zone Map</CardTitle>
+              <div className="flex space-x-2">
+                <Button variant="outline" size="sm">Filter</Button>
+                <Button variant="outline" size="sm">Export</Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-48 md:h-64 bg-green-100 rounded-lg flex items-center justify-center relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-green-200 via-yellow-200 to-red-200 rounded-lg opacity-70"></div>
+                <span className="text-muted-foreground z-10">Interactive Risk Map</span>
+              </div>
+            </CardContent>
+          </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Risk Zone Map */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Risk Zone Map</CardTitle>
+          {/* Recent Alerts */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Recent Alerts</CardTitle>
+              <Button variant="link" size="sm">View All</Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-start space-x-3">
+                <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
+                <div>
+                  <p className="font-medium text-sm">High Risk Alert</p>
+                  <p className="text-xs text-muted-foreground">Flood warning in Kiambu. 3 farms exposed</p>
+                  <p className="text-xs text-muted-foreground">1 hour ago</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3">
+                <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
+                <div>
+                  <p className="font-medium text-sm">Pest Alert</p>
+                  <p className="text-xs text-muted-foreground">Potential locust outbreak in Eastern Province</p>
+                  <p className="text-xs text-muted-foreground">3 hours ago</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3">
+                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                <div>
+                  <p className="font-medium text-sm">Weather Alert</p>
+                  <p className="text-xs text-muted-foreground">Heavy rainfall expected in Western Region</p>
+                  <p className="text-xs text-muted-foreground">6 hours ago</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Recent Claims */}
+        <Card>
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <CardTitle>Recent Claims</CardTitle>
             <div className="flex space-x-2">
               <Button variant="outline" size="sm">Filter</Button>
               <Button variant="outline" size="sm">Export</Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="h-64 bg-green-100 rounded-lg flex items-center justify-center relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-green-200 via-yellow-200 to-red-200 rounded-lg opacity-70"></div>
-              <span className="text-gray-600 z-10">Interactive Risk Map</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Alerts */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Recent Alerts</CardTitle>
-            <Button variant="link" size="sm">View All</Button>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-start space-x-3">
-              <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
-              <div>
-                <p className="font-medium text-sm">High Risk Alert</p>
-                <p className="text-xs text-gray-600">Flood warning in Kiambu. 3 farms exposed</p>
-                <p className="text-xs text-gray-500">1 hour ago</p>
-              </div>
-            </div>
-            
-            <div className="flex items-start space-x-3">
-              <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
-              <div>
-                <p className="font-medium text-sm">Pest Alert</p>
-                <p className="text-xs text-gray-600">Potential locust outbreak in Eastern Province</p>
-                <p className="text-xs text-gray-500">3 hours ago</p>
-              </div>
-            </div>
-            
-            <div className="flex items-start space-x-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-              <div>
-                <p className="font-medium text-sm">Weather Alert</p>
-                <p className="text-xs text-gray-600">Heavy rainfall expected in Western Region</p>
-                <p className="text-xs text-gray-500">6 hours ago</p>
-              </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[600px]">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-2 text-sm font-medium text-muted-foreground">Claim ID</th>
+                    <th className="text-left py-2 text-sm font-medium text-muted-foreground">Farmer</th>
+                    <th className="text-left py-2 text-sm font-medium text-muted-foreground">Type</th>
+                    <th className="text-left py-2 text-sm font-medium text-muted-foreground">Location</th>
+                    <th className="text-left py-2 text-sm font-medium text-muted-foreground">Status</th>
+                    <th className="text-left py-2 text-sm font-medium text-muted-foreground">Date</th>
+                    <th className="text-left py-2 text-sm font-medium text-muted-foreground">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentClaims.map((claim) => (
+                    <tr key={claim.id} className="border-b border-border">
+                      <td className="py-3 text-sm text-foreground">{claim.id}</td>
+                      <td className="py-3 text-sm">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-6 h-6 bg-muted rounded-full"></div>
+                          <span className="text-foreground">James Kamau</span>
+                        </div>
+                      </td>
+                      <td className="py-3 text-sm text-foreground">{claim.type}</td>
+                      <td className="py-3 text-sm text-foreground">{claim.location}</td>
+                      <td className="py-3 text-sm">
+                        <Badge variant={claim.status === "Approved" ? "default" : "secondary"}>
+                          {claim.status}
+                        </Badge>
+                      </td>
+                      <td className="py-3 text-sm text-foreground">{claim.date}</td>
+                      <td className="py-3 text-sm">
+                        <Button variant="link" size="sm">View</Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Recent Claims */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Recent Claims</CardTitle>
-          <div className="flex space-x-2">
-            <Button variant="outline" size="sm">Filter</Button>
-            <Button variant="outline" size="sm">Export</Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 text-sm font-medium text-gray-600">Claim ID</th>
-                  <th className="text-left py-2 text-sm font-medium text-gray-600">Farmer</th>
-                  <th className="text-left py-2 text-sm font-medium text-gray-600">Type</th>
-                  <th className="text-left py-2 text-sm font-medium text-gray-600">Location</th>
-                  <th className="text-left py-2 text-sm font-medium text-gray-600">Status</th>
-                  <th className="text-left py-2 text-sm font-medium text-gray-600">Date</th>
-                  <th className="text-left py-2 text-sm font-medium text-gray-600">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentClaims.map((claim) => (
-                  <tr key={claim.id} className="border-b">
-                    <td className="py-3 text-sm">{claim.id}</td>
-                    <td className="py-3 text-sm">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-6 h-6 bg-gray-300 rounded-full"></div>
-                        <span>James Kamau</span>
-                      </div>
-                    </td>
-                    <td className="py-3 text-sm">{claim.type}</td>
-                    <td className="py-3 text-sm">{claim.location}</td>
-                    <td className="py-3 text-sm">
-                      <Badge variant={claim.status === "Approved" ? "default" : "secondary"}>
-                        {claim.status}
-                      </Badge>
-                    </td>
-                    <td className="py-3 text-sm">{claim.date}</td>
-                    <td className="py-3 text-sm">
-                      <Button variant="link" size="sm">View</Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

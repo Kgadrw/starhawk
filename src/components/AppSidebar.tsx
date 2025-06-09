@@ -40,16 +40,16 @@ interface AppSidebarProps {
 
 export function AppSidebar({ onPageChange, activePage = "dashboard" }: AppSidebarProps) {
   return (
-    <Sidebar className="w-64 border-r border-gray-200">
-      <SidebarContent className="bg-white">
-        <div className="p-6 border-b border-gray-200">
+    <Sidebar className="w-64 border-r border-border bg-background" collapsible="none">
+      <SidebarContent className="bg-background">
+        <div className="p-6 border-b border-border">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">JS</span>
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-sm">JS</span>
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">John Smith</h3>
-              <p className="text-sm text-gray-500">Admin</p>
+              <h3 className="font-semibold text-foreground">John Smith</h3>
+              <p className="text-sm text-muted-foreground">Admin</p>
             </div>
           </div>
         </div>
@@ -66,13 +66,13 @@ export function AppSidebar({ onPageChange, activePage = "dashboard" }: AppSideba
                       asChild 
                       className={`w-full justify-start px-6 py-3 ${
                         isActive 
-                          ? "bg-blue-50 text-blue-700 border-r-2 border-blue-700" 
-                          : "text-gray-700 hover:bg-gray-50"
+                          ? "bg-accent text-accent-foreground border-r-2 border-primary" 
+                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                       }`}
                     >
                       <button 
                         onClick={() => onPageChange?.(item.key)}
-                        className="flex items-center space-x-3"
+                        className="flex items-center space-x-3 w-full"
                       >
                         <Icon className="h-5 w-5" />
                         <span className="font-medium">{item.title}</span>
