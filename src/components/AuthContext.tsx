@@ -2,32 +2,53 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 
 type UserRole = "admin" | "farmer";
 
+interface User {
+  username: string;
+  password: string;
+  role: UserRole;
+}
+
 interface AuthContextType {
   isAuthenticated: boolean;
-  user: { username: string; role: UserRole } | null;
+  user: User | null;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
+  register: (username: string, password: string, role: UserRole) => Promise<boolean>;
+  selectRole: (role: UserRole) => void;
   switchRole: (role: UserRole) => void;
+  users: User[];
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_KEY = "auth_user";
+const USERS_KEY = "auth_users";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<{ username: string; role: UserRole } | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
     const stored = localStorage.getItem(AUTH_KEY);
     if (stored) setUser(JSON.parse(stored));
+    const storedUsers = localStorage.getItem(USERS_KEY);
+    if (storedUsers) setUsers(JSON.parse(storedUsers));
+    else {
+      // Default users
+      const defaultUsers = [
+        { username: "admin", password: "admin", role: "admin" },
+        { username: "farmer", password: "farmer", role: "farmer" },
+      ];
+      setUsers(defaultUsers);
+      localStorage.setItem(USERS_KEY, JSON.stringify(defaultUsers));
+    }
   }, []);
 
   const login = async (username: string, password: string) => {
-    if ((username === "admin" && password === "admin") || (username === "farmer" && password === "farmer")) {
-      const role = username === "admin" ? "admin" : "farmer";
-      const userObj = { username, role };
-      setUser(userObj);
-      localStorage.setItem(AUTH_KEY, JSON.stringify(userObj));
+    const found = users.find(u => u.username === username && u.password === password);
+    if (found) {
+      setUser(found);
+      localStorage.setItem(AUTH_KEY, JSON.stringify(found));
       return true;
     }
     return false;
@@ -38,16 +59,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem(AUTH_KEY);
   };
 
-  const switchRole = (role: UserRole) => {
+  const register = async (username: string, password: string, role: UserRole) => {
+    if (users.find(u => u.username === username)) return false;
+    const newUser = { username, password, role };
+    const updated = [...users, newUser];
+    setUsers(updated);
+    localStorage.setItem(USERS_KEY, JSON.stringify(updated));
+    setUser(newUser);
+    localStorage.setItem(AUTH_KEY, JSON.stringify(newUser));
+    return true;
+  };
+
+  const selectRole = (role: UserRole) => {
     if (user) {
-      const newUser = { ...user, role };
-      setUser(newUser);
-      localStorage.setItem(AUTH_KEY, JSON.stringify(newUser));
+      const updatedUser = { ...user, role };
+      setUser(updatedUser);
+      localStorage.setItem(AUTH_KEY, JSON.stringify(updatedUser));
     }
   };
 
+  const switchRole = selectRole;
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated: !!user, user, login, logout, switchRole }}>
+    <AuthContext.Provider value={{ isAuthenticated: !!user, user, login, logout, register, selectRole, switchRole, users }}>
       {children}
     </AuthContext.Provider>
   );

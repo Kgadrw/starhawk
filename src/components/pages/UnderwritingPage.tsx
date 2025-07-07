@@ -1,9 +1,9 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { FileText, TrendingUp, AlertTriangle, CheckCircle, Clock, Plus } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 const applications = [
   {
@@ -57,6 +57,10 @@ const getRiskLevel = (score: number) => {
 };
 
 export function UnderwritingPage() {
+  const { toast } = useToast();
+  const handleExport = () => toast({ title: "Exported!", description: "Applications exported." });
+  const handleNewApp = () => toast({ title: "New Application!", description: "New application modal would open." });
+
   return (
     <div className="flex-1 h-full overflow-auto bg-background">
       <div className="p-4 md:p-6 space-y-6">
@@ -66,7 +70,7 @@ export function UnderwritingPage() {
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">Underwriting</h1>
             <p className="text-muted-foreground">Risk assessment and policy approval</p>
           </div>
-          <Button>
+          <Button onClick={handleNewApp}>
             <Plus className="w-4 h-4 mr-2" />
             New Application
           </Button>
@@ -192,6 +196,7 @@ export function UnderwritingPage() {
         <Card>
           <CardHeader>
             <CardTitle>Recent Applications</CardTitle>
+            <Button variant="outline" size="sm" type="button" onClick={handleExport}>Export</Button>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">

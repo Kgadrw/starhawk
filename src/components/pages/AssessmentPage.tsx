@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/use-toast";
 
 const assessments = [
   { id: "INA-2025-001", farmer: "John Smith", location: "Nairobi East", date: "Jan 15", status: "Pending", priority: "HIGH" },
@@ -13,6 +14,12 @@ const assessments = [
 ];
 
 export function AssessmentPage() {
+  const { toast } = useToast();
+  const handleExport = () => toast({ title: "Exported!", description: "Assessment data exported." });
+  const handleFilter = () => toast({ title: "Filter applied!", description: "Assessment filter applied." });
+  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); toast({ title: "Assessment Submitted!", description: "Your assessment has been submitted." }); };
+  const handleUpload = () => toast({ title: "Upload!", description: "Photo upload simulated." });
+
   return (
     <div className="p-6 space-y-6 bg-gray-50 h-screen overflow-y-auto">
       {/* Header */}
@@ -74,73 +81,75 @@ export function AssessmentPage() {
             <p className="text-sm text-gray-600">Crop Types</p>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="cropType">Crop Type</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Maize" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="maize">Maize</SelectItem>
-                    <SelectItem value="wheat">Wheat</SelectItem>
-                    <SelectItem value="rice">Rice</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <form onSubmit={handleSubmit}>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="cropType">Crop Type</Label>
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Maize" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="maize">Maize</SelectItem>
+                      <SelectItem value="wheat">Wheat</SelectItem>
+                      <SelectItem value="rice">Rice</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div>
-                <Label htmlFor="inspector">Inspector Status</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Verified" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="verified">Verified</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <Label>Farm History</Label>
-                <div className="space-y-2 mt-2">
-                  <div className="flex items-center space-x-2">
-                    <input type="checkbox" defaultChecked />
-                    <span className="text-sm">Previous crop insurance</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input type="checkbox" defaultChecked />
-                    <span className="text-sm">Good damage patterns identified</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input type="checkbox" />
-                    <span className="text-sm">Affected area: 120 acres</span>
-                  </div>
+                <div>
+                  <Label htmlFor="inspector">Inspector Status</Label>
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Verified" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="verified">Verified</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
-              <div>
-                <Label>Field Photos</Label>
-                <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                  <Button variant="outline">📷 Upload Photos</Button>
-                  <p className="text-sm text-gray-500 mt-2">Drag & drop photos or click to browse</p>
+              <div className="space-y-4">
+                <div>
+                  <Label>Farm History</Label>
+                  <div className="space-y-2 mt-2">
+                    <div className="flex items-center space-x-2">
+                      <input type="checkbox" defaultChecked />
+                      <span className="text-sm">Previous crop insurance</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input type="checkbox" defaultChecked />
+                      <span className="text-sm">Good damage patterns identified</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input type="checkbox" />
+                      <span className="text-sm">Affected area: 120 acres</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea 
-                  placeholder="Enter assessment details..."
-                  className="mt-1"
-                />
-              </div>
+                <div>
+                  <Label>Field Photos</Label>
+                  <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                    <Button variant="outline" type="button" onClick={handleUpload}>📷 Upload Photos</Button>
+                    <p className="text-sm text-gray-500 mt-2">Drag & drop photos or click to browse</p>
+                  </div>
+                </div>
 
-              <Button className="w-full bg-green-600 hover:bg-green-700">Submit Assessment</Button>
-            </div>
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea 
+                    placeholder="Enter assessment details..."
+                    className="mt-1"
+                  />
+                </div>
+
+                <Button className="w-full bg-green-600 hover:bg-green-700" type="submit">Submit Assessment</Button>
+              </div>
+            </form>
           </CardContent>
         </Card>
 
@@ -185,8 +194,8 @@ export function AssessmentPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Recent Assessments</CardTitle>
           <div className="flex space-x-2">
-            <Button variant="outline" size="sm">Filter</Button>
-            <Button variant="outline" size="sm">Export</Button>
+            <Button variant="outline" size="sm" type="button" onClick={handleFilter}>Filter</Button>
+            <Button variant="outline" size="sm" type="button" onClick={handleExport}>Export</Button>
           </div>
         </CardHeader>
         <CardContent>

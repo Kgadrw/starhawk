@@ -1,8 +1,8 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Bell, AlertTriangle, Info, CheckCircle, X } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 const notifications = [
   {
@@ -81,6 +81,12 @@ const getPriorityColor = (priority: string) => {
 };
 
 export function NotificationsPage() {
+  const { toast } = useToast();
+  const handleMarkAllRead = () => toast({ title: "All notifications marked as read." });
+  const handleClearAll = () => toast({ title: "All notifications cleared." });
+  const handleMarkRead = (id: number) => toast({ title: `Notification #${id} marked as read.` });
+  const handleDelete = (id: number) => toast({ title: `Notification #${id} deleted.` });
+
   return (
     <div className="flex-1 h-full overflow-auto bg-background">
       <div className="p-4 md:p-6 space-y-6">
@@ -91,8 +97,8 @@ export function NotificationsPage() {
             <p className="text-muted-foreground">Stay updated with system alerts and notifications</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">Mark All Read</Button>
-            <Button variant="outline" size="sm">Clear All</Button>
+            <Button variant="outline" size="sm" onClick={handleMarkAllRead}>Mark All Read</Button>
+            <Button variant="outline" size="sm" onClick={handleClearAll}>Clear All</Button>
           </div>
         </div>
 
@@ -172,10 +178,10 @@ export function NotificationsPage() {
                           </p>
                         </div>
                         <div className="flex space-x-1 ml-4">
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => handleMarkRead(notification.id)}>
                             <CheckCircle className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(notification.id)}>
                             <X className="w-4 h-4" />
                           </Button>
                         </div>

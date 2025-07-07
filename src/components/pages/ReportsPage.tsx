@@ -1,9 +1,9 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 import { Download, Calendar, TrendingUp, Users, DollarSign, FileBarChart } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 const monthlyData = [
   { month: "Jan", claims: 45, premiums: 120000, policies: 230 },
@@ -29,6 +29,10 @@ const claimsByType = [
 ];
 
 export function ReportsPage() {
+  const { toast } = useToast();
+  const handleExport = () => toast({ title: "Exported!", description: "Reports exported." });
+  const handleFilter = () => toast({ title: "Filter applied!", description: "Report filter applied." });
+
   return (
     <div className="flex-1 h-full overflow-auto bg-background">
       <div className="p-4 md:p-6 space-y-6">
@@ -51,9 +55,13 @@ export function ReportsPage() {
                 <SelectItem value="thisYear">This Year</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExport}>
               <Download className="w-4 h-4 mr-2" />
               Export
+            </Button>
+            <Button variant="outline" onClick={handleFilter}>
+              <Download className="w-4 h-4 mr-2" />
+              Filter
             </Button>
           </div>
         </div>

@@ -1,10 +1,10 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { User, Mail, Phone, MapPin, Calendar, Shield, Settings, Edit } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 const recentActivity = [
   {
@@ -41,6 +41,9 @@ const achievements = [
 ];
 
 export function ProfilePage() {
+  const { toast } = useToast();
+  const handleEdit = () => toast({ title: "Edit Profile", description: "Profile editing simulated." });
+
   return (
     <div className="flex-1 h-full overflow-auto bg-background">
       <div className="p-4 md:p-6 space-y-6">
@@ -50,7 +53,7 @@ export function ProfilePage() {
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">Profile</h1>
             <p className="text-muted-foreground">Manage your account and view activity</p>
           </div>
-          <Button>
+          <Button onClick={handleEdit}>
             <Edit className="w-4 h-4 mr-2" />
             Edit Profile
           </Button>

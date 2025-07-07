@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,8 +6,15 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { User, Bell, Shield, Globe, Database, Mail } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 export function SettingsPage() {
+  const { toast } = useToast();
+  const handleSave = () => toast({ title: "Changes Saved!", description: "Your settings have been saved." });
+  const handleChangePassword = () => toast({ title: "Change Password", description: "Password change simulated." });
+  const handleEnable2FA = () => toast({ title: "2FA Enabled!", description: "Two-factor authentication enabled." });
+  const handleDownloadData = () => toast({ title: "Data Downloaded!", description: "Your data has been downloaded." });
+
   return (
     <div className="flex-1 h-full overflow-auto bg-background">
       <div className="p-4 md:p-6 space-y-6">
@@ -59,7 +65,7 @@ export function SettingsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button>Save Changes</Button>
+              <Button onClick={handleSave}>Save Changes</Button>
             </CardContent>
           </Card>
 
@@ -72,9 +78,9 @@ export function SettingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Button variant="outline" className="w-full">Change Password</Button>
-              <Button variant="outline" className="w-full">Enable 2FA</Button>
-              <Button variant="outline" className="w-full">Download Data</Button>
+              <Button variant="outline" className="w-full" onClick={handleChangePassword}>Change Password</Button>
+              <Button variant="outline" className="w-full" onClick={handleEnable2FA}>Enable 2FA</Button>
+              <Button variant="outline" className="w-full" onClick={handleDownloadData}>Download Data</Button>
             </CardContent>
           </Card>
         </div>

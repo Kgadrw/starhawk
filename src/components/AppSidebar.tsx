@@ -22,17 +22,6 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
-const menuItems = [
-  { title: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
-  { title: "Claims", icon: ClipboardList, key: "claims" },
-  { title: "P&L Assessment", icon: Activity, key: "assessment" },
-  { title: "Underwriting", icon: FileText, key: "underwriting" },
-  { title: "Reports", icon: Database, key: "reports" },
-  { title: "Notifications", icon: Bell, key: "notifications" },
-  { title: "Settings", icon: Settings, key: "settings" },
-  { title: "Profile", icon: Users, key: "profile" },
-];
-
 interface AppSidebarProps {
   onPageChange?: (page: string) => void;
   activePage?: string;
@@ -40,6 +29,23 @@ interface AppSidebarProps {
 
 export function AppSidebar({ onPageChange, activePage = "dashboard" }: AppSidebarProps) {
   const { user, logout, switchRole } = useAuth();
+  const userRole = user?.role || "admin";
+  const menuItems = userRole === "farmer"
+    ? [
+        { title: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
+        { title: "Claims", icon: ClipboardList, key: "claims" },
+        { title: "Profile", icon: Users, key: "profile" },
+      ]
+    : [
+        { title: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
+        { title: "Claims", icon: ClipboardList, key: "claims" },
+        { title: "P&L Assessment", icon: Activity, key: "assessment" },
+        { title: "Underwriting", icon: FileText, key: "underwriting" },
+        { title: "Reports", icon: Database, key: "reports" },
+        { title: "Notifications", icon: Bell, key: "notifications" },
+        { title: "Settings", icon: Settings, key: "settings" },
+        { title: "Profile", icon: Users, key: "profile" },
+      ];
   return (
     <Sidebar className="w-64 border-r border-border bg-background" collapsible="none">
       <SidebarContent className="bg-background">
