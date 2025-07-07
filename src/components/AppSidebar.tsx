@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   LayoutDashboard, 
@@ -10,6 +9,7 @@ import {
   Settings, 
   Users 
 } from "lucide-react";
+import { useAuth } from "@/components/AuthContext";
 
 import {
   Sidebar,
@@ -39,19 +39,37 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ onPageChange, activePage = "dashboard" }: AppSidebarProps) {
+  const { user, logout, switchRole } = useAuth();
   return (
     <Sidebar className="w-64 border-r border-border bg-background" collapsible="none">
       <SidebarContent className="bg-background">
         <div className="p-6 border-b border-border">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">JS</span>
+              <span className="text-primary-foreground font-bold text-sm">{user?.username?.slice(0,2).toUpperCase() || "JS"}</span>
             </div>
             <div>
-              <h3 className="font-semibold text-foreground">John Smith</h3>
-              <p className="text-sm text-muted-foreground">Admin</p>
+              <h3 className="font-semibold text-foreground">{user?.username || "John Smith"}</h3>
+              <p className="text-sm text-muted-foreground">{user?.role === "admin" ? "Admin" : "Farmer"}</p>
             </div>
           </div>
+          <div className="mt-4 flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Role:</span>
+            <select
+              className="text-xs bg-background border rounded px-2 py-1"
+              value={user?.role}
+              onChange={e => switchRole(e.target.value as any)}
+            >
+              <option value="admin">Admin</option>
+              <option value="farmer">Farmer</option>
+            </select>
+          </div>
+          <button
+            className="mt-4 text-xs text-red-600 underline hover:text-red-800"
+            onClick={logout}
+          >
+            Logout
+          </button>
         </div>
         
         <SidebarGroup>
