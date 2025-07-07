@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,7 @@ const assessments = [
 
 export function AssessmentPage() {
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+    <div className="p-6 space-y-6 bg-gray-50 h-screen overflow-y-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -35,7 +34,7 @@ export function AssessmentPage() {
             <p className="text-xs text-gray-600">2 months locations</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-green-600">Completed Tasks</CardTitle>
@@ -45,7 +44,7 @@ export function AssessmentPage() {
             <p className="text-xs text-gray-600">This month</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-orange-600">High Risk Claims</CardTitle>
@@ -55,7 +54,7 @@ export function AssessmentPage() {
             <p className="text-xs text-gray-600">Next assessment</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-purple-600">Upgraded Factors</CardTitle>
@@ -89,7 +88,7 @@ export function AssessmentPage() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
                 <Label htmlFor="inspector">Inspector Status</Label>
                 <Select>
@@ -155,14 +154,14 @@ export function AssessmentPage() {
               <p className="text-sm font-medium mb-2">Risk Probability</p>
               <div className="text-2xl font-bold">2%</div>
             </div>
-            
+
             <div>
               <p className="text-sm font-medium mb-2">Risk Analysis</p>
               <div className="h-32 bg-green-100 rounded flex items-center justify-center">
                 <span className="text-sm text-gray-600">Satellite Image</span>
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm">Crop Condition</span>
