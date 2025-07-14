@@ -7,13 +7,64 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { User, Bell, Shield, Globe, Database, Mail } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useState } from "react";
 
 export function SettingsPage() {
   const { toast } = useToast();
-  const handleSave = () => toast({ title: "Changes Saved!", description: "Your settings have been saved." });
-  const handleChangePassword = () => toast({ title: "Change Password", description: "Password change simulated." });
-  const handleEnable2FA = () => toast({ title: "2FA Enabled!", description: "Two-factor authentication enabled." });
-  const handleDownloadData = () => toast({ title: "Data Downloaded!", description: "Your data has been downloaded." });
+  const [settings, setSettings] = useState({
+    emailNotifications: true,
+    pushNotifications: true,
+    smsAlerts: false,
+    weeklyReports: true,
+    autoBackup: true,
+    dataRetention: "12months"
+  });
+
+  const handleSave = () => {
+    toast({ 
+      title: "Changes Saved!", 
+      description: "Your settings have been saved successfully." 
+    });
+  };
+
+  const handleChangePassword = () => {
+    toast({ 
+      title: "Change Password", 
+      description: "Password change form would open here." 
+    });
+  };
+
+  const handleEnable2FA = () => {
+    toast({ 
+      title: "2FA Enabled!", 
+      description: "Two-factor authentication has been enabled for your account." 
+    });
+  };
+
+  const handleDownloadData = () => {
+    toast({ 
+      title: "Data Downloaded!", 
+      description: "Your personal data has been downloaded as a ZIP file." 
+    });
+  };
+
+  const handleExportAllData = () => {
+    toast({ 
+      title: "Exporting All Data", 
+      description: "All system data is being exported. This may take a few minutes." 
+    });
+  };
+
+  const handleToggleSetting = (setting: string) => {
+    setSettings(prev => ({
+      ...prev,
+      [setting]: !prev[setting as keyof typeof prev]
+    }));
+    toast({ 
+      title: "Setting Updated", 
+      description: `${setting.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} setting has been updated.` 
+    });
+  };
 
   return (
     <div className="flex-1 h-full overflow-auto bg-background">
@@ -99,7 +150,10 @@ export function SettingsPage() {
                 <Label className="text-base">Email Notifications</Label>
                 <p className="text-sm text-muted-foreground">Receive notifications via email</p>
               </div>
-              <Switch defaultChecked />
+              <Switch 
+                checked={settings.emailNotifications} 
+                onCheckedChange={() => handleToggleSetting('emailNotifications')}
+              />
             </div>
             <Separator />
             <div className="flex items-center justify-between">
@@ -107,7 +161,10 @@ export function SettingsPage() {
                 <Label className="text-base">Push Notifications</Label>
                 <p className="text-sm text-muted-foreground">Receive push notifications in browser</p>
               </div>
-              <Switch defaultChecked />
+              <Switch 
+                checked={settings.pushNotifications} 
+                onCheckedChange={() => handleToggleSetting('pushNotifications')}
+              />
             </div>
             <Separator />
             <div className="flex items-center justify-between">
@@ -115,7 +172,10 @@ export function SettingsPage() {
                 <Label className="text-base">SMS Alerts</Label>
                 <p className="text-sm text-muted-foreground">Receive critical alerts via SMS</p>
               </div>
-              <Switch />
+              <Switch 
+                checked={settings.smsAlerts} 
+                onCheckedChange={() => handleToggleSetting('smsAlerts')}
+              />
             </div>
             <Separator />
             <div className="flex items-center justify-between">
@@ -123,7 +183,10 @@ export function SettingsPage() {
                 <Label className="text-base">Weekly Reports</Label>
                 <p className="text-sm text-muted-foreground">Get weekly summary reports</p>
               </div>
-              <Switch defaultChecked />
+              <Switch 
+                checked={settings.weeklyReports} 
+                onCheckedChange={() => handleToggleSetting('weeklyReports')}
+              />
             </div>
           </CardContent>
         </Card>
@@ -193,7 +256,10 @@ export function SettingsPage() {
                   <Label className="text-base">Auto Backup</Label>
                   <p className="text-sm text-muted-foreground">Automatically backup data daily</p>
                 </div>
-                <Switch defaultChecked />
+                <Switch 
+                  checked={settings.autoBackup} 
+                  onCheckedChange={() => handleToggleSetting('autoBackup')}
+                />
               </div>
               <Separator />
               <div className="space-y-2">
@@ -210,7 +276,7 @@ export function SettingsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" onClick={handleExportAllData}>
                 <Database className="w-4 h-4 mr-2" />
                 Export All Data
               </Button>

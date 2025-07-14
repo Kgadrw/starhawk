@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { User, Mail, Phone, MapPin, Calendar, Shield, Settings, Edit } from "lucide-react";
+import { User, Mail, Phone, MapPin, Calendar, Shield, Settings, Edit, Eye, Download, Share } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useState } from "react";
 
 const recentActivity = [
   {
@@ -42,7 +43,50 @@ const achievements = [
 
 export function ProfilePage() {
   const { toast } = useToast();
-  const handleEdit = () => toast({ title: "Edit Profile", description: "Profile editing simulated." });
+  const [selectedActivity, setSelectedActivity] = useState<number | null>(null);
+
+  const handleEdit = () => {
+    toast({ 
+      title: "Edit Profile", 
+      description: "Opening profile editing form with all user details." 
+    });
+  };
+
+  const handleViewActivity = (index: number) => {
+    setSelectedActivity(index);
+    toast({ 
+      title: "Viewing Activity", 
+      description: `Opening detailed view for: ${recentActivity[index].action}` 
+    });
+  };
+
+  const handleDownloadProfile = () => {
+    toast({ 
+      title: "Downloading Profile", 
+      description: "Your profile data is being exported as a PDF." 
+    });
+  };
+
+  const handleShareProfile = () => {
+    toast({ 
+      title: "Share Profile", 
+      description: "Profile sharing options are being prepared." 
+    });
+  };
+
+  const handleViewAchievement = (achievement: any) => {
+    toast({ 
+      title: "Achievement Details", 
+      description: `Viewing details for: ${achievement.title}` 
+    });
+  };
+
+  const handleViewPerformance = () => {
+    toast({ 
+      title: "Performance Analytics", 
+      description: "Opening detailed performance analytics dashboard." 
+    });
+  };
 
   return (
     <div className="flex-1 h-full overflow-auto bg-background">
@@ -53,10 +97,20 @@ export function ProfilePage() {
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">Profile</h1>
             <p className="text-muted-foreground">Manage your account and view activity</p>
           </div>
-          <Button onClick={handleEdit}>
-            <Edit className="w-4 h-4 mr-2" />
-            Edit Profile
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleDownloadProfile}>
+              <Download className="w-4 h-4 mr-2" />
+              Download
+            </Button>
+            <Button variant="outline" onClick={handleShareProfile}>
+              <Share className="w-4 h-4 mr-2" />
+              Share
+            </Button>
+            <Button onClick={handleEdit}>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Profile
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -114,17 +168,17 @@ export function ProfilePage() {
               <CardTitle>Performance Stats</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-center">
+              <div className="text-center cursor-pointer hover:bg-muted/50 p-2 rounded" onClick={handleViewPerformance}>
                 <div className="text-2xl font-bold text-foreground">156</div>
                 <p className="text-sm text-muted-foreground">Claims Processed</p>
               </div>
               <Separator />
-              <div className="text-center">
+              <div className="text-center cursor-pointer hover:bg-muted/50 p-2 rounded" onClick={handleViewPerformance}>
                 <div className="text-2xl font-bold text-foreground">94%</div>
                 <p className="text-sm text-muted-foreground">Approval Rate</p>
               </div>
               <Separator />
-              <div className="text-center">
+              <div className="text-center cursor-pointer hover:bg-muted/50 p-2 rounded" onClick={handleViewPerformance}>
                 <div className="text-2xl font-bold text-foreground">1.8hrs</div>
                 <p className="text-sm text-muted-foreground">Avg Response Time</p>
               </div>
@@ -147,6 +201,13 @@ export function ProfilePage() {
                     <p className="text-sm text-muted-foreground">{activity.details}</p>
                     <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
                   </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => handleViewActivity(index)}
+                  >
+                    <Eye className="w-4 h-4" />
+                  </Button>
                 </div>
               ))}
             </div>
@@ -161,7 +222,11 @@ export function ProfilePage() {
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {achievements.map((achievement, index) => (
-                <div key={index} className="flex items-start space-x-3 p-3 rounded-lg bg-muted/50">
+                <div 
+                  key={index} 
+                  className="flex items-start space-x-3 p-3 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted/70 transition-colors"
+                  onClick={() => handleViewAchievement(achievement)}
+                >
                   <span className="text-2xl">{achievement.icon}</span>
                   <div>
                     <h4 className="text-sm font-medium text-foreground">{achievement.title}</h4>

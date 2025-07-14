@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { useToast } from "@/components/ui/use-toast";
+import { useState } from "react";
 
 const chartData = [
   { name: "Jan", value: 65 },
@@ -33,6 +35,51 @@ const recentClaims = [
 ];
 
 export function DashboardOverview() {
+  const { toast } = useToast();
+  const [filteredClaims, setFilteredClaims] = useState(recentClaims);
+
+  const handleRiskMapFilter = () => {
+    toast({ 
+      title: "Risk Map Filter Applied", 
+      description: "Risk zone map filtered by selected criteria." 
+    });
+  };
+
+  const handleRiskMapExport = () => {
+    toast({ 
+      title: "Risk Map Exported", 
+      description: "Risk zone map data exported to CSV format." 
+    });
+  };
+
+  const handleViewAllAlerts = () => {
+    toast({ 
+      title: "Viewing All Alerts", 
+      description: "Opening comprehensive alerts dashboard." 
+    });
+  };
+
+  const handleClaimsFilter = () => {
+    toast({ 
+      title: "Claims Filter Applied", 
+      description: "Claims list filtered by selected criteria." 
+    });
+  };
+
+  const handleClaimsExport = () => {
+    toast({ 
+      title: "Claims Exported", 
+      description: "Claims data exported to Excel format." 
+    });
+  };
+
+  const handleViewClaim = (claimId: string) => {
+    toast({ 
+      title: "Viewing Claim", 
+      description: `Opening detailed view for claim ${claimId}.` 
+    });
+  };
+
   return (
     <div className="flex-1 h-full overflow-auto bg-background">
       <div className="p-4 md:p-6 space-y-6">
@@ -96,8 +143,8 @@ export function DashboardOverview() {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Risk Zone Map</CardTitle>
               <div className="flex space-x-2">
-                <Button variant="outline" size="sm">Filter</Button>
-                <Button variant="outline" size="sm">Export</Button>
+                <Button variant="outline" size="sm" onClick={handleRiskMapFilter}>Filter</Button>
+                <Button variant="outline" size="sm" onClick={handleRiskMapExport}>Export</Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -112,7 +159,7 @@ export function DashboardOverview() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Recent Alerts</CardTitle>
-              <Button variant="link" size="sm">View All</Button>
+              <Button variant="link" size="sm" onClick={handleViewAllAlerts}>View All</Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-start space-x-3">
@@ -150,8 +197,8 @@ export function DashboardOverview() {
           <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <CardTitle>Recent Claims</CardTitle>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">Filter</Button>
-              <Button variant="outline" size="sm">Export</Button>
+              <Button variant="outline" size="sm" onClick={handleClaimsFilter}>Filter</Button>
+              <Button variant="outline" size="sm" onClick={handleClaimsExport}>Export</Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -169,7 +216,7 @@ export function DashboardOverview() {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentClaims.map((claim) => (
+                  {filteredClaims.map((claim) => (
                     <tr key={claim.id} className="border-b border-border">
                       <td className="py-3 text-sm text-foreground">{claim.id}</td>
                       <td className="py-3 text-sm">
@@ -187,7 +234,7 @@ export function DashboardOverview() {
                       </td>
                       <td className="py-3 text-sm text-foreground">{claim.date}</td>
                       <td className="py-3 text-sm">
-                        <Button variant="link" size="sm">View</Button>
+                        <Button variant="link" size="sm" onClick={() => handleViewClaim(claim.id)}>View</Button>
                       </td>
                     </tr>
                   ))}

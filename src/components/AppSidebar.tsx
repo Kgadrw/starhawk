@@ -28,24 +28,19 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ onPageChange, activePage = "dashboard" }: AppSidebarProps) {
-  const { user, logout, switchRole } = useAuth();
-  const userRole = user?.role || "admin";
-  const menuItems = userRole === "farmer"
-    ? [
-        { title: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
-        { title: "Claims", icon: ClipboardList, key: "claims" },
-        { title: "Profile", icon: Users, key: "profile" },
-      ]
-    : [
-        { title: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
-        { title: "Claims", icon: ClipboardList, key: "claims" },
-        { title: "P&L Assessment", icon: Activity, key: "assessment" },
-        { title: "Underwriting", icon: FileText, key: "underwriting" },
-        { title: "Reports", icon: Database, key: "reports" },
-        { title: "Notifications", icon: Bell, key: "notifications" },
-        { title: "Settings", icon: Settings, key: "settings" },
-        { title: "Profile", icon: Users, key: "profile" },
-      ];
+  const { user, logout } = useAuth();
+  
+  const menuItems = [
+    { title: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
+    { title: "Claims", icon: ClipboardList, key: "claims" },
+    { title: "P&L Assessment", icon: Activity, key: "assessment" },
+    { title: "Underwriting", icon: FileText, key: "underwriting" },
+    { title: "Reports", icon: Database, key: "reports" },
+    { title: "Notifications", icon: Bell, key: "notifications" },
+    { title: "Settings", icon: Settings, key: "settings" },
+    { title: "Profile", icon: Users, key: "profile" },
+  ];
+
   return (
     <Sidebar className="w-64 border-r border-border bg-background" collapsible="none">
       <SidebarContent className="bg-background">
@@ -56,19 +51,8 @@ export function AppSidebar({ onPageChange, activePage = "dashboard" }: AppSideba
             </div>
             <div>
               <h3 className="font-semibold text-foreground">{user?.username || "John Smith"}</h3>
-              <p className="text-sm text-muted-foreground">{user?.role === "admin" ? "Admin" : "Farmer"}</p>
+              <p className="text-sm text-muted-foreground">Admin</p>
             </div>
-          </div>
-          <div className="mt-4 flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Role:</span>
-            <select
-              className="text-xs bg-background border rounded px-2 py-1"
-              value={user?.role}
-              onChange={e => switchRole(e.target.value as any)}
-            >
-              <option value="admin">Admin</option>
-              <option value="farmer">Farmer</option>
-            </select>
           </div>
           <button
             className="mt-4 text-xs text-red-600 underline hover:text-red-800"

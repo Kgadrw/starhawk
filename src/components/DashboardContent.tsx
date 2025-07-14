@@ -29,38 +29,25 @@ export function DashboardContent({ userRole }: { userRole: "admin" | "farmer" })
   };
 
   const renderPage = () => {
-    if (userRole === "farmer") {
-      switch (activePage) {
-        case "dashboard":
-          return <DashboardOverview />;
-        case "claims":
-          return <ClaimsPage userRole={userRole} onNewClaim={handleNewClaim} claims={claims} onClaimAction={handleClaimAction} />;
-        case "profile":
-          return <ProfilePage />;
-        default:
-          return <DashboardOverview />;
-      }
-    } else {
-      switch (activePage) {
-        case "dashboard":
-          return <DashboardOverview />;
-        case "claims":
-          return <ClaimsPage userRole={userRole} onNewClaim={handleNewClaim} claims={claims} onClaimAction={handleClaimAction} />;
-        case "assessment":
-          return <AssessmentPage />;
-        case "underwriting":
-          return <UnderwritingPage />;
-        case "reports":
-          return <ReportsPage />;
-        case "notifications":
-          return <NotificationsPage />;
-        case "settings":
-          return <SettingsPage />;
-        case "profile":
-          return <ProfilePage />;
-        default:
-          return <DashboardOverview />;
-      }
+    switch (activePage) {
+      case "dashboard":
+        return <DashboardOverview />;
+      case "claims":
+        return <ClaimsPage userRole="admin" onNewClaim={handleNewClaim} claims={claims} onClaimAction={handleClaimAction} />;
+      case "assessment":
+        return <AssessmentPage />;
+      case "underwriting":
+        return <UnderwritingPage />;
+      case "reports":
+        return <ReportsPage />;
+      case "notifications":
+        return <NotificationsPage />;
+      case "settings":
+        return <SettingsPage />;
+      case "profile":
+        return <ProfilePage />;
+      default:
+        return <DashboardOverview />;
     }
   };
 

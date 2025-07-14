@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { FileText, TrendingUp, AlertTriangle, CheckCircle, Clock, Plus } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useState } from "react";
 
 const applications = [
   {
@@ -58,8 +59,66 @@ const getRiskLevel = (score: number) => {
 
 export function UnderwritingPage() {
   const { toast } = useToast();
-  const handleExport = () => toast({ title: "Exported!", description: "Applications exported." });
-  const handleNewApp = () => toast({ title: "New Application!", description: "New application modal would open." });
+  const [applicationsList, setApplicationsList] = useState(applications);
+
+  const handleExport = () => toast({ title: "Exported!", description: "Applications exported to Excel format." });
+  const handleNewApp = () => toast({ title: "New Application!", description: "Opening new application form." });
+
+  const handleReviewApplication = (appId: string) => {
+    toast({ 
+      title: "Reviewing Application", 
+      description: `Opening detailed review for application ${appId}.` 
+    });
+  };
+
+  const handleViewDetails = (appId: string) => {
+    toast({ 
+      title: "Viewing Details", 
+      description: `Opening comprehensive details for application ${appId}.` 
+    });
+  };
+
+  const handleApproveApplication = (appId: string) => {
+    setApplicationsList(prev => 
+      prev.map(app => 
+        app.id === appId 
+          ? { ...app, status: "Approved" }
+          : app
+      )
+    );
+    toast({ 
+      title: "Application Approved", 
+      description: `Application ${appId} has been approved successfully.` 
+    });
+  };
+
+  const handleRejectApplication = (appId: string) => {
+    setApplicationsList(prev => 
+      prev.map(app => 
+        app.id === appId 
+          ? { ...app, status: "Rejected" }
+          : app
+      )
+    );
+    toast({ 
+      title: "Application Rejected", 
+      description: `Application ${appId} has been rejected.` 
+    });
+  };
+
+  const handleFlagForReview = (appId: string) => {
+    setApplicationsList(prev => 
+      prev.map(app => 
+        app.id === appId 
+          ? { ...app, status: "Requires Review" }
+          : app
+      )
+    );
+    toast({ 
+      title: "Application Flagged", 
+      description: `Application ${appId} has been flagged for additional review.` 
+    });
+  };
 
   return (
     <div className="flex-1 h-full overflow-auto bg-background">
@@ -215,7 +274,7 @@ export function UnderwritingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {applications.map((app) => (
+                  {applicationsList.map((app) => (
                     <tr key={app.id} className="border-b border-border hover:bg-muted/50">
                       <td className="py-4 text-sm text-foreground font-medium">{app.id}</td>
                       <td className="py-4 text-sm">
@@ -256,8 +315,48 @@ export function UnderwritingPage() {
                       </td>
                       <td className="py-4 text-sm">
                         <div className="flex space-x-2">
-                          <Button variant="ghost" size="sm">Review</Button>
-                          <Button variant="ghost" size="sm">Details</Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleReviewApplication(app.id)}
+                          >
+                            Review
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleViewDetails(app.id)}
+                          >
+                            Details
+                          </Button>
+                          {app.status === "Under Review" && (
+                            <>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleApproveApplication(app.id)}
+                                className="text-green-600 hover:text-green-700"
+                              >
+                                Approve
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleRejectApplication(app.id)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                Reject
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleFlagForReview(app.id)}
+                                className="text-orange-600 hover:text-orange-700"
+                              >
+                                Flag
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

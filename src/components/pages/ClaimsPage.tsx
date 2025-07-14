@@ -42,6 +42,8 @@ export function ClaimsPage({ userRole, onNewClaim, claims, onClaimAction }: {
   const { toast } = useToast();
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedClaim, setSelectedClaim] = useState<any>(null);
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("all");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -88,6 +90,17 @@ export function ClaimsPage({ userRole, onNewClaim, claims, onClaimAction }: {
     });
     setDetailOpen(false);
   };
+
+  const filteredClaims = claims.filter(claim => {
+    const matchesSearch =
+      claim.id.toLowerCase().includes(search.toLowerCase()) ||
+      claim.farmer.toLowerCase().includes(search.toLowerCase()) ||
+      claim.crop.toLowerCase().includes(search.toLowerCase()) ||
+      claim.type.toLowerCase().includes(search.toLowerCase()) ||
+      claim.location.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = status === "all" || claim.status.toLowerCase() === status;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="flex-1 h-full overflow-auto bg-background">
@@ -151,9 +164,9 @@ export function ClaimsPage({ userRole, onNewClaim, claims, onClaimAction }: {
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input placeholder="Search claims..." className="pl-10 w-full sm:w-64" />
+                  <Input placeholder="Search claims..." className="pl-10 w-full sm:w-64" value={search} onChange={e => setSearch(e.target.value)} />
                 </div>
-                <Select>
+                <Select value={status} onValueChange={setStatus}>
                   <SelectTrigger className="w-full sm:w-32">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
@@ -162,6 +175,8 @@ export function ClaimsPage({ userRole, onNewClaim, claims, onClaimAction }: {
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="approved">Approved</SelectItem>
                     <SelectItem value="rejected">Rejected</SelectItem>
+                    <SelectItem value="under review">Under Review</SelectItem>
+                    <SelectItem value="flagged">Flagged</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button variant="outline" size="sm">
@@ -192,7 +207,7 @@ export function ClaimsPage({ userRole, onNewClaim, claims, onClaimAction }: {
                   </tr>
                 </thead>
                 <tbody>
-                  {claims.map((claim) => (
+                  {filteredClaims.map((claim) => (
                     <tr key={claim.id} className="border-b border-border hover:bg-muted/50">
                       <td className="py-4 text-sm text-foreground font-medium">{claim.id}</td>
                       <td className="py-4 text-sm">
