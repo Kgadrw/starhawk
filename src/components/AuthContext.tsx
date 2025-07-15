@@ -36,7 +36,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     else {
       // Default users
       const defaultUsers = [
-        { username: "admin", password: "admin", role: "admin" },
         { username: "farmer", password: "farmer", role: "farmer" },
       ];
       setUsers(defaultUsers);
