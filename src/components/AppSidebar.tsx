@@ -9,7 +9,6 @@ import {
   Settings, 
   Users 
 } from "lucide-react";
-import { useAuth } from "@/components/AuthContext";
 
 import {
   Sidebar,
@@ -28,7 +27,6 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ onPageChange, activePage = "dashboard" }: AppSidebarProps) {
-  const { user, logout } = useAuth();
   
   const menuItems = [
     { title: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
@@ -47,19 +45,13 @@ export function AppSidebar({ onPageChange, activePage = "dashboard" }: AppSideba
         <div className="p-6 border-b border-border">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">{user?.username?.slice(0,2).toUpperCase() || "JS"}</span>
+              <span className="text-primary-foreground font-bold text-sm">JS</span>
             </div>
             <div>
-              <h3 className="font-semibold text-foreground">{user?.username || "John Smith"}</h3>
-              <p className="text-sm text-muted-foreground">Admin</p>
+              <h3 className="font-semibold text-foreground">John Smith</h3>
+              <p className="text-sm text-muted-foreground">Insurer</p>
             </div>
           </div>
-          <button
-            className="mt-4 text-xs text-red-600 underline hover:text-red-800"
-            onClick={logout}
-          >
-            Logout
-          </button>
         </div>
         
         <SidebarGroup>

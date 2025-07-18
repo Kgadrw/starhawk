@@ -9,7 +9,7 @@ import { NotificationsPage } from "./pages/NotificationsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { ProfilePage } from "./pages/ProfilePage";
 
-export function DashboardContent({ userRole }: { userRole: "admin" | "farmer" }) {
+export function DashboardContent({ userRole }: { userRole: "admin" }) {
   const [activePage, setActivePage] = useState("dashboard");
   const [claims, setClaims] = useState<any[]>(() => {
     const stored = localStorage.getItem("claims");

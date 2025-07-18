@@ -24,7 +24,7 @@ const stats = [
 ];
 
 export function ClaimsPage({ userRole, onNewClaim, claims, onClaimAction }: {
-  userRole: "admin" | "farmer",
+  userRole: "admin",
   onNewClaim: (claim: any) => void,
   claims: any[],
   onClaimAction: (id: string, action: "approve" | "reject" | "flag") => void
@@ -111,33 +111,7 @@ export function ClaimsPage({ userRole, onNewClaim, claims, onClaimAction }: {
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">Claims Management</h1>
             <p className="text-muted-foreground">Track and manage insurance claims</p>
           </div>
-          {userRole === "farmer" && (
-            <Button className="self-start sm:self-auto" onClick={() => setModalOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Claim
-            </Button>
-          )}
         </div>
-
-        {/* Claim Submission Modal */}
-        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Submit New Claim</DialogTitle>
-            </DialogHeader>
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              <Input name="farmer" placeholder="Farmer Name" value={form.farmer} onChange={handleChange} required />
-              <Input name="crop" placeholder="Crop Type" value={form.crop} onChange={handleChange} required />
-              <Input name="type" placeholder="Loss Type (e.g. Drought)" value={form.type} onChange={handleChange} required />
-              <Input name="location" placeholder="Location" value={form.location} onChange={handleChange} required />
-              <Input name="date" type="date" placeholder="Date of Loss" value={form.date} onChange={handleChange} required />
-              {error && <div className="text-red-600 text-sm">{error}</div>}
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Submitting..." : "Submit Claim"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
