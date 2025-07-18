@@ -9,18 +9,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/components/ui/use-toast";
 
 const claims = [
-  { id: "CLM-2024-001", farmer: "John Mwangi", crop: "Maize", type: "Drought", location: "Kiambu", amount: "KSh 45,000", status: "Pending", date: "2024-01-15", priority: "High" },
-  { id: "CLM-2024-002", farmer: "Mary Wanjiku", crop: "Beans", type: "Flood", location: "Nairobi", amount: "KSh 32,000", status: "Approved", date: "2024-01-14", priority: "Medium" },
-  { id: "CLM-2024-003", farmer: "Peter Kamau", crop: "Coffee", type: "Pest", location: "Nyeri", amount: "KSh 78,000", status: "Under Review", date: "2024-01-13", priority: "High" },
-  { id: "CLM-2024-004", farmer: "Susan Njeri", crop: "Tea", type: "Disease", location: "Kericho", amount: "KSh 56,000", status: "Rejected", date: "2024-01-12", priority: "Low" },
-  { id: "CLM-2024-005", farmer: "David Ochieng", crop: "Rice", type: "Flood", location: "Kisumu", amount: "KSh 41,000", status: "Approved", date: "2024-01-11", priority: "Medium" },
+  { id: "CLM-2024-001", farmer: "John Mwangi", crop: "Maize", type: "Drought", location: "Kiambu", amount: "FRW 45,000", status: "Pending", date: "2024-01-15", priority: "High" },
+  { id: "CLM-2024-002", farmer: "Mary Wanjiku", crop: "Beans", type: "Flood", location: "Nairobi", amount: "FRW 32,000", status: "Approved", date: "2024-01-14", priority: "Medium" },
+  { id: "CLM-2024-003", farmer: "Peter Kamau", crop: "Coffee", type: "Pest", location: "Nyeri", amount: "FRW 78,000", status: "Under Review", date: "2024-01-13", priority: "High" },
+  { id: "CLM-2024-004", farmer: "Susan Njeri", crop: "Tea", type: "Disease", location: "Kericho", amount: "FRW 56,000", status: "Rejected", date: "2024-01-12", priority: "Low" },
+  { id: "CLM-2024-005", farmer: "David Ochieng", crop: "Rice", type: "Flood", location: "Kisumu", amount: "FRW 41,000", status: "Approved", date: "2024-01-11", priority: "Medium" },
 ];
 
 const stats = [
   { title: "Total Claims", value: "2,451", change: "+12%", positive: true },
   { title: "Pending Review", value: "183", change: "+5%", positive: false },
   { title: "Approved", value: "1,892", change: "+8%", positive: true },
-  { title: "Total Value", value: "KSh 12.4M", change: "+15%", positive: true },
+  { title: "Total Value", value: "FRW 12.4M", change: "+15%", positive: true },
 ];
 
 export function ClaimsPage({ userRole, onNewClaim, claims, onClaimAction }: {
@@ -63,7 +63,7 @@ export function ClaimsPage({ userRole, onNewClaim, claims, onClaimAction }: {
       const claim = {
         id,
         ...form,
-        amount: `KSh ${Math.floor(Math.random()*50000+20000)}`,
+        amount: `FRW ${Math.floor(Math.random()*50000+20000)}`,
         status: "Pending",
         priority: ["High","Medium","Low"][Math.floor(Math.random()*3)],
         ndvi: (Math.random()*0.5+0.3).toFixed(2),

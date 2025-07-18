@@ -12,8 +12,8 @@ const applications = [
     farmer: "Samuel Kiprotich",
     crop: "Coffee",
     location: "Nyeri",
-    coverage: "KSh 150,000",
-    premium: "KSh 7,500",
+    coverage: "FRW 150,000",
+    premium: "FRW 7,500",
     riskScore: 75,
     status: "Under Review",
     submittedDate: "2024-01-15",
@@ -24,8 +24,8 @@ const applications = [
     farmer: "Grace Muthoni",
     crop: "Tea",
     location: "Kericho",
-    coverage: "KSh 200,000",
-    premium: "KSh 10,000",
+    coverage: "FRW 200,000",
+    premium: "FRW 10,000",
     riskScore: 45,
     status: "Approved",
     submittedDate: "2024-01-14",
@@ -36,8 +36,8 @@ const applications = [
     farmer: "Peter Kamau",
     crop: "Maize",
     location: "Nakuru",
-    coverage: "KSh 80,000",
-    premium: "KSh 4,800",
+    coverage: "FRW 80,000",
+    premium: "FRW 4,800",
     riskScore: 85,
     status: "Requires Review",
     submittedDate: "2024-01-13",
@@ -171,7 +171,7 @@ export function UnderwritingPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">KSh 2.4M</div>
+              <div className="text-2xl font-bold text-foreground">FRW 2.4M</div>
               <p className="text-xs text-green-600">+18% this month</p>
             </CardContent>
           </Card>

@@ -89,7 +89,7 @@ export function ReportsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">KSh 8.4M</div>
+              <div className="text-2xl font-bold text-foreground">FRW 8.4M</div>
               <p className="text-xs text-green-600">+18% from last period</p>
             </CardContent>
           </Card>

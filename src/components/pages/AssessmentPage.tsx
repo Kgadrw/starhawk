@@ -618,7 +618,7 @@ export function AssessmentPage() {
                                   Crop: {analysis.cropType} | Health: {analysis.healthScore.toFixed(1)}%
                                 </div>
                                 <div className="text-sm text-gray-600">
-                                  Damage: {analysis.damageAssessment} | Loss: KSh {analysis.estimatedLoss.toLocaleString()}
+                                  Damage: {analysis.damageAssessment} | Loss: FRW {analysis.estimatedLoss.toLocaleString()}
                                 </div>
                               </div>
                               <Badge variant={analysis.confidence > 90 ? "default" : "secondary"}>
@@ -645,11 +645,11 @@ export function AssessmentPage() {
                           <div className="text-xs text-gray-600">Avg Health</div>
                         </div>
                         <div className="text-center p-3 bg-red-50 rounded">
-                          <div className="text-lg font-bold">KSh {processedData.totalEstimatedLoss.toLocaleString()}</div>
+                          <div className="text-lg font-bold">FRW {processedData.totalEstimatedLoss.toLocaleString()}</div>
                           <div className="text-xs text-gray-600">Total Loss</div>
                         </div>
                         <div className="text-center p-3 bg-yellow-50 rounded">
-                          <div className="text-lg font-bold">KSh {processedData.pnlImpact.netImpact.toLocaleString()}</div>
+                          <div className="text-lg font-bold">FRW {processedData.pnlImpact.netImpact.toLocaleString()}</div>
                           <div className="text-xs text-gray-600">Net Impact</div>
                         </div>
                       </div>
@@ -683,19 +683,19 @@ export function AssessmentPage() {
                         <div className="space-y-2 mt-2">
                           <div className="flex justify-between">
                             <span className="text-sm">Revenue Loss:</span>
-                            <span className="text-sm font-medium">KSh {processedData.pnlImpact.revenueLoss.toLocaleString()}</span>
+                            <span className="text-sm font-medium">FRW {processedData.pnlImpact.revenueLoss.toLocaleString()}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-sm">Recovery Cost:</span>
-                            <span className="text-sm font-medium">KSh {processedData.pnlImpact.recoveryCost.toLocaleString()}</span>
+                            <span className="text-sm font-medium">FRW {processedData.pnlImpact.recoveryCost.toLocaleString()}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-sm">Insurance Coverage:</span>
-                            <span className="text-sm font-medium">KSh {processedData.pnlImpact.insuranceCoverage.toLocaleString()}</span>
+                            <span className="text-sm font-medium">FRW {processedData.pnlImpact.insuranceCoverage.toLocaleString()}</span>
                           </div>
                           <div className="flex justify-between border-t pt-2">
                             <span className="text-sm font-medium">Net Impact:</span>
-                            <span className="text-sm font-bold">KSh {processedData.pnlImpact.netImpact.toLocaleString()}</span>
+                            <span className="text-sm font-bold">FRW {processedData.pnlImpact.netImpact.toLocaleString()}</span>
                           </div>
                         </div>
                       </div>

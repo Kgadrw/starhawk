@@ -229,12 +229,12 @@ export function SettingsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="currency">Currency</Label>
-                <Select defaultValue="kes">
+                <Select defaultValue="frw">
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="kes">Kenyan Shilling (KSh)</SelectItem>
+                    <SelectItem value="frw">Rwandan Franc (FRW)</SelectItem>
                     <SelectItem value="usd">US Dollar ($)</SelectItem>
                     <SelectItem value="eur">Euro (€)</SelectItem>
                   </SelectContent>
