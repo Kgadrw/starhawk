@@ -78,7 +78,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
             </div>
             <div>
               <CardTitle className="text-2xl font-bold text-agri-primary">
-                Nexus Agri
+                STARHAWK
               </CardTitle>
               <CardDescription className="text-muted-foreground">
                 Advanced Crop Assessment & Risk Analysis
