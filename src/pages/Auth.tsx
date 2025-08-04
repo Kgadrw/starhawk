@@ -41,14 +41,27 @@ const Auth = () => {
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    console.log("Attempting sign in with:", email);
 
-    if (error) {
-      setError(error.message);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      console.log("Sign in response:", { data, error });
+
+      if (error) {
+        console.error("Sign in error:", error);
+        setError(error.message);
+      } else {
+        console.log("Sign in successful:", data);
+      }
+    } catch (err) {
+      console.error("Sign in exception:", err);
+      setError("An unexpected error occurred. Please try again.");
     }
+    
     setLoading(false);
   };
 
@@ -58,20 +71,31 @@ const Auth = () => {
     setError(null);
 
     const redirectUrl = `${window.location.origin}/`;
+    console.log("Attempting sign up with:", email, "redirect:", redirectUrl);
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl
+        }
+      });
+
+      console.log("Sign up response:", { data, error });
+
+      if (error) {
+        console.error("Sign up error:", error);
+        setError(error.message);
+      } else {
+        console.log("Sign up successful:", data);
+        setError("Check your email for the confirmation link!");
       }
-    });
-
-    if (error) {
-      setError(error.message);
-    } else {
-      setError("Check your email for the confirmation link!");
+    } catch (err) {
+      console.error("Sign up exception:", err);
+      setError("An unexpected error occurred. Please try again.");
     }
+    
     setLoading(false);
   };
 
