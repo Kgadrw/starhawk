@@ -31,6 +31,7 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ onPageChange, activePage = "dashboard" }: AppSidebarProps) {
+  // User authentication state
   const [user, setUser] = useState<SupabaseUser | null>(null);
 
   useEffect(() => {
