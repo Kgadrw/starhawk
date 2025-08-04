@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { 
   LayoutDashboard, 
   ClipboardList, 
@@ -7,10 +7,9 @@ import {
   Database, 
   Bell, 
   Settings, 
-  Users,
-  LogOut 
+  Users 
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
 import {
   Sidebar,
   SidebarContent,
@@ -20,10 +19,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarFooter,
 } from "@/components/ui/sidebar";
-import { supabase } from "@/integrations/supabase/client";
-import { User as SupabaseUser } from "@supabase/supabase-js";
 
 interface AppSidebarProps {
   onPageChange?: (page: string) => void;
@@ -31,26 +27,6 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ onPageChange, activePage = "dashboard" }: AppSidebarProps) {
-  // User authentication state
-  const [user, setUser] = useState<SupabaseUser | null>(null);
-
-  useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-  };
   
   const menuItems = [
     { title: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
@@ -69,14 +45,10 @@ export function AppSidebar({ onPageChange, activePage = "dashboard" }: AppSideba
         <div className="p-6 border-b border-border">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">
-                {user?.email?.charAt(0).toUpperCase() || "U"}
-              </span>
+              <span className="text-primary-foreground font-bold text-sm">JS</span>
             </div>
             <div>
-              <h3 className="font-semibold text-foreground">
-                {user?.email?.split('@')[0] || "User"}
-              </h3>
+              <h3 className="font-semibold text-foreground">John Smith</h3>
               <p className="text-sm text-muted-foreground">Insurer</p>
             </div>
           </div>
@@ -113,29 +85,6 @@ export function AppSidebar({ onPageChange, activePage = "dashboard" }: AppSideba
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      
-      {user && (
-        <SidebarFooter>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <div className="flex flex-col space-y-2 p-4 border-t border-border">
-                <span className="text-sm text-muted-foreground truncate">
-                  {user.email}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSignOut}
-                  className="justify-start h-8"
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign Out
-                </Button>
-              </div>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
-      )}
     </Sidebar>
   );
 }
