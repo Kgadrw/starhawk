@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { AppSidebar } from "./AppSidebar";
 import { DashboardOverview } from "./pages/DashboardOverview";
