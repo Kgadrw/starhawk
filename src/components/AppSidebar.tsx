@@ -40,16 +40,16 @@ export function AppSidebar({ onPageChange, activePage = "dashboard" }: AppSideba
   ];
 
   return (
-    <Sidebar className="w-64 border-r border-border bg-background" collapsible="none">
+    <Sidebar className="w-64 lg:w-64 border-r border-border bg-background" collapsible="none">
       <SidebarContent className="bg-background">
-        <div className="p-6 border-b border-border">
+        <div className="p-4 sm:p-6 border-b border-border">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-sm">JS</span>
             </div>
-            <div>
-              <h3 className="font-semibold text-foreground">John Smith</h3>
-              <p className="text-sm text-muted-foreground">Insurer</p>
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-foreground text-sm sm:text-base truncate">John Smith</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground">Insurer</p>
             </div>
           </div>
         </div>
@@ -64,7 +64,7 @@ export function AppSidebar({ onPageChange, activePage = "dashboard" }: AppSideba
                   <SidebarMenuItem key={item.key}>
                     <SidebarMenuButton 
                       asChild 
-                      className={`w-full justify-start px-6 py-3 ${
+                      className={`w-full justify-start px-4 sm:px-6 py-2 sm:py-3 ${
                         isActive 
                           ? "bg-accent text-accent-foreground border-r-2 border-primary" 
                           : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
@@ -74,8 +74,8 @@ export function AppSidebar({ onPageChange, activePage = "dashboard" }: AppSideba
                         onClick={() => onPageChange?.(item.key)}
                         className="flex items-center space-x-3 w-full"
                       >
-                        <Icon className="h-5 w-5" />
-                        <span className="font-medium">{item.title}</span>
+                        <Icon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                        <span className="font-medium text-sm sm:text-base">{item.title}</span>
                       </button>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

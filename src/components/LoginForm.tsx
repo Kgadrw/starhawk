@@ -119,26 +119,26 @@ export function LoginForm({ onLogin }: LoginFormProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-surface p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-surface p-4 sm:p-6">
       <div className="w-full max-w-md">
         <Card className="shadow-strong border-0 bg-white/95 backdrop-blur-sm">
-          <CardHeader className="text-center space-y-4">
-            <div className="mx-auto w-16 h-16 bg-primary rounded-full flex items-center justify-center">
-              <Leaf className="w-8 h-8 text-white" />
+          <CardHeader className="text-center space-y-4 px-4 sm:px-6">
+            <div className="mx-auto w-12 h-12 sm:w-16 sm:h-16 bg-primary rounded-full flex items-center justify-center">
+              <Leaf className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
             </div>
             <div>
-              <CardTitle className="text-2xl font-bold text-agri-primary">
+              <CardTitle className="text-xl sm:text-2xl font-bold text-agri-primary">
                 STARHAWK
               </CardTitle>
-              <CardDescription className="text-muted-foreground">
+              <CardDescription className="text-muted-foreground text-sm sm:text-base">
                 Advanced Crop Assessment & Risk Analysis
               </CardDescription>
             </div>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <CardContent className="px-4 sm:px-6">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-sm sm:text-base">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -146,11 +146,11 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="h-11"
+                  className="h-10 sm:h-11 text-sm sm:text-base"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-sm sm:text-base">Password</Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -159,7 +159,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="h-11 pr-10"
+                    className="h-10 sm:h-11 pr-10 text-sm sm:text-base"
                   />
                   <button
                     type="button"
@@ -176,7 +176,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
               </div>
               <Button
                 type="submit"
-                className="w-full h-11 hover:opacity-90 transition-opacity"
+                className="w-full h-10 sm:h-11 hover:opacity-90 transition-opacity text-sm sm:text-base"
                 disabled={isLoading}
               >
                 {isLoading ? (

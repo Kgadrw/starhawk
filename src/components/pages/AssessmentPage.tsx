@@ -438,93 +438,96 @@ export function AssessmentPage() {
   };
 
   return (
-    <div className="p-6 space-y-6 bg-background h-screen overflow-y-auto">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 bg-background">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">CropScan AI</h1>
-          <p className="text-gray-500">NVDI Data Analysis & Risk Assessment</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">CropScan AI</h1>
+          <p className="text-sm sm:text-base text-gray-500">NVDI Data Analysis & Risk Assessment</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
         <Card className="shadow-soft">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
+          <CardHeader className="pb-2 px-3 sm:px-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">
               Field Assessment
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">247</div>
+          <CardContent className="px-3 sm:px-6">
+            <div className="text-lg sm:text-2xl font-bold">247</div>
             <p className="text-xs text-gray-500">2 months locations</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-soft">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-agri-success">
+          <CardHeader className="pb-2 px-3 sm:px-6">
+            <CardTitle className="text-xs sm:text-sm font-medium text-agri-success">
               Completed Tasks
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">32</div>
+          <CardContent className="px-3 sm:px-6">
+            <div className="text-lg sm:text-2xl font-bold">32</div>
             <p className="text-xs text-gray-500">This month</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-soft">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-agri-warning">
+          <CardHeader className="pb-2 px-3 sm:px-6">
+            <CardTitle className="text-xs sm:text-sm font-medium text-agri-warning">
               High Risk Claims
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">2 Days</div>
+          <CardContent className="px-3 sm:px-6">
+            <div className="text-lg sm:text-2xl font-bold">2 Days</div>
             <p className="text-xs text-gray-500">Next assessment</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-soft">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-agri-accent">
+          <CardHeader className="pb-2 px-3 sm:px-6">
+            <CardTitle className="text-xs sm:text-sm font-medium text-agri-accent">
               Upgraded Factors
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">2.4 Days</div>
+          <CardContent className="px-3 sm:px-6">
+            <div className="text-lg sm:text-2xl font-bold">2.4 Days</div>
             <p className="text-xs text-gray-500">Average time</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Main Assessment Form */}
         <Card className="lg:col-span-2 shadow-medium">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
+          <CardHeader className="px-4 sm:px-6">
+            <CardTitle className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
               <Leaf className="w-5 h-5 text-green-500" />
-              <span>Field Assessment & NVDI Analysis</span>
+              <span className="text-lg sm:text-xl">Field Assessment & NVDI Analysis</span>
             </CardTitle>
             <p className="text-sm text-gray-500">
               Upload NVDI data files or field images for analysis
             </p>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6">
             <Tabs defaultValue="field" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="field">Field Images</TabsTrigger>
-                <TabsTrigger value="ncdi">NVDI Analysis</TabsTrigger>
+                <TabsTrigger value="field" className="text-xs sm:text-sm">Field Images</TabsTrigger>
+                <TabsTrigger value="ncdi" className="text-xs sm:text-sm">NVDI Analysis</TabsTrigger>
               </TabsList>
 
               <TabsContent value="field" className="space-y-4">
                 <form onSubmit={handleSubmit}>
-                  <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div>
                       <Label htmlFor="cropType">Crop Type</Label>
                       <Select
                         value={selectedCrop}
                         onValueChange={setSelectedCrop}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="h-10 sm:h-11">
                           <SelectValue placeholder="Maize" />
                         </SelectTrigger>
                         <SelectContent>
@@ -543,7 +546,7 @@ export function AssessmentPage() {
                         value={selectedLocation}
                         onValueChange={setSelectedLocation}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="h-10 sm:h-11">
                           <SelectValue placeholder="Nairobi" />
                         </SelectTrigger>
                         <SelectContent>
@@ -560,7 +563,7 @@ export function AssessmentPage() {
                     <div>
                       <Label>Field Images Upload</Label>
                       <div
-                        className="mt-2 border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-agri-green transition-colors"
+                        className="mt-2 border-2 border-dashed border-border rounded-lg p-4 sm:p-6 text-center hover:border-agri-green transition-colors"
                         onDragOver={handleDragOver}
                         onDrop={handleDrop}
                       >
@@ -576,7 +579,7 @@ export function AssessmentPage() {
                           variant="outline"
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
-                          className="mb-2"
+                          className="mb-2 w-full sm:w-auto h-10 sm:h-11"
                         >
                           📷 Select Images
                         </Button>
@@ -593,18 +596,18 @@ export function AssessmentPage() {
                     {uploadedImages.length > 0 && (
                       <div className="space-y-2">
                         <Label>Uploaded Images ({uploadedImages.length})</Label>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                           {uploadedImages.map((file, index) => (
                             <div key={index} className="relative group">
                               <img
                                 src={URL.createObjectURL(file)}
                                 alt={file.name}
-                                className="w-full h-20 object-cover rounded border"
+                                className="w-full h-16 sm:h-20 object-cover rounded border"
                               />
                               <button
                                 type="button"
                                 onClick={() => removeImage(index)}
-                                className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full w-5 h-5 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full w-6 h-6 text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                               >
                                 ×
                               </button>
@@ -615,7 +618,7 @@ export function AssessmentPage() {
                           type="button"
                           onClick={processImages}
                           disabled={isProcessing}
-                          className="w-full bg-gradient-primary hover:opacity-90"
+                          className="w-full bg-gradient-primary hover:opacity-90 h-10 sm:h-11"
                         >
                           {isProcessing ? "Processing..." : "Analyze Images"}
                         </Button>
@@ -625,7 +628,7 @@ export function AssessmentPage() {
                     {/* Image Analysis Results */}
                     {imageAnalysis.length > 0 && (
                       <div className="space-y-4">
-                        <h3 className="font-semibold">
+                        <h3 className="font-semibold text-base sm:text-lg">
                           Image Analysis Results
                         </h3>
                         <div className="space-y-2">
@@ -634,16 +637,16 @@ export function AssessmentPage() {
                               key={index}
                               className="p-3 border rounded bg-card"
                             >
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <div className="font-medium">
+                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start space-y-2 sm:space-y-0">
+                                <div className="flex-1">
+                                  <div className="font-medium text-sm sm:text-base">
                                     {analysis.filename}
                                   </div>
-                                  <div className="text-sm text-gray-500">
+                                  <div className="text-xs sm:text-sm text-gray-500">
                                     Crop: {analysis.cropType} | Health:{" "}
                                     {analysis.healthScore.toFixed(1)}%
                                   </div>
-                                  <div className="text-sm text-gray-500">
+                                  <div className="text-xs sm:text-sm text-gray-500">
                                     Damage: {analysis.damageAssessment} | Loss:
                                     FRW{" "}
                                     {analysis.estimatedLoss.toLocaleString()}
@@ -655,6 +658,7 @@ export function AssessmentPage() {
                                       ? "default"
                                       : "secondary"
                                   }
+                                  className="self-start sm:self-auto"
                                 >
                                   {analysis.confidence.toFixed(0)}% confidence
                                 </Badge>
@@ -668,12 +672,12 @@ export function AssessmentPage() {
                     {/* Processed Data Summary */}
                     {processedData && (
                       <div className="space-y-4">
-                        <h3 className="font-semibold">
+                        <h3 className="font-semibold text-base sm:text-lg">
                           P&L Assessment Summary
                         </h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                           <div className="text-center p-3 bg-agri-green-light rounded">
-                            <div className="text-lg font-bold">
+                            <div className="text-base sm:text-lg font-bold">
                               {processedData.totalImages}
                             </div>
                             <div className="text-xs text-gray-500">
@@ -681,7 +685,7 @@ export function AssessmentPage() {
                             </div>
                           </div>
                           <div className="text-center p-3 bg-agri-success-light rounded">
-                            <div className="text-lg font-bold">
+                            <div className="text-base sm:text-lg font-bold">
                               {processedData.averageHealthScore.toFixed(1)}%
                             </div>
                             <div className="text-xs text-gray-500">
@@ -689,7 +693,7 @@ export function AssessmentPage() {
                             </div>
                           </div>
                           <div className="text-center p-3 bg-agri-danger-light rounded">
-                            <div className="text-lg font-bold">
+                            <div className="text-base sm:text-lg font-bold">
                               FRW{" "}
                               {processedData.totalEstimatedLoss.toLocaleString()}
                             </div>
@@ -698,7 +702,7 @@ export function AssessmentPage() {
                             </div>
                           </div>
                           <div className="text-center p-3 bg-agri-warning-light rounded">
-                            <div className="text-lg font-bold">
+                            <div className="text-base sm:text-lg font-bold">
                               FRW{" "}
                               {processedData.pnlImpact.netImpact.toLocaleString()}
                             </div>
@@ -717,12 +721,12 @@ export function AssessmentPage() {
                         value={assessmentNotes}
                         onChange={(e) => setAssessmentNotes(e.target.value)}
                         placeholder="Enter assessment details..."
-                        className="mt-1"
+                        className="mt-1 min-h-[100px]"
                       />
                     </div>
 
                     <Button
-                      className="w-full bg-gradient-primary hover:opacity-90"
+                      className="w-full bg-gradient-primary hover:opacity-90 h-10 sm:h-11"
                       type="submit"
                     >
                       Submit Assessment
@@ -776,7 +780,7 @@ export function AssessmentPage() {
                   <Button
                     onClick={analyzeNcdiData}
                     disabled={!ncdiFile || isAnalyzing}
-                    className="w-full hover:opacity-90 transition-smooth"
+                    className="w-full hover:opacity-90 transition-smooth h-10 sm:h-11"
                   >
                     {isAnalyzing && (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -789,19 +793,20 @@ export function AssessmentPage() {
           </CardContent>
         </Card>
 
+        {/* Analysis Results Sidebar */}
         <Card className="shadow-medium">
-          <CardHeader>
+          <CardHeader className="px-4 sm:px-6">
             <CardTitle className="flex items-center space-x-2">
               <BarChart3 className="w-5 h-5 text-green-500" />
-              <span>Analysis Results</span>
+              <span className="text-base sm:text-lg">Analysis Results</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 px-4 sm:px-6">
             {analysisResult ? (
               <div className="space-y-4">
                 <div>
                   <p className="text-sm font-medium mb-2">Overall Risk Score</p>
-                  <div className="text-2xl font-bold">
+                  <div className="text-xl sm:text-2xl font-bold">
                     {analysisResult.data.analysis.riskAnalysis.overallRiskScore}
                   </div>
                   <Badge
@@ -815,7 +820,7 @@ export function AssessmentPage() {
 
                 <div>
                   <p className="text-sm font-medium mb-2">Payout Probability</p>
-                  <div className="text-2xl font-bold">
+                  <div className="text-xl sm:text-2xl font-bold">
                     {
                       analysisResult.data.analysis.riskAnalysis
                         .payoutProbability
@@ -833,7 +838,7 @@ export function AssessmentPage() {
 
                 <div>
                   <p className="text-sm font-medium mb-2">Average NVDI</p>
-                  <div className="text-2xl font-bold">
+                  <div className="text-xl sm:text-2xl font-bold">
                     {analysisResult.data.analysis.ncdiAnalysis.averageNcdi.toFixed(
                       3
                     )}
@@ -945,56 +950,57 @@ export function AssessmentPage() {
         </Card>
       </div>
 
+      {/* Detailed NDVI Analysis */}
       {analysisResult && (
         <Card className="shadow-medium">
-          <CardHeader>
+          <CardHeader className="px-4 sm:px-6">
             <CardTitle className="flex items-center space-x-2">
               <TrendingUp className="w-5 h-5 text-green-500" />
-              <span>Detailed NDVI Analysis</span>
+              <span className="text-base sm:text-lg">Detailed NDVI Analysis</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CardContent className="px-4 sm:px-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* NDVI Statistics */}
               <div className="space-y-4">
-                <h3 className="font-semibold flex items-center gap-2">
+                <h3 className="font-semibold flex items-center gap-2 text-base sm:text-lg">
                   <BarChart3 className="w-4 h-4 text-primary" /> NDVI Statistics
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
                   <div className="p-3 border rounded-md flex flex-col items-start">
-                    <div className="flex items-center gap-1 text-sm font-medium">
+                    <div className="flex items-center gap-1 text-xs sm:text-sm font-medium">
                       <ArrowDownCircle className="w-4 h-4 text-blue-500" />{" "}
                       Minimum
                     </div>
-                    <p className="text-xl font-bold">
+                    <p className="text-lg sm:text-xl font-bold">
                       {analysisResult.data.analysis.ncdiAnalysis.min.toFixed(3)}
                     </p>
                   </div>
                   <div className="p-3 border rounded-md flex flex-col items-start">
-                    <div className="flex items-center gap-1 text-sm font-medium">
+                    <div className="flex items-center gap-1 text-xs sm:text-sm font-medium">
                       <ArrowUpCircle className="w-4 h-4 text-red-500" /> Maximum
                     </div>
-                    <p className="text-xl font-bold">
+                    <p className="text-lg sm:text-xl font-bold">
                       {analysisResult.data.analysis.ncdiAnalysis.max.toFixed(3)}
                     </p>
                   </div>
                   <div className="p-3 border rounded-md flex flex-col items-start">
-                    <div className="flex items-center gap-1 text-sm font-medium">
+                    <div className="flex items-center gap-1 text-xs sm:text-sm font-medium">
                       <Percent className="w-4 h-4 text-yellow-500" /> 25th
                       Percentile
                     </div>
-                    <p className="text-xl font-bold">
+                    <p className="text-lg sm:text-xl font-bold">
                       {analysisResult.data.analysis.ncdiAnalysis.percentiles.p25.toFixed(
                         3
                       )}
                     </p>
                   </div>
                   <div className="p-3 border rounded-md flex flex-col items-start">
-                    <div className="flex items-center gap-1 text-sm font-medium">
+                    <div className="flex items-center gap-1 text-xs sm:text-sm font-medium">
                       <Percent className="w-4 h-4 text-yellow-500" /> 75th
                       Percentile
                     </div>
-                    <p className="text-xl font-bold">
+                    <p className="text-lg sm:text-xl font-bold">
                       {analysisResult.data.analysis.ncdiAnalysis.percentiles.p75.toFixed(
                         3
                       )}
@@ -1002,11 +1008,11 @@ export function AssessmentPage() {
                   </div>
                 </div>
                 <div className="p-3 border rounded-md flex flex-col items-start">
-                  <div className="flex items-center gap-1 text-sm font-medium">
+                  <div className="flex items-center gap-1 text-xs sm:text-sm font-medium">
                     <Sigma className="w-4 h-4 text-purple-500" /> Standard
                     Deviation
                   </div>
-                  <p className="text-xl font-bold">
+                  <p className="text-lg sm:text-xl font-bold">
                     {analysisResult.data.analysis.ncdiAnalysis.standardDeviation.toFixed(
                       3
                     )}
@@ -1016,14 +1022,14 @@ export function AssessmentPage() {
 
               {/* Vegetation Distribution */}
               <div className="space-y-4">
-                <h3 className="font-semibold flex items-center gap-2">
+                <h3 className="font-semibold flex items-center gap-2 text-base sm:text-lg">
                   <BarChart3 className="w-4 h-4 text-green-500" /> Vegetation
                   Distribution
                 </h3>
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium flex items-center gap-1">
+                      <span className="text-xs sm:text-sm font-medium flex items-center gap-1">
                         <ArrowDownCircle className="w-4 h-4 text-blue-400" />{" "}
                         Low Density
                       </span>
@@ -1050,7 +1056,7 @@ export function AssessmentPage() {
 
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium flex items-center gap-1">
+                      <span className="text-xs sm:text-sm font-medium flex items-center gap-1">
                         <Percent className="w-4 h-4 text-yellow-500" /> Medium
                         Density
                       </span>
@@ -1077,7 +1083,7 @@ export function AssessmentPage() {
 
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium flex items-center gap-1">
+                      <span className="text-xs sm:text-sm font-medium flex items-center gap-1">
                         <ArrowUpCircle className="w-4 h-4 text-green-500" />{" "}
                         High Density
                       </span>
@@ -1108,15 +1114,17 @@ export function AssessmentPage() {
         </Card>
       )}
 
+      {/* Recent Assessments Table */}
       <Card className="shadow-medium">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Recent Assessments</CardTitle>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0 px-4 sm:px-6">
+          <CardTitle className="text-base sm:text-lg">Recent Assessments</CardTitle>
           <div className="flex space-x-2">
             <Button
               variant="outline"
               size="sm"
               type="button"
               onClick={handleFilter}
+              className="text-xs sm:text-sm h-8 sm:h-9"
             >
               Filter
             </Button>
@@ -1125,13 +1133,82 @@ export function AssessmentPage() {
               size="sm"
               type="button"
               onClick={handleExport}
+              className="text-xs sm:text-sm h-8 sm:h-9"
             >
               Export
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
+        <CardContent className="px-4 sm:px-6">
+          {/* Mobile-friendly table */}
+          <div className="block sm:hidden">
+            {assessments.map((assessment) => (
+              <div key={assessment.id} className="border rounded-lg p-4 mb-4 space-y-2">
+                <div className="flex justify-between items-start">
+                  <div className="font-medium text-sm">{assessment.id}</div>
+                  <Badge
+                    variant={
+                      assessment.status === "Approved"
+                        ? "default"
+                        : assessment.status === "Rejected"
+                        ? "destructive"
+                        : "secondary"
+                    }
+                    className="text-xs"
+                  >
+                    {assessment.status}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-gray-500">Farmer:</span>
+                    <div className="font-medium">{assessment.farmer}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Location:</span>
+                    <div className="font-medium">{assessment.location}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Crop Type:</span>
+                    <div className="font-medium">{assessment.cropType || "N/A"}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Date:</span>
+                    <div className="font-medium">{assessment.date}</div>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t">
+                  <Badge
+                    variant={
+                      assessment.priority === "HIGH"
+                        ? "destructive"
+                        : assessment.priority === "MEDIUM"
+                        ? "default"
+                        : "secondary"
+                    }
+                    className="text-xs"
+                  >
+                    {assessment.priority}
+                  </Badge>
+                  <div className="text-right">
+                    <div className="text-xs text-gray-500">Estimated Loss</div>
+                    <div className="font-medium text-sm">
+                      {assessment.estimatedLoss ? (
+                        <span className="text-red-600">
+                          FRW {assessment.estimatedLoss.toLocaleString()}
+                        </span>
+                      ) : (
+                        "N/A"
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
