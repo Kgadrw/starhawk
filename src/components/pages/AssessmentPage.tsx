@@ -110,7 +110,20 @@ interface ProcessedData {
   };
 }
 
-const assessments = [
+interface Assessment {
+  id: string;
+  farmer: string;
+  location: string;
+  date: string;
+  status: "Pending" | "Approved" | "Rejected";
+  priority: "HIGH" | "MEDIUM" | "LOW";
+  cropType?: string;
+  totalImages?: number;
+  estimatedLoss?: number;
+  healthScore?: number;
+}
+
+const initialAssessments: Assessment[] = [
   {
     id: "INA-2025-001",
     farmer: "John Smith",
@@ -159,12 +172,33 @@ export function AssessmentPage() {
   const ncdiFileInputRef = useRef<HTMLInputElement>(null);
 
   const [token, setToken] = useState<string | null>(null);
+  const [assessments, setAssessments] = useState<Assessment[]>(initialAssessments);
+  const [assessmentNotes, setAssessmentNotes] = useState("");
 
   useEffect(() => {
     const storedToken = localStorage.getItem("auth_token");
 
     if (storedToken) setToken(storedToken);
   }, []);
+
+  const generateAssessmentId = () => {
+    const year = new Date().getFullYear();
+    const existingIds = assessments.map(a => parseInt(a.id.split('-')[2]));
+    const nextId = Math.max(...existingIds, 0) + 1;
+    return `INA-${year}-${nextId.toString().padStart(3, '0')}`;
+  };
+
+  const getPriorityFromData = (data: ProcessedData | null, analysis: ImageAnalysis[]): "HIGH" | "MEDIUM" | "LOW" => {
+    if (!data) return "MEDIUM";
+    
+    if (data.totalEstimatedLoss > 100000 || data.averageHealthScore < 30) {
+      return "HIGH";
+    } else if (data.totalEstimatedLoss > 50000 || data.averageHealthScore < 60) {
+      return "MEDIUM";
+    } else {
+      return "LOW";
+    }
+  };
 
   const handleExport = () =>
     toast({ title: "Exported!", description: "Assessment data exported." });
@@ -175,10 +209,36 @@ export function AssessmentPage() {
     });
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Create new assessment
+    const newAssessment: Assessment = {
+      id: generateAssessmentId(),
+      farmer: "Current User", // This could be fetched from user context
+      location: selectedLocation.charAt(0).toUpperCase() + selectedLocation.slice(1),
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      status: "Pending",
+      priority: getPriorityFromData(processedData, imageAnalysis),
+      cropType: selectedCrop.charAt(0).toUpperCase() + selectedCrop.slice(1),
+      totalImages: uploadedImages.length,
+      estimatedLoss: processedData?.totalEstimatedLoss,
+      healthScore: processedData?.averageHealthScore,
+    };
+
+    // Add to assessments list
+    setAssessments(prev => [newAssessment, ...prev]);
+
     toast({
       title: "Assessment Submitted!",
-      description: "Your assessment has been submitted.",
+      description: `Assessment ${newAssessment.id} has been submitted successfully.`,
     });
+
+    // Reset form
+    setUploadedImages([]);
+    setImageAnalysis([]);
+    setProcessedData(null);
+    setSelectedCrop("maize");
+    setSelectedLocation("nairobi");
+    setAssessmentNotes("");
   };
 
   const handleImageUpload = (files: FileList | null) => {
@@ -653,6 +713,9 @@ export function AssessmentPage() {
                     <div>
                       <Label htmlFor="description">Assessment Notes</Label>
                       <Textarea
+                        id="description"
+                        value={assessmentNotes}
+                        onChange={(e) => setAssessmentNotes(e.target.value)}
                         placeholder="Enter assessment details..."
                         className="mt-1"
                       />
@@ -1082,6 +1145,9 @@ export function AssessmentPage() {
                     Location
                   </th>
                   <th className="text-left py-2 text-sm font-medium text-gray-500">
+                    Crop Type
+                  </th>
+                  <th className="text-left py-2 text-sm font-medium text-gray-500">
                     Date
                   </th>
                   <th className="text-left py-2 text-sm font-medium text-gray-500">
@@ -1090,20 +1156,28 @@ export function AssessmentPage() {
                   <th className="text-left py-2 text-sm font-medium text-gray-500">
                     Priority
                   </th>
+                  <th className="text-left py-2 text-sm font-medium text-gray-500">
+                    Estimated Loss
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {assessments.map((assessment) => (
                   <tr key={assessment.id} className="border-b">
-                    <td className="py-2 text-sm">{assessment.id}</td>
+                    <td className="py-2 text-sm font-medium">{assessment.id}</td>
                     <td className="py-2 text-sm">{assessment.farmer}</td>
                     <td className="py-2 text-sm">{assessment.location}</td>
+                    <td className="py-2 text-sm">
+                      {assessment.cropType || "N/A"}
+                    </td>
                     <td className="py-2 text-sm">{assessment.date}</td>
                     <td className="py-2 text-sm">
                       <Badge
                         variant={
                           assessment.status === "Approved"
                             ? "default"
+                            : assessment.status === "Rejected"
+                            ? "destructive"
                             : "secondary"
                         }
                       >
@@ -1122,6 +1196,15 @@ export function AssessmentPage() {
                       >
                         {assessment.priority}
                       </Badge>
+                    </td>
+                    <td className="py-2 text-sm">
+                      {assessment.estimatedLoss ? (
+                        <span className="text-red-600 font-medium">
+                          FRW {assessment.estimatedLoss.toLocaleString()}
+                        </span>
+                      ) : (
+                        "N/A"
+                      )}
                     </td>
                   </tr>
                 ))}

@@ -29,6 +29,26 @@ export function LoginForm({ onLogin }: LoginFormProps) {
     setIsLoading(true);
 
     try {
+      console.log("Attempting login with:", { email, password: "***" });
+      
+      // For development/testing purposes, allow a mock login
+      if (email === "test@example.com" && password === "password") {
+        const mockUser = {
+          id: "1",
+          name: "Test User",
+          email: email,
+          role: "admin"
+        };
+        const mockToken = "mock-jwt-token-" + Date.now();
+        
+        onLogin(mockToken, mockUser);
+        toast({
+          title: "Login Successful (Mock)",
+          description: `Welcome back, ${mockUser.name}!`,
+        });
+        return;
+      }
+      
       const response = await fetch(
         "https://nexus-agri-backend.onrender.com/auth/login",
         {
@@ -39,25 +59,55 @@ export function LoginForm({ onLogin }: LoginFormProps) {
           body: JSON.stringify({ email, password }),
         }
       );
-      
+
+      console.log("Response status:", response.status);
+      console.log("Response headers:", response.headers);
 
       if (!response.ok) {
-        throw new Error("Invalid email or password");
+        const errorData = await response.text();
+        console.error("Login error response:", errorData);
+        
+        let errorMessage = "Invalid email or password";
+        try {
+          const errorJson = JSON.parse(errorData);
+          errorMessage = errorJson.detail || errorJson.message || errorMessage;
+        } catch (e) {
+          // If parsing fails, use the raw text
+          errorMessage = errorData || errorMessage;
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
+      console.log("Login response data:", data);
 
-      if (!data.access_token || !data.user) {
-        throw new Error("Invalid response format");
+      // Handle different response formats
+      let accessToken = data.access_token || data.token || data.accessToken;
+      let userData = data.user || data.user_data || data;
+
+      if (!accessToken) {
+        throw new Error("No access token received from server");
       }
 
-      onLogin(data.access_token, data.user);
+      if (!userData) {
+        // If no user data, create a basic user object
+        userData = {
+          id: data.id || "unknown",
+          name: data.name || email.split("@")[0],
+          email: email,
+          role: data.role || "user"
+        };
+      }
+
+      onLogin(accessToken, userData);
 
       toast({
         title: "Login Successful",
-        description: `Welcome back, ${data.user.name}!`,
+        description: `Welcome back, ${userData.name || email}!`,
       });
     } catch (error: any) {
+      console.error("Login error:", error);
       toast({
         title: "Login Failed",
         description: error.message || "An error occurred during login.",
@@ -138,6 +188,11 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                   "Sign In"
                 )}
               </Button>
+              
+              {/* Development hint */}
+              <div className="text-center text-xs text-gray-500 mt-4">
+                <p>For testing: use test@example.com / password</p>
+              </div>
             </form>
           </CardContent>
         </Card>
