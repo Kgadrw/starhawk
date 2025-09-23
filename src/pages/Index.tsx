@@ -68,7 +68,7 @@ const Index = () => {
     return <AdminDashboard />;
   }
 
-  // Default home page
+  // Default: Show homepage for root path "/" and any other paths
   return <HomePage />;
 };
 
