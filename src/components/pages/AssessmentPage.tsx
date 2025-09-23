@@ -32,7 +32,8 @@ import {
   Eye,
   Calendar,
   Activity,
-   ArrowDownCircle, ArrowUpCircle, Percent, Sigma
+   ArrowDownCircle, ArrowUpCircle, Percent, Sigma,
+   Camera
 } from "lucide-react";
 
 interface AnalysisResult {
@@ -581,7 +582,8 @@ export function AssessmentPage() {
                           onClick={() => fileInputRef.current?.click()}
                           className="mb-2 w-full sm:w-auto h-10 sm:h-11"
                         >
-                          📷 Select Images
+                          <Camera className="h-4 w-4 mr-2" />
+                          Select Images
                         </Button>
                         <p className="text-sm text-gray-500">
                           Drag & drop images here or click to browse

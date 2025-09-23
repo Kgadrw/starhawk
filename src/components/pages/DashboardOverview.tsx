@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { useToast } from "@/components/ui/use-toast";
 import { useState } from "react";
+import { User } from "lucide-react";
 
 const chartData = [
   { name: "Jan", value: 65 },
@@ -90,7 +91,7 @@ export function DashboardOverview() {
             <p className="text-muted-foreground">Insurer Dashboard</p>
           </div>
           <div className="w-12 h-12 md:w-16 md:h-16 bg-orange-200 rounded-full flex items-center justify-center">
-            <span className="text-xl md:text-2xl">👨‍💼</span>
+            <User className="h-6 w-6 md:h-8 md:w-8 text-orange-600" />
           </div>
         </div>
 

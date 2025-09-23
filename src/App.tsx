@@ -4,8 +4,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
+import Team from "./pages/Team";
+import Services from "./pages/Services";
+import Contact from "./pages/Contact";
+import Claim from "./pages/Claim";
 import NotFound from "./pages/NotFound";
-import { AuthProvider } from "./contexts/AuthContext";
 
 const queryClient = new QueryClient();
 
@@ -15,24 +18,21 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth/login" element={<Index />} />
-              <Route path="/auth/register" element={<Index />} />
-              <Route path="/onboarding/farmer" element={<Index />} />
-              <Route path="/onboarding/insurer" element={<Index />} />
-              <Route path="/farmer/*" element={<Index />} />
-              <Route path="/surveyor/*" element={<Index />} />
-              <Route path="/underwriter/*" element={<Index />} />
-              <Route path="/government/*" element={<Index />} />
-              <Route path="/admin/*" element={<Index />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AuthProvider>
-        </BrowserRouter>
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/team" element={<Team />} />
+                    <Route path="/services" element={<Services />} />
+                    <Route path="/contact" element={<Contact />} />
+                    <Route path="/claim" element={<Claim />} />
+                    <Route path="/insurer/*" element={<Index />} />
+                    <Route path="/assessor/*" element={<Index />} />
+                    <Route path="/government/*" element={<Index />} />
+                    <Route path="/admin/*" element={<Index />} />
+                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
   );

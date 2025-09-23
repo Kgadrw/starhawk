@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { User, Mail, Phone, MapPin, Calendar, Shield, Settings, Edit, Eye, Download, Share } from "lucide-react";
+import { User, Mail, Phone, MapPin, Calendar, Shield, Settings, Edit, Eye, Download, Share, Trophy, Zap, Star, Users } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useState } from "react";
 
@@ -35,10 +35,10 @@ const recentActivity = [
 ];
 
 const achievements = [
-  { title: "Top Performer", description: "Highest approval rate this quarter", icon: "🏆" },
-  { title: "Quick Responder", description: "Average response time under 2 hours", icon: "⚡" },
-  { title: "Quality Reviewer", description: "Zero disputed decisions this month", icon: "✨" },
-  { title: "Team Player", description: "Helped train 3 new team members", icon: "🤝" }
+  { title: "Top Performer", description: "Highest approval rate this quarter", icon: Trophy },
+  { title: "Quick Responder", description: "Average response time under 2 hours", icon: Zap },
+  { title: "Quality Reviewer", description: "Zero disputed decisions this month", icon: Star },
+  { title: "Team Player", description: "Helped train 3 new team members", icon: Users }
 ];
 
 export function ProfilePage() {
@@ -221,19 +221,22 @@ export function ProfilePage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {achievements.map((achievement, index) => (
-                <div 
-                  key={index} 
-                  className="flex items-start space-x-3 p-3 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted/70 transition-colors"
-                  onClick={() => handleViewAchievement(achievement)}
-                >
-                  <span className="text-2xl">{achievement.icon}</span>
-                  <div>
-                    <h4 className="text-sm font-medium text-foreground">{achievement.title}</h4>
-                    <p className="text-xs text-muted-foreground">{achievement.description}</p>
+              {achievements.map((achievement, index) => {
+                const Icon = achievement.icon;
+                return (
+                  <div 
+                    key={index} 
+                    className="flex items-start space-x-3 p-3 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted/70 transition-colors"
+                    onClick={() => handleViewAchievement(achievement)}
+                  >
+                    <Icon className="h-6 w-6 text-blue-600" />
+                    <div>
+                      <h4 className="text-sm font-medium text-foreground">{achievement.title}</h4>
+                      <p className="text-xs text-muted-foreground">{achievement.description}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>

@@ -1,4 +1,4 @@
-export type Role = "farmer" | "insurer" | "surveyor" | "underwriter" | "government" | "admin";
+export type Role = "insurer" | "government" | "assessor" | "admin";
 
 export interface PolicyRequest {
   id: string;

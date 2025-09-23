@@ -10,7 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Leaf, User, Building2 } from "lucide-react";
+import { Leaf, User, Building2, MapPin, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { User as UserType } from "@/contexts/AuthContext";
@@ -39,7 +39,7 @@ export function LoginForm() {
       id: "1",
       name: email.split("@")[0],
       email: email,
-      role: (role as any) || "farmer"
+      role: (role as any) || "admin"
     };
     
     console.log("Logging in user:", user);
@@ -89,28 +89,10 @@ export function LoginForm() {
                     <SelectValue placeholder="Select your role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="farmer">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        Farmer
-                      </div>
-                    </SelectItem>
                     <SelectItem value="insurer">
                       <div className="flex items-center gap-2">
                         <Building2 className="h-4 w-4" />
                         Insurer
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="surveyor">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        Surveyor
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="underwriter">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        Underwriter
                       </div>
                     </SelectItem>
                     <SelectItem value="government">
@@ -119,10 +101,16 @@ export function LoginForm() {
                         Government
                       </div>
                     </SelectItem>
+                    <SelectItem value="assessor">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        Assessor
+                      </div>
+                    </SelectItem>
                     <SelectItem value="admin">
                       <div className="flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        Admin
+                        <Settings className="h-4 w-4" />
+                        Admin (You)
                       </div>
                     </SelectItem>
                   </SelectContent>
@@ -138,7 +126,8 @@ export function LoginForm() {
               {/* Development hint */}
               <div className="text-center text-xs text-gray-500 mt-4">
                 <p><strong>Super Easy Login:</strong> Just enter any email and select a role!</p>
-                <p>Example: test@example.com</p>
+                <p>Example: admin@starhawk.com</p>
+                <p className="mt-1 text-green-600 font-medium">4 Users: Insurer, Government, Assessor, Admin</p>
               </div>
             </form>
           </CardContent>
