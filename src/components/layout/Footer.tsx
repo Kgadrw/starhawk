@@ -54,22 +54,22 @@ export function Footer() {
   ];
 
   return (
-    <footer className="bg-gray-900 text-white">
+    <footer className="bg-white border-t border-gray-100">
       {/* Main Footer Content */}
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
           {/* Company Info */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center">
                 <Shield className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h3 className="text-xl font-bold">STARHAWK</h3>
-                <p className="text-sm text-gray-400">AI Agricultural Insurance</p>
+                <h3 className="text-xl font-light text-gray-900 tracking-tight">STARHAWK</h3>
+                <p className="text-sm text-gray-500 font-light">AI Agricultural Insurance</p>
               </div>
             </div>
-            <p className="text-sm text-gray-300 leading-relaxed">
+            <p className="text-sm text-gray-500 leading-relaxed font-light">
               Revolutionizing agricultural insurance through cutting-edge AI technology, 
               real-time data analysis, and intelligent risk assessment for modern farming.
             </p>
@@ -81,7 +81,7 @@ export function Footer() {
                     key={social.name}
                     variant="ghost"
                     size="sm"
-                    className="text-gray-400 hover:text-white hover:bg-gray-800"
+                    className="text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full"
                     asChild
                   >
                     <a href={social.href} aria-label={social.name}>
@@ -94,14 +94,14 @@ export function Footer() {
           </div>
 
           {/* Quick Links */}
-          <div className="space-y-4">
-            <h4 className="text-lg font-semibold">Quick Links</h4>
-            <ul className="space-y-2">
+          <div className="space-y-6">
+            <h4 className="text-lg font-medium text-gray-900">Quick Links</h4>
+            <ul className="space-y-3">
               {quickLinks.map((link) => (
                 <li key={link.name}>
                   <Link
                     to={link.href}
-                    className="text-sm text-gray-300 hover:text-white transition-colors"
+                    className="text-sm text-gray-500 hover:text-gray-900 transition-colors font-light"
                   >
                     {link.name}
                   </Link>
@@ -111,14 +111,14 @@ export function Footer() {
           </div>
 
           {/* Services */}
-          <div className="space-y-4">
-            <h4 className="text-lg font-semibold">Our Services</h4>
-            <ul className="space-y-2">
+          <div className="space-y-6">
+            <h4 className="text-lg font-medium text-gray-900">Our Services</h4>
+            <ul className="space-y-3">
               {services.map((service) => (
                 <li key={service.name}>
                   <Link
                     to={service.href}
-                    className="text-sm text-gray-300 hover:text-white transition-colors"
+                    className="text-sm text-gray-500 hover:text-gray-900 transition-colors font-light"
                   >
                     {service.name}
                   </Link>
@@ -128,16 +128,16 @@ export function Footer() {
           </div>
 
           {/* Platform Access & Newsletter */}
-          <div className="space-y-4">
-            <h4 className="text-lg font-semibold">Platform Access</h4>
-            <div className="space-y-2">
+          <div className="space-y-6">
+            <h4 className="text-lg font-medium text-gray-900">Platform Access</h4>
+            <div className="space-y-3">
               {platforms.map((platform) => {
                 const Icon = platform.icon;
                 return (
                   <Link
                     key={platform.name}
                     to={platform.href}
-                    className="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors"
+                    className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors font-light"
                   >
                     <Icon className="h-4 w-4" />
                     {platform.name}
@@ -147,17 +147,17 @@ export function Footer() {
             </div>
 
             <div className="pt-4">
-              <h4 className="text-lg font-semibold mb-3">Newsletter</h4>
-              <p className="text-sm text-gray-300 mb-3">
+              <h4 className="text-lg font-medium mb-3 text-gray-900">Newsletter</h4>
+              <p className="text-sm text-gray-500 mb-4 font-light">
                 Stay updated with the latest in agricultural insurance technology.
               </p>
               <div className="flex gap-2">
                 <Input
                   type="email"
                   placeholder="Enter your email"
-                  className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-400"
+                  className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 rounded-full"
                 />
-                <Button className="bg-blue-600 hover:bg-blue-700">
+                <Button className="bg-gray-900 hover:bg-gray-800 rounded-full">
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -167,40 +167,40 @@ export function Footer() {
       </div>
 
       {/* Contact Info Bar */}
-      <div className="border-t border-gray-800">
-        <div className="container mx-auto px-4 py-6">
-          <div className="grid gap-4 md:grid-cols-3 text-center md:text-left">
-            <div className="flex items-center justify-center md:justify-start gap-2">
-              <Phone className="h-4 w-4 text-green-400" />
-              <span className="text-sm text-gray-300">+250 123 456 789</span>
+      <div className="border-t border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid gap-6 md:grid-cols-3 text-center md:text-left">
+            <div className="flex items-center justify-center md:justify-start gap-3">
+              <Phone className="h-4 w-4 text-gray-500" />
+              <span className="text-sm text-gray-500 font-light">+250 123 456 789</span>
             </div>
-            <div className="flex items-center justify-center md:justify-start gap-2">
-              <Mail className="h-4 w-4 text-green-400" />
-              <span className="text-sm text-gray-300">info@starhawk.com</span>
+            <div className="flex items-center justify-center md:justify-start gap-3">
+              <Mail className="h-4 w-4 text-gray-500" />
+              <span className="text-sm text-gray-500 font-light">info@starhawk.com</span>
             </div>
-            <div className="flex items-center justify-center md:justify-start gap-2">
-              <MapPin className="h-4 w-4 text-green-400" />
-              <span className="text-sm text-gray-300">Kigali, Rwanda</span>
+            <div className="flex items-center justify-center md:justify-start gap-3">
+              <MapPin className="h-4 w-4 text-gray-500" />
+              <span className="text-sm text-gray-500 font-light">Kigali, Rwanda</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Bottom Bar */}
-      <div className="border-t border-gray-800">
-        <div className="container mx-auto px-4 py-4">
+      <div className="border-t border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="text-sm text-gray-400">
+            <div className="text-sm text-gray-500 font-light">
               © {currentYear} STARHAWK. All rights reserved. | AI Agricultural Insurance Platform
             </div>
-            <div className="flex items-center gap-6 text-sm text-gray-400">
-              <Link to="/privacy" className="hover:text-white transition-colors">
+            <div className="flex items-center gap-6 text-sm text-gray-500">
+              <Link to="/privacy" className="hover:text-gray-900 transition-colors font-light">
                 Privacy Policy
               </Link>
-              <Link to="/terms" className="hover:text-white transition-colors">
+              <Link to="/terms" className="hover:text-gray-900 transition-colors font-light">
                 Terms of Service
               </Link>
-              <Link to="/cookies" className="hover:text-white transition-colors">
+              <Link to="/cookies" className="hover:text-gray-900 transition-colors font-light">
                 Cookie Policy
               </Link>
             </div>

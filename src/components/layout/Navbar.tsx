@@ -64,65 +64,32 @@ export function Navbar() {
 
   const teamMembers = [
     {
-      name: "Dr. Sarah Johnson",
-      role: "Chief Technology Officer",
-      expertise: "AI & Machine Learning"
+      name: "Victor Muragwa",
+      role: "Chief Executive Officer",
+      expertise: "Strategic Leadership & Vision"
     },
     {
-      name: "Michael Chen",
-      role: "Head of Agriculture",
-      expertise: "Crop Science & Risk Assessment"
-    },
-    {
-      name: "Dr. Aisha Patel",
-      role: "Data Science Director",
-      expertise: "Satellite Imagery Analysis"
-    },
-    {
-      name: "James Wilson",
-      role: "Product Manager",
-      expertise: "Insurance Technology"
+      name: "Gad Kalisa",
+      role: "Software Engineer & Product Designer",
+      expertise: "Full-Stack Development & UX Design"
     }
   ];
 
   return (
-    <nav className="bg-white/95 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
-      {/* Top Bar */}
-      <div className="bg-primary text-primary-foreground py-2">
-        <div className="container mx-auto px-4 flex justify-between items-center text-sm">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4" />
-              <span>+250 123 456 789</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4" />
-              <span>info@starhawk.com</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              <span>Kigali, Rwanda</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-primary-foreground/80">Welcome to STARHAWK</span>
-          </div>
-        </div>
-      </div>
-
+    <nav className="bg-white border-b border-gray-100 sticky top-0 z-50">
       {/* Main Navigation */}
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center">
               <Shield className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-light text-gray-900 tracking-tight">
                 STARHAWK
               </h1>
-              <p className="text-xs text-muted-foreground">AI Agricultural Insurance</p>
+              <p className="text-xs text-gray-500 font-light">AI Agricultural Insurance</p>
             </div>
           </Link>
 
@@ -131,30 +98,30 @@ export function Navbar() {
             <NavigationMenu>
               <NavigationMenuList>
                 <NavigationMenuItem>
-                  <Link to="/" className="px-3 py-2 text-sm font-medium hover:text-primary transition-colors">
+                  <Link to="/" className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
                     Home
                   </Link>
                 </NavigationMenuItem>
                 
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger className="text-sm font-medium">
+                  <NavigationMenuTrigger className="text-sm font-medium text-gray-600 hover:text-gray-900">
                     Services
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <div className="grid gap-3 p-6 w-[500px]">
+                    <div className="grid gap-3 p-6 w-[500px] bg-white border border-gray-100 rounded-xl shadow-lg">
                       {services.map((service) => {
                         const Icon = service.icon;
                         return (
                           <NavigationMenuLink key={service.title} asChild>
                             <Link
                               to={service.href}
-                              className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                              className="block select-none space-y-1 rounded-lg p-3 leading-none no-underline outline-none transition-colors hover:bg-gray-50"
                             >
                               <div className="flex items-center gap-3">
-                                <Icon className="h-5 w-5 text-primary" />
+                                <Icon className="h-5 w-5 text-gray-600" />
                                 <div>
-                                  <div className="text-sm font-medium leading-none">{service.title}</div>
-                                  <p className="line-clamp-2 text-sm leading-snug text-muted-foreground mt-1">
+                                  <div className="text-sm font-medium leading-none text-gray-900">{service.title}</div>
+                                  <p className="line-clamp-2 text-sm leading-snug text-gray-500 mt-1">
                                     {service.description}
                                   </p>
                                 </div>
@@ -168,18 +135,18 @@ export function Navbar() {
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger className="text-sm font-medium">
+                  <NavigationMenuTrigger className="text-sm font-medium text-gray-600 hover:text-gray-900">
                     Team
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <div className="grid gap-3 p-6 w-[400px]">
-                      <div className="text-sm font-medium mb-2">Our Expert Team</div>
+                    <div className="grid gap-3 p-6 w-[400px] bg-white border border-gray-100 rounded-xl shadow-lg">
+                      <div className="text-sm font-medium mb-2 text-gray-900">Our Expert Team</div>
                       {teamMembers.map((member, index) => (
                         <NavigationMenuLink key={index} asChild>
-                          <div className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground">
-                            <div className="text-sm font-medium leading-none">{member.name}</div>
-                            <p className="text-sm text-muted-foreground">{member.role}</p>
-                            <p className="text-xs text-primary">{member.expertise}</p>
+                          <div className="block select-none space-y-1 rounded-lg p-3 leading-none no-underline outline-none transition-colors hover:bg-gray-50">
+                            <div className="text-sm font-medium leading-none text-gray-900">{member.name}</div>
+                            <p className="text-sm text-gray-500">{member.role}</p>
+                            <p className="text-xs text-gray-600">{member.expertise}</p>
                           </div>
                         </NavigationMenuLink>
                       ))}
@@ -188,13 +155,13 @@ export function Navbar() {
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <Link to="/contact" className="px-3 py-2 text-sm font-medium hover:text-primary transition-colors">
+                  <Link to="/contact" className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
                     Contact
                   </Link>
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <Link to="/claim" className="px-3 py-2 text-sm font-medium hover:text-primary transition-colors">
+                  <Link to="/claim" className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
                     File a Claim
                   </Link>
                 </NavigationMenuItem>
@@ -206,32 +173,32 @@ export function Navbar() {
           <div className="hidden lg:flex items-center gap-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
+                <Button variant="outline" className="flex items-center gap-2 border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900">
                   <Users className="h-4 w-4" />
                   Login
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => navigate("/insurer")}>
+              <DropdownMenuContent align="end" className="w-56 bg-white border border-gray-100 rounded-xl shadow-lg">
+                <DropdownMenuItem onClick={() => navigate("/insurer")} className="text-gray-700 hover:bg-gray-50">
                   <Shield className="h-4 w-4 mr-2" />
                   Insurer Login
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/government")}>
+                <DropdownMenuItem onClick={() => navigate("/government")} className="text-gray-700 hover:bg-gray-50">
                   <Users className="h-4 w-4 mr-2" />
                   Government Login
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/assessor")}>
+                <DropdownMenuItem onClick={() => navigate("/assessor")} className="text-gray-700 hover:bg-gray-50">
                   <FileText className="h-4 w-4 mr-2" />
                   Assessor Login
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/admin")}>
+                <DropdownMenuItem onClick={() => navigate("/admin")} className="text-gray-700 hover:bg-gray-50">
                   <Briefcase className="h-4 w-4 mr-2" />
                   Admin Login
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button className="bg-blue-600 hover:bg-blue-700">
+            <Button className="bg-gray-900 hover:bg-gray-800 text-white rounded-full px-6">
               Get Started
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
@@ -241,7 +208,7 @@ export function Navbar() {
           <Button
             variant="ghost"
             size="sm"
-            className="lg:hidden"
+            className="lg:hidden text-gray-600 hover:text-gray-900 hover:bg-gray-50"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -250,23 +217,23 @@ export function Navbar() {
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="lg:hidden border-t border-gray-200 py-4">
-            <div className="space-y-4">
+          <div className="lg:hidden border-t border-gray-100 py-6">
+            <div className="space-y-6">
               <Link
                 to="/"
-                className="block px-3 py-2 text-sm font-medium hover:text-primary transition-colors"
+                className="block px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Home
               </Link>
               <div className="px-3 py-2">
-                <div className="text-sm font-medium mb-2">Services</div>
-                <div className="space-y-2 ml-4">
+                <div className="text-sm font-medium mb-3 text-gray-900">Services</div>
+                <div className="space-y-3 ml-4">
                   {services.map((service) => (
                     <Link
                       key={service.title}
                       to={service.href}
-                      className="block text-sm text-muted-foreground hover:text-primary transition-colors"
+                      className="block text-sm text-gray-500 hover:text-gray-900 transition-colors"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       {service.title}
@@ -276,31 +243,31 @@ export function Navbar() {
               </div>
               <Link
                 to="/team"
-                className="block px-3 py-2 text-sm font-medium hover:text-primary transition-colors"
+                className="block px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Team
               </Link>
               <Link
                 to="/contact"
-                className="block px-3 py-2 text-sm font-medium hover:text-primary transition-colors"
+                className="block px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Contact
               </Link>
               <Link
                 to="/claim"
-                className="block px-3 py-2 text-sm font-medium hover:text-primary transition-colors"
+                className="block px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
                 File a Claim
               </Link>
-              <div className="px-3 py-2 space-y-2">
-                <Button variant="outline" className="w-full justify-start">
+              <div className="px-3 py-2 space-y-3">
+                <Button variant="outline" className="w-full justify-start border-gray-200 text-gray-600 hover:bg-gray-50">
                   <Users className="h-4 w-4 mr-2" />
                   Login
                 </Button>
-                <Button className="w-full bg-gradient-to-r from-blue-600 to-green-600">
+                <Button className="w-full bg-gray-900 hover:bg-gray-800 text-white rounded-full">
                   Get Started
                 </Button>
               </div>

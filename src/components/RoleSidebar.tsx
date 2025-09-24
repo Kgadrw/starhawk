@@ -24,11 +24,12 @@ import {
   TrendingUp,
   AlertTriangle,
   CheckCircle,
-  Clock
+  Clock,
+  Wheat
 } from "lucide-react";
 
 interface RoleSidebarProps {
-  role: "insurer" | "government" | "assessor" | "admin";
+  role: "insurer" | "government" | "assessor" | "admin" | "farmer";
   onPageChange: (page: string) => void;
   activePage?: string;
   isOpen?: boolean;
@@ -112,6 +113,25 @@ export function RoleSidebar({ role, onPageChange, activePage = "dashboard", isOp
         { label: "Total Users", value: "1,247", icon: Users, color: "text-blue-600" },
         { label: "System Health", value: "99.9%", icon: CheckCircle, color: "text-green-600" },
         { label: "Active Sessions", value: "156", icon: Activity, color: "text-orange-600" }
+      ]
+    },
+    farmer: {
+      title: "Farmer Portal",
+      icon: Wheat,
+      color: "bg-green-500",
+      menuItems: [
+        { id: "dashboard", label: "Dashboard", icon: Home, description: "Farm Overview" },
+        { id: "policies", label: "My Policies", icon: FileText, description: "Insurance Policies" },
+        { id: "claims", label: "Claims", icon: AlertTriangle, description: "File & Track Claims" },
+        { id: "monitoring", label: "Field Monitoring", icon: MapPin, description: "Crop Surveillance" },
+        { id: "reports", label: "Reports", icon: BarChart3, description: "Farm Reports" },
+        { id: "notifications", label: "Notifications", icon: Bell, description: "Alerts & Updates" },
+        { id: "profile", label: "Profile", icon: Users, description: "Account Settings" }
+      ],
+      stats: [
+        { label: "Active Policies", value: "3", icon: CheckCircle, color: "text-green-600" },
+        { label: "Pending Claims", value: "1", icon: Clock, color: "text-yellow-600" },
+        { label: "Total Coverage", value: "$45K", icon: TrendingUp, color: "text-blue-600" }
       ]
     }
   };
