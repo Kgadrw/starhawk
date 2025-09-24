@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Card, CardContent } from "@/components/ui/card";
@@ -69,35 +69,35 @@ function HomePage() {
       description: "Manage your farm, monitor crops, and access insurance services",
       icon: Wheat,
       color: "bg-green-500",
-      href: "/farmer"
+      href: "/farmer-dashboard"
     },
     {
       title: "Insurer Dashboard",
       description: "Manage policies, process claims, and analyze risk data",
       icon: Building2,
       color: "bg-blue-500",
-      href: "/insurer"
+      href: "/insurer-dashboard"
     },
     {
       title: "Government Analytics",
       description: "National agricultural insights and policy monitoring",
       icon: BarChart3,
       color: "bg-red-500",
-      href: "/government"
+      href: "/government-dashboard"
     },
     {
       title: "Assessor Portal",
       description: "Conduct field assessments and risk evaluations",
       icon: MapPin,
       color: "bg-orange-500",
-      href: "/assessor"
+      href: "/assessor-dashboard"
     },
     {
       title: "Admin Panel",
       description: "System administration and user management",
       icon: Settings,
       color: "bg-gray-500",
-      href: "/admin"
+      href: "/admin-dashboard"
     }
   ];
 
@@ -128,7 +128,7 @@ function HomePage() {
     }
   ];
 
-  return (
+    return (
     <div className="min-h-screen bg-white">
       <Navbar />
       
@@ -139,28 +139,29 @@ function HomePage() {
           <h1 className="text-5xl md:text-6xl font-light text-gray-900 mb-6 tracking-tight">
             Revolutionizing Agricultural
             <span className="block text-gray-600">Insurance with Technology</span>
-          </h1>
+            </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto font-light leading-relaxed">
             STARHAWK combines drone surveillance, satellite analytics, and AI to provide 
             comprehensive agricultural insurance solutions for farmers, insurers, and governments.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              size="lg" 
-              className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-3 rounded-full font-medium"
-              onClick={() => navigate("/farmer")}
-            >
-              Get Started
-            </Button>
-            <Button 
-              size="lg" 
-              variant="outline" 
+            <Link to="/farmer-dashboard">
+              <Button 
+                size="lg" 
+                className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-3 rounded-full font-medium"
+              >
+                Get Started
+              </Button>
+            </Link>
+              <Button 
+                size="lg" 
+                variant="outline" 
               className="border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-3 rounded-full font-medium"
-            >
-              Learn More
-            </Button>
-          </div>
-        </div>
+              >
+                Learn More
+              </Button>
+            </div>
+              </div>
       </section>
 
       {/* Features Section */}
@@ -182,14 +183,14 @@ function HomePage() {
                 <CardContent className="p-8 text-center">
                   <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
                     <feature.icon className="h-8 w-8 text-gray-700" />
-                  </div>
+      </div>
                   <h3 className="text-xl font-medium text-gray-900 mb-3">{feature.title}</h3>
                   <p className="text-gray-600 font-light leading-relaxed">{feature.description}</p>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+                      ))}
+                    </div>
           </div>
-        </div>
       </section>
 
       {/* Platform Showcase Section */}
@@ -203,8 +204,8 @@ function HomePage() {
               See how our drone technology and AI systems work together to provide 
               comprehensive agricultural monitoring and insurance solutions.
             </p>
-          </div>
-          
+        </div>
+
           {/* Drone Images */}
           <div className="grid gap-8 md:grid-cols-3 mb-16">
             <div className="group">
@@ -214,10 +215,10 @@ function HomePage() {
                   alt="Drone surveillance system" 
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
-              </div>
+        </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">Drone Surveillance</h3>
               <p className="text-gray-600 font-light">High-resolution aerial imaging for comprehensive field monitoring</p>
-            </div>
+        </div>
             
             <div className="group">
               <div className="aspect-video bg-gray-100 rounded-2xl overflow-hidden mb-4">
@@ -226,10 +227,10 @@ function HomePage() {
                   alt="Land surveying with drones" 
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
-              </div>
+            </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">Land Surveying</h3>
               <p className="text-gray-600 font-light">Precise field mapping and boundary detection for accurate assessments</p>
-            </div>
+          </div>
             
             <div className="group">
               <div className="aspect-video bg-gray-100 rounded-2xl overflow-hidden mb-4">
@@ -237,12 +238,12 @@ function HomePage() {
                   src="/drone2.jpeg" 
                   alt="Crop monitoring and analysis" 
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              </div>
+        />
+      </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">Crop Analysis</h3>
               <p className="text-gray-600 font-light">AI-powered crop health monitoring and yield prediction</p>
-            </div>
-          </div>
+        </div>
+      </div>
 
           {/* Platform Capabilities */}
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -251,11 +252,11 @@ function HomePage() {
                 <CardContent className="p-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-2">{capability.title}</h3>
                   <p className="text-gray-600 font-light">{capability.description}</p>
-                </CardContent>
-              </Card>
+          </CardContent>
+        </Card>
             ))}
-          </div>
-        </div>
+              </div>
+            </div>
       </section>
 
       {/* Role Selection Section */}
@@ -268,38 +269,36 @@ function HomePage() {
             <p className="text-xl text-gray-600 max-w-3xl mx-auto font-light">
               Access specialized dashboards designed for your specific needs and responsibilities.
             </p>
-          </div>
-          
+      </div>
+
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2">
             {roleCards.map((role, index) => (
-              <Card 
-                key={index} 
-                className="bg-white border-0 shadow-sm hover:shadow-md transition-all duration-300 rounded-2xl cursor-pointer group"
-                onClick={() => navigate(role.href)}
-              >
-                <CardContent className="p-8">
-                  <div className="flex items-start gap-6">
-                    <div className={`w-16 h-16 ${role.color} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                      <role.icon className="h-8 w-8 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-medium text-gray-900 mb-3 group-hover:text-gray-700 transition-colors">
-                        {role.title}
-                      </h3>
-                      <p className="text-gray-600 font-light leading-relaxed mb-4">
-                        {role.description}
-                      </p>
-                      <div className="flex items-center text-gray-500 group-hover:text-gray-700 transition-colors">
-                        <span className="text-sm font-medium">Access Dashboard</span>
-                        <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    </div>
+              <Link key={index} to={role.href} className="block">
+                <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all duration-300 rounded-2xl cursor-pointer group">
+                  <CardContent className="p-8">
+                    <div className="flex items-start gap-6">
+                      <div className={`w-16 h-16 ${role.color} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                        <role.icon className="h-8 w-8 text-white" />
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
+                      <div className="flex-1">
+                        <h3 className="text-xl font-medium text-gray-900 mb-3 group-hover:text-gray-700 transition-colors">
+                          {role.title}
+                        </h3>
+                        <p className="text-gray-600 font-light leading-relaxed mb-4">
+                          {role.description}
+                        </p>
+                        <div className="flex items-center text-gray-500 group-hover:text-gray-700 transition-colors">
+                          <span className="text-sm font-medium">Access Dashboard</span>
+                          <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </div>
+            </div>
+          </CardContent>
+        </Card>
+              </Link>
+                    ))}
+                  </div>
+                  </div>
       </section>
 
       {/* Technology Showcase */}
@@ -313,49 +312,49 @@ function HomePage() {
               Our technology stack combines the latest in AI, satellite imagery, 
               and drone technology to deliver unmatched agricultural insights.
             </p>
-          </div>
+        </div>
           
           <div className="grid gap-8 md:grid-cols-3">
             <Card className="bg-gray-50 border-0 hover:bg-gray-100 transition-colors duration-300 rounded-2xl">
               <CardContent className="p-8 text-center">
                 <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
                   <Database className="h-8 w-8 text-blue-600" />
-                </div>
+              </div>
                 <h3 className="text-xl font-medium text-gray-900 mb-3">Big Data Analytics</h3>
                 <p className="text-gray-600 font-light">
                   Process massive datasets from satellites, drones, and IoT sensors 
                   to generate actionable insights for agricultural decision-making.
                 </p>
-              </CardContent>
-            </Card>
-            
+                </CardContent>
+              </Card>
+
             <Card className="bg-gray-50 border-0 hover:bg-gray-100 transition-colors duration-300 rounded-2xl">
               <CardContent className="p-8 text-center">
                 <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
                   <Globe className="h-8 w-8 text-green-600" />
-                </div>
+                    </div>
                 <h3 className="text-xl font-medium text-gray-900 mb-3">Global Coverage</h3>
                 <p className="text-gray-600 font-light">
                   Monitor agricultural activities across vast regions with 
                   satellite coverage and local drone networks for comprehensive insights.
                 </p>
-              </CardContent>
-            </Card>
-            
+                </CardContent>
+              </Card>
+
             <Card className="bg-gray-50 border-0 hover:bg-gray-100 transition-colors duration-300 rounded-2xl">
               <CardContent className="p-8 text-center">
                 <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
                   <TrendingUp className="h-8 w-8 text-purple-600" />
-                </div>
+                    </div>
                 <h3 className="text-xl font-medium text-gray-900 mb-3">Predictive Analytics</h3>
                 <p className="text-gray-600 font-light">
                   Advanced machine learning models predict weather patterns, 
                   crop yields, and potential risks to optimize insurance coverage.
                 </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+                </CardContent>
+              </Card>
+                    </div>
+                  </div>
       </section>
 
       {/* CTA Section */}
@@ -369,27 +368,28 @@ function HomePage() {
             who trust STARHAWK for their agricultural monitoring and insurance needs.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              size="lg" 
-              className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-3 rounded-full font-medium"
-              onClick={() => navigate("/farmer")}
-            >
-              Start Your Journey
-            </Button>
+            <Link to="/farmer-dashboard">
+              <Button 
+                size="lg" 
+                className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-3 rounded-full font-medium"
+              >
+                Start Your Journey
+                    </Button>
+            </Link>
             <Button 
               size="lg" 
               variant="outline" 
               className="border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-3 rounded-full font-medium"
             >
               Contact Sales
-            </Button>
-          </div>
-        </div>
+                    </Button>
+                      </div>
+                  </div>
       </section>
 
       <Footer />
-    </div>
-  );
+          </div>
+        );
 }
 
 export default Index;
