@@ -1,44 +1,30 @@
-import { useState } from "react";
-import { useLocation, useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
-  Users, 
-  FileText, 
-  BarChart3, 
-  MapPin, 
-  Settings,
   ArrowRight,
   Camera,
   Satellite,
   Brain,
   Wheat,
   Building2,
+  BarChart3,
+  MapPin,
+  Settings,
+  Shield,
   Database,
   Globe,
-  TrendingUp,
-  Shield
+  TrendingUp
 } from "lucide-react";
 
 const Index = () => {
-  const location = useLocation();
-  
-  console.log('Index - current pathname:', location.pathname);
-
-  const handleAssessmentSubmit = (data: any) => {
-    console.log("Assessment submitted:", data);
-    // In real app, submit to API
-  };
-
-  // Default: Show homepage for root path "/" and any other paths
   return <HomePage />;
 };
 
 // Home Page Component
 function HomePage() {
-  const navigate = useNavigate();
 
   const features = [
     {
