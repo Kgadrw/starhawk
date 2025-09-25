@@ -25,7 +25,9 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  Wheat
+  Wheat,
+  DollarSign,
+  Percent
 } from "lucide-react";
 
 interface RoleSidebarProps {
@@ -56,7 +58,7 @@ export function RoleSidebar({ role, onPageChange, activePage = "dashboard", isOp
       stats: [
         { label: "Active Policies", value: "1,247", icon: CheckCircle, color: "text-green-600" },
         { label: "Pending Claims", value: "23", icon: Clock, color: "text-yellow-600" },
-        { label: "Total Premium", value: "$2.4M", icon: TrendingUp, color: "text-blue-600" }
+        { label: "Total Premium", value: "RWF 2.4B", icon: TrendingUp, color: "text-blue-600" }
       ]
     },
     government: {
@@ -72,9 +74,9 @@ export function RoleSidebar({ role, onPageChange, activePage = "dashboard", isOp
         { id: "settings", label: "Settings", icon: Settings, description: "System Settings" }
       ],
       stats: [
-        { label: "Total Farmers", value: "15,247", icon: Users, color: "text-blue-600" },
-        { label: "Active Policies", value: "8,923", icon: CheckCircle, color: "text-green-600" },
-        { label: "Claims Processed", value: "1,456", icon: FileText, color: "text-orange-600" }
+        { label: "Total Farmers", value: "7,950", icon: Users, color: "text-blue-600" },
+        { label: "Active Policies", value: "5,900", icon: CheckCircle, color: "text-green-600" },
+        { label: "Total Premiums", value: "RWF 5.94B", icon: DollarSign, color: "text-green-600" }
       ]
     },
     assessor: {
@@ -101,6 +103,8 @@ export function RoleSidebar({ role, onPageChange, activePage = "dashboard", isOp
       color: "bg-gray-500",
       menuItems: [
         { id: "dashboard", label: "Dashboard", icon: Home, description: "System Overview" },
+        { id: "monetization", label: "Monetization", icon: DollarSign, description: "Revenue & Transactions" },
+        { id: "commission", label: "Commission", icon: Percent, description: "Commission Settings" },
         { id: "users", label: "Users", icon: Users, description: "User Management" },
         { id: "system", label: "System", icon: Database, description: "System Settings" },
         { id: "analytics", label: "Analytics", icon: BarChart3, description: "Platform Analytics" },
@@ -110,7 +114,7 @@ export function RoleSidebar({ role, onPageChange, activePage = "dashboard", isOp
         { id: "settings", label: "Settings", icon: Settings, description: "Platform Settings" }
       ],
       stats: [
-        { label: "Total Users", value: "1,247", icon: Users, color: "text-blue-600" },
+        { label: "Monthly Revenue", value: "RWF 15.65M", icon: DollarSign, color: "text-green-600" },
         { label: "System Health", value: "99.9%", icon: CheckCircle, color: "text-green-600" },
         { label: "Active Sessions", value: "156", icon: Activity, color: "text-orange-600" }
       ]
@@ -131,7 +135,7 @@ export function RoleSidebar({ role, onPageChange, activePage = "dashboard", isOp
       stats: [
         { label: "Active Policies", value: "3", icon: CheckCircle, color: "text-green-600" },
         { label: "Pending Claims", value: "1", icon: Clock, color: "text-yellow-600" },
-        { label: "Total Coverage", value: "$45K", icon: TrendingUp, color: "text-blue-600" }
+        { label: "Total Coverage", value: "RWF 9M", icon: TrendingUp, color: "text-blue-600" }
       ]
     }
   };
