@@ -15,7 +15,9 @@ import {
   Lock,
   Eye,
   EyeOff,
-  ArrowRight
+  ArrowRight,
+  Eye as PreviewIcon,
+  Play
 } from "lucide-react";
 
 interface LoginPageProps {
@@ -46,7 +48,9 @@ export const LoginPage = ({ role }: LoginPageProps) => {
       title: "Farmer Portal",
       icon: Wheat,
       color: "bg-green-500",
+      gradient: "from-green-400 to-green-600",
       description: "Access your farm management dashboard",
+      features: ["Crop Monitoring", "Weather Alerts", "Insurance Claims", "Market Prices"],
       canRegister: true,
       registerFields: ["name", "phone", "farmName", "location", "farmSize"]
     },
@@ -54,7 +58,9 @@ export const LoginPage = ({ role }: LoginPageProps) => {
       title: "Insurer Dashboard",
       icon: Building2,
       color: "bg-blue-500",
+      gradient: "from-blue-400 to-blue-600",
       description: "Manage insurance policies and claims",
+      features: ["Policy Management", "Risk Assessment", "Claims Processing", "Analytics"],
       canRegister: true,
       registerFields: ["name", "phone", "company", "position"]
     },
@@ -62,7 +68,9 @@ export const LoginPage = ({ role }: LoginPageProps) => {
       title: "Government Analytics",
       icon: BarChart3,
       color: "bg-red-500",
+      gradient: "from-red-400 to-red-600",
       description: "National agricultural insights and monitoring",
+      features: ["National Statistics", "Policy Monitoring", "Disaster Management", "Reports"],
       canRegister: false,
       registerFields: []
     },
@@ -70,7 +78,9 @@ export const LoginPage = ({ role }: LoginPageProps) => {
       title: "Assessor Portal",
       icon: MapPin,
       color: "bg-orange-500",
+      gradient: "from-orange-400 to-orange-600",
       description: "Conduct farm assessments and evaluations",
+      features: ["Field Assessments", "Risk Evaluation", "Documentation", "Reports"],
       canRegister: true,
       registerFields: ["name", "phone", "company", "position"]
     },
@@ -78,7 +88,9 @@ export const LoginPage = ({ role }: LoginPageProps) => {
       title: "Admin Panel",
       icon: Settings,
       color: "bg-gray-500",
+      gradient: "from-gray-400 to-gray-600",
       description: "System administration and management",
+      features: ["User Management", "System Settings", "Analytics", "Monitoring"],
       canRegister: false,
       registerFields: []
     }
@@ -87,35 +99,42 @@ export const LoginPage = ({ role }: LoginPageProps) => {
   const config = roleConfig[role as keyof typeof roleConfig];
   const Icon = config.icon;
 
+  const handlePreview = () => {
+    // Navigate to dashboard for preview
+    if (role === "farmer") {
+      navigate("/farmer-dashboard");
+    } else if (role === "insurer") {
+      navigate("/insurer-dashboard");
+    } else if (role === "government") {
+      navigate("/government-dashboard");
+    } else if (role === "assessor") {
+      navigate("/assessor-dashboard");
+    } else if (role === "admin") {
+      navigate("/admin-dashboard");
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
     
-    try {
-      const success = await login(email, password, role);
-      
-      if (success) {
-        // Navigate to dashboard
-        if (role === "farmer") {
-          navigate("/farmer-dashboard");
-        } else if (role === "insurer") {
-          navigate("/insurer-dashboard");
-        } else if (role === "government") {
-          navigate("/government-dashboard");
-        } else if (role === "assessor") {
-          navigate("/assessor-dashboard");
-        } else if (role === "admin") {
-          navigate("/admin-dashboard");
-        }
-      } else {
-        setError('Login failed. Please check your credentials.');
+    // Simulate loading for demo purposes
+    setTimeout(() => {
+      // Navigate directly to dashboard (no authentication required)
+      if (role === "farmer") {
+        navigate("/farmer-dashboard");
+      } else if (role === "insurer") {
+        navigate("/insurer-dashboard");
+      } else if (role === "government") {
+        navigate("/government-dashboard");
+      } else if (role === "assessor") {
+        navigate("/assessor-dashboard");
+      } else if (role === "admin") {
+        navigate("/admin-dashboard");
       }
-    } catch (error) {
-      setError('Network error. Please check if the server is running.');
-    } finally {
       setIsLoading(false);
-    }
+    }, 1000);
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -123,57 +142,57 @@ export const LoginPage = ({ role }: LoginPageProps) => {
     setIsLoading(true);
     setError("");
     
-    try {
-      const userData = {
-        email,
-        password,
-        role,
-        name: registerData.name,
-        profile: {
-          phone: registerData.phone,
-          company: registerData.company,
-          position: registerData.position,
-          farmName: registerData.farmName,
-          location: registerData.location,
-          farmSize: registerData.farmSize ? parseFloat(registerData.farmSize) : undefined
-        }
-      };
-
-      const success = await register(userData);
-      
-      if (success) {
-        // Navigate to dashboard
-        if (role === "farmer") {
-          navigate("/farmer-dashboard");
-        } else if (role === "insurer") {
-          navigate("/insurer-dashboard");
-        } else if (role === "assessor") {
-          navigate("/assessor-dashboard");
-        }
-      } else {
-        setError('Registration failed. Please try again.');
+    // Simulate loading for demo purposes
+    setTimeout(() => {
+      // Navigate directly to dashboard (no authentication required)
+      if (role === "farmer") {
+        navigate("/farmer-dashboard");
+      } else if (role === "insurer") {
+        navigate("/insurer-dashboard");
+      } else if (role === "assessor") {
+        navigate("/assessor-dashboard");
       }
-    } catch (error) {
-      setError('Network error. Please check if the server is running.');
-    } finally {
       setIsLoading(false);
-    }
+    }, 1000);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+    <div className={`min-h-screen bg-gradient-to-br ${config.gradient} to-gray-100 flex items-center justify-center p-4`}>
       <div className="max-w-md w-full">
         {/* Role-specific header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${config.color} text-white`}>
-              <Icon className="h-6 w-6" />
+            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${config.color} text-white shadow-lg`}>
+              <Icon className="h-8 w-8" />
             </div>
             <div>
-              <h1 className="text-2xl font-medium text-gray-900">{config.title}</h1>
-              <p className="text-sm text-gray-500 font-light">{config.description}</p>
+              <h1 className="text-3xl font-bold text-white drop-shadow-lg">{config.title}</h1>
+              <p className="text-sm text-white/90 font-light">{config.description}</p>
             </div>
           </div>
+          
+          {/* Features preview */}
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-6">
+            <h3 className="text-white font-medium mb-3">Dashboard Features:</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {config.features.map((feature, index) => (
+                <div key={index} className="flex items-center gap-2 text-white/90 text-sm">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                  <span>{feature}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Preview Button */}
+          <Button
+            onClick={handlePreview}
+            variant="outline"
+            className="w-full mb-6 bg-white/20 border-white/30 text-white hover:bg-white/30 backdrop-blur-sm"
+          >
+            <PreviewIcon className="h-4 w-4 mr-2" />
+            Preview Dashboard
+          </Button>
         </div>
 
         {/* Error Message */}
@@ -184,7 +203,7 @@ export const LoginPage = ({ role }: LoginPageProps) => {
         )}
 
         {/* Login/Register Form */}
-        <Card className="bg-white shadow-lg border border-gray-100">
+        <Card className="bg-white/95 backdrop-blur-sm shadow-2xl border border-white/20">
           <CardContent className="p-8">
             {/* Toggle between Login and Register */}
             {config.canRegister && (
@@ -401,7 +420,7 @@ export const LoginPage = ({ role }: LoginPageProps) => {
 
               <Button
                 type="submit"
-                className={`w-full rounded-full py-3 font-medium ${config.color} hover:opacity-90 text-white`}
+                className={`w-full rounded-full py-3 font-medium bg-gradient-to-r ${config.gradient} hover:opacity-90 text-white shadow-lg`}
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -410,7 +429,10 @@ export const LoginPage = ({ role }: LoginPageProps) => {
                     {isRegisterMode ? "Creating Account..." : "Signing in..."}
                   </div>
                 ) : (
-                  isRegisterMode ? "Create Account" : "Sign In"
+                  <div className="flex items-center gap-2">
+                    <Play className="h-4 w-4" />
+                    {isRegisterMode ? "Create Account" : "Sign In"}
+                  </div>
                 )}
               </Button>
             </form>
@@ -432,7 +454,7 @@ export const LoginPage = ({ role }: LoginPageProps) => {
         <div className="text-center mt-6">
           <button
             onClick={() => navigate("/")}
-            className="text-sm text-gray-500 hover:text-gray-700 font-medium flex items-center gap-2 mx-auto"
+            className="text-sm text-white/80 hover:text-white font-medium flex items-center gap-2 mx-auto bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full hover:bg-white/20 transition-colors"
           >
             <ArrowRight className="h-4 w-4 rotate-180" />
             Back to Home

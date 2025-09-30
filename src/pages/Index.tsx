@@ -55,35 +55,35 @@ function HomePage() {
       description: "Manage your farm, monitor crops, and access insurance services",
       icon: Wheat,
       color: "bg-green-500",
-      href: "/farmer-dashboard"
+      href: "/farmer"
     },
     {
       title: "Insurer Dashboard",
       description: "Manage policies, process claims, and analyze risk data",
       icon: Building2,
       color: "bg-blue-500",
-      href: "/insurer-dashboard"
+      href: "/insurer"
     },
     {
       title: "Government Analytics",
       description: "National agricultural insights and policy monitoring",
       icon: BarChart3,
       color: "bg-red-500",
-      href: "/government-dashboard"
+      href: "/government"
     },
     {
       title: "Assessor Portal",
       description: "Conduct field assessments and risk evaluations",
       icon: MapPin,
       color: "bg-orange-500",
-      href: "/assessor-dashboard"
+      href: "/assessor"
     },
     {
       title: "Admin Panel",
       description: "System administration and user management",
       icon: Settings,
       color: "bg-gray-500",
-      href: "/admin-dashboard"
+      href: "/admin"
     }
   ];
 
@@ -131,7 +131,7 @@ function HomePage() {
             comprehensive agricultural insurance solutions for farmers, insurers, and governments.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/farmer-dashboard">
+            <Link to="/farmer">
               <Button 
                 size="lg" 
                 className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-3 rounded-full font-medium"
@@ -354,7 +354,7 @@ function HomePage() {
             who trust STARHAWK for their agricultural monitoring and insurance needs.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/farmer-dashboard">
+            <Link to="/farmer">
               <Button 
                 size="lg" 
                 className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-3 rounded-full font-medium"

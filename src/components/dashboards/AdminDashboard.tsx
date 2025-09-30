@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { BaseDashboard } from "./BaseDashboard";
 import { DashboardPage, StatCard, DataTable, StatusBadge } from "./DashboardPage";
 import { 
@@ -46,6 +47,14 @@ import {
 
 export const AdminDashboard = () => {
   const [activePage, setActivePage] = useState("dashboard");
+  const [commissionSettings, setCommissionSettings] = useState({
+    policySale: 15,
+    claimProcessing: 10,
+    policyRenewal: 15,
+    assessmentFee: 15,
+    premiumCollection: 5
+  });
+  const [isEditingCommission, setIsEditingCommission] = useState(false);
   
   const users = [
     { id: "U001", name: "John Doe", email: "john@example.com", role: "farmer", status: "active", lastLogin: "2024-03-15" },
@@ -67,12 +76,17 @@ export const AdminDashboard = () => {
     { id: "T005", type: "Assessment Fee", user: "Charlie Davis", amount: 800000, commission: 120000, percentage: 15, date: "2024-03-11", status: "completed" }
   ];
 
-  const commissionSettings = {
-    policySale: 15,
-    claimProcessing: 10,
-    policyRenewal: 15,
-    assessmentFee: 15,
-    premiumCollection: 5
+  const handleCommissionUpdate = (key: string, value: number) => {
+    setCommissionSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const saveCommissionSettings = () => {
+    // In a real app, this would save to the backend
+    console.log('Saving commission settings:', commissionSettings);
+    setIsEditingCommission(false);
   };
 
   const revenueData = [
