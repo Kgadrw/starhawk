@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { BaseDashboard } from "./BaseDashboard";
 import { DashboardPage, StatCard, DataTable, StatusBadge } from "./DashboardPage";
 import { 
@@ -49,12 +50,24 @@ import {
   Send,
   Search,
   Filter,
-  X
+  X,
+  ChevronLeft,
+  ChevronRight as ChevronRightIcon,
+  ExternalLink,
+  FileText as FileTextIcon,
+  Maximize2,
+  Minimize2
 } from "lucide-react";
 
 export const InsurerDashboard = () => {
   const [activePage, setActivePage] = useState("dashboard");
   const [expandedClaims, setExpandedClaims] = useState<Set<string>>(new Set());
+  const [currentClaimIndex, setCurrentClaimIndex] = useState(0);
+  const [documentViewerOpen, setDocumentViewerOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [policyDetailsOpen, setPolicyDetailsOpen] = useState(false);
+  const [selectedPolicy, setSelectedPolicy] = useState<any>(null);
+  const [selectedClaim, setSelectedClaim] = useState<any>(null);
   const [claims, setClaims] = useState([
     {
       id: "C001",
@@ -182,9 +195,87 @@ export const InsurerDashboard = () => {
   const [selectedClaims, setSelectedClaims] = useState<Set<string>>(new Set());
 
   const policies = [
-    { id: "P001", client: "John Doe", crop: "Maize", premium: 250000, coverage: 2500000, status: "active", date: "2024-03-15" },
-    { id: "P002", client: "Jane Smith", crop: "Rice", premium: 180000, coverage: 1800000, status: "active", date: "2024-02-20" },
-    { id: "P003", client: "Bob Wilson", crop: "Beans", premium: 120000, coverage: 1200000, status: "pending", date: "2024-03-10" }
+    { 
+      id: "P001", 
+      client: "John Doe", 
+      crop: "Maize", 
+      premium: 250000, 
+      coverage: 2500000, 
+      status: "active", 
+      date: "2024-03-15",
+      farmer: {
+        name: "John Doe",
+        id: "F001",
+        phone: "+250 788 123 456",
+        email: "john.doe@email.com",
+        location: "Northern Province, Musanze District",
+        farmSize: 5.2,
+        experience: "15 years",
+        previousClaims: 2
+      },
+      policyDetails: {
+        startDate: "2024-03-15",
+        endDate: "2025-03-15",
+        deductible: 100000,
+        coverageType: "Comprehensive",
+        riskLevel: "Medium",
+        premiumFrequency: "Annual"
+      }
+    },
+    { 
+      id: "P002", 
+      client: "Jane Smith", 
+      crop: "Rice", 
+      premium: 180000, 
+      coverage: 1800000, 
+      status: "active", 
+      date: "2024-02-20",
+      farmer: {
+        name: "Jane Smith",
+        id: "F002",
+        phone: "+250 789 234 567",
+        email: "jane.smith@email.com",
+        location: "Eastern Province, Rwamagana District",
+        farmSize: 3.8,
+        experience: "8 years",
+        previousClaims: 1
+      },
+      policyDetails: {
+        startDate: "2024-02-20",
+        endDate: "2025-02-20",
+        deductible: 50000,
+        coverageType: "Basic",
+        riskLevel: "Low",
+        premiumFrequency: "Annual"
+      }
+    },
+    { 
+      id: "P003", 
+      client: "Bob Wilson", 
+      crop: "Beans", 
+      premium: 120000, 
+      coverage: 1200000, 
+      status: "pending", 
+      date: "2024-03-10",
+      farmer: {
+        name: "Bob Wilson",
+        id: "F003",
+        phone: "+250 790 345 678",
+        email: "bob.wilson@email.com",
+        location: "Western Province, Rubavu District",
+        farmSize: 2.1,
+        experience: "5 years",
+        previousClaims: 0
+      },
+      policyDetails: {
+        startDate: "2024-03-10",
+        endDate: "2025-03-10",
+        deductible: 75000,
+        coverageType: "Standard",
+        riskLevel: "High",
+        premiumFrequency: "Annual"
+      }
+    }
   ];
 
   const premiumData = [
@@ -262,6 +353,38 @@ export const InsurerDashboard = () => {
     alert(`Downloading ${documentName}...`);
   };
 
+  const openClaimsSlide = (claimIndex: number = 0) => {
+    setCurrentClaimIndex(claimIndex);
+    // Navigate to claims page with specific claim focused
+    setActivePage("claims");
+  };
+
+  const nextClaim = () => {
+    setCurrentClaimIndex((prev) => (prev + 1) % filteredClaims.length);
+  };
+
+  const prevClaim = () => {
+    setCurrentClaimIndex((prev) => (prev - 1 + filteredClaims.length) % filteredClaims.length);
+  };
+
+  const openDocumentViewer = (document: any) => {
+    setSelectedDocument(document);
+    setDocumentViewerOpen(true);
+  };
+
+  const openPolicyDetails = (policyId: string) => {
+    const policy = policies.find(p => p.id === policyId);
+    if (policy) {
+      setSelectedPolicy(policy);
+      setPolicyDetailsOpen(true);
+    }
+  };
+
+  const openClaimDetail = (claim: any) => {
+    setSelectedClaim(claim);
+    setActivePage("claim-detail");
+  };
+
   const exportClaims = () => {
     const csvContent = [
       ['Claim ID', 'Client', 'Crop', 'Type', 'Amount', 'Status', 'Date', 'Priority'],
@@ -329,7 +452,13 @@ export const InsurerDashboard = () => {
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Policy ID:</span>
-              <span className="font-mono text-sm">{claim.policyDetails.policyId}</span>
+              <button
+                onClick={() => openPolicyDetails(claim.policyDetails.policyId)}
+                className="font-mono text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+              >
+                {claim.policyDetails.policyId}
+                <ExternalLink className="h-3 w-3" />
+              </button>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Coverage:</span>
@@ -448,13 +577,22 @@ export const InsurerDashboard = () => {
                       <div className="text-xs text-gray-500">{doc.type} • {doc.size}</div>
                     </div>
                   </div>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => downloadDocument(doc.name)}
-                  >
-                    <Download className="h-3 w-3" />
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => openDocumentViewer(doc)}
+                    >
+                      <Eye className="h-3 w-3" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => downloadDocument(doc.name)}
+                    >
+                      <Download className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -692,151 +830,311 @@ export const InsurerDashboard = () => {
         </div>
       </div>
 
-      <div className="space-y-4">
-        {filteredClaims.map((claim) => (
-          <Card key={claim.id} className="overflow-hidden">
-            <div className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <input
-                    type="checkbox"
-                    checked={selectedClaims.has(claim.id)}
-                    onChange={() => toggleClaimSelection(claim.id)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleClaimExpansion(claim.id)}
-                    className="p-1"
-                  >
-                    {expandedClaims.has(claim.id) ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <div>
-                    <h3 className="font-semibold text-lg">{claim.id}</h3>
-                    <p className="text-sm text-gray-600">{claim.client} • {claim.crop}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <div className="font-semibold text-lg">RWF {claim.amount.toLocaleString()}</div>
-                    <div className="text-sm text-gray-600">{claim.date}</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge 
-                      variant={
-                        claim.priority === 'high' ? 'destructive' : 
-                        claim.priority === 'medium' ? 'default' : 'secondary'
-                      }
-                    >
-                      {claim.priority} priority
-                    </Badge>
-                    <StatusBadge status={claim.status} />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <Crop className="h-4 w-4 text-gray-500" />
-                  <span>{claim.type}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <LocationIcon className="h-4 w-4 text-gray-500" />
-                  <span className="truncate">{claim.location}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-gray-500" />
-                  <span>{claim.assessor}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-gray-500" />
-                  <span>{claim.date}</span>
-                </div>
-              </div>
+      {/* Claims Slide View */}
+      <div className="space-y-6">
+        {/* Slide Navigation */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              onClick={prevClaim}
+              disabled={filteredClaims.length <= 1}
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Previous
+            </Button>
+            <span className="text-sm text-gray-600">
+              {currentClaimIndex + 1} of {filteredClaims.length} claims
+            </span>
+            <Button
+              variant="outline"
+              onClick={nextClaim}
+              disabled={filteredClaims.length <= 1}
+            >
+              Next
+              <ChevronRightIcon className="h-4 w-4 ml-2" />
+            </Button>
+          </div>
+          
+          {/* Slide Indicators */}
+          <div className="flex gap-2">
+            {filteredClaims.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentClaimIndex(index)}
+                className={`w-3 h-3 rounded-full transition-colors ${
+                  index === currentClaimIndex ? 'bg-blue-600' : 'bg-gray-300 hover:bg-gray-400'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
 
-              <div className="mt-4 flex gap-2">
+        {/* Current Claim Display */}
+        {filteredClaims.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredClaims.slice(currentClaimIndex, currentClaimIndex + 3).map((claim, index) => (
+              <Card 
+                key={claim.id} 
+                className={`overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                  index === 0 ? 'ring-2 ring-blue-500' : ''
+                }`}
+                onClick={() => openClaimDetail(claim)}
+              >
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedClaims.has(claim.id)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleClaimSelection(claim.id);
+                        }}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <div>
+                        <h3 className="font-semibold text-lg">{claim.id}</h3>
+                        <p className="text-sm text-gray-600">{claim.client} • {claim.crop}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge 
+                        variant={
+                          claim.priority === 'high' ? 'destructive' : 
+                          claim.priority === 'medium' ? 'default' : 'secondary'
+                        }
+                      >
+                        {claim.priority}
+                      </Badge>
+                      <StatusBadge status={claim.status} />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3 mb-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Amount:</span>
+                      <span className="font-semibold text-lg text-green-600">
+                        RWF {claim.amount.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Crop className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm">{claim.type}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <LocationIcon className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm truncate">{claim.location}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm">{claim.assessor}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm">{claim.date}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openClaimDetail(claim);
+                      }}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Review
+                    </Button>
+                    {claim.status === 'pending' && (
+                      <Button 
+                        size="sm" 
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateClaimStatus(claim.id, 'approved');
+                        }}
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Approve
+                      </Button>
+                    )}
+                    {claim.status === 'under_review' && (
+                      <>
+                        <Button 
+                          size="sm" 
+                          className="bg-green-600 hover:bg-green-700"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateClaimStatus(claim.id, 'approved');
+                          }}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Approve
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          className="bg-red-600 hover:bg-red-700"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateClaimStatus(claim.id, 'rejected');
+                          }}
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Reject
+                        </Button>
+                      </>
+                    )}
+                    {claim.status === 'approved' && (
+                      <Button 
+                        size="sm" 
+                        className="bg-blue-600 hover:bg-blue-700"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateClaimStatus(claim.id, 'pending_payment');
+                        }}
+                      >
+                        <DollarSign className="h-4 w-4 mr-2" />
+                        Process Payment
+                      </Button>
+                    )}
+                    {claim.status === 'pending_payment' && (
+                      <Button 
+                        size="sm" 
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateClaimStatus(claim.id, 'completed');
+                        }}
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Mark Complete
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {filteredClaims.length === 0 && (
+          <div className="text-center py-12">
+            <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-600 mb-2">No claims found</h3>
+            <p className="text-gray-500">Try adjusting your search or filter criteria.</p>
+          </div>
+        )}
+      </div>
+    </DashboardPage>
+  );
+
+  const renderClaimDetail = () => (
+    <DashboardPage 
+      title={`Claim Details - ${selectedClaim?.id || 'Loading...'}`} 
+      actions={
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setActivePage("claims")}
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Back to Claims
+          </Button>
+          {selectedClaim && (
+            <>
+              <Button 
+                variant="outline"
+                onClick={() => updateClaimStatus(selectedClaim.id, 'under_review')}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Review
+              </Button>
+              {selectedClaim.status === 'pending' && (
                 <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => toggleClaimExpansion(claim.id)}
+                  className="bg-green-600 hover:bg-green-700"
+                  onClick={() => updateClaimStatus(selectedClaim.id, 'approved')}
                 >
-                  <Eye className="h-4 w-4 mr-2" />
-                  {expandedClaims.has(claim.id) ? 'Hide Details' : 'View Details'}
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Approve
                 </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => updateClaimStatus(claim.id, 'under_review')}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Review
-                </Button>
-                {claim.status === 'pending' && (
+              )}
+              {selectedClaim.status === 'under_review' && (
+                <>
                   <Button 
-                    size="sm" 
                     className="bg-green-600 hover:bg-green-700"
-                    onClick={() => updateClaimStatus(claim.id, 'approved')}
+                    onClick={() => updateClaimStatus(selectedClaim.id, 'approved')}
                   >
                     <CheckCircle className="h-4 w-4 mr-2" />
                     Approve
                   </Button>
-                )}
-                {claim.status === 'under_review' && (
-                  <>
-                    <Button 
-                      size="sm" 
-                      className="bg-green-600 hover:bg-green-700"
-                      onClick={() => updateClaimStatus(claim.id, 'approved')}
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Approve
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      className="bg-red-600 hover:bg-red-700"
-                      onClick={() => updateClaimStatus(claim.id, 'rejected')}
-                    >
-                      <X className="h-4 w-4 mr-2" />
-                      Reject
-                    </Button>
-                  </>
-                )}
-                {claim.status === 'approved' && (
                   <Button 
-                    size="sm" 
-                    className="bg-blue-600 hover:bg-blue-700"
-                    onClick={() => updateClaimStatus(claim.id, 'pending_payment')}
+                    className="bg-red-600 hover:bg-red-700"
+                    onClick={() => updateClaimStatus(selectedClaim.id, 'rejected')}
                   >
-                    <DollarSign className="h-4 w-4 mr-2" />
-                    Process Payment
+                    <X className="h-4 w-4 mr-2" />
+                    Reject
                   </Button>
-                )}
-                {claim.status === 'pending_payment' && (
-                  <Button 
-                    size="sm" 
-                    className="bg-green-600 hover:bg-green-700"
-                    onClick={() => updateClaimStatus(claim.id, 'completed')}
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Mark Complete
-                  </Button>
-                )}
+                </>
+              )}
+              {selectedClaim.status === 'approved' && (
+                <Button 
+                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={() => updateClaimStatus(selectedClaim.id, 'pending_payment')}
+                >
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Process Payment
+                </Button>
+              )}
+              {selectedClaim.status === 'pending_payment' && (
+                <Button 
+                  className="bg-green-600 hover:bg-green-700"
+                  onClick={() => updateClaimStatus(selectedClaim.id, 'completed')}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Mark Complete
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+      }
+    >
+      {selectedClaim && (
+        <div className="space-y-6">
+          {/* Claim Header */}
+          <div className="flex items-center justify-between p-6 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-4">
+              <div>
+                <h3 className="text-2xl font-bold">{selectedClaim.id}</h3>
+                <p className="text-gray-600">{selectedClaim.client} • {selectedClaim.crop}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge 
+                  variant={
+                    selectedClaim.priority === 'high' ? 'destructive' : 
+                    selectedClaim.priority === 'medium' ? 'default' : 'secondary'
+                  }
+                >
+                  {selectedClaim.priority} priority
+                </Badge>
+                <StatusBadge status={selectedClaim.status} />
               </div>
             </div>
-
-            {expandedClaims.has(claim.id) && (
-              <div className="border-t">
-                <ClaimDetails claim={claim} />
+            <div className="text-right">
+              <div className="text-3xl font-bold text-green-600">
+                RWF {selectedClaim.amount.toLocaleString()}
               </div>
-            )}
-          </Card>
-        ))}
-      </div>
+              <div className="text-gray-600">{selectedClaim.date}</div>
+            </div>
+          </div>
+
+          {/* Claim Details */}
+          <ClaimDetails claim={selectedClaim} />
+        </div>
+      )}
     </DashboardPage>
   );
 
@@ -848,6 +1146,8 @@ export const InsurerDashboard = () => {
         return renderPolicies();
       case "claims":
         return renderClaims();
+      case "claim-detail":
+        return renderClaimDetail();
       case "risk":
         return (
           <DashboardPage title="Risk Assessment" actions={
@@ -992,6 +1292,234 @@ export const InsurerDashboard = () => {
     }
   };
 
+
+  // Document Viewer Modal
+  const DocumentViewer = () => (
+    <Dialog open={documentViewerOpen} onOpenChange={setDocumentViewerOpen}>
+      <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center justify-between">
+            <span>{selectedDocument?.name}</span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => downloadDocument(selectedDocument?.name)}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDocumentViewerOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="flex-1 overflow-auto">
+          {selectedDocument && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileTextIcon className="h-5 w-5 text-gray-500" />
+                  <span className="font-medium">{selectedDocument.name}</span>
+                </div>
+                <div className="text-sm text-gray-600">
+                  Type: {selectedDocument.type} • Size: {selectedDocument.size}
+                </div>
+              </div>
+              
+              {/* Document Preview Area */}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <FileTextIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-600 mb-2">
+                  Document Preview
+                </h3>
+                <p className="text-gray-500 mb-4">
+                  {selectedDocument.type === 'PDF' 
+                    ? 'PDF preview would be displayed here'
+                    : selectedDocument.type === 'ZIP'
+                    ? 'ZIP file contents would be listed here'
+                    : 'Document content would be displayed here'
+                  }
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => downloadDocument(selectedDocument.name)}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download to View
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
+  // Policy Details Modal
+  const PolicyDetailsModal = () => (
+    <Dialog open={policyDetailsOpen} onOpenChange={setPolicyDetailsOpen}>
+      <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center justify-between">
+            <span>Policy Details - {selectedPolicy?.id}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPolicyDetailsOpen(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="flex-1 overflow-auto">
+          {selectedPolicy && (
+            <div className="space-y-6">
+              {/* Policy Overview */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5" />
+                    Policy Overview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Policy ID:</span>
+                        <span className="font-mono">{selectedPolicy.id}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Coverage Type:</span>
+                        <span className="font-medium">{selectedPolicy.policyDetails.coverageType}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Coverage Amount:</span>
+                        <span className="font-medium">RWF {selectedPolicy.coverage.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Premium:</span>
+                        <span className="font-medium">RWF {selectedPolicy.premium.toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Deductible:</span>
+                        <span className="font-medium">RWF {selectedPolicy.policyDetails.deductible.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Risk Level:</span>
+                        <Badge variant={
+                          selectedPolicy.policyDetails.riskLevel === 'High' ? 'destructive' :
+                          selectedPolicy.policyDetails.riskLevel === 'Medium' ? 'default' : 'secondary'
+                        }>
+                          {selectedPolicy.policyDetails.riskLevel}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Start Date:</span>
+                        <span className="font-medium">{selectedPolicy.policyDetails.startDate}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">End Date:</span>
+                        <span className="font-medium">{selectedPolicy.policyDetails.endDate}</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Farmer Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Farmer Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Name:</span>
+                        <span className="font-medium">{selectedPolicy.farmer.name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Farmer ID:</span>
+                        <span className="font-mono">{selectedPolicy.farmer.id}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Phone:</span>
+                        <span className="font-medium">{selectedPolicy.farmer.phone}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Email:</span>
+                        <span className="font-medium">{selectedPolicy.farmer.email}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Location:</span>
+                        <span className="font-medium text-sm">{selectedPolicy.farmer.location}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Farm Size:</span>
+                        <span className="font-medium">{selectedPolicy.farmer.farmSize} hectares</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Experience:</span>
+                        <span className="font-medium">{selectedPolicy.farmer.experience}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Previous Claims:</span>
+                        <span className="font-medium">{selectedPolicy.farmer.previousClaims}</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Crop Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Crop className="h-5 w-5" />
+                    Crop Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="text-center p-4 bg-blue-50 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-600">{selectedPolicy.crop}</div>
+                      <div className="text-sm text-blue-600">Crop Type</div>
+                    </div>
+                    <div className="text-center p-4 bg-green-50 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600">{selectedPolicy.farmer.farmSize} ha</div>
+                      <div className="text-sm text-green-600">Farm Size</div>
+                    </div>
+                    <div className="text-center p-4 bg-orange-50 rounded-lg">
+                      <div className="text-2xl font-bold text-orange-600">{selectedPolicy.policyDetails.riskLevel}</div>
+                      <div className="text-sm text-orange-600">Risk Level</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
+
   return (
     <BaseDashboard 
       role="insurer" 
@@ -999,6 +1527,8 @@ export const InsurerDashboard = () => {
       onPageChange={setActivePage}
     >
       {renderPage()}
+      <DocumentViewer />
+      <PolicyDetailsModal />
     </BaseDashboard>
   );
 };
