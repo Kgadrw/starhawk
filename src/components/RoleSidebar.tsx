@@ -27,7 +27,9 @@ import {
   Clock,
   Wheat,
   DollarSign,
-  Percent
+  Percent,
+  Crop,
+  Camera
 } from "lucide-react";
 
 interface RoleSidebarProps {
@@ -51,7 +53,8 @@ export function RoleSidebar({ role, onPageChange, activePage = "dashboard", isOp
         { id: "dashboard", label: "Dashboard", icon: Home, description: "Overview & Analytics" },
         { id: "policies", label: "Policies", icon: FileText, description: "Policy Management" },
         { id: "claims", label: "Claims", icon: AlertTriangle, description: "Claims Processing" },
-        { id: "risk", label: "Risk Analysis", icon: TrendingUp, description: "Risk Assessment" },
+        { id: "risk", label: "Risk Assessment", icon: TrendingUp, description: "Weather & Risk Analysis" },
+        { id: "crop-monitoring", label: "Crop Monitoring", icon: Crop, description: "Field Surveillance" },
         { id: "portfolio", label: "Portfolio", icon: BarChart3, description: "Portfolio Overview" },
         { id: "reports", label: "Reports", icon: FileText, description: "Analytics & Reports" }
       ],

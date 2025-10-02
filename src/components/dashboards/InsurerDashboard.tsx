@@ -21,7 +21,10 @@ import {
   ResponsiveContainer,
   PieChart as RechartsPieChart,
   Pie,
-  Cell
+  Cell,
+  Legend,
+  RadialBarChart,
+  RadialBar
 } from 'recharts';
 import { 
   CheckCircle,
@@ -293,6 +296,57 @@ export const InsurerDashboard = () => {
     { region: 'Eastern', policies: 38, claims: 15, riskScore: 39 },
     { region: 'Western', policies: 55, claims: 9, riskScore: 16 },
     { region: 'Kigali', policies: 42, claims: 6, riskScore: 14 }
+  ];
+
+  // Risk Assessment Data
+  const weatherData = [
+    { date: '2024-03-01', temperature: 28, humidity: 65, rainfall: 0, windSpeed: 12, riskLevel: 'Low' },
+    { date: '2024-03-02', temperature: 30, humidity: 58, rainfall: 0, windSpeed: 15, riskLevel: 'Low' },
+    { date: '2024-03-03', temperature: 32, humidity: 45, rainfall: 0, windSpeed: 18, riskLevel: 'Medium' },
+    { date: '2024-03-04', temperature: 35, humidity: 38, rainfall: 0, windSpeed: 22, riskLevel: 'High' },
+    { date: '2024-03-05', temperature: 33, humidity: 42, rainfall: 0, windSpeed: 20, riskLevel: 'High' },
+    { date: '2024-03-06', temperature: 29, humidity: 55, rainfall: 5, windSpeed: 16, riskLevel: 'Medium' },
+    { date: '2024-03-07', temperature: 26, humidity: 72, rainfall: 15, windSpeed: 14, riskLevel: 'Low' }
+  ];
+
+  const satelliteData = [
+    { region: 'Northern', vegetation: 85, moisture: 72, temperature: 28, riskScore: 18, alerts: 2 },
+    { region: 'Southern', vegetation: 78, moisture: 68, temperature: 30, riskScore: 19, alerts: 3 },
+    { region: 'Eastern', vegetation: 45, moisture: 35, temperature: 35, riskScore: 39, alerts: 8 },
+    { region: 'Western', vegetation: 92, moisture: 85, temperature: 26, riskScore: 16, alerts: 1 },
+    { region: 'Kigali', vegetation: 88, moisture: 75, temperature: 29, riskScore: 14, alerts: 1 }
+  ];
+
+  const riskAlerts = [
+    { id: 'RA001', type: 'Drought Risk', severity: 'High', region: 'Eastern Province', message: 'Prolonged dry spell detected. 15+ days without rainfall.', timestamp: '2024-03-15 14:30', status: 'active' },
+    { id: 'RA002', type: 'Flood Risk', severity: 'Medium', region: 'Western Province', message: 'Heavy rainfall expected in next 48 hours.', timestamp: '2024-03-15 10:15', status: 'monitoring' },
+    { id: 'RA003', type: 'Pest Alert', severity: 'Low', region: 'Northern Province', message: 'Increased pest activity detected in maize fields.', timestamp: '2024-03-14 16:45', status: 'resolved' }
+  ];
+
+  // Crop Monitoring Data
+  const cropFields = [
+    { id: 'F001', farmer: 'John Doe', crop: 'Maize', location: 'Northern Province', area: 2.5, growthStage: 'Flowering', health: 85, lastUpdate: '2024-03-15 08:30' },
+    { id: 'F002', farmer: 'Jane Smith', crop: 'Rice', location: 'Eastern Province', area: 1.8, growthStage: 'Maturity', health: 92, lastUpdate: '2024-03-15 09:15' },
+    { id: 'F003', farmer: 'Peter Kimani', crop: 'Beans', location: 'Western Province', area: 1.2, growthStage: 'Vegetative', health: 78, lastUpdate: '2024-03-15 07:45' },
+    { id: 'F004', farmer: 'Alice Johnson', crop: 'Maize', location: 'Southern Province', area: 3.2, growthStage: 'Germination', health: 95, lastUpdate: '2024-03-15 10:20' }
+  ];
+
+  const cropHealthData = [
+    { date: '2024-03-01', healthy: 85, stressed: 12, diseased: 3 },
+    { date: '2024-03-02', healthy: 87, stressed: 10, diseased: 3 },
+    { date: '2024-03-03', healthy: 84, stressed: 13, diseased: 3 },
+    { date: '2024-03-04', healthy: 82, stressed: 15, diseased: 3 },
+    { date: '2024-03-05', healthy: 80, stressed: 17, diseased: 3 },
+    { date: '2024-03-06', healthy: 83, stressed: 14, diseased: 3 },
+    { date: '2024-03-07', healthy: 86, stressed: 11, diseased: 3 }
+  ];
+
+  const growthStages = [
+    { stage: 'Germination', fields: 12, avgHealth: 95, riskLevel: 'Low' },
+    { stage: 'Vegetative', fields: 28, avgHealth: 88, riskLevel: 'Low' },
+    { stage: 'Flowering', fields: 35, avgHealth: 82, riskLevel: 'Medium' },
+    { stage: 'Maturity', fields: 18, avgHealth: 90, riskLevel: 'Low' },
+    { stage: 'Harvest', fields: 8, avgHealth: 85, riskLevel: 'Low' }
   ];
 
   const toggleClaimExpansion = (claimId: string) => {
@@ -727,7 +781,7 @@ export const InsurerDashboard = () => {
   );
 
   const renderClaims = () => (
-    <DashboardPage title="Claims Processing" actions={
+    <DashboardPage title="Claim Assessment" actions={
       <div className="flex gap-2">
         <Button className="bg-orange-600 hover:bg-orange-700">
           <AlertTriangle className="h-4 w-4 mr-2" />
@@ -739,6 +793,13 @@ export const InsurerDashboard = () => {
         </Button>
       </div>
     }>
+      {/* Claims Overview Cards */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        <StatCard title="Total Claims" value="23" icon={<AlertTriangle className="h-6 w-6 text-orange-600" />} change="+3 this week" />
+        <StatCard title="Pending Review" value="8" icon={<Clock className="h-6 w-6 text-yellow-600" />} change="2 high priority" />
+        <StatCard title="Approved Claims" value="12" icon={<CheckCircle className="h-6 w-6 text-green-600" />} change="+5 this month" changeType="positive" />
+        <StatCard title="Total Value" value="RWF 1.2M" icon={<DollarSign className="h-6 w-6 text-blue-600" />} change="+15% from last month" changeType="positive" />
+      </div>
       {/* Search and Filter Controls */}
       <div className="bg-white p-4 rounded-lg border mb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -828,6 +889,160 @@ export const InsurerDashboard = () => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Claims Analytics */}
+      <div className="grid gap-6 lg:grid-cols-2 mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Claims by Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsPieChart>
+                  <Pie
+                    data={[
+                      { name: 'Pending', value: 8, color: '#F59E0B', fill: 'url(#pendingGradient)' },
+                      { name: 'Under Review', value: 3, color: '#3B82F6', fill: 'url(#reviewGradient)' },
+                      { name: 'Approved', value: 12, color: '#10B981', fill: 'url(#approvedGradient)' }
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    dataKey="value"
+                    stroke="#fff"
+                    strokeWidth={2}
+                    paddingAngle={2}
+                  >
+                    {[
+                      { name: 'Pending', value: 8, color: '#F59E0B' },
+                      { name: 'Under Review', value: 3, color: '#3B82F6' },
+                      { name: 'Approved', value: 12, color: '#10B981' }
+                    ].map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value: number, name: string) => [value, name]}
+                    contentStyle={{
+                      backgroundColor: '#1f2937',
+                      border: 'none',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: '14px'
+                    }}
+                  />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={36}
+                    iconType="circle"
+                    wrapperStyle={{
+                      fontSize: '14px',
+                      fontWeight: '500'
+                    }}
+                  />
+                  <defs>
+                    <linearGradient id="pendingGradient" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.8}/>
+                      <stop offset="100%" stopColor="#D97706" stopOpacity={1}/>
+                    </linearGradient>
+                    <linearGradient id="reviewGradient" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.8}/>
+                      <stop offset="100%" stopColor="#1D4ED8" stopOpacity={1}/>
+                    </linearGradient>
+                    <linearGradient id="approvedGradient" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#10B981" stopOpacity={0.8}/>
+                      <stop offset="100%" stopColor="#059669" stopOpacity={1}/>
+                    </linearGradient>
+                  </defs>
+                </RechartsPieChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Claims Trend Analysis
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsBarChart data={[
+                  { month: 'Jan', claims: 15, approved: 12, rejected: 3 },
+                  { month: 'Feb', claims: 18, approved: 14, rejected: 4 },
+                  { month: 'Mar', claims: 23, approved: 12, rejected: 2 },
+                  { month: 'Apr', claims: 20, approved: 16, rejected: 4 },
+                  { month: 'May', claims: 25, approved: 18, rejected: 7 },
+                  { month: 'Jun', claims: 23, approved: 12, rejected: 3 }
+                ]}>
+                  <defs>
+                    <linearGradient id="claimsGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.8}/>
+                      <stop offset="100%" stopColor="#1D4ED8" stopOpacity={0.6}/>
+                    </linearGradient>
+                    <linearGradient id="approvedGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10B981" stopOpacity={0.8}/>
+                      <stop offset="100%" stopColor="#059669" stopOpacity={0.6}/>
+                    </linearGradient>
+                    <linearGradient id="rejectedGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#EF4444" stopOpacity={0.8}/>
+                      <stop offset="100%" stopColor="#DC2626" stopOpacity={0.6}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis 
+                    dataKey="month" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: '#64748b' }}
+                  />
+                  <YAxis 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: '#64748b' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: '#1f2937',
+                      border: 'none',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: '14px',
+                      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                    }}
+                    formatter={(value: number, name: string) => [
+                      value, 
+                      name === 'claims' ? 'Total Claims' : 
+                      name === 'approved' ? 'Approved' : 'Rejected'
+                    ]}
+                  />
+                  <Legend 
+                    verticalAlign="top" 
+                    height={36}
+                    iconType="rect"
+                    wrapperStyle={{
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      paddingBottom: '10px'
+                    }}
+                  />
+                  <Bar dataKey="claims" fill="url(#claimsGradient)" name="claims" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="approved" fill="url(#approvedGradient)" name="approved" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="rejected" fill="url(#rejectedGradient)" name="rejected" radius={[4, 4, 0, 0]} />
+                </RechartsBarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Claims Slide View */}
@@ -1151,34 +1366,621 @@ export const InsurerDashboard = () => {
       case "risk":
         return (
           <DashboardPage title="Risk Assessment" actions={
-            <Button className="bg-red-600 hover:bg-red-700">
-              <AlertTriangle className="h-4 w-4 mr-2" />
-              Generate Risk Report
-            </Button>
+            <div className="flex gap-2">
+              <Button className="bg-red-600 hover:bg-red-700">
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Generate Risk Report
+              </Button>
+              <Button variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Export Data
+              </Button>
+            </div>
           }>
-            <div className="grid gap-6 lg:grid-cols-2">
+            {/* Risk Assessment Overview Cards */}
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
+              <StatCard title="Active Alerts" value="3" icon={<AlertTriangle className="h-6 w-6 text-red-600" />} change="1 new today" />
+              <StatCard title="High Risk Areas" value="1" icon={<MapPin className="h-6 w-6 text-orange-600" />} change="Eastern Province" />
+              <StatCard title="Weather Risk" value="Medium" icon={<TrendingUp className="h-6 w-6 text-yellow-600" />} change="Drought conditions" />
+              <StatCard title="Overall Risk" value="Low" icon={<Shield className="h-6 w-6 text-green-600" />} change="Stable conditions" />
+            </div>
+
+            {/* Risk Assessment Analytics */}
+            <div className="grid gap-6 lg:grid-cols-2 mb-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <BarChart3 className="h-5 w-5" />
-                    Risk Analysis by Region
+                    Risk Level Distribution
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-64">
+                  <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
-                      <RechartsBarChart data={riskData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="region" />
-                        <YAxis />
-                        <Tooltip formatter={(value: number, name: string) => [value, name === 'policies' ? 'Policies' : name === 'claims' ? 'Claims' : 'Risk Score']} />
-                        <Bar dataKey="policies" fill="#3B82F6" name="policies" />
-                        <Bar dataKey="claims" fill="#EF4444" name="claims" />
+                      <RechartsPieChart>
+                        <Pie
+                          data={[
+                            { name: 'Low Risk', value: 40, color: '#10B981', fill: 'url(#riskLowGradient)' },
+                            { name: 'Medium Risk', value: 35, color: '#F59E0B', fill: 'url(#riskMediumGradient)' },
+                            { name: 'High Risk', value: 25, color: '#EF4444', fill: 'url(#riskHighGradient)' }
+                          ]}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={100}
+                          dataKey="value"
+                          stroke="#fff"
+                          strokeWidth={2}
+                          paddingAngle={2}
+                        >
+                          {[
+                            { name: 'Low Risk', value: 40, color: '#10B981' },
+                            { name: 'Medium Risk', value: 35, color: '#F59E0B' },
+                            { name: 'High Risk', value: 25, color: '#EF4444' }
+                          ].map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value: number, name: string) => [`${value}%`, name]}
+                          contentStyle={{
+                            backgroundColor: '#1f2937',
+                            border: 'none',
+                            borderRadius: '8px',
+                            color: '#fff',
+                            fontSize: '14px'
+                          }}
+                        />
+                        <Legend 
+                          verticalAlign="bottom" 
+                          height={36}
+                          iconType="circle"
+                          wrapperStyle={{
+                            fontSize: '14px',
+                            fontWeight: '500'
+                          }}
+                        />
+                        <defs>
+                          <linearGradient id="riskLowGradient" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor="#10B981" stopOpacity={0.8}/>
+                            <stop offset="100%" stopColor="#059669" stopOpacity={1}/>
+                          </linearGradient>
+                          <linearGradient id="riskMediumGradient" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.8}/>
+                            <stop offset="100%" stopColor="#D97706" stopOpacity={1}/>
+                          </linearGradient>
+                          <linearGradient id="riskHighGradient" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor="#EF4444" stopOpacity={0.8}/>
+                            <stop offset="100%" stopColor="#DC2626" stopOpacity={1}/>
+                          </linearGradient>
+                        </defs>
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    Risk Trend Analysis
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsBarChart data={[
+                        { month: 'Jan', lowRisk: 45, mediumRisk: 30, highRisk: 25 },
+                        { month: 'Feb', lowRisk: 42, mediumRisk: 32, highRisk: 26 },
+                        { month: 'Mar', lowRisk: 40, mediumRisk: 35, highRisk: 25 },
+                        { month: 'Apr', lowRisk: 38, mediumRisk: 37, highRisk: 25 },
+                        { month: 'May', lowRisk: 35, mediumRisk: 40, highRisk: 25 },
+                        { month: 'Jun', lowRisk: 40, mediumRisk: 35, highRisk: 25 }
+                      ]}>
+                        <defs>
+                          <linearGradient id="lowRiskTrendGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10B981" stopOpacity={0.8}/>
+                            <stop offset="100%" stopColor="#059669" stopOpacity={0.6}/>
+                          </linearGradient>
+                          <linearGradient id="mediumRiskTrendGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.8}/>
+                            <stop offset="100%" stopColor="#D97706" stopOpacity={0.6}/>
+                          </linearGradient>
+                          <linearGradient id="highRiskTrendGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#EF4444" stopOpacity={0.8}/>
+                            <stop offset="100%" stopColor="#DC2626" stopOpacity={0.6}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis 
+                          dataKey="month" 
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: '#64748b' }}
+                        />
+                        <YAxis 
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: '#64748b' }}
+                        />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: '#1f2937',
+                            border: 'none',
+                            borderRadius: '8px',
+                            color: '#fff',
+                            fontSize: '14px',
+                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                          }}
+                          formatter={(value: number, name: string) => [
+                            `${value}%`, 
+                            name === 'lowRisk' ? 'Low Risk' : 
+                            name === 'mediumRisk' ? 'Medium Risk' : 'High Risk'
+                          ]}
+                        />
+                        <Legend 
+                          verticalAlign="top" 
+                          height={36}
+                          iconType="rect"
+                          wrapperStyle={{
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            paddingBottom: '10px'
+                          }}
+                        />
+                        <Bar dataKey="lowRisk" fill="url(#lowRiskTrendGradient)" name="lowRisk" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="mediumRisk" fill="url(#mediumRiskTrendGradient)" name="mediumRisk" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="highRisk" fill="url(#highRiskTrendGradient)" name="highRisk" radius={[4, 4, 0, 0]} />
                       </RechartsBarChart>
                     </ResponsiveContainer>
                   </div>
                 </CardContent>
               </Card>
+            </div>
+
+            {/* Claims Under Risk Assessment - Slide View */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  Claims Under Risk Assessment
+                </CardTitle>
+                <p className="text-sm text-gray-600">Claims currently being evaluated for risk factors and potential impact</p>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const claimsUnderAssessment = filteredClaims.filter(claim => claim.status === 'under_review' || claim.status === 'pending');
+                  
+                  if (claimsUnderAssessment.length === 0) {
+                    return (
+                      <div className="text-center py-8">
+                        <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-600 mb-2">No claims under assessment</h3>
+                        <p className="text-gray-500">All claims have been processed or no new claims require risk assessment.</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-6">
+                      {/* Slide Navigation */}
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-2 sm:gap-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentClaimIndex(Math.max(0, currentClaimIndex - 1))}
+                            disabled={currentClaimIndex === 0}
+                            className="flex items-center gap-1 sm:gap-2"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                            <span className="hidden sm:inline">Previous</span>
+                            <span className="sm:hidden">Prev</span>
+                          </Button>
+                          <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">
+                            {currentClaimIndex + 1} of {claimsUnderAssessment.length} claims
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentClaimIndex(Math.min(claimsUnderAssessment.length - 1, currentClaimIndex + 1))}
+                            disabled={currentClaimIndex === claimsUnderAssessment.length - 1}
+                            className="flex items-center gap-1 sm:gap-2"
+                          >
+                            <span className="hidden sm:inline">Next</span>
+                            <span className="sm:hidden">Next</span>
+                            <ChevronRightIcon className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        
+                        {/* Slide Indicators */}
+                        <div className="flex gap-1 sm:gap-2 overflow-x-auto max-w-full">
+                          {claimsUnderAssessment.map((_, index) => (
+                            <button
+                              key={index}
+                              onClick={() => setCurrentClaimIndex(index)}
+                              className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-colors flex-shrink-0 ${
+                                index === currentClaimIndex ? 'bg-blue-600' : 'bg-gray-300 hover:bg-gray-400'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Current Claim Display */}
+                      {claimsUnderAssessment[currentClaimIndex] && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+                          {claimsUnderAssessment.slice(currentClaimIndex, currentClaimIndex + 3).map((claim, index) => (
+                            <Card 
+                              key={claim.id} 
+                              className={`overflow-hidden transition-all duration-200 hover:shadow-lg ${
+                                index === 0 ? 'ring-2 ring-blue-500' : ''
+                              }`}
+                            >
+                              <div className="p-4 lg:p-6">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                                      claim.priority === 'high' ? 'bg-red-500' : 
+                                      claim.priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
+                                    }`}></div>
+                                    <div className="min-w-0 flex-1">
+                                      <h3 className="font-semibold text-base lg:text-lg truncate">{claim.id}</h3>
+                                      <p className="text-xs sm:text-sm text-gray-600 truncate">{claim.client} • {claim.crop}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col sm:flex-row gap-2">
+                                    <Badge 
+                                      variant={
+                                        claim.priority === 'high' ? 'destructive' : 
+                                        claim.priority === 'medium' ? 'default' : 'secondary'
+                                      }
+                                      className="text-xs"
+                                    >
+                                      {claim.priority}
+                                    </Badge>
+                                    <StatusBadge status={claim.status} />
+                                  </div>
+                                </div>
+                                
+                                <div className="space-y-2 lg:space-y-3 mb-4">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-gray-600 text-sm">Amount:</span>
+                                    <span className="font-semibold text-base lg:text-lg text-green-600">
+                                      RWF {claim.amount.toLocaleString()}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Crop className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                                    <span className="text-xs sm:text-sm truncate">{claim.type}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <LocationIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                                    <span className="text-xs sm:text-sm truncate">{claim.location}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <User className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                                    <span className="text-xs sm:text-sm truncate">{claim.assessor}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                                    <span className="text-xs sm:text-sm">{claim.date}</span>
+                                  </div>
+                                </div>
+
+                                {/* Risk Assessment Metrics */}
+                                <div className="grid grid-cols-3 gap-2 mb-4">
+                                  <div className="bg-red-50 p-2 rounded text-center">
+                                    <div className="text-xs text-red-600 font-medium">Area</div>
+                                    <div className="text-xs sm:text-sm font-bold text-red-700">{claim.damageAssessment.affectedArea}ha</div>
+                                  </div>
+                                  <div className="bg-orange-50 p-2 rounded text-center">
+                                    <div className="text-xs text-orange-600 font-medium">Loss</div>
+                                    <div className="text-xs sm:text-sm font-bold text-orange-700">{claim.damageAssessment.yieldLoss}%</div>
+                                  </div>
+                                  <div className="bg-blue-50 p-2 rounded text-center">
+                                    <div className="text-xs text-blue-600 font-medium">Risk</div>
+                                    <div className="text-xs sm:text-sm font-bold text-blue-700">
+                                      {claim.priority === 'high' ? '85' : 
+                                       claim.priority === 'medium' ? '65' : '45'}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => openClaimDetail(claim)}
+                                    className="flex-1 sm:flex-none"
+                                  >
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    <span className="hidden sm:inline">Review</span>
+                                    <span className="sm:hidden">View</span>
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    className="bg-blue-600 hover:bg-blue-700 flex-1 sm:flex-none"
+                                    onClick={() => updateClaimStatus(claim.id, 'approved')}
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                    <span className="hidden sm:inline">Approve</span>
+                                    <span className="sm:hidden">OK</span>
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-1 sm:flex-none"
+                                    onClick={() => updateClaimStatus(claim.id, 'rejected')}
+                                  >
+                                    <X className="h-4 w-4 mr-2" />
+                                    <span className="hidden sm:inline">Flag Risk</span>
+                                    <span className="sm:hidden">Flag</span>
+                                  </Button>
+                                </div>
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+
+            {/* Weather Monitoring */}
+            <div className="grid gap-6 lg:grid-cols-2 mb-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    Weather Risk Trends
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsLineChart data={weatherData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" />
+                        <YAxis />
+                        <Tooltip />
+                        <Line type="monotone" dataKey="temperature" stroke="#EF4444" strokeWidth={2} name="Temperature (°C)" />
+                        <Line type="monotone" dataKey="humidity" stroke="#3B82F6" strokeWidth={2} name="Humidity (%)" />
+                        <Line type="monotone" dataKey="rainfall" stroke="#10B981" strokeWidth={2} name="Rainfall (mm)" />
+                      </RechartsLineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5" />
+                    Regional Risk Analysis
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsBarChart data={satelliteData}>
+                        <defs>
+                          <linearGradient id="vegetationGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10B981" stopOpacity={0.8}/>
+                            <stop offset="100%" stopColor="#059669" stopOpacity={0.6}/>
+                          </linearGradient>
+                          <linearGradient id="moistureGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.8}/>
+                            <stop offset="100%" stopColor="#1D4ED8" stopOpacity={0.6}/>
+                          </linearGradient>
+                          <linearGradient id="riskScoreGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#EF4444" stopOpacity={0.8}/>
+                            <stop offset="100%" stopColor="#DC2626" stopOpacity={0.6}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis 
+                          dataKey="region" 
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: '#64748b' }}
+                        />
+                        <YAxis 
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: '#64748b' }}
+                        />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: '#1f2937',
+                            border: 'none',
+                            borderRadius: '8px',
+                            color: '#fff',
+                            fontSize: '14px',
+                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                          }}
+                          formatter={(value: number, name: string) => [
+                            value, 
+                            name === 'vegetation' ? 'Vegetation (%)' : 
+                            name === 'moisture' ? 'Moisture (%)' : 'Risk Score'
+                          ]} 
+                        />
+                        <Legend 
+                          verticalAlign="top" 
+                          height={36}
+                          iconType="rect"
+                          wrapperStyle={{
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            paddingBottom: '10px'
+                          }}
+                        />
+                        <Bar dataKey="vegetation" fill="url(#vegetationGradient)" name="vegetation" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="moisture" fill="url(#moistureGradient)" name="moisture" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="riskScore" fill="url(#riskScoreGradient)" name="riskScore" radius={[4, 4, 0, 0]} />
+                      </RechartsBarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Risk Alerts */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className="h-5 w-5" />
+                  Active Risk Alerts
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {riskAlerts.map((alert) => (
+                    <div key={alert.id} className={`p-4 rounded-lg border-l-4 ${
+                      alert.severity === 'High' ? 'bg-red-50 border-red-500' :
+                      alert.severity === 'Medium' ? 'bg-yellow-50 border-yellow-500' :
+                      'bg-green-50 border-green-500'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-3 h-3 rounded-full ${
+                            alert.severity === 'High' ? 'bg-red-500' :
+                            alert.severity === 'Medium' ? 'bg-yellow-500' :
+                            'bg-green-500'
+                          }`}></div>
+                          <div>
+                            <div className="font-medium">{alert.type}</div>
+                            <div className="text-sm text-gray-600">{alert.region}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={
+                            alert.severity === 'High' ? 'destructive' :
+                            alert.severity === 'Medium' ? 'default' : 'secondary'
+                          }>
+                            {alert.severity}
+                          </Badge>
+                          <Badge variant={alert.status === 'active' ? 'default' : 'secondary'}>
+                            {alert.status}
+                          </Badge>
+                        </div>
+                      </div>
+                      <p className="mt-2 text-sm text-gray-700">{alert.message}</p>
+                      <div className="mt-2 text-xs text-gray-500">{alert.timestamp}</div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Satellite Data Analysis */}
+            <div className="grid gap-6 lg:grid-cols-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Camera className="h-5 w-5" />
+                    Satellite Imagery
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                      <img src="/drone.png" alt="Satellite view" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <div className="flex justify-between">
+                        <span>Last Update:</span>
+                        <span>2024-03-15 14:30</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Resolution:</span>
+                        <span>10m per pixel</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Coverage:</span>
+                        <span>Rwanda</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5" />
+                    Risk Distribution
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsPieChart>
+                        <Pie
+                          data={[
+                            { name: 'Low Risk', value: 40, color: '#10B981', fill: 'url(#lowRiskGradient)' },
+                            { name: 'Medium Risk', value: 35, color: '#F59E0B', fill: 'url(#mediumRiskGradient)' },
+                            { name: 'High Risk', value: 25, color: '#EF4444', fill: 'url(#highRiskGradient)' }
+                          ]}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={90}
+                          dataKey="value"
+                          stroke="#fff"
+                          strokeWidth={2}
+                          paddingAngle={2}
+                        >
+                          {[
+                            { name: 'Low Risk', value: 40, color: '#10B981' },
+                            { name: 'Medium Risk', value: 35, color: '#F59E0B' },
+                            { name: 'High Risk', value: 25, color: '#EF4444' }
+                          ].map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value: number, name: string) => [`${value}%`, name]}
+                          contentStyle={{
+                            backgroundColor: '#1f2937',
+                            border: 'none',
+                            borderRadius: '8px',
+                            color: '#fff',
+                            fontSize: '14px'
+                          }}
+                        />
+                        <Legend 
+                          verticalAlign="bottom" 
+                          height={36}
+                          iconType="circle"
+                          wrapperStyle={{
+                            fontSize: '14px',
+                            fontWeight: '500'
+                          }}
+                        />
+                        <defs>
+                          <linearGradient id="lowRiskGradient" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor="#10B981" stopOpacity={0.8}/>
+                            <stop offset="100%" stopColor="#059669" stopOpacity={1}/>
+                          </linearGradient>
+                          <linearGradient id="mediumRiskGradient" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.8}/>
+                            <stop offset="100%" stopColor="#D97706" stopOpacity={1}/>
+                          </linearGradient>
+                          <linearGradient id="highRiskGradient" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor="#EF4444" stopOpacity={0.8}/>
+                            <stop offset="100%" stopColor="#DC2626" stopOpacity={1}/>
+                          </linearGradient>
+                        </defs>
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -1188,26 +1990,343 @@ export const InsurerDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                       <div>
                         <div className="font-medium text-red-800">High Risk Areas</div>
                         <div className="text-sm text-red-600">Eastern Province</div>
                       </div>
                       <div className="text-xl font-bold text-red-700">1</div>
                     </div>
-                    <div className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
                       <div>
                         <div className="font-medium text-yellow-800">Medium Risk Areas</div>
                         <div className="text-sm text-yellow-600">Northern, Southern</div>
                       </div>
                       <div className="text-xl font-bold text-yellow-700">2</div>
                     </div>
-                    <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                       <div>
                         <div className="font-medium text-green-800">Low Risk Areas</div>
                         <div className="text-sm text-green-600">Western, Kigali</div>
                       </div>
                       <div className="text-xl font-bold text-green-700">2</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </DashboardPage>
+        );
+      case "crop-monitoring":
+        return (
+          <DashboardPage title="Crop Monitoring" actions={
+            <div className="flex gap-2">
+              <Button className="bg-green-600 hover:bg-green-700">
+                <Crop className="h-4 w-4 mr-2" />
+                Add Field
+              </Button>
+              <Button variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Export Report
+              </Button>
+            </div>
+          }>
+            {/* Crop Overview Cards */}
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
+              <StatCard title="Total Fields" value="91" icon={<Crop className="h-6 w-6 text-green-600" />} change="+3 this week" changeType="positive" />
+              <StatCard title="Healthy Crops" value="86%" icon={<CheckCircle className="h-6 w-6 text-green-600" />} change="+2% from last week" changeType="positive" />
+              <StatCard title="Fields at Risk" value="12" icon={<AlertTriangle className="h-6 w-6 text-orange-600" />} change="3 new alerts" />
+              <StatCard title="Avg Growth Stage" value="Flowering" icon={<TrendingUp className="h-6 w-6 text-blue-600" />} change="35 fields" />
+            </div>
+
+            {/* Field Health Overview */}
+            <div className="grid gap-6 lg:grid-cols-2 mb-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5" />
+                    Crop Health Trends
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={cropHealthData}>
+                        <defs>
+                          <linearGradient id="healthyGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10B981" stopOpacity={0.8}/>
+                            <stop offset="100%" stopColor="#059669" stopOpacity={0.3}/>
+                          </linearGradient>
+                          <linearGradient id="stressedGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.8}/>
+                            <stop offset="100%" stopColor="#D97706" stopOpacity={0.3}/>
+                          </linearGradient>
+                          <linearGradient id="diseasedGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#EF4444" stopOpacity={0.8}/>
+                            <stop offset="100%" stopColor="#DC2626" stopOpacity={0.3}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis 
+                          dataKey="date" 
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: '#64748b' }}
+                        />
+                        <YAxis 
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: '#64748b' }}
+                        />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: '#1f2937',
+                            border: 'none',
+                            borderRadius: '8px',
+                            color: '#fff',
+                            fontSize: '14px',
+                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                          }}
+                          formatter={(value: number, name: string) => [
+                            `${value}%`, 
+                            name === 'healthy' ? 'Healthy' : 
+                            name === 'stressed' ? 'Stressed' : 'Diseased'
+                          ]}
+                        />
+                        <Legend 
+                          verticalAlign="top" 
+                          height={36}
+                          iconType="rect"
+                          wrapperStyle={{
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            paddingBottom: '10px'
+                          }}
+                        />
+                        <Area type="monotone" dataKey="healthy" stackId="1" stroke="#10B981" fill="url(#healthyGradient)" name="Healthy" strokeWidth={2} />
+                        <Area type="monotone" dataKey="stressed" stackId="2" stroke="#F59E0B" fill="url(#stressedGradient)" name="Stressed" strokeWidth={2} />
+                        <Area type="monotone" dataKey="diseased" stackId="3" stroke="#EF4444" fill="url(#diseasedGradient)" name="Diseased" strokeWidth={2} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Crop className="h-5 w-5" />
+                    Growth Stage Distribution
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsBarChart data={growthStages}>
+                        <defs>
+                          <linearGradient id="fieldsGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.8}/>
+                            <stop offset="100%" stopColor="#1D4ED8" stopOpacity={0.6}/>
+                          </linearGradient>
+                          <linearGradient id="healthGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10B981" stopOpacity={0.8}/>
+                            <stop offset="100%" stopColor="#059669" stopOpacity={0.6}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis 
+                          dataKey="stage" 
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: '#64748b' }}
+                        />
+                        <YAxis 
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: '#64748b' }}
+                        />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: '#1f2937',
+                            border: 'none',
+                            borderRadius: '8px',
+                            color: '#fff',
+                            fontSize: '14px',
+                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                          }}
+                          formatter={(value: number, name: string) => [
+                            value, 
+                            name === 'fields' ? 'Fields' : 
+                            name === 'avgHealth' ? 'Avg Health (%)' : 'Risk Level'
+                          ]} 
+                        />
+                        <Legend 
+                          verticalAlign="top" 
+                          height={36}
+                          iconType="rect"
+                          wrapperStyle={{
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            paddingBottom: '10px'
+                          }}
+                        />
+                        <Bar dataKey="fields" fill="url(#fieldsGradient)" name="fields" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="avgHealth" fill="url(#healthGradient)" name="avgHealth" radius={[4, 4, 0, 0]} />
+                      </RechartsBarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Field Monitoring Table */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Field Monitoring
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-4">Field ID</th>
+                        <th className="text-left py-3 px-4">Farmer</th>
+                        <th className="text-left py-3 px-4">Crop</th>
+                        <th className="text-left py-3 px-4">Location</th>
+                        <th className="text-left py-3 px-4">Area (ha)</th>
+                        <th className="text-left py-3 px-4">Growth Stage</th>
+                        <th className="text-left py-3 px-4">Health</th>
+                        <th className="text-left py-3 px-4">Last Update</th>
+                        <th className="text-left py-3 px-4">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cropFields.map((field) => (
+                        <tr key={field.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4 font-mono">{field.id}</td>
+                          <td className="py-3 px-4">{field.farmer}</td>
+                          <td className="py-3 px-4">{field.crop}</td>
+                          <td className="py-3 px-4 text-sm">{field.location}</td>
+                          <td className="py-3 px-4">{field.area}</td>
+                          <td className="py-3 px-4">
+                            <Badge variant={
+                              field.growthStage === 'Flowering' ? 'default' :
+                              field.growthStage === 'Maturity' ? 'secondary' : 'outline'
+                            }>
+                              {field.growthStage}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full ${
+                                field.health >= 90 ? 'bg-green-500' :
+                                field.health >= 70 ? 'bg-yellow-500' : 'bg-red-500'
+                              }`}></div>
+                              <span className="font-medium">{field.health}%</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600">{field.lastUpdate}</td>
+                          <td className="py-3 px-4">
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline">
+                                <Eye className="h-3 w-3" />
+                              </Button>
+                              <Button size="sm" variant="outline">
+                                <Camera className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Real-time Monitoring */}
+            <div className="grid gap-6 lg:grid-cols-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Camera className="h-5 w-5" />
+                    Drone Images
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                      <img src="/drone1.jpg" alt="Field view" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <div className="flex justify-between">
+                        <span>Field:</span>
+                        <span>F001 - Maize</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Captured:</span>
+                        <span>2024-03-15 08:30</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Health Score:</span>
+                        <span className="font-medium text-green-600">85%</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bell className="h-5 w-5" />
+                    Field Alerts
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="p-3 bg-red-50 rounded-lg border-l-4 border-red-500">
+                      <div className="font-medium text-red-800">Water Stress Detected</div>
+                      <div className="text-sm text-red-600">Field F003 - Beans</div>
+                      <div className="text-xs text-gray-500">2 hours ago</div>
+                    </div>
+                    <div className="p-3 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
+                      <div className="font-medium text-yellow-800">Pest Activity</div>
+                      <div className="text-sm text-yellow-600">Field F001 - Maize</div>
+                      <div className="text-xs text-gray-500">4 hours ago</div>
+                    </div>
+                    <div className="p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
+                      <div className="font-medium text-green-800">Optimal Growth</div>
+                      <div className="text-sm text-green-600">Field F002 - Rice</div>
+                      <div className="text-xs text-gray-500">6 hours ago</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    Growth Analytics
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="text-center p-4 bg-blue-50 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-600">35</div>
+                      <div className="text-sm text-blue-600">Fields in Flowering</div>
+                    </div>
+                    <div className="text-center p-4 bg-green-50 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600">86%</div>
+                      <div className="text-sm text-green-600">Average Health</div>
+                    </div>
+                    <div className="text-center p-4 bg-orange-50 rounded-lg">
+                      <div className="text-2xl font-bold text-orange-600">12</div>
+                      <div className="text-sm text-orange-600">Fields at Risk</div>
                     </div>
                   </div>
                 </CardContent>
@@ -1242,20 +2361,58 @@ export const InsurerDashboard = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-64">
+                  <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={premiumData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
-                        <YAxis tickFormatter={(value) => `RWF ${(value / 1000000000).toFixed(1)}B`} />
+                        <defs>
+                          <linearGradient id="premiumGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.8}/>
+                            <stop offset="100%" stopColor="#1D4ED8" stopOpacity={0.3}/>
+                          </linearGradient>
+                          <linearGradient id="claimsGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#EF4444" stopOpacity={0.8}/>
+                            <stop offset="100%" stopColor="#DC2626" stopOpacity={0.3}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis 
+                          dataKey="month" 
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: '#64748b' }}
+                        />
+                        <YAxis 
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: '#64748b' }}
+                          tickFormatter={(value) => `RWF ${(value / 1000000000).toFixed(1)}B`} 
+                        />
                         <Tooltip 
+                          contentStyle={{
+                            backgroundColor: '#1f2937',
+                            border: 'none',
+                            borderRadius: '8px',
+                            color: '#fff',
+                            fontSize: '14px',
+                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                          }}
                           formatter={(value: number, name: string) => [
                             `RWF ${(value / 1000000000).toFixed(1)}B`, 
                             name === 'collected' ? 'Premium Collected' : 'Claims Paid'
                           ]}
                         />
-                        <Area type="monotone" dataKey="collected" stackId="1" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.6} />
-                        <Area type="monotone" dataKey="claims" stackId="2" stroke="#EF4444" fill="#EF4444" fillOpacity={0.6} />
+                        <Legend 
+                          verticalAlign="top" 
+                          height={36}
+                          iconType="rect"
+                          wrapperStyle={{
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            paddingBottom: '10px'
+                          }}
+                        />
+                        <Area type="monotone" dataKey="collected" stackId="1" stroke="#3B82F6" fill="url(#premiumGradient)" name="collected" strokeWidth={2} />
+                        <Area type="monotone" dataKey="claims" stackId="2" stroke="#EF4444" fill="url(#claimsGradient)" name="claims" strokeWidth={2} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -1270,15 +2427,58 @@ export const InsurerDashboard = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-64">
+                  <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
                       <RechartsBarChart data={riskData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="region" />
-                        <YAxis />
-                        <Tooltip formatter={(value: number, name: string) => [value, name === 'policies' ? 'Policies' : name === 'claims' ? 'Claims' : 'Risk Score']} />
-                        <Bar dataKey="policies" fill="#3B82F6" name="policies" />
-                        <Bar dataKey="claims" fill="#EF4444" name="claims" />
+                        <defs>
+                          <linearGradient id="policiesGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.8}/>
+                            <stop offset="100%" stopColor="#1D4ED8" stopOpacity={0.6}/>
+                          </linearGradient>
+                          <linearGradient id="claimsGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#EF4444" stopOpacity={0.8}/>
+                            <stop offset="100%" stopColor="#DC2626" stopOpacity={0.6}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis 
+                          dataKey="region" 
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: '#64748b' }}
+                        />
+                        <YAxis 
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: '#64748b' }}
+                        />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: '#1f2937',
+                            border: 'none',
+                            borderRadius: '8px',
+                            color: '#fff',
+                            fontSize: '14px',
+                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                          }}
+                          formatter={(value: number, name: string) => [
+                            value, 
+                            name === 'policies' ? 'Policies' : 
+                            name === 'claims' ? 'Claims' : 'Risk Score'
+                          ]} 
+                        />
+                        <Legend 
+                          verticalAlign="top" 
+                          height={36}
+                          iconType="rect"
+                          wrapperStyle={{
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            paddingBottom: '10px'
+                          }}
+                        />
+                        <Bar dataKey="policies" fill="url(#policiesGradient)" name="policies" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="claims" fill="url(#claimsGradient)" name="claims" radius={[4, 4, 0, 0]} />
                       </RechartsBarChart>
                     </ResponsiveContainer>
                   </div>
