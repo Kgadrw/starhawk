@@ -47,50 +47,35 @@ export const LoginPage = ({ role }: LoginPageProps) => {
     farmer: {
       title: "Farmer Portal",
       icon: Wheat,
-      color: "bg-green-500",
-      gradient: "from-green-400 to-green-600",
-      description: "Access your farm management dashboard",
-      features: ["Crop Monitoring", "Weather Alerts", "Insurance Claims", "Market Prices"],
+      color: "bg-gray-600",
       canRegister: true,
       registerFields: ["name", "phone", "farmName", "location", "farmSize"]
     },
     insurer: {
       title: "Insurer Dashboard",
       icon: Building2,
-      color: "bg-blue-500",
-      gradient: "from-blue-400 to-blue-600",
-      description: "Manage insurance policies and claims",
-      features: ["Policy Management", "Risk Assessment", "Claims Processing", "Analytics"],
+      color: "bg-gray-600",
       canRegister: true,
       registerFields: ["name", "phone", "company", "position"]
     },
     government: {
       title: "Government Analytics",
       icon: BarChart3,
-      color: "bg-red-500",
-      gradient: "from-red-400 to-red-600",
-      description: "National agricultural insights and monitoring",
-      features: ["National Statistics", "Policy Monitoring", "Disaster Management", "Reports"],
+      color: "bg-gray-600",
       canRegister: false,
       registerFields: []
     },
     assessor: {
       title: "Assessor Portal",
       icon: MapPin,
-      color: "bg-orange-500",
-      gradient: "from-orange-400 to-orange-600",
-      description: "Conduct farm assessments and evaluations",
-      features: ["Field Assessments", "Risk Evaluation", "Documentation", "Reports"],
+      color: "bg-gray-600",
       canRegister: true,
       registerFields: ["name", "phone", "company", "position"]
     },
     admin: {
       title: "Admin Panel",
       icon: Settings,
-      color: "bg-gray-500",
-      gradient: "from-gray-400 to-gray-600",
-      description: "System administration and management",
-      features: ["User Management", "System Settings", "Analytics", "Monitoring"],
+      color: "bg-gray-600",
       canRegister: false,
       registerFields: []
     }
@@ -157,7 +142,7 @@ export const LoginPage = ({ role }: LoginPageProps) => {
   };
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${config.gradient} to-gray-100 flex items-center justify-center p-4`}>
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         {/* Role-specific header */}
         <div className="text-center mb-8">
@@ -166,21 +151,7 @@ export const LoginPage = ({ role }: LoginPageProps) => {
               <Icon className="h-8 w-8" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white drop-shadow-lg">{config.title}</h1>
-              <p className="text-sm text-white/90 font-light">{config.description}</p>
-            </div>
-          </div>
-          
-          {/* Features preview */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-6">
-            <h3 className="text-white font-medium mb-3">Dashboard Features:</h3>
-            <div className="grid grid-cols-2 gap-2">
-              {config.features.map((feature, index) => (
-                <div key={index} className="flex items-center gap-2 text-white/90 text-sm">
-                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                  <span>{feature}</span>
-                </div>
-              ))}
+              <h1 className="text-3xl font-bold text-gray-900">{config.title}</h1>
             </div>
           </div>
 
@@ -188,7 +159,7 @@ export const LoginPage = ({ role }: LoginPageProps) => {
           <Button
             onClick={handlePreview}
             variant="outline"
-            className="w-full mb-6 bg-white/20 border-white/30 text-white hover:bg-white/30 backdrop-blur-sm"
+            className="w-full mb-6 border-gray-300 text-gray-700 hover:bg-gray-50"
           >
             <PreviewIcon className="h-4 w-4 mr-2" />
             Preview Dashboard
@@ -203,7 +174,7 @@ export const LoginPage = ({ role }: LoginPageProps) => {
         )}
 
         {/* Login/Register Form */}
-        <Card className="bg-white/95 backdrop-blur-sm shadow-2xl border border-white/20">
+        <Card className="bg-white shadow-lg border border-gray-200">
           <CardContent className="p-8">
             {/* Toggle between Login and Register */}
             {config.canRegister && (
@@ -420,7 +391,7 @@ export const LoginPage = ({ role }: LoginPageProps) => {
 
               <Button
                 type="submit"
-                className={`w-full rounded-full py-3 font-medium bg-gradient-to-r ${config.gradient} hover:opacity-90 text-white shadow-lg`}
+                className="w-full rounded-full py-3 font-medium bg-gray-600 hover:bg-gray-700 text-white shadow-lg"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -454,7 +425,7 @@ export const LoginPage = ({ role }: LoginPageProps) => {
         <div className="text-center mt-6">
           <button
             onClick={() => navigate("/")}
-            className="text-sm text-white/80 hover:text-white font-medium flex items-center gap-2 mx-auto bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full hover:bg-white/20 transition-colors"
+            className="text-sm text-gray-600 hover:text-gray-900 font-medium flex items-center gap-2 mx-auto bg-gray-100 px-4 py-2 rounded-full hover:bg-gray-200 transition-colors"
           >
             <ArrowRight className="h-4 w-4 rotate-180" />
             Back to Home

@@ -15,13 +15,13 @@ export const BaseDashboard = ({
   onPageChange 
 }: BaseDashboardProps) => {
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-white">
       <RoleSidebar 
         role={role} 
         activePage={activePage} 
         onPageChange={onPageChange} 
       />
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto bg-white">
         <div className="p-6">
           {children}
         </div>
