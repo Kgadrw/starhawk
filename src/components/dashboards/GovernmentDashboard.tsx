@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BaseDashboard } from "./BaseDashboard";
 import { DashboardPage, StatCard, DataTable, StatusBadge } from "./DashboardPage";
+import { GovernmentAnalyticsDashboard } from "../government/GovernmentAnalyticsDashboard";
+import { NotificationManager } from "../notifications/NotificationManager";
+import { EmailNotificationSystem } from "../notifications/EmailNotificationSystem";
 import { 
   LineChart as RechartsLineChart, 
   Line, 
@@ -67,7 +70,7 @@ export const GovernmentDashboard = () => {
 
   const renderDashboard = () => (
     <DashboardPage title="Government Analytics" actions={
-      <Button className="bg-red-600 hover:bg-red-700">
+      <Button className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
         <Globe className="h-4 w-4 mr-2" />
         Generate Report
       </Button>
@@ -467,6 +470,18 @@ export const GovernmentDashboard = () => {
               </div>
             </div>
           </DashboardPage>
+        );
+      case "analytics":
+        return (
+          <GovernmentAnalyticsDashboard />
+        );
+      case "notifications":
+        return (
+          <NotificationManager userType="government" userId="gov_001" />
+        );
+      case "email-notifications":
+        return (
+          <EmailNotificationSystem userRole="government" userId="gov_001" />
         );
       default:
         return renderDashboard();

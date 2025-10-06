@@ -29,7 +29,12 @@ import {
   DollarSign,
   Percent,
   Crop,
-  Camera
+  Camera,
+  UserPlus,
+  Plus,
+  CreditCard,
+  Smartphone,
+  Mail
 } from "lucide-react";
 
 interface RoleSidebarProps {
@@ -53,8 +58,11 @@ export function RoleSidebar({ role, onPageChange, activePage = "dashboard", isOp
         { id: "dashboard", label: "Dashboard", icon: Home, description: "Overview & Analytics" },
         { id: "policies", label: "Policies", icon: FileText, description: "Policy Management" },
         { id: "claims", label: "Claims", icon: AlertTriangle, description: "Claims Processing" },
+        { id: "underwriting", label: "Underwriting", icon: Shield, description: "AI Risk Assessment" },
+        { id: "policy-creation", label: "Policy Creation", icon: FileText, description: "Automated Policy Engine" },
         { id: "risk", label: "Risk Assessment", icon: TrendingUp, description: "Weather & Risk Analysis" },
-        { id: "crop-monitoring", label: "Crop Monitoring", icon: Crop, description: "Field Surveillance" },
+        { id: "monitoring", label: "Monitoring", icon: Crop, description: "Continuous Surveillance" },
+        { id: "payments", label: "Payments", icon: CreditCard, description: "Payment Processing" },
         { id: "portfolio", label: "Portfolio", icon: BarChart3, description: "Portfolio Overview" },
         { id: "reports", label: "Reports", icon: FileText, description: "Analytics & Reports" }
       ],
@@ -70,9 +78,12 @@ export function RoleSidebar({ role, onPageChange, activePage = "dashboard", isOp
       color: "bg-red-500",
       menuItems: [
         { id: "dashboard", label: "Overview", icon: Home, description: "National Statistics" },
+        { id: "analytics", label: "Analytics", icon: BarChart3, description: "AI Analytics Dashboard" },
         { id: "monitoring", label: "Monitoring", icon: Activity, description: "Policy Monitoring" },
         { id: "sector", label: "Sector Analysis", icon: BarChart3, description: "Agricultural Sector" },
         { id: "trends", label: "Trends", icon: TrendingUp, description: "Market Trends" },
+        { id: "notifications", label: "Notifications", icon: Bell, description: "Alert Management" },
+        { id: "email-notifications", label: "Email System", icon: Mail, description: "Email Templates & Logs" },
         { id: "reports", label: "Reports", icon: FileText, description: "Government Reports" },
         { id: "settings", label: "Settings", icon: Settings, description: "System Settings" }
       ],
@@ -89,6 +100,8 @@ export function RoleSidebar({ role, onPageChange, activePage = "dashboard", isOp
       menuItems: [
         { id: "dashboard", label: "Dashboard", icon: Home, description: "Task Overview" },
         { id: "assessments", label: "Assessments", icon: MapPin, description: "Field Assessments" },
+        { id: "risk-assessment", label: "Risk Assessment", icon: Shield, description: "AI-Powered Assessment" },
+        { id: "monitoring", label: "Monitoring", icon: Activity, description: "Continuous Surveillance" },
         { id: "tasks", label: "My Tasks", icon: Calendar, description: "Assigned Tasks" },
         { id: "reports", label: "Reports", icon: FileText, description: "Assessment Reports" },
         { id: "history", label: "History", icon: Clock, description: "Completed Tasks" },
@@ -128,9 +141,13 @@ export function RoleSidebar({ role, onPageChange, activePage = "dashboard", isOp
       color: "bg-green-500",
       menuItems: [
         { id: "dashboard", label: "Dashboard", icon: Home, description: "Farm Overview" },
+        { id: "registration", label: "Registration", icon: UserPlus, description: "Complete Profile" },
+        { id: "policy-request", label: "Request Policy", icon: Plus, description: "Apply for Insurance" },
         { id: "policies", label: "My Policies", icon: FileText, description: "Insurance Policies" },
         { id: "claims", label: "Claims", icon: AlertTriangle, description: "File & Track Claims" },
         { id: "monitoring", label: "Field Monitoring", icon: MapPin, description: "Crop Surveillance" },
+        { id: "payments", label: "Payments", icon: CreditCard, description: "Mobile Money & USSD" },
+        { id: "file-claim", label: "File Claim", icon: AlertTriangle, description: "Report Crop Damage" },
         { id: "reports", label: "Reports", icon: BarChart3, description: "Farm Reports" },
         { id: "notifications", label: "Notifications", icon: Bell, description: "Alerts & Updates" },
         { id: "profile", label: "Profile", icon: Users, description: "Account Settings" }
@@ -195,14 +212,14 @@ export function RoleSidebar({ role, onPageChange, activePage = "dashboard", isOp
         </div>
 
         {/* Stats */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="grid grid-cols-3 gap-2">
+        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+          <div className="grid grid-cols-3 gap-3">
             {config.stats.map((stat, index) => {
               const StatIcon = stat.icon;
               return (
-                <div key={index} className="text-center">
-                  <div className={`text-lg font-semibold ${stat.color}`}>{stat.value}</div>
-                  <div className="text-xs text-muted-foreground">{stat.label}</div>
+                <div key={index} className="text-center p-2 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200">
+                  <div className={`text-lg font-bold ${stat.color}`}>{stat.value}</div>
+                  <div className="text-xs text-gray-600 font-medium">{stat.label}</div>
                 </div>
               );
             })}
@@ -220,17 +237,19 @@ export function RoleSidebar({ role, onPageChange, activePage = "dashboard", isOp
                 <Button
                   key={item.id}
                   variant={isActive ? "default" : "ghost"}
-                  className={`w-full justify-start h-auto p-3 ${
-                    isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                  className={`w-full justify-start h-auto p-3 rounded-lg transition-all duration-200 ${
+                    isActive 
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg' 
+                      : 'hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-200 hover:shadow-md'
                   }`}
                   onClick={() => handlePageChange(item.id)}
                 >
-                  <ItemIcon className="h-4 w-4 mr-3" />
+                  <ItemIcon className={`h-4 w-4 mr-3 ${isActive ? 'text-white' : 'text-gray-600'}`} />
                   <div className="flex-1 text-left">
-                    <div className="font-medium">{item.label}</div>
-                    <div className="text-xs opacity-70">{item.description}</div>
+                    <div className={`font-medium ${isActive ? 'text-white' : 'text-gray-800'}`}>{item.label}</div>
+                    <div className={`text-xs ${isActive ? 'text-blue-100' : 'text-gray-500'}`}>{item.description}</div>
                   </div>
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className={`h-4 w-4 ${isActive ? 'text-white' : 'text-gray-400'}`} />
                 </Button>
               );
             })}

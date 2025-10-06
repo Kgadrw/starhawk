@@ -171,34 +171,18 @@ export function Navbar() {
 
           {/* Action Buttons */}
           <div className="hidden lg:flex items-center gap-4">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2 border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900">
-                  <Users className="h-4 w-4" />
-                  Login
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-white border border-gray-100 rounded-xl shadow-lg">
-                <DropdownMenuItem onClick={() => navigate("/insurer")} className="text-gray-700 hover:bg-gray-50">
-                  <Shield className="h-4 w-4 mr-2" />
-                  Insurer Login
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/government")} className="text-gray-700 hover:bg-gray-50">
-                  <Users className="h-4 w-4 mr-2" />
-                  Government Login
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/assessor")} className="text-gray-700 hover:bg-gray-50">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Assessor Login
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/admin")} className="text-gray-700 hover:bg-gray-50">
-                  <Briefcase className="h-4 w-4 mr-2" />
-                  Admin Login
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button className="bg-gray-900 hover:bg-gray-800 text-white rounded-full px-6">
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2 border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              onClick={() => navigate("/role-selection")}
+            >
+              <Users className="h-4 w-4" />
+              Login
+            </Button>
+            <Button 
+              className="bg-gray-900 hover:bg-gray-800 text-white rounded-full px-6"
+              onClick={() => navigate("/role-selection")}
+            >
               Get Started
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
@@ -263,11 +247,24 @@ export function Navbar() {
                 File a Claim
               </Link>
               <div className="px-3 py-2 space-y-3">
-                <Button variant="outline" className="w-full justify-start border-gray-200 text-gray-600 hover:bg-gray-50">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start border-gray-200 text-gray-600 hover:bg-gray-50"
+                  onClick={() => {
+                    navigate("/role-selection");
+                    setIsMenuOpen(false);
+                  }}
+                >
                   <Users className="h-4 w-4 mr-2" />
                   Login
                 </Button>
-                <Button className="w-full bg-gray-900 hover:bg-gray-800 text-white rounded-full">
+                <Button 
+                  className="w-full bg-gray-900 hover:bg-gray-800 text-white rounded-full"
+                  onClick={() => {
+                    navigate("/role-selection");
+                    setIsMenuOpen(false);
+                  }}
+                >
                   Get Started
                 </Button>
               </div>

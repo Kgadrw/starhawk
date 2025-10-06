@@ -1,6 +1,4 @@
 import { Link } from "react-router-dom";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -16,7 +14,13 @@ import {
   Shield,
   Database,
   Globe,
-  TrendingUp
+  TrendingUp,
+  Sparkles,
+  CheckCircle,
+  Star,
+  Users,
+  Zap,
+  Target
 } from "lucide-react";
 
 const Index = () => {
@@ -49,64 +53,26 @@ function HomePage() {
     }
   ];
 
-  const roleCards = [
-    {
-      title: "Farmer Portal",
-      description: "Manage your farm, monitor crops, and access insurance services",
-      icon: Wheat,
-      color: "bg-green-500",
-      href: "/farmer"
-    },
-    {
-      title: "Insurer Dashboard",
-      description: "Manage policies, process claims, and analyze risk data",
-      icon: Building2,
-      color: "bg-blue-500",
-      href: "/insurer"
-    },
-    {
-      title: "Government Analytics",
-      description: "National agricultural insights and policy monitoring",
-      icon: BarChart3,
-      color: "bg-red-500",
-      href: "/government"
-    },
-    {
-      title: "Assessor Portal",
-      description: "Conduct field assessments and risk evaluations",
-      icon: MapPin,
-      color: "bg-orange-500",
-      href: "/assessor"
-    },
-    {
-      title: "Admin Panel",
-      description: "System administration and user management",
-      icon: Settings,
-      color: "bg-gray-500",
-      href: "/admin"
-    }
-  ];
-
   const platformCapabilities = [
     {
       title: "Real-time Monitoring",
-      description: "24/7 field surveillance with instant alerts"
+      description: "Continuous field surveillance with instant alerts and notifications"
     },
     {
-      title: "Weather Integration",
-      description: "Advanced weather forecasting and risk modeling"
-    },
-    {
-      title: "Crop Health Analysis",
-      description: "AI-powered disease and pest detection"
-    },
-    {
-      title: "Yield Prediction",
-      description: "Accurate harvest forecasting using satellite data"
+      title: "Automated Claims",
+      description: "AI-powered claim processing with drone verification and satellite validation"
     },
     {
       title: "Risk Assessment",
-      description: "Comprehensive risk evaluation and mitigation"
+      description: "Comprehensive risk evaluation using historical data and predictive analytics"
+    },
+    {
+      title: "Policy Management",
+      description: "Dynamic policy adjustment based on real-time field conditions and risk factors"
+    },
+    {
+      title: "Data Analytics",
+      description: "Advanced analytics dashboard for insights and decision-making"
     },
     {
       title: "Insurance Claims",
@@ -115,49 +81,92 @@ function HomePage() {
   ];
 
     return (
-    <div className="min-h-screen bg-white">
-      <Navbar />
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="absolute inset-0 opacity-20">
+        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/5 to-transparent"></div>
+      </div>
+      
+      {/* Floating Elements */}
+      <div className="absolute top-20 left-10 w-20 h-20 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full blur-xl opacity-20 animate-pulse"></div>
+      <div className="absolute top-40 right-20 w-32 h-32 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full blur-xl opacity-20 animate-pulse delay-1000"></div>
+      <div className="absolute bottom-20 left-1/4 w-24 h-24 bg-gradient-to-r from-orange-400 to-amber-500 rounded-full blur-xl opacity-20 animate-pulse delay-2000"></div>
+      <div className="absolute top-1/2 right-1/4 w-16 h-16 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full blur-xl opacity-20 animate-pulse delay-3000"></div>
+
+      {/* Header */}
+      <div className="relative z-10 bg-white/10 backdrop-blur-md border-b border-white/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Shield className="h-7 w-7 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-white">STARHAWK</h1>
+                <p className="text-green-200 text-sm">Agricultural Insurance Platform</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Link 
+                to="/role-selection" 
+                className="text-white/80 hover:text-white transition-colors flex items-center space-x-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm"
+              >
+                <Users className="h-4 w-4" />
+                <span>Get Started</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
       
       {/* Hero Section */}
-      <section className="relative bg-cover bg-center bg-no-repeat py-24 px-4" style={{ backgroundImage: 'url(/bg.jpg)' }}>
-        <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/80 to-white/90"></div>
-        <div className="relative max-w-7xl mx-auto text-center">
-          <h1 className="text-5xl md:text-6xl font-light text-gray-900 mb-6 tracking-tight">
+      <section className="relative z-10 py-24 px-4">
+        <div className="max-w-7xl mx-auto text-center">
+          <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-8">
+            <Sparkles className="h-4 w-4 text-yellow-400" />
+            <span className="text-white/90 text-sm font-medium">Revolutionary Agricultural Technology</span>
+          </div>
+          <h1 className="text-6xl md:text-7xl font-bold text-white mb-8 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent leading-tight">
             Revolutionizing Agricultural
-            <span className="block text-gray-600">Insurance with Technology</span>
-            </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto font-light leading-relaxed">
+            <span className="block bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Insurance with AI</span>
+          </h1>
+          <p className="text-xl text-white/80 mb-12 max-w-4xl mx-auto leading-relaxed">
             STARHAWK combines drone surveillance, satellite analytics, and AI to provide 
             comprehensive agricultural insurance solutions for farmers, insurers, and governments.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/farmer">
+          <div className="flex flex-col sm:flex-row gap-6 justify-center">
+            <Link to="/role-selection">
               <Button 
                 size="lg" 
-                className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-3 rounded-full font-medium"
+                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-10 py-4 rounded-2xl font-semibold text-lg shadow-2xl hover:shadow-3xl transition-all duration-300"
               >
                 Get Started
+                <ArrowRight className="h-5 w-5 ml-2" />
               </Button>
             </Link>
-              <Button 
-                size="lg" 
-                variant="outline" 
-              className="border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-3 rounded-full font-medium"
-              >
-                Learn More
-              </Button>
-            </div>
-              </div>
+            <Button 
+              size="lg" 
+              variant="outline" 
+              className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30 px-10 py-4 rounded-2xl font-semibold text-lg backdrop-blur-sm"
+            >
+              Learn More
+            </Button>
+          </div>
+        </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-24 px-4 bg-gray-50">
+      <section className="relative z-10 py-24 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-light text-gray-900 mb-4 tracking-tight">
-              Advanced Technology Solutions
+          <div className="text-center mb-20">
+            <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
+              <Zap className="h-4 w-4 text-yellow-400" />
+              <span className="text-white/90 text-sm font-medium">Advanced Technology</span>
+            </div>
+            <h2 className="text-5xl font-bold text-white mb-6 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent">
+              Technology Solutions
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto font-light">
+            <p className="text-xl text-white/80 max-w-4xl mx-auto leading-relaxed">
               Our platform integrates cutting-edge technology to deliver comprehensive 
               agricultural monitoring and insurance services.
             </p>
@@ -165,217 +174,165 @@ function HomePage() {
           
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
             {features.map((feature, index) => (
-              <Card key={index} className="bg-white border-0 shadow-sm hover:shadow-md transition-shadow duration-300 rounded-2xl">
+              <Card key={index} className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-500 rounded-3xl group">
                 <CardContent className="p-8 text-center">
-                  <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                    <feature.icon className="h-8 w-8 text-gray-700" />
-      </div>
-                  <h3 className="text-xl font-medium text-gray-900 mb-3">{feature.title}</h3>
-                  <p className="text-gray-600 font-light leading-relaxed">{feature.description}</p>
-                  </CardContent>
-                </Card>
-                      ))}
-                    </div>
+                  <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-all duration-500 shadow-lg">
+                    <feature.icon className="h-10 w-10 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-4 group-hover:text-green-200 transition-colors">{feature.title}</h3>
+                  <p className="text-white/70 leading-relaxed">{feature.description}</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="relative z-10 py-24 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-12">
+            <div className="grid gap-8 md:grid-cols-4">
+              <div className="text-center">
+                <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <Users className="h-10 w-10 text-white" />
+                </div>
+                <h3 className="text-4xl font-bold text-white mb-2">10,000+</h3>
+                <p className="text-white/70">Active Farmers</p>
+              </div>
+              <div className="text-center">
+                <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <Shield className="h-10 w-10 text-white" />
+                </div>
+                <h3 className="text-4xl font-bold text-white mb-2">99.9%</h3>
+                <p className="text-white/70">Uptime Guarantee</p>
+              </div>
+              <div className="text-center">
+                <div className="w-20 h-20 bg-gradient-to-r from-orange-500 to-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <Target className="h-10 w-10 text-white" />
+                </div>
+                <h3 className="text-4xl font-bold text-white mb-2">24/7</h3>
+                <p className="text-white/70">Support Available</p>
+              </div>
+              <div className="text-center">
+                <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <TrendingUp className="h-10 w-10 text-white" />
+                </div>
+                <h3 className="text-4xl font-bold text-white mb-2">95%</h3>
+                <p className="text-white/70">Claim Accuracy</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* Platform Showcase Section */}
-      <section className="py-24 px-4 bg-white">
+      <section className="relative z-10 py-24 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-light text-gray-900 mb-4 tracking-tight">
-              Our Platform in Action
+          <div className="text-center mb-20">
+            <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
+              <Camera className="h-4 w-4 text-yellow-400" />
+              <span className="text-white/90 text-sm font-medium">Platform in Action</span>
+            </div>
+            <h2 className="text-5xl font-bold text-white mb-6 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent">
+              Our Technology
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto font-light">
+            <p className="text-xl text-white/80 max-w-4xl mx-auto leading-relaxed">
               See how our drone technology and AI systems work together to provide 
               comprehensive agricultural monitoring and insurance solutions.
             </p>
-        </div>
+          </div>
 
-          {/* Drone Images */}
-          <div className="grid gap-8 md:grid-cols-3 mb-16">
+          {/* Technology Showcase */}
+          <div className="grid gap-8 md:grid-cols-3 mb-20">
             <div className="group">
-              <div className="aspect-video bg-gray-100 rounded-2xl overflow-hidden mb-4">
+              <div className="aspect-video bg-white/10 backdrop-blur-sm rounded-3xl overflow-hidden mb-6 border border-white/20">
                 <img 
                   src="/drone.png" 
                   alt="Drone surveillance system" 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-        </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Drone Surveillance</h3>
-              <p className="text-gray-600 font-light">High-resolution aerial imaging for comprehensive field monitoring</p>
-        </div>
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3 group-hover:text-green-200 transition-colors">Drone Surveillance</h3>
+              <p className="text-white/70 leading-relaxed">High-resolution aerial imaging for comprehensive field monitoring</p>
+            </div>
             
             <div className="group">
-              <div className="aspect-video bg-gray-100 rounded-2xl overflow-hidden mb-4">
+              <div className="aspect-video bg-white/10 backdrop-blur-sm rounded-3xl overflow-hidden mb-6 border border-white/20">
                 <img 
                   src="/drone1.jpg" 
                   alt="Land surveying with drones" 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3 group-hover:text-green-200 transition-colors">Land Surveying</h3>
+              <p className="text-white/70 leading-relaxed">Precise field mapping and boundary detection for accurate assessments</p>
             </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Land Surveying</h3>
-              <p className="text-gray-600 font-light">Precise field mapping and boundary detection for accurate assessments</p>
-          </div>
             
             <div className="group">
-              <div className="aspect-video bg-gray-100 rounded-2xl overflow-hidden mb-4">
+              <div className="aspect-video bg-white/10 backdrop-blur-sm rounded-3xl overflow-hidden mb-6 border border-white/20">
                 <img 
                   src="/drone2.jpeg" 
                   alt="Crop monitoring and analysis" 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-        />
-      </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Crop Analysis</h3>
-              <p className="text-gray-600 font-light">AI-powered crop health monitoring and yield prediction</p>
-        </div>
-      </div>
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3 group-hover:text-green-200 transition-colors">Crop Analysis</h3>
+              <p className="text-white/70 leading-relaxed">AI-powered crop health monitoring and yield prediction</p>
+            </div>
+          </div>
 
           {/* Platform Capabilities */}
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {platformCapabilities.map((capability, index) => (
-              <Card key={index} className="bg-gray-50 border-0 hover:bg-gray-100 transition-colors duration-300 rounded-2xl">
+              <Card key={index} className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300 rounded-2xl group">
                 <CardContent className="p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">{capability.title}</h3>
-                  <p className="text-gray-600 font-light">{capability.description}</p>
-          </CardContent>
-        </Card>
+                  <h3 className="text-lg font-bold text-white mb-2 group-hover:text-green-200 transition-colors">{capability.title}</h3>
+                  <p className="text-white/70 leading-relaxed">{capability.description}</p>
+                </CardContent>
+              </Card>
             ))}
-              </div>
-            </div>
-      </section>
-
-      {/* Role Selection Section */}
-      <section className="py-24 px-4 bg-gray-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-light text-gray-900 mb-4 tracking-tight">
-              Choose Your Role
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto font-light">
-              Access specialized dashboards designed for your specific needs and responsibilities.
-            </p>
-      </div>
-
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2">
-            {roleCards.map((role, index) => (
-              <Link key={index} to={role.href} className="block">
-                <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all duration-300 rounded-2xl cursor-pointer group">
-                  <CardContent className="p-8">
-                    <div className="flex items-start gap-6">
-                      <div className={`w-16 h-16 ${role.color} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                        <role.icon className="h-8 w-8 text-white" />
-                  </div>
-                      <div className="flex-1">
-                        <h3 className="text-xl font-medium text-gray-900 mb-3 group-hover:text-gray-700 transition-colors">
-                          {role.title}
-                        </h3>
-                        <p className="text-gray-600 font-light leading-relaxed mb-4">
-                          {role.description}
-                        </p>
-                        <div className="flex items-center text-gray-500 group-hover:text-gray-700 transition-colors">
-                          <span className="text-sm font-medium">Access Dashboard</span>
-                          <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </div>
-            </div>
-          </CardContent>
-        </Card>
-              </Link>
-                    ))}
-                  </div>
-                  </div>
-      </section>
-
-      {/* Technology Showcase */}
-      <section className="py-24 px-4 bg-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-light text-gray-900 mb-4 tracking-tight">
-              Powered by Innovation
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto font-light">
-              Our technology stack combines the latest in AI, satellite imagery, 
-              and drone technology to deliver unmatched agricultural insights.
-            </p>
+          </div>
         </div>
-          
-          <div className="grid gap-8 md:grid-cols-3">
-            <Card className="bg-gray-50 border-0 hover:bg-gray-100 transition-colors duration-300 rounded-2xl">
-              <CardContent className="p-8 text-center">
-                <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <Database className="h-8 w-8 text-blue-600" />
-              </div>
-                <h3 className="text-xl font-medium text-gray-900 mb-3">Big Data Analytics</h3>
-                <p className="text-gray-600 font-light">
-                  Process massive datasets from satellites, drones, and IoT sensors 
-                  to generate actionable insights for agricultural decision-making.
-                </p>
-                </CardContent>
-              </Card>
-
-            <Card className="bg-gray-50 border-0 hover:bg-gray-100 transition-colors duration-300 rounded-2xl">
-              <CardContent className="p-8 text-center">
-                <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <Globe className="h-8 w-8 text-green-600" />
-                    </div>
-                <h3 className="text-xl font-medium text-gray-900 mb-3">Global Coverage</h3>
-                <p className="text-gray-600 font-light">
-                  Monitor agricultural activities across vast regions with 
-                  satellite coverage and local drone networks for comprehensive insights.
-                </p>
-                </CardContent>
-              </Card>
-
-            <Card className="bg-gray-50 border-0 hover:bg-gray-100 transition-colors duration-300 rounded-2xl">
-              <CardContent className="p-8 text-center">
-                <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <TrendingUp className="h-8 w-8 text-purple-600" />
-                    </div>
-                <h3 className="text-xl font-medium text-gray-900 mb-3">Predictive Analytics</h3>
-                <p className="text-gray-600 font-light">
-                  Advanced machine learning models predict weather patterns, 
-                  crop yields, and potential risks to optimize insurance coverage.
-                </p>
-                </CardContent>
-              </Card>
-                    </div>
-                  </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-24 px-4 bg-gray-50">
+      {/* Final CTA Section */}
+      <section className="relative z-10 py-24 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl font-light text-gray-900 mb-6 tracking-tight">
-            Ready to Transform Agriculture?
-          </h2>
-          <p className="text-xl text-gray-600 mb-8 font-light">
-            Join thousands of farmers, insurers, and agricultural professionals 
-            who trust STARHAWK for their agricultural monitoring and insurance needs.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/farmer">
+          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-12">
+            <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-8">
+              <Star className="h-4 w-4 text-yellow-400" />
+              <span className="text-white/90 text-sm font-medium">Ready to Get Started?</span>
+            </div>
+            <h2 className="text-4xl font-bold text-white mb-6 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent">
+              Join the Future of Agriculture
+            </h2>
+            <p className="text-xl text-white/80 mb-10 leading-relaxed">
+              Experience the power of AI-driven agricultural insurance. Get started today and transform your farming operations.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-6 justify-center">
+              <Link to="/role-selection">
+                <Button 
+                  size="lg" 
+                  className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-10 py-4 rounded-2xl font-semibold text-lg shadow-2xl hover:shadow-3xl transition-all duration-300"
+                >
+                  Get Started Now
+                  <ArrowRight className="h-5 w-5 ml-2" />
+                </Button>
+              </Link>
               <Button 
                 size="lg" 
-                className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-3 rounded-full font-medium"
+                variant="outline" 
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30 px-10 py-4 rounded-2xl font-semibold text-lg backdrop-blur-sm"
               >
-                Start Your Journey
-                    </Button>
-            </Link>
-            <Button 
-              size="lg" 
-              variant="outline" 
-              className="border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-3 rounded-full font-medium"
-            >
-              Contact Sales
-                    </Button>
-                      </div>
-                  </div>
-      </section>
-
-      <Footer />
+                Learn More
+              </Button>
+            </div>
           </div>
-        );
+        </div>
+      </section>
+    </div>
+  );
 }
 
 export default Index;
