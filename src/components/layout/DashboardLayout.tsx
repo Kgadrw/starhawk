@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +16,9 @@ import {
   Home,
   User,
   Shield,
-  Building2
+  Building2,
+  Sun,
+  Moon
 } from "lucide-react";
 
 interface DashboardLayoutProps {
@@ -46,7 +48,34 @@ export default function DashboardLayout({
   onLogout
 }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const navigate = useNavigate();
+
+  // Load dark mode preference from localStorage on component mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      setIsDarkMode(true);
+      document.documentElement.classList.add('dark');
+    } else {
+      setIsDarkMode(false);
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
+
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    const newDarkMode = !isDarkMode;
+    setIsDarkMode(newDarkMode);
+    
+    if (newDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
 
   const handleLogout = () => {
     // Clear any stored authentication data
@@ -86,6 +115,86 @@ export default function DashboardLayout({
     }
   };
 
+  const getSidebarTheme = () => {
+    if (isDarkMode) {
+      switch (userType) {
+        case "farmer": return "from-gray-800 to-gray-900 border-gray-700/30";
+        case "assessor": return "from-gray-800 to-gray-900 border-gray-700/30";
+        case "insurer": return "from-gray-800 to-gray-900 border-gray-700/30";
+        case "admin": return "from-gray-800 to-gray-900 border-gray-700/30";
+        case "government": return "from-gray-800 to-gray-900 border-gray-700/30";
+        default: return "from-gray-800 to-gray-900 border-gray-700/30";
+      }
+    } else {
+      switch (userType) {
+        case "farmer": return "from-green-50/90 to-emerald-50/90 border-green-200/30";
+        case "assessor": return "from-orange-50/90 to-red-50/90 border-orange-200/30";
+        case "insurer": return "from-blue-50/90 to-indigo-50/90 border-blue-200/30";
+        case "admin": return "from-purple-50/90 to-violet-50/90 border-purple-200/30";
+        case "government": return "from-indigo-50/90 to-blue-50/90 border-indigo-200/30";
+        default: return "from-gray-50/90 to-slate-50/90 border-gray-200/30";
+      }
+    }
+  };
+
+  const getNavigationColors = () => {
+    if (isDarkMode) {
+      switch (userType) {
+        case "farmer": return {
+          active: "from-green-500/80 to-emerald-600/80 shadow-green-500/20",
+          hover: "hover:text-green-400"
+        };
+        case "assessor": return {
+          active: "from-orange-500/80 to-red-600/80 shadow-orange-500/20",
+          hover: "hover:text-orange-400"
+        };
+        case "insurer": return {
+          active: "from-blue-500/80 to-indigo-600/80 shadow-blue-500/20",
+          hover: "hover:text-blue-400"
+        };
+        case "admin": return {
+          active: "from-purple-500/80 to-violet-600/80 shadow-purple-500/20",
+          hover: "hover:text-purple-400"
+        };
+        case "government": return {
+          active: "from-indigo-500/80 to-blue-600/80 shadow-indigo-500/20",
+          hover: "hover:text-indigo-400"
+        };
+        default: return {
+          active: "from-gray-500/80 to-slate-600/80 shadow-gray-500/20",
+          hover: "hover:text-gray-400"
+        };
+      }
+    } else {
+      switch (userType) {
+        case "farmer": return {
+          active: "from-green-400/80 to-emerald-500/80 shadow-green-200/50",
+          hover: "hover:text-green-600"
+        };
+        case "assessor": return {
+          active: "from-orange-400/80 to-red-500/80 shadow-orange-200/50",
+          hover: "hover:text-orange-600"
+        };
+        case "insurer": return {
+          active: "from-blue-400/80 to-indigo-500/80 shadow-blue-200/50",
+          hover: "hover:text-blue-600"
+        };
+        case "admin": return {
+          active: "from-purple-400/80 to-violet-500/80 shadow-purple-200/50",
+          hover: "hover:text-purple-600"
+        };
+        case "government": return {
+          active: "from-indigo-400/80 to-blue-500/80 shadow-indigo-200/50",
+          hover: "hover:text-indigo-600"
+        };
+        default: return {
+          active: "from-gray-400/80 to-slate-500/80 shadow-gray-200/50",
+          hover: "hover:text-gray-600"
+        };
+      }
+    }
+  };
+
   const getUserLabel = () => {
     switch (userType) {
       case "farmer": return "Farmer";
@@ -98,9 +207,7 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex relative">
-      {/* Soft background overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-blue-100/20 pointer-events-none"></div>
+     <div className="min-h-screen bg-white dark:bg-gray-900 flex relative transition-colors duration-300">
       
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
@@ -111,7 +218,7 @@ export default function DashboardLayout({
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white/80 backdrop-blur-xl shadow-2xl border-r border-white/20 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+      <div className={`fixed inset-y-4 left-4 z-50 w-64 bg-gradient-to-br ${getSidebarTheme()} backdrop-blur-xl border rounded-3xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="flex flex-col h-full">
@@ -128,18 +235,25 @@ export default function DashboardLayout({
           </div>
 
           {/* User Info */}
-          <div className="p-4 border-b border-white/30 bg-gradient-to-r from-green-50/60 to-emerald-50/60 backdrop-blur-sm">
-            <div className="text-center">
-              <p className="text-sm font-semibold text-gray-800">{userName}</p>
-              <p className="text-xs text-gray-500">{getUserLabel()}</p>
+          <div className="p-4 border-b border-white/30 dark:border-gray-700/30">
+            <div className="flex items-center space-x-3 p-3 rounded-xl">
+              <div className="w-10 h-10 bg-gradient-to-br from-green-400/80 to-emerald-500/80 backdrop-blur-sm rounded-full flex items-center justify-center">
+                <User className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{userName}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{getUserLabel()}</p>
+              </div>
             </div>
           </div>
 
+
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          <nav className="flex-1 p-4 space-y-3 overflow-y-auto">
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const isActive = activePage === item.id;
+              const colors = getNavigationColors();
               
               return (
                             <button
@@ -150,19 +264,24 @@ export default function DashboardLayout({
                               }}
                               className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300 ${
                                 isActive
-                                  ? 'bg-gradient-to-r from-green-400/80 to-emerald-500/80 backdrop-blur-sm text-white shadow-lg shadow-green-200/50 transform scale-105'
-                                  : 'text-gray-600 hover:bg-white/40 hover:text-green-600 hover:shadow-md hover:backdrop-blur-sm'
+                                  ? `bg-gradient-to-r ${colors.active} backdrop-blur-sm text-white transform scale-105`
+                                  : `text-gray-600 dark:text-gray-300 hover:bg-white/40 dark:hover:bg-gray-800/40 ${colors.hover} hover:backdrop-blur-sm`
                               }`}
                             >
                   <div className="flex items-center space-x-3">
-                    <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-gray-500'}`} />
+                    <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-gray-500 dark:text-gray-400'}`} />
                     <span>{item.label}</span>
                   </div>
                               {item.badge && item.badge > 0 && (
                                 <Badge variant="secondary" className={`text-xs ${
                                   isActive 
-                                    ? 'bg-white text-green-600' 
-                                    : 'bg-red-100 text-red-800'
+                                    ? 'bg-white text-gray-600' 
+                                    : userType === 'farmer' ? 'bg-green-100 text-green-700' :
+                                      userType === 'assessor' ? 'bg-orange-100 text-orange-700' :
+                                      userType === 'insurer' ? 'bg-blue-100 text-blue-700' :
+                                      userType === 'admin' ? 'bg-purple-100 text-purple-700' :
+                                      userType === 'government' ? 'bg-indigo-100 text-indigo-700' :
+                                      'bg-gray-100 text-gray-700'
                                 }`}>
                                   {item.badge}
                                 </Badge>
@@ -173,17 +292,32 @@ export default function DashboardLayout({
           </nav>
 
           {/* Sidebar Footer */}
-          <div className="p-4 border-t border-white/30 bg-gradient-to-r from-gray-50/60 to-white/60 backdrop-blur-sm">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start hover:bg-red-50/60 hover:border-red-200/60 hover:text-red-600 transition-all duration-300 backdrop-blur-sm border-white/40"
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Logout
-                </Button>
-              </AlertDialogTrigger>
+          <div className="p-4 border-t border-white/30 dark:border-gray-700/30">
+            <div className="flex items-center space-x-2">
+              {/* Dark Mode Toggle */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleDarkMode}
+                className="flex-1 justify-center hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-all duration-300"
+              >
+                {isDarkMode ? (
+                  <Sun className="h-4 w-4 text-yellow-500" />
+                ) : (
+                  <Moon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                )}
+              </Button>
+              
+              {/* Logout Button */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="flex-1 justify-center hover:text-red-600 dark:hover:text-red-400 transition-all duration-300 text-gray-600 dark:text-gray-300"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
@@ -202,53 +336,27 @@ export default function DashboardLayout({
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-64">
-        {/* Top Header */}
-        <header className="bg-white/60 backdrop-blur-xl shadow-lg shadow-blue-100/20 border-b border-white/30 sticky top-0 z-30">
-          <div className="px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="lg:hidden mr-2 hover:bg-green-50/60 backdrop-blur-sm"
-                  onClick={() => setSidebarOpen(true)}
-                >
-                  <Menu className="h-5 w-5" />
-                </Button>
-                <div className="flex items-center space-x-2">
-                  <Home className="h-5 w-5 text-green-500" />
-                  <span className="text-sm text-gray-400">/</span>
-                  <span className="text-sm font-semibold text-gray-800">
-                    {navigationItems.find(item => item.id === activePage)?.label || 'Dashboard'}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-4">
-                <Button variant="ghost" size="sm" className="hover:bg-green-50/60 backdrop-blur-sm">
-                  <Bell className="h-4 w-4" />
-                </Button>
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-gradient-to-br from-green-400/80 to-emerald-500/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md shadow-green-200/50">
-                    <User className="h-4 w-4 text-white" />
-                  </div>
-                  <span className="text-sm font-medium text-gray-600 hidden sm:block">
-                    {userName}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-72">
+        {/* Mobile Menu Button */}
+        <div className="lg:hidden fixed top-4 left-4 z-40">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:bg-white/90 dark:hover:bg-gray-800/90 shadow-lg rounded-2xl"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+          </Button>
+        </div>
 
-        {/* Page Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto bg-gradient-to-br from-slate-50/50 via-blue-50/30 to-indigo-50/50">
+         {/* Page Content */}
+         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto bg-white dark:bg-gray-900 transition-colors duration-300">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>

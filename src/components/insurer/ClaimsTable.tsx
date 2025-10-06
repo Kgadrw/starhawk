@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import ClaimDetailView from "./ClaimDetailView";
 import { 
   Search,
   Filter,
@@ -44,6 +45,7 @@ export default function ClaimsTable() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [expandedPriority, setExpandedPriority] = useState<string | null>(null);
+  const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null);
 
   // Mock claims data
   const claims: Claim[] = [
@@ -206,6 +208,28 @@ export default function ClaimsTable() {
     }
   };
 
+  const handleViewClaim = (claim: Claim) => {
+    setSelectedClaim(claim);
+  };
+
+  const handleBackToList = () => {
+    setSelectedClaim(null);
+  };
+
+  const handleApproveClaim = (claimId: string, notes: string) => {
+    // Handle claim approval logic here
+    console.log(`Approving claim ${claimId} with notes: ${notes}`);
+    // You would typically make an API call here
+    setSelectedClaim(null);
+  };
+
+  const handleRejectClaim = (claimId: string, reason: string) => {
+    // Handle claim rejection logic here
+    console.log(`Rejecting claim ${claimId} with reason: ${reason}`);
+    // You would typically make an API call here
+    setSelectedClaim(null);
+  };
+
   const getPriorityIcon = (priority: string) => {
     switch (priority) {
       case "high": return <AlertTriangle className="h-4 w-4" />;
@@ -286,10 +310,7 @@ export default function ClaimsTable() {
           <Button 
             size="sm" 
             className="flex-1 bg-blue-600 hover:bg-blue-700"
-            onClick={() => {
-              // Navigate to detailed claim review
-              window.location.href = `/claim-review/${claim.id}`;
-            }}
+            onClick={() => handleViewClaim(claim)}
           >
             <Eye className="h-3 w-3 mr-1" />
             Review
@@ -348,6 +369,18 @@ export default function ClaimsTable() {
       </div>
     );
   };
+
+  // Show detailed view if a claim is selected
+  if (selectedClaim) {
+    return (
+      <ClaimDetailView
+        claim={selectedClaim}
+        onBack={handleBackToList}
+        onApprove={handleApproveClaim}
+        onReject={handleRejectClaim}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -14,6 +14,7 @@ import InsurerLogin from "./pages/InsurerLogin";
 import FarmerDashboard from "./components/dashboards/FarmerDashboard";
 import AssessorDashboard from "./components/dashboards/AssessorDashboard";
 import InsurerDashboard from "./components/dashboards/InsurerDashboard";
+import PolicyDetailsPage from "./components/insurer/PolicyDetailsPage";
 import { PolicyRequestForm } from "./components/requests/PolicyRequestForm";
 import { RiskAssessmentModule } from "./components/assessment/RiskAssessmentModule";
 import { UnderwritingDashboard } from "./components/underwriting/UnderwritingDashboard";
@@ -59,6 +60,9 @@ const App = () => {
               <Route path="/assessor-dashboard" element={<AssessorDashboard />} />
               <Route path="/insurer-dashboard" element={<InsurerDashboard />} />
               
+              {/* Policy Details Route */}
+              <Route path="/policy-details/:policyId" element={<PolicyDetailsPage />} />
+              
               {/* Enhanced Platform Routes */}
               {/* <Route path="/farmer-registration" element={<FarmerRegistration onComplete={() => {}} onCancel={() => {}} />} /> */}
               <Route path="/policy-request" element={<PolicyRequestForm farmerId="farmer_001" onSubmit={() => {}} onCancel={() => {}} />} />
@@ -67,10 +71,10 @@ const App = () => {
               <Route path="/government-analytics" element={<GovernmentAnalyticsDashboard />} />
               <Route path="/notifications" element={<NotificationManager userType="farmer" userId="farmer_001" />} />
               <Route path="/payments" element={<PaymentIntegration farmerId="farmer_001" amount={120000} currency="RWF" onPaymentSuccess={() => {}} onPaymentFailure={() => {}} />} />
-        <Route path="/file-claim" element={<ClaimFilingSystem farmerId="farmer_001" onClaimSubmit={() => {}} onCancel={() => {}} />} />
-        <Route path="/policy-creation" element={<PolicyCreationEngine assessmentId="assess_001" farmerId="farmer_001" cropType="Maize" farmSize={2.5} riskLevel="low" location="Nyagatare District" onPolicyCreated={() => {}} onCancel={() => {}} />} />
-        <Route path="/monitoring" element={<ContinuousMonitoringSystem userRole="insurer" userId="insurer_001" />} />
-        <Route path="/email-notifications" element={<EmailNotificationSystem userRole="government" userId="gov_001" />} />
+              <Route path="/file-claim" element={<ClaimFilingSystem farmerId="farmer_001" onClaimSubmit={() => {}} onCancel={() => {}} />} />
+              <Route path="/policy-creation" element={<PolicyCreationEngine assessmentId="assess_001" farmerId="farmer_001" cropType="Maize" farmSize={2.5} riskLevel="low" location="Nyagatare District" onPolicyCreated={() => {}} onCancel={() => {}} />} />
+              <Route path="/monitoring" element={<ContinuousMonitoringSystem userRole="insurer" userId="insurer_001" />} />
+              <Route path="/email-notifications" element={<EmailNotificationSystem userRole="government" userId="gov_001" />} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

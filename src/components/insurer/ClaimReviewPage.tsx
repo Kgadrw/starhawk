@@ -161,11 +161,11 @@ export default function ClaimReviewPage() {
       <CardContent className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <Label className="text-sm font-medium text-gray-600">Claim ID</Label>
+            <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Claim ID</Label>
             <p className="text-lg font-semibold">{currentClaim?.id}</p>
           </div>
           <div>
-            <Label className="text-sm font-medium text-gray-600">Status</Label>
+            <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Status</Label>
             <div className="mt-1">
               <Badge className={getStatusColor(currentClaim?.status || "")}>
                 {getStatusIcon(currentClaim?.status || "")}
@@ -177,19 +177,19 @@ export default function ClaimReviewPage() {
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <Label className="text-sm font-medium text-gray-600">Claim Amount</Label>
+            <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Claim Amount</Label>
             <p className="text-lg font-semibold text-green-600">
               {currentClaim?.claimAmount.toLocaleString()} RWF
             </p>
           </div>
           <div>
-            <Label className="text-sm font-medium text-gray-600">Filed Date</Label>
+            <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Filed Date</Label>
             <p className="text-lg">{currentClaim?.filedDate}</p>
           </div>
         </div>
 
         <div>
-          <Label className="text-sm font-medium text-gray-600">Description</Label>
+          <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Description</Label>
           <p className="text-gray-700 mt-1">{currentClaim?.description}</p>
         </div>
       </CardContent>
