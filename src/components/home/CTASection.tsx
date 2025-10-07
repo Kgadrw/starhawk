@@ -55,7 +55,7 @@ export function CTASection() {
                 size="lg" 
                 className="bg-gradient-to-r from-green-500/90 to-emerald-600/90 hover:from-green-500 hover:to-emerald-600 text-white px-10 py-4 rounded-3xl font-medium text-lg shadow-lg hover:shadow-xl transition-all duration-500 ease-out hover:scale-105 hover:-translate-y-1"
               >
-                Get Started Now
+                How It Works
                 <ArrowRight className="h-5 w-5 ml-2 transition-transform duration-300 ease-out group-hover:translate-x-1" />
               </Button>
             </Link>

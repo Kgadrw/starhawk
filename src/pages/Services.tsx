@@ -3,6 +3,7 @@ import { FooterSection } from "@/components/home/FooterSection";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import CustomScrollbar from "@/components/ui/CustomScrollbar";
+import SplashCursor from "@/components/ui/SplashCursor";
 import { 
   Shield, 
   FileText, 
@@ -100,6 +101,9 @@ export default function Services() {
   return (
     <CustomScrollbar>
       <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 relative">
+        {/* Splash Cursor Effect */}
+        <SplashCursor />
+        
         {/* Navigation */}
         <HomeNavbar />
       

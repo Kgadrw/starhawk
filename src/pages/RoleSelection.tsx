@@ -66,7 +66,7 @@ export default function RoleSelection() {
           className="w-3/4 h-3/4 object-contain"
         />
       </div>
-
+      
       {/* Bottom Corner Lines */}
       <div className="absolute bottom-0 left-0 opacity-60">
         <img
@@ -74,7 +74,7 @@ export default function RoleSelection() {
           alt="Bottom left lines"
           className="w-[32rem] h-[32rem]"
         />
-      </div>
+              </div>
       <div className="absolute bottom-0 right-0 opacity-60">
         <img
           src="/lines2.png"
@@ -153,59 +153,59 @@ export default function RoleSelection() {
               </div>
               );
             } else {
-              return (
-                <Link key={index} to={role.href} className="block group">
+            return (
+              <Link key={index} to={role.href} className="block group">
                   <Card className="bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-500 rounded-2xl cursor-pointer h-full relative overflow-hidden">
-                    {/* Badge */}
-                    {role.badge && (
-                      <div className="absolute top-4 right-4 z-10">
+                  {/* Badge */}
+                  {role.badge && (
+                    <div className="absolute top-4 right-4 z-10">
                         <div className="bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full flex items-center space-x-1 border border-white/20">
-                          <Star className="h-3 w-3" />
-                          <span>{role.badge}</span>
-                        </div>
+                        <Star className="h-3 w-3" />
+                        <span>{role.badge}</span>
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    <CardHeader className="pb-6 relative z-10">
-                      <div className="flex items-center justify-center mb-6">
+                  <CardHeader className="pb-6 relative z-10">
+                    <div className="flex items-center justify-center mb-6">
                         <div className="w-20 h-20 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-500">
                           <Icon className="h-10 w-10 text-white" />
-                        </div>
                       </div>
+                    </div>
                       <CardTitle className="text-xl font-bold text-center text-white group-hover:text-green-200 transition-colors">
-                        {role.title}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0 relative z-10">
+                      {role.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0 relative z-10">
                       <p className="text-white/80 text-center mb-6 leading-relaxed text-sm">
-                        {role.description}
-                      </p>
-                      
-                      {/* Features List */}
+                      {role.description}
+                    </p>
+                    
+                    {/* Features List */}
                       <div className="space-y-2 mb-6">
-                        {role.features.map((feature, featureIndex) => (
+                      {role.features.map((feature, featureIndex) => (
                           <div key={featureIndex} className="flex items-center text-xs text-white/70">
                             <CheckCircle className="h-3 w-3 text-green-400 mr-2 flex-shrink-0" />
-                            <span>{feature}</span>
-                          </div>
-                        ))}
-                      </div>
+                          <span>{feature}</span>
+                        </div>
+                      ))}
+                    </div>
 
-                      <Button 
+                    <Button 
                         className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white py-3 rounded-xl font-medium text-base backdrop-blur-sm transition-all duration-300 group-hover:scale-105"
-                      >
-                        Access Portal
+                    >
+                      Access Portal
                         <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </Link>
-              );
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
             }
           })}
         </div>
 
-      </div>
+              </div>
 
         {/* Footer */}
         <FooterSection />
@@ -215,7 +215,7 @@ export default function RoleSelection() {
           isOpen={isFarmerModalOpen} 
           onClose={() => setIsFarmerModalOpen(false)} 
         />
-      </div>
+            </div>
     </CustomScrollbar>
   );
 }

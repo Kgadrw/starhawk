@@ -1,6 +1,7 @@
 import { HomeNavbar } from "@/components/layout/HomeNavbar";
 import { HeroSection } from "@/components/home/HeroSection";
 import { FeaturesSection } from "@/components/home/FeaturesSection";
+import PartnersSection from "@/components/home/PartnersSection";
 import { TestimonialsSection } from "@/components/home/TestimonialsSection";
 import { CTASection } from "@/components/home/CTASection";
 import { FooterSection } from "@/components/home/FooterSection";
@@ -24,6 +25,7 @@ function HomePage() {
         {/* Scroll Stack Sections */}
         <div className="relative z-10">
           <FeaturesSection />
+          <PartnersSection />
           <TestimonialsSection />
           <CTASection />
           <FooterSection />
