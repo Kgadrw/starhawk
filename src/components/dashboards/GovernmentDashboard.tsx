@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { dashboardTheme } from "@/utils/dashboardTheme";
 import { BaseDashboard } from "./BaseDashboard";
 import { DashboardPage, StatCard, DataTable, StatusBadge } from "./DashboardPage";
 import { GovernmentAnalyticsDashboard } from "../government/GovernmentAnalyticsDashboard";
@@ -98,33 +99,33 @@ export const GovernmentDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-80 bg-gradient-to-br from-green-50 via-blue-50 to-orange-50 rounded-lg relative overflow-hidden">
+            <div className="h-80 bg-gradient-to-br from-gray-800 via-gray-700 to-gray-900 rounded-lg relative overflow-hidden">
               {/* Interactive Map Placeholder */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center">
                   <Map className="h-24 w-24 text-green-400 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-800 mb-2">Rwanda Map</h3>
-                  <p className="text-gray-600 mb-4">Interactive coverage visualization</p>
+                  <h3 className="text-xl font-semibold text-white mb-2">Rwanda Map</h3>
+                  <p className="text-white/80 mb-4">Interactive coverage visualization</p>
                   <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="bg-green-100 p-3 rounded-lg">
+                    <div className="bg-green-400/20 p-3 rounded-lg border border-green-400/30">
                       <div className="w-4 h-4 bg-green-500 rounded-full mx-auto mb-2"></div>
-                      <p className="font-medium">High Coverage</p>
-                      <p className="text-xs text-gray-600">75%+</p>
+                      <p className="font-medium text-white">High Coverage</p>
+                      <p className="text-xs text-white/70">75%+</p>
                     </div>
-                    <div className="bg-yellow-100 p-3 rounded-lg">
+                    <div className="bg-yellow-400/20 p-3 rounded-lg border border-yellow-400/30">
                       <div className="w-4 h-4 bg-yellow-500 rounded-full mx-auto mb-2"></div>
-                      <p className="font-medium">Medium Coverage</p>
-                      <p className="text-xs text-gray-600">50-75%</p>
+                      <p className="font-medium text-white">Medium Coverage</p>
+                      <p className="text-xs text-white/70">50-75%</p>
                     </div>
-                    <div className="bg-red-100 p-3 rounded-lg">
+                    <div className="bg-red-400/20 p-3 rounded-lg border border-red-400/30">
                       <div className="w-4 h-4 bg-red-500 rounded-full mx-auto mb-2"></div>
-                      <p className="font-medium">Low Coverage</p>
-                      <p className="text-xs text-gray-600">&lt;50%</p>
+                      <p className="font-medium text-white">Low Coverage</p>
+                      <p className="text-xs text-white/70">&lt;50%</p>
                     </div>
-                    <div className="bg-blue-100 p-3 rounded-lg">
+                    <div className="bg-blue-400/20 p-3 rounded-lg border border-blue-400/30">
                       <div className="w-4 h-4 bg-blue-500 rounded-full mx-auto mb-2"></div>
-                      <p className="font-medium">Claims Areas</p>
-                      <p className="text-xs text-gray-600">Active</p>
+                      <p className="font-medium text-white">Claims Areas</p>
+                      <p className="text-xs text-white/70">Active</p>
                     </div>
                   </div>
                 </div>
@@ -154,9 +155,9 @@ export const GovernmentDashboard = () => {
                   <div className="flex items-center gap-4">
                     <div className="text-right">
                       <div className="text-sm font-medium">{region.coverage}%</div>
-                      <div className="text-xs text-gray-500">{region.policies} policies</div>
+                      <div className="text-xs text-white/60">{region.policies} policies</div>
                     </div>
-                    <div className="w-24 h-2 bg-gray-200 rounded-full">
+                    <div className="w-24 h-2 bg-gray-700 rounded-full">
                       <div 
                         className={`h-2 rounded-full ${
                           region.coverage >= 75 ? 'bg-green-500' :
@@ -184,7 +185,7 @@ export const GovernmentDashboard = () => {
             <td className="py-3 px-4">
               <div className="flex items-center gap-2">
                 <span className="font-medium">{region.coverage}%</span>
-                <div className="w-16 h-2 bg-gray-200 rounded-full">
+                <div className="w-16 h-2 bg-gray-700 rounded-full">
                   <div 
                     className={`h-2 rounded-full ${
                       region.coverage >= 75 ? 'bg-green-500' :
@@ -212,20 +213,20 @@ export const GovernmentDashboard = () => {
         return (
           <DashboardPage title="National Monitoring">
             <div className="grid gap-6 lg:grid-cols-2">
-              <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-                <MapPin className="h-12 w-12 text-gray-400" />
+              <div className="h-64 bg-gray-800 rounded-lg flex items-center justify-center">
+                <MapPin className="h-12 w-12 text-white/60" />
               </div>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">High Risk Areas</span>
+                  <span className="text-sm text-white/80">High Risk Areas</span>
                   <span className="font-medium text-red-600">3</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Medium Risk Areas</span>
+                  <span className="text-sm text-white/80">Medium Risk Areas</span>
                   <span className="font-medium text-yellow-600">7</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Low Risk Areas</span>
+                  <span className="text-sm text-white/80">Low Risk Areas</span>
                   <span className="font-medium text-green-600">12</span>
                 </div>
               </div>
@@ -315,7 +316,7 @@ export const GovernmentDashboard = () => {
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{((crop.policies / crop.farmers) * 100).toFixed(1)}%</span>
-                      <div className="w-16 h-2 bg-gray-200 rounded-full">
+                      <div className="w-16 h-2 bg-gray-700 rounded-full">
                         <div 
                           className="h-2 bg-blue-500 rounded-full"
                           style={{ width: `${(crop.policies / crop.farmers) * 100}%` }}
@@ -428,7 +429,7 @@ export const GovernmentDashboard = () => {
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           data.month === 'Jun' ? 'bg-green-100 text-green-800' :
                           data.month === 'May' ? 'bg-blue-100 text-blue-800' :
-                          'bg-gray-100 text-gray-800'
+                          'bg-gray-800/20 text-white'
                         }`}>
                           {data.month === 'Jun' ? '+12.5%' : 
                            data.month === 'May' ? '+8.1%' : '+5.2%'}

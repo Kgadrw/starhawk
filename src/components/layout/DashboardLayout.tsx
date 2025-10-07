@@ -116,16 +116,13 @@ export default function DashboardLayout({
   };
 
   const getSidebarTheme = () => {
+    // Always use gray-950 theme to match main background
+    return "from-gray-950/90 to-gray-900/90 border-gray-800/30";
+  };
+
+  const getMainContentTheme = () => {
+    // Always use dark theme like Chainex dashboard
     if (isDarkMode) {
-      switch (userType) {
-        case "farmer": return "from-gray-800 to-gray-900 border-gray-700/30";
-        case "assessor": return "from-gray-800 to-gray-900 border-gray-700/30";
-        case "insurer": return "from-gray-800 to-gray-900 border-gray-700/30";
-        case "admin": return "from-gray-800 to-gray-900 border-gray-700/30";
-        case "government": return "from-gray-800 to-gray-900 border-gray-700/30";
-        default: return "from-gray-800 to-gray-900 border-gray-700/30";
-      }
-    } else {
       switch (userType) {
         case "farmer": return "from-green-50/90 to-emerald-50/90 border-green-200/30";
         case "assessor": return "from-orange-50/90 to-red-50/90 border-orange-200/30";
@@ -207,7 +204,7 @@ export default function DashboardLayout({
   };
 
   return (
-     <div className="min-h-screen bg-white dark:bg-gray-900 flex relative transition-colors duration-300">
+     <div className="min-h-screen bg-gray-950 flex relative">
       
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
@@ -227,7 +224,7 @@ export default function DashboardLayout({
             <Button
               variant="ghost"
               size="sm"
-              className="hover:bg-gray-100"
+              className="hover:bg-gray-800/10 text-white"
               onClick={() => setSidebarOpen(false)}
             >
               <X className="h-4 w-4" />
@@ -241,8 +238,8 @@ export default function DashboardLayout({
                 <User className="h-5 w-5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{userName}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{getUserLabel()}</p>
+                <p className="text-sm font-semibold text-white truncate">{userName}</p>
+                <p className="text-xs text-white/70 truncate">{getUserLabel()}</p>
               </div>
             </div>
           </div>
@@ -265,17 +262,17 @@ export default function DashboardLayout({
                               className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300 ${
                                 isActive
                                   ? `bg-gradient-to-r ${colors.active} backdrop-blur-sm text-white transform scale-105`
-                                  : `text-gray-600 dark:text-gray-300 hover:bg-white/40 dark:hover:bg-gray-800/40 ${colors.hover} hover:backdrop-blur-sm`
+                                  : `text-white/80 hover:bg-gray-800/20 hover:text-white ${colors.hover} hover:backdrop-blur-sm`
                               }`}
                             >
                   <div className="flex items-center space-x-3">
-                    <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-gray-500 dark:text-gray-400'}`} />
+                    <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-white/70'}`} />
                     <span>{item.label}</span>
                   </div>
                               {item.badge && item.badge > 0 && (
                                 <Badge variant="secondary" className={`text-xs ${
                                   isActive 
-                                    ? 'bg-white text-gray-600' 
+                                    ? 'bg-gray-800 text-white' 
                                     : userType === 'farmer' ? 'bg-green-100 text-green-700' :
                                       userType === 'assessor' ? 'bg-orange-100 text-orange-700' :
                                       userType === 'insurer' ? 'bg-blue-100 text-blue-700' :
@@ -342,21 +339,21 @@ export default function DashboardLayout({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-72">
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-72 bg-gray-950">
         {/* Mobile Menu Button */}
         <div className="lg:hidden fixed top-4 left-4 z-40">
           <Button
             variant="ghost"
             size="sm"
-            className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:bg-white/90 dark:hover:bg-gray-800/90 shadow-lg rounded-2xl"
+            className="bg-gray-900/80 backdrop-blur-sm hover:bg-gray-800/90 shadow-lg rounded-2xl border border-gray-700/50"
             onClick={() => setSidebarOpen(true)}
           >
-            <Menu className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+            <Menu className="h-5 w-5 text-white" />
           </Button>
         </div>
 
          {/* Page Content */}
-         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto bg-white dark:bg-gray-900 transition-colors duration-300">
+         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto bg-gray-950">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>

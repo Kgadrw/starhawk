@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { dashboardTheme } from "@/utils/dashboardTheme";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -333,7 +334,7 @@ export function NotificationManager({ userType, userId }: NotificationManagerPro
                 }}
               >
                 <h3 className="font-semibold">{template.name}</h3>
-                <p className="text-sm text-gray-600 mt-1">{template.title}</p>
+                <p className="text-sm text-white/80 mt-1">{template.title}</p>
                 <div className="flex space-x-2 mt-2">
                   {template.channels.map((channel) => (
                     <Badge key={channel} variant="outline" className="text-xs">
@@ -412,7 +413,7 @@ export function NotificationManager({ userType, userId }: NotificationManagerPro
               onChange={(e) => setComposeNotification(prev => ({ ...prev, message: e.target.value }))}
               rows={4}
             />
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-white/70">
               SMS limit: 160 characters | Current: {(composeNotification.message || '').length}
             </p>
           </div>
@@ -495,9 +496,9 @@ export function NotificationManager({ userType, userId }: NotificationManagerPro
                   </Badge>
                 </div>
                 
-                <p className="text-gray-600 mb-3">{notification.message}</p>
+                <p className="text-white/80 mb-3">{notification.message}</p>
                 
-                <div className="flex items-center space-x-4 text-sm text-gray-500">
+                <div className="flex items-center space-x-4 text-sm text-white/60">
                   <div className="flex items-center space-x-1">
                     <Calendar className="h-4 w-4" />
                     <span>
@@ -569,7 +570,7 @@ export function NotificationManager({ userType, userId }: NotificationManagerPro
                   <CardTitle className="text-lg">
                     {alert.type.replace('_', ' ').toUpperCase()} Alert
                   </CardTitle>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-white/80">
                     {alert.affectedRegions.join(', ')}
                   </p>
                 </div>
@@ -580,7 +581,7 @@ export function NotificationManager({ userType, userId }: NotificationManagerPro
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-700 mb-4">{alert.alertMessage}</p>
+            <p className="text-white/80 mb-4">{alert.alertMessage}</p>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div className="text-center p-3 bg-red-50 rounded-lg">

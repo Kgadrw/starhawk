@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { dashboardTheme } from "@/utils/dashboardTheme";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -162,7 +163,7 @@ export default function FarmerDashboard() {
       case "in_review": return "bg-blue-100 text-blue-800";
       case "approved": return "bg-green-100 text-green-800";
       case "rejected": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-800/20 text-white";
     }
   };
 
@@ -181,7 +182,7 @@ export default function FarmerDashboard() {
     <div className="space-y-6">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-green-50/80 to-emerald-50/80 dark:from-green-900/20 dark:to-emerald-900/20 backdrop-blur-sm border border-green-200/50 dark:border-green-700/30 rounded-2xl p-6 shadow-lg shadow-green-100/30 dark:shadow-green-900/20">
-        <h1 className="text-2xl font-bold mb-2 text-green-800 dark:text-green-200">
+        <h1 className="text-2xl font-bold mb-2 text-white">
           Welcome back, {farmerName}
         </h1>
         <p className="text-green-600 dark:text-green-400">
@@ -191,15 +192,15 @@ export default function FarmerDashboard() {
 
       {/* Stats Cards */}
       <div className="grid gap-6 md:grid-cols-4">
-        <Card className="hover:border-emerald-400/80 dark:hover:border-emerald-500/80 transition-all duration-300 bg-emerald-50/90 dark:bg-emerald-900/20 backdrop-blur-sm border border-emerald-200/60 dark:border-emerald-700/30 rounded-2xl shadow-lg shadow-emerald-100/30 dark:shadow-emerald-900/20">
+        <Card className={`${dashboardTheme.card} hover:border-green-400/50 transition-all duration-300 rounded-2xl shadow-lg shadow-green-900/20`}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">My Policies</p>
-                <p className="text-2xl font-bold text-gray-800 dark:text-gray-200">{policies.length}</p>
+                <p className="text-sm font-medium text-white/70">My Policies</p>
+                <p className="text-2xl font-bold text-white">{policies.length}</p>
               </div>
-              <div className="w-12 h-12 bg-green-100/80 dark:bg-green-900/40 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-md shadow-green-200/30 dark:shadow-green-900/20">
-                <FileText className="h-6 w-6 text-green-600 dark:text-green-400" />
+              <div className="w-12 h-12 bg-green-400/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-md shadow-green-900/20">
+                <FileText className="h-6 w-6 text-green-400" />
               </div>
             </div>
           </CardContent>
@@ -209,8 +210,8 @@ export default function FarmerDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Pending Requests</p>
-                <p className="text-2xl font-bold text-gray-800 dark:text-gray-200">0</p>
+                <p className="text-sm font-medium text-white/70">Pending Requests</p>
+                <p className="text-2xl font-bold text-white">0</p>
               </div>
               <div className="w-12 h-12 bg-yellow-100/80 dark:bg-yellow-900/40 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-md shadow-yellow-200/30 dark:shadow-yellow-900/20">
                 <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
@@ -223,8 +224,8 @@ export default function FarmerDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Claims Filed</p>
-                <p className="text-2xl font-bold text-gray-800 dark:text-gray-200">{claims.length}</p>
+                <p className="text-sm font-medium text-white/70">Claims Filed</p>
+                <p className="text-2xl font-bold text-white">{claims.length}</p>
               </div>
               <div className="w-12 h-12 bg-blue-100/80 dark:bg-blue-900/40 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-md shadow-blue-200/30 dark:shadow-blue-900/20">
                 <AlertTriangle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -237,8 +238,8 @@ export default function FarmerDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Claims in Review</p>
-                <p className="text-2xl font-bold text-gray-800 dark:text-gray-200">{claims.filter(c => c.status === 'in_review').length}</p>
+                <p className="text-sm font-medium text-white/70">Claims in Review</p>
+                <p className="text-2xl font-bold text-white">{claims.filter(c => c.status === 'in_review').length}</p>
               </div>
               <div className="w-12 h-12 bg-orange-100/80 dark:bg-orange-900/40 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-md shadow-orange-200/30 dark:shadow-orange-900/20">
                 <TrendingUp className="h-6 w-6 text-orange-600 dark:text-orange-400" />
@@ -253,7 +254,7 @@ export default function FarmerDashboard() {
         {/* Policy Distribution Pie Chart */}
         <Card className="bg-gradient-to-br from-white/90 to-green-50/50 dark:from-gray-800/90 dark:to-gray-900/50 backdrop-blur-xl border border-green-200/30 dark:border-gray-700/30 rounded-3xl shadow-2xl shadow-green-200/20 dark:shadow-gray-900/20 hover:shadow-green-300/30 dark:hover:shadow-gray-800/30 transition-all duration-500">
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center text-gray-800 dark:text-gray-200 text-lg font-bold">
+            <CardTitle className="flex items-center text-white text-lg font-bold">
               <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl flex items-center justify-center mr-3 shadow-lg shadow-green-200/50">
                 <TrendingUp className="h-5 w-5 text-white" />
               </div>
@@ -312,10 +313,10 @@ export default function FarmerDashboard() {
               {/* Center text */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-800">
+                  <div className="text-2xl font-bold text-white">
                     {policyDistributionData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
                   </div>
-                  <div className="text-sm text-gray-500 font-medium">Total RWF</div>
+                  <div className="text-sm text-white/70 font-medium">Total RWF</div>
                 </div>
               </div>
             </div>
@@ -324,9 +325,9 @@ export default function FarmerDashboard() {
                 <div key={index} className="flex items-center justify-between p-3 bg-green-50/60 backdrop-blur-sm rounded-xl border border-green-200/40 hover:bg-green-100/80 transition-all duration-300">
                   <div className="flex items-center space-x-3">
                     <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: item.color }}></div>
-                    <span className="text-gray-700 font-medium">{item.name}</span>
+                    <span className="text-white/80 font-medium">{item.name}</span>
                   </div>
-                  <span className="font-bold text-gray-800 bg-gray-100/80 px-3 py-1 rounded-lg">{item.value.toLocaleString()} RWF</span>
+                  <span className="font-bold text-white bg-gray-800/80 px-3 py-1 rounded-lg">{item.value.toLocaleString()} RWF</span>
                 </div>
               ))}
             </div>
@@ -336,7 +337,7 @@ export default function FarmerDashboard() {
         {/* Claims Over Time Bar Chart */}
         <Card className="bg-gradient-to-br from-white/90 to-blue-50/50 dark:from-gray-800/90 dark:to-gray-900/50 backdrop-blur-xl border border-blue-200/30 dark:border-gray-700/30 rounded-3xl shadow-2xl shadow-blue-200/20 dark:shadow-gray-900/20 hover:shadow-blue-300/30 dark:hover:shadow-gray-800/30 transition-all duration-500">
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center text-gray-800 dark:text-gray-200 text-lg font-bold">
+            <CardTitle className="flex items-center text-white text-lg font-bold">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center mr-3 shadow-lg shadow-blue-200/50">
                 <AlertTriangle className="h-5 w-5 text-white" />
               </div>
@@ -407,7 +408,7 @@ export default function FarmerDashboard() {
         {/* Coverage Trend Area Chart */}
         <Card className="bg-gradient-to-br from-white/90 to-emerald-50/50 backdrop-blur-xl border border-emerald-200/30 rounded-3xl shadow-2xl shadow-emerald-200/20 hover:shadow-emerald-300/30 transition-all duration-500">
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center text-gray-800 text-lg font-bold">
+            <CardTitle className="flex items-center text-white text-lg font-bold">
               <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-green-500 rounded-xl flex items-center justify-center mr-3 shadow-lg shadow-emerald-200/50">
                 <DollarSign className="h-5 w-5 text-white" />
               </div>
@@ -479,7 +480,7 @@ export default function FarmerDashboard() {
         {/* Policy Status Distribution */}
         <Card className="bg-gradient-to-br from-white/90 to-yellow-50/50 backdrop-blur-xl border border-yellow-200/30 rounded-3xl shadow-2xl shadow-yellow-200/20 hover:shadow-yellow-300/30 transition-all duration-500">
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center text-gray-800 text-lg font-bold">
+            <CardTitle className="flex items-center text-white text-lg font-bold">
               <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-xl flex items-center justify-center mr-3 shadow-lg shadow-yellow-200/50">
                 <FileText className="h-5 w-5 text-white" />
               </div>
@@ -535,10 +536,10 @@ export default function FarmerDashboard() {
               {/* Center text */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-800">
+                  <div className="text-2xl font-bold text-white">
                     {statusDistributionData.reduce((sum, item) => sum + item.value, 0)}
                   </div>
-                  <div className="text-sm text-gray-500 font-medium">Total Policies</div>
+                  <div className="text-sm text-white/70 font-medium">Total Policies</div>
                 </div>
               </div>
             </div>
@@ -547,9 +548,9 @@ export default function FarmerDashboard() {
                 <div key={index} className="flex items-center justify-between p-3 bg-green-50/60 backdrop-blur-sm rounded-xl border border-green-200/40 hover:bg-green-100/80 transition-all duration-300">
                   <div className="flex items-center space-x-3">
                     <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: item.color }}></div>
-                    <span className="text-gray-700 font-medium">{item.name}</span>
+                    <span className="text-white/80 font-medium">{item.name}</span>
                   </div>
-                  <span className="font-bold text-gray-800 bg-gray-100/80 px-3 py-1 rounded-lg">{item.value}</span>
+                  <span className="font-bold text-white bg-gray-800/80 px-3 py-1 rounded-lg">{item.value}</span>
                 </div>
               ))}
             </div>
@@ -561,8 +562,8 @@ export default function FarmerDashboard() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="hover:border-violet-400/80 dark:hover:border-violet-500/80 transition-all duration-300 bg-violet-50/90 dark:bg-violet-900/20 backdrop-blur-sm border border-violet-200/60 dark:border-violet-700/30 rounded-2xl shadow-lg shadow-violet-100/30 dark:shadow-violet-900/20">
           <CardHeader>
-            <CardTitle className="flex items-center text-gray-800 dark:text-gray-200">
-              <Plus className="h-5 w-5 mr-2 text-gray-600 dark:text-gray-400" />
+            <CardTitle className="flex items-center text-white">
+              <Plus className="h-5 w-5 mr-2 text-white/70" />
               Quick Actions
             </CardTitle>
           </CardHeader>
@@ -584,23 +585,30 @@ export default function FarmerDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="hover:border-rose-400/80 dark:hover:border-rose-500/80 transition-all duration-300 bg-rose-50/90 dark:bg-rose-900/20 backdrop-blur-sm border border-rose-200/60 dark:border-rose-700/30 rounded-2xl shadow-lg shadow-rose-100/30 dark:shadow-rose-900/20">
+        <Card className={`${dashboardTheme.card}`}>
           <CardHeader>
-            <CardTitle className="flex items-center text-gray-800 dark:text-gray-200">
-              <Bell className="h-5 w-5 mr-2 text-gray-600 dark:text-gray-400" />
+            <CardTitle className="flex items-center text-white">
+              <Bell className="h-5 w-5 mr-2 text-white/70" />
               Recent Notifications
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {notifications.map((notification) => (
-                <div key={notification.id} className="flex items-start space-x-3 p-3 bg-green-50/60 dark:bg-green-900/20 backdrop-blur-sm rounded-xl border border-green-200/40 dark:border-green-700/30">
-                  <div className={`w-2 h-2 rounded-full mt-2 ${
-                    notification.type === 'success' ? 'bg-green-500' : 'bg-blue-500'
-                  }`}></div>
+                <div key={notification.id} className={`flex items-start space-x-3 p-4 rounded-xl border ${
+                  notification.type === 'success' ? 'bg-green-600/30 border-green-600/40' : 'bg-blue-600/30 border-blue-600/40'
+                }`}>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center mt-1 ${
+                    notification.type === 'success' ? 'bg-green-400/20 text-green-400' : 'bg-blue-400/20 text-blue-400'
+                  }`}>
+                    {notification.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <Info className="h-4 w-4" />}
+                  </div>
                   <div className="flex-1">
-                    <p className="text-sm text-gray-800 dark:text-gray-200">{notification.message}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{notification.date}</p>
+                    <h4 className="text-sm font-medium text-white mb-1">
+                      {notification.type === 'success' ? 'Policy Update' : 'System Notification'}
+                    </h4>
+                    <p className="text-sm text-white/80 mb-1">{notification.message}</p>
+                    <p className="text-xs text-white/60">{notification.date}</p>
                   </div>
                 </div>
               ))}
@@ -614,7 +622,7 @@ export default function FarmerDashboard() {
   const renderRequestInsurance = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Request Insurance</h2>
+        <h2 className="text-2xl font-bold text-white">Request Insurance</h2>
         <Button variant="outline" onClick={() => setActivePage("dashboard")}>
           Back to Dashboard
         </Button>
@@ -668,7 +676,7 @@ export default function FarmerDashboard() {
   const renderMyPolicies = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">My Policies</h2>
+        <h2 className="text-2xl font-bold text-white">My Policies</h2>
         <Button variant="outline" onClick={() => setActivePage("dashboard")}>
           Back to Dashboard
         </Button>
@@ -720,7 +728,7 @@ export default function FarmerDashboard() {
   const renderFileClaim = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">File a Claim</h2>
+        <h2 className="text-2xl font-bold text-white">File a Claim</h2>
         <Button variant="outline" onClick={() => setActivePage("dashboard")}>
           Back to Dashboard
         </Button>
@@ -758,10 +766,10 @@ export default function FarmerDashboard() {
 
           <div className="space-y-2">
             <Label>Upload Photos</Label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-              <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-              <p className="text-sm text-gray-600">Click to upload or drag and drop</p>
-              <p className="text-xs text-gray-500">PNG, JPG up to 10MB</p>
+            <div className="border-2 border-dashed border-gray-700/50 rounded-lg p-6 text-center">
+              <Upload className="h-8 w-8 mx-auto text-white/60 mb-2" />
+              <p className="text-sm text-white/80">Click to upload or drag and drop</p>
+              <p className="text-xs text-white/60">PNG, JPG up to 10MB</p>
             </div>
           </div>
 
@@ -776,7 +784,7 @@ export default function FarmerDashboard() {
   const renderClaimStatus = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Claim Status</h2>
+        <h2 className="text-2xl font-bold text-white">Claim Status</h2>
         <Button variant="outline" onClick={() => setActivePage("dashboard")}>
           Back to Dashboard
         </Button>
@@ -826,23 +834,54 @@ export default function FarmerDashboard() {
   const renderNotifications = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Notifications</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-white">Notifications</h2>
+          <p className="text-white/80">Stay updated with your policy status and claim updates</p>
+        </div>
         <Button variant="outline" onClick={() => setActivePage("dashboard")}>
           Back to Dashboard
         </Button>
-                </div>
+      </div>
 
       <div className="space-y-4">
         {notifications.map((notification) => (
-          <Card key={notification.id}>
-            <CardContent className="p-4">
-              <div className="flex items-start space-x-3">
-                <div className={`w-3 h-3 rounded-full mt-2 ${
-                  notification.type === 'success' ? 'bg-green-500' : 'bg-blue-500'
-                }`}></div>
-                <div className="flex-1">
-                  <p className="text-gray-900">{notification.message}</p>
-                  <p className="text-sm text-gray-500 mt-1">{notification.date}</p>
+          <Card key={notification.id} className={`${dashboardTheme.card} transition-all duration-200 ${
+            notification.type === 'success' ? "border-l-4 border-l-green-500 bg-green-600/30" : "border-l-4 border-l-blue-500 bg-blue-600/30"
+          }`}>
+            <CardContent className="p-6">
+              <div className="flex items-start space-x-4">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                  notification.type === 'success' ? "bg-green-400/20 text-green-400" : "bg-blue-400/20 text-blue-400"
+                }`}>
+                  {notification.type === 'success' ? <CheckCircle className="h-5 w-5" /> : <Info className="h-5 w-5" />}
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-medium text-white">
+                      {notification.type === 'success' ? 'Policy Update' : 'System Notification'}
+                    </h3>
+                    <div className="flex items-center space-x-2">
+                      <Badge className={`${
+                        notification.type === 'success' ? "bg-green-400/20 text-green-400" : "bg-blue-400/20 text-blue-400"
+                      }`}>
+                        {notification.type}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <p className="text-white/80 mb-3">
+                    {notification.message}
+                  </p>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4 text-sm text-white/60">
+                      <div className="flex items-center">
+                        <Clock className="h-4 w-4 mr-1" />
+                        {notification.date}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -855,7 +894,7 @@ export default function FarmerDashboard() {
   const renderProfileSettings = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Profile Settings</h2>
+        <h2 className="text-2xl font-bold text-white">Profile Settings</h2>
         <Button variant="outline" onClick={() => setActivePage("dashboard")}>
           Back to Dashboard
         </Button>

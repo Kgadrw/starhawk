@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { HomeNavbar } from "@/components/layout/HomeNavbar";
+import { FooterSection } from "@/components/home/FooterSection";
 import { 
   User, 
   ArrowLeft, 
@@ -141,23 +143,41 @@ export default function FarmerRegistration() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-slate-900 relative overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute inset-0 opacity-20">
-        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/5 to-transparent"></div>
+    <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 min-h-screen">
+      {/* Navigation */}
+      <HomeNavbar />
+
+      {/* Grid Pattern Background */}
+      <div className="absolute inset-0 opacity-70 flex items-center justify-center">
+        <img
+          src="/lines.png"
+          alt="Grid lines"
+          className="w-3/4 h-3/4 object-contain"
+        />
       </div>
-      
-      {/* Floating Elements */}
-      <div className="absolute top-20 left-10 w-20 h-20 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full blur-xl opacity-20 animate-pulse"></div>
-      <div className="absolute top-40 right-20 w-32 h-32 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full blur-xl opacity-20 animate-pulse delay-1000"></div>
-      <div className="absolute bottom-20 left-1/4 w-24 h-24 bg-gradient-to-r from-orange-400 to-amber-500 rounded-full blur-xl opacity-20 animate-pulse delay-2000"></div>
+
+      {/* Bottom Corner Lines */}
+      <div className="absolute bottom-0 left-0 opacity-60">
+        <img
+          src="/lines2.png"
+          alt="Bottom left lines"
+          className="w-[32rem] h-[32rem]"
+        />
+      </div>
+      <div className="absolute bottom-0 right-0 opacity-60">
+        <img
+          src="/lines2.png"
+          alt="Bottom right lines"
+          className="w-[32rem] h-[32rem]"
+        />
+      </div>
 
       {/* Header */}
-      <div className="relative z-10 bg-white/10 backdrop-blur-md border-b border-white/20">
+      <div className="relative z-10 bg-white/10 backdrop-blur-md border-b border-white/20 pt-32">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-12 h-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl flex items-center justify-center">
                 <User className="h-7 w-7 text-white" />
               </div>
               <div>
@@ -354,7 +374,7 @@ export default function FarmerRegistration() {
                     type="button"
                     onClick={() => setStep(2)}
                     disabled={!isStep1Valid}
-                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-8 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                    className="bg-white/10 hover:bg-white/20 border border-white/20 text-white backdrop-blur-sm px-8 py-3 text-lg font-semibold"
                   >
                     Next Step
                   </Button>
@@ -362,7 +382,7 @@ export default function FarmerRegistration() {
                   <Button
                     type="submit"
                     disabled={!isStep2Valid || isSubmitting}
-                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-8 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                    className="bg-white/10 hover:bg-white/20 border border-white/20 text-white backdrop-blur-sm px-8 py-3 text-lg font-semibold"
                   >
                     {isSubmitting ? "Creating Account..." : "Register Farmer"}
                   </Button>
@@ -372,6 +392,9 @@ export default function FarmerRegistration() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Footer */}
+      <FooterSection />
     </div>
   );
 }

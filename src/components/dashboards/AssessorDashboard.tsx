@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { dashboardTheme } from "@/utils/dashboardTheme";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -158,7 +159,7 @@ export default function AssessorDashboard() {
       case "in_progress": return "bg-blue-100 text-blue-800";
       case "completed": return "bg-green-100 text-green-800";
       case "overdue": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-800/20 text-white";
     }
   };
 
@@ -177,7 +178,7 @@ export default function AssessorDashboard() {
       case "risk_assessment": return "bg-blue-100 text-blue-800";
       case "loss_assessment": return "bg-red-100 text-red-800";
       case "monitoring": return "bg-green-100 text-green-800";
-      default: return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-800/20 text-white";
     }
   };
 
@@ -185,7 +186,7 @@ export default function AssessorDashboard() {
     <div className="space-y-6">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 border border-orange-200 dark:border-orange-700/30 rounded-2xl p-6">
-        <h1 className="text-2xl font-bold mb-2 text-orange-800 dark:text-orange-200">
+        <h1 className="text-2xl font-bold mb-2 text-white">
           Welcome back, {assessorName}
         </h1>
         <p className="text-orange-600 dark:text-orange-400">
@@ -195,57 +196,57 @@ export default function AssessorDashboard() {
 
       {/* Stats Cards */}
       <div className="grid gap-6 md:grid-cols-4">
-        <Card className="hover:border-amber-400/80 dark:hover:border-amber-500/80 transition-all duration-300 bg-amber-50/90 dark:bg-amber-900/20 border border-amber-200/60 dark:border-amber-700/30">
+        <Card className={`${dashboardTheme.card} border-amber-700/30`}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pending Tasks</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-200">{assessments.filter(a => a.status === 'pending').length}</p>
+                <p className="text-sm font-medium text-white/70">Pending Tasks</p>
+                <p className="text-2xl font-bold text-white">{assessments.filter(a => a.status === 'pending').length}</p>
               </div>
-              <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/40 rounded-lg flex items-center justify-center">
-                <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+              <div className="w-12 h-12 bg-yellow-400/20 rounded-lg flex items-center justify-center">
+                <Clock className="h-6 w-6 text-yellow-400" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:border-yellow-400/80 dark:hover:border-yellow-500/80 transition-all duration-300 bg-yellow-50/90 dark:bg-yellow-900/20 border border-yellow-200/60 dark:border-yellow-700/30">
+        <Card className={`${dashboardTheme.card} border-yellow-700/30`}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">In Progress</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-200">{assessments.filter(a => a.status === 'in_progress').length}</p>
+                <p className="text-sm font-medium text-white/70">In Progress</p>
+                <p className="text-2xl font-bold text-white">{assessments.filter(a => a.status === 'in_progress').length}</p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center">
-                <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div className="w-12 h-12 bg-blue-400/20 rounded-lg flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-blue-400" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:border-orange-400/80 dark:hover:border-orange-500/80 transition-all duration-300 bg-orange-50/90 dark:bg-orange-900/20 border border-orange-200/60 dark:border-orange-700/30">
+        <Card className={`${dashboardTheme.card} border-orange-700/30`}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Completed</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-200">{completedAssessments.length}</p>
+                <p className="text-sm font-medium text-white/70">Completed</p>
+                <p className="text-2xl font-bold text-white">{completedAssessments.length}</p>
               </div>
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-900/40 rounded-lg flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+              <div className="w-12 h-12 bg-green-400/20 rounded-lg flex items-center justify-center">
+                <CheckCircle className="h-6 w-6 text-green-400" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:border-teal-400/80 dark:hover:border-teal-500/80 transition-all duration-300 bg-teal-50/90 dark:bg-teal-900/20 border border-teal-200/60 dark:border-teal-700/30">
+        <Card className={`${dashboardTheme.card} border-teal-700/30`}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Completion Rate</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-200">92%</p>
+                <p className="text-sm font-medium text-white/70">Completion Rate</p>
+                <p className="text-2xl font-bold text-white">92%</p>
               </div>
-              <div className="w-12 h-12 bg-teal-100 dark:bg-teal-900/40 rounded-lg flex items-center justify-center">
-                <TrendingUp className="h-6 w-6 text-teal-600 dark:text-teal-400" />
+              <div className="w-12 h-12 bg-teal-400/20 rounded-lg flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-teal-400" />
               </div>
             </div>
           </CardContent>
@@ -255,9 +256,9 @@ export default function AssessorDashboard() {
       {/* Charts Section */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Assessment Type Distribution Pie Chart */}
-        <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-white/50 dark:border-gray-700/50 rounded-2xl shadow-lg shadow-orange-100/20 dark:shadow-gray-900/20">
+        <Card className={`${dashboardTheme.card} rounded-2xl shadow-lg shadow-orange-900/20`}>
           <CardHeader>
-            <CardTitle className="flex items-center text-gray-800 dark:text-gray-200">
+            <CardTitle className="flex items-center text-white">
               <FileText className="h-5 w-5 mr-2" />
               Assessment Type Distribution
             </CardTitle>
@@ -296,9 +297,9 @@ export default function AssessorDashboard() {
                 <div key={index} className="flex items-center justify-between text-sm">
                   <div className="flex items-center space-x-2">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                    <span className="text-gray-600">{item.name}</span>
+                    <span className="text-white/80">{item.name}</span>
                   </div>
-                  <span className="font-medium text-gray-800">{item.value}%</span>
+                  <span className="font-medium text-white">{item.value}%</span>
                 </div>
               ))}
             </div>
@@ -306,9 +307,9 @@ export default function AssessorDashboard() {
         </Card>
 
         {/* Monthly Assessments Bar Chart */}
-        <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-white/50 dark:border-gray-700/50 rounded-2xl shadow-lg shadow-blue-100/20 dark:shadow-gray-900/20">
+        <Card className={`${dashboardTheme.card} rounded-2xl shadow-lg shadow-blue-900/20`}>
           <CardHeader>
-            <CardTitle className="flex items-center text-gray-800 dark:text-gray-200">
+            <CardTitle className="flex items-center text-white">
               <TrendingUp className="h-5 w-5 mr-2" />
               Monthly Assessment Progress
             </CardTitle>
@@ -357,9 +358,9 @@ export default function AssessorDashboard() {
       {/* Additional Charts Row */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Performance Trend Line Chart */}
-        <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-white/50 dark:border-gray-700/50 rounded-2xl shadow-lg shadow-green-100/20 dark:shadow-gray-900/20">
+        <Card className={`${dashboardTheme.card} rounded-2xl shadow-lg shadow-green-900/20`}>
           <CardHeader>
-            <CardTitle className="flex items-center text-gray-800 dark:text-gray-200">
+            <CardTitle className="flex items-center text-white">
               <TrendingUp className="h-5 w-5 mr-2" />
               Performance Metrics
             </CardTitle>
@@ -411,9 +412,9 @@ export default function AssessorDashboard() {
         </Card>
 
         {/* Crop Type Distribution */}
-        <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-white/50 dark:border-gray-700/50 rounded-2xl shadow-lg shadow-purple-100/20 dark:shadow-gray-900/20">
+        <Card className={`${dashboardTheme.card} rounded-2xl shadow-lg shadow-purple-900/20`}>
           <CardHeader>
-            <CardTitle className="flex items-center text-gray-800 dark:text-gray-200">
+            <CardTitle className="flex items-center text-white">
               <MapPin className="h-5 w-5 mr-2" />
               Assessments by Crop Type
             </CardTitle>
@@ -460,7 +461,7 @@ export default function AssessorDashboard() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
+            <CardTitle className="flex items-center text-white">
               <Clock className="h-5 w-5 mr-2" />
               Pending Assessments
             </CardTitle>
@@ -475,13 +476,13 @@ export default function AssessorDashboard() {
                       {assessment.type.replace('_', ' ')}
                     </Badge>
                   </div>
-                  <p className="text-sm text-gray-600 mb-1">
+                  <p className="text-sm text-white/80 mb-1">
                     {assessment.farmerName} • {assessment.cropType}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-white/60">
                     Due: {assessment.dueDate}
                   </p>
-                  <Button size="sm" className="mt-2" onClick={() => setActivePage("assessment-detail")}>
+                  <Button size="sm" className={`${dashboardTheme.buttonPrimary} mt-2`} onClick={() => setActivePage("assessment-detail")}>
                     View Details
                   </Button>
                 </div>
@@ -492,7 +493,7 @@ export default function AssessorDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
+            <CardTitle className="flex items-center text-white">
               <CheckCircle className="h-5 w-5 mr-2" />
               Recent Completions
             </CardTitle>
@@ -507,10 +508,10 @@ export default function AssessorDashboard() {
                       {assessment.type.replace('_', ' ')}
                     </Badge>
                   </div>
-                  <p className="text-sm text-gray-600 mb-1">
+                  <p className="text-sm text-white/80 mb-1">
                     {assessment.farmerName} • {assessment.cropType}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-white/60">
                     Completed: {assessment.completedDate}
                   </p>
                   <div className="mt-2">
@@ -530,15 +531,15 @@ export default function AssessorDashboard() {
   const renderAssessmentTasks = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Assessment Tasks</h2>
-        <Button variant="outline" onClick={() => setActivePage("dashboard")}>
+        <h2 className="text-2xl font-bold text-white">Assessment Tasks</h2>
+        <Button className={`${dashboardTheme.buttonPrimary}`} onClick={() => setActivePage("dashboard")}>
           Back to Dashboard
             </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>All Assessments</CardTitle>
+          <CardTitle className="text-white">All Assessments</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -566,12 +567,12 @@ export default function AssessorDashboard() {
                     </td>
                     <td className="p-3">
                       <div>
-                        <p className="font-medium">{assessment.farmerName}</p>
-                        <p className="text-sm text-gray-500">{assessment.farmerId}</p>
+                        <p className="font-medium text-white">{assessment.farmerName}</p>
+                        <p className="text-sm text-white/60">{assessment.farmerId}</p>
                     </div>
                   </td>
-                    <td className="p-3">{assessment.cropType}</td>
-                    <td className="p-3">{assessment.location}</td>
+                    <td className="p-3 text-white">{assessment.cropType}</td>
+                    <td className="p-3 text-white">{assessment.location}</td>
                     <td className="p-3">
                       <Badge className={getStatusColor(assessment.status)}>
                         {getStatusIcon(assessment.status)}
@@ -580,7 +581,7 @@ export default function AssessorDashboard() {
                     </td>
                     <td className="p-3">{assessment.dueDate}</td>
                     <td className="p-3">
-                      <Button size="sm" variant="outline">
+                      <Button size="sm" className={`${dashboardTheme.buttonSecondary}`}>
                         View Details
                       </Button>
                   </td>
@@ -597,7 +598,7 @@ export default function AssessorDashboard() {
   const renderAssessmentDetail = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Assessment Details</h2>
+        <h2 className="text-2xl font-bold text-white">Assessment Details</h2>
         <Button variant="outline" onClick={() => setActivePage("assessment-tasks")}>
           Back to Tasks
         </Button>
@@ -606,29 +607,29 @@ export default function AssessorDashboard() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Farmer Information</CardTitle>
+            <CardTitle className="text-white">Farmer Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4">
               <div>
-                <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Farmer Name</Label>
-                <p className="text-lg">Jean Baptiste</p>
+                <Label className="text-sm font-medium text-white/80">Farmer Name</Label>
+                <p className="text-lg text-white">Jean Baptiste</p>
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Farmer ID</Label>
-                <p className="text-lg">FMR-0247</p>
+                <Label className="text-sm font-medium text-white/80">Farmer ID</Label>
+                <p className="text-lg text-white">FMR-0247</p>
                 </div>
               <div>
-                <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Location</Label>
-                <p className="text-lg">Nyagatare District, Eastern Province</p>
+                <Label className="text-sm font-medium text-white/80">Location</Label>
+                <p className="text-lg text-white">Nyagatare District, Eastern Province</p>
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Farm Size</Label>
-                <p className="text-lg">2.5 hectares</p>
+                <Label className="text-sm font-medium text-white/80">Farm Size</Label>
+                <p className="text-lg text-white">2.5 hectares</p>
                 </div>
               <div>
-                <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Crop Type</Label>
-                <p className="text-lg">Maize</p>
+                <Label className="text-sm font-medium text-white/80">Crop Type</Label>
+                <p className="text-lg text-white">Maize</p>
               </div>
             </div>
           </CardContent>
@@ -636,7 +637,7 @@ export default function AssessorDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Assessment Form</CardTitle>
+            <CardTitle className="text-white">Assessment Form</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -695,9 +696,9 @@ export default function AssessorDashboard() {
             <div className="space-y-2">
               <Label>Upload Photos</Label>
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <Camera className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                <p className="text-sm text-gray-600">Click to upload field photos</p>
-                <p className="text-xs text-gray-500">PNG, JPG up to 10MB</p>
+                <Camera className="h-8 w-8 mx-auto text-white/60 mb-2" />
+                <p className="text-sm text-white/80">Click to upload field photos</p>
+                <p className="text-xs text-white/60">PNG, JPG up to 10MB</p>
                 </div>
             </div>
 

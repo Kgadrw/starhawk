@@ -1,6 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { HomeNavbar } from "@/components/layout/HomeNavbar";
+import { FooterSection } from "@/components/home/FooterSection";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Shield, 
   FileText, 
@@ -15,7 +16,8 @@ import {
   ArrowRight,
   Phone,
   Mail,
-  MessageCircle
+  MessageCircle,
+  Sparkles
 } from "lucide-react";
 
 export default function Services() {
@@ -30,9 +32,7 @@ export default function Services() {
         "Historical data correlation",
         "Real-time risk scoring",
         "Automated report generation"
-      ],
-      color: "bg-blue-500",
-      image: "/api/placeholder/400/300"
+      ]
     },
     {
       title: "Drone Surveillance & Monitoring",
@@ -44,9 +44,7 @@ export default function Services() {
         "Disease detection algorithms",
         "Growth pattern analysis",
         "Real-time field updates"
-      ],
-      color: "bg-green-500",
-      image: "/api/placeholder/400/300"
+      ]
     },
     {
       title: "Automated Claims Processing",
@@ -58,9 +56,7 @@ export default function Services() {
         "Photo evidence analysis",
         "Fast payout processing",
         "Fraud detection algorithms"
-      ],
-      color: "bg-orange-500",
-      image: "/api/placeholder/400/300"
+      ]
     },
     {
       title: "Policy Management System",
@@ -72,9 +68,7 @@ export default function Services() {
         "Policy performance tracking",
         "Renewal management",
         "Compliance monitoring"
-      ],
-      color: "bg-purple-500",
-      image: "/api/placeholder/400/300"
+      ]
     },
     {
       title: "Satellite Data Analysis",
@@ -86,9 +80,7 @@ export default function Services() {
         "Crop yield prediction",
         "Drought monitoring",
         "Flood risk assessment"
-      ],
-      color: "bg-indigo-500",
-      image: "/api/placeholder/400/300"
+      ]
     },
     {
       title: "Government Analytics Dashboard",
@@ -100,195 +92,141 @@ export default function Services() {
         "Policy impact assessment",
         "Economic impact studies",
         "Predictive analytics"
-      ],
-      color: "bg-red-500",
-      image: "/api/placeholder/400/300"
-    }
-  ];
-
-  const processSteps = [
-    {
-      step: "01",
-      title: "Data Collection",
-      description: "Gather satellite imagery, drone footage, weather data, and field information",
-      icon: Globe
-    },
-    {
-      step: "02",
-      title: "AI Analysis",
-      description: "Process data using machine learning algorithms for risk assessment",
-      icon: Zap
-    },
-    {
-      step: "03",
-      title: "Risk Evaluation",
-      description: "Generate comprehensive risk reports with actionable insights",
-      icon: Shield
-    },
-    {
-      step: "04",
-      title: "Decision Support",
-      description: "Provide recommendations for policy creation and claims processing",
-      icon: CheckCircle
-    }
-  ];
-
-  const benefits = [
-    {
-      title: "Reduced Processing Time",
-      description: "90% faster claims processing compared to traditional methods",
-      value: "90%",
-      icon: Zap
-    },
-    {
-      title: "Improved Accuracy",
-      description: "AI-powered analysis reduces human error and improves assessment accuracy",
-      value: "95%",
-      icon: CheckCircle
-    },
-    {
-      title: "Cost Savings",
-      description: "Significant reduction in operational costs through automation",
-      value: "60%",
-      icon: BarChart3
-    },
-    {
-      title: "Global Coverage",
-      description: "Satellite technology enables monitoring of remote and inaccessible areas",
-      value: "100%",
-      icon: Globe
+      ]
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 relative">
+      {/* Navigation */}
+      <HomeNavbar />
+      
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-blue-900 to-green-900 text-white">
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="relative container mx-auto px-4 py-20">
-          <div className="text-center max-w-4xl mx-auto">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              Our Services
-            </h1>
-            <p className="text-xl md:text-2xl mb-8 text-blue-100">
-              Comprehensive AI-powered solutions for modern agricultural insurance,
-              from risk assessment to claims processing.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="secondary">
-                Get Started Today
-              </Button>
-              <Button size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white hover:text-blue-600">
-                Schedule Demo
-              </Button>
-            </div>
-          </div>
+      <div className="relative min-h-screen flex items-center justify-center">
+        {/* Grid Pattern Background */}
+        <div className="absolute inset-0 opacity-70 flex items-center justify-center">
+          <img
+            src="/lines.png"
+            alt="Grid lines"
+            className="w-3/4 h-3/4 object-contain"
+          />
         </div>
-      </div>
 
-      {/* Services Grid */}
-      <div className="container mx-auto px-4 py-20">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+        {/* Bottom Corner Lines */}
+        <div className="absolute bottom-0 left-0 opacity-60">
+          <img
+            src="/lines2.png"
+            alt="Bottom left lines"
+            className="w-[32rem] h-[32rem]"
+          />
+        </div>
+        <div className="absolute bottom-0 right-0 opacity-60">
+          <img
+            src="/lines2.png"
+            alt="Bottom right lines"
+            className="w-[32rem] h-[32rem]"
+          />
+        </div>
+
+        {/* Hero Content */}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20 text-center">
+          <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
+            <Sparkles className="h-4 w-4 text-green-400" />
+            <span className="text-white/90 text-sm font-medium">Our Services</span>
+          </div>
+          
+          <h1 className="text-6xl font-bold text-white mb-6 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent">
             Comprehensive Solutions
-          </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Our suite of services covers every aspect of agricultural insurance,
-            from initial risk assessment to final claims processing.
+          </h1>
+          
+          <p className="text-xl text-white/80 max-w-3xl mx-auto leading-relaxed mb-12">
+            AI-powered agricultural insurance solutions that revolutionize risk assessment, 
+            claims processing, and policy management for the modern farming industry.
           </p>
-        </div>
 
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {services.map((service, index) => {
-            const Icon = service.icon;
-            return (
-              <Card key={index} className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
-                <CardHeader className="text-center pb-4">
-                  <div className={`w-16 h-16 ${service.color} rounded-full flex items-center justify-center mx-auto mb-4`}>
-                    <Icon className="h-8 w-8 text-white" />
-                  </div>
-                  <CardTitle className="text-xl">{service.title}</CardTitle>
-                  <p className="text-muted-foreground">{service.description}</p>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2 mb-6">
-                    {service.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-center gap-2 text-sm">
-                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Button className="w-full group-hover:bg-primary group-hover:text-primary-foreground">
-                    Learn More
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Process Section */}
-      <div className="bg-white py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              How It Works
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Our streamlined process ensures accurate risk assessment and efficient claims processing.
-            </p>
-          </div>
-
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-            {processSteps.map((step, index) => {
-              const Icon = step.icon;
-              return (
-                <div key={index} className="text-center">
-                  <div className="relative mb-6">
-                    <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Icon className="h-10 w-10 text-white" />
-                    </div>
-                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-bold text-sm">
-                      {step.step}
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-semibold mb-3">{step.title}</h3>
-                  <p className="text-muted-foreground">{step.description}</p>
-                </div>
-              );
-            })}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button 
+              size="lg" 
+              className="bg-white/10 hover:bg-white/20 border border-white/20 text-white backdrop-blur-sm rounded-3xl px-8 py-4 text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+            >
+              Get Started Today
+              <ArrowRight className="h-5 w-5 ml-2" />
+            </Button>
+            <Button 
+              size="lg" 
+              className="bg-white/10 hover:bg-white/20 border border-white/20 text-white backdrop-blur-sm rounded-3xl px-8 py-4 text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+            >
+              Schedule Demo
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* Benefits Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-green-600 text-white py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Why Choose STARHAWK?
-            </h2>
-            <p className="text-xl text-blue-100 max-w-3xl mx-auto">
-              Our AI-powered platform delivers measurable results and significant improvements
-              in agricultural insurance operations.
-            </p>
-          </div>
+      {/* Services Section */}
+      <div className="relative z-10 py-20">
+        {/* Background decorations */}
+        <div className="absolute inset-0 opacity-70 flex items-center justify-center">
+          <img
+            src="/lines.png"
+            alt="Grid lines"
+            className="w-3/4 h-3/4 object-contain"
+          />
+        </div>
 
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-            {benefits.map((benefit, index) => {
-              const Icon = benefit.icon;
+        <div className="absolute bottom-0 left-0 opacity-60">
+          <img
+            src="/lines2.png"
+            alt="Bottom left lines"
+            className="w-[32rem] h-[32rem]"
+          />
+        </div>
+        <div className="absolute bottom-0 right-0 opacity-60">
+          <img
+            src="/lines2.png"
+            alt="Bottom right lines"
+            className="w-[32rem] h-[32rem]"
+          />
+        </div>
+
+        {/* Services Grid */}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {services.map((service, index) => {
+              const Icon = service.icon;
               return (
-                <div key={index} className="text-center">
-                  <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Icon className="h-8 w-8" />
-                  </div>
-                  <div className="text-4xl font-bold mb-2">{benefit.value}</div>
-                  <h3 className="text-xl font-semibold mb-2">{benefit.title}</h3>
-                  <p className="text-blue-100">{benefit.description}</p>
-                </div>
+                <Card key={index} className="group bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 transition-all duration-500 rounded-2xl h-full">
+                  <CardHeader className="pb-6">
+                    <div className="flex items-center justify-center mb-6">
+                      <div className="w-16 h-16 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-500">
+                        <Icon className="h-8 w-8 text-white" />
+                      </div>
+                    </div>
+                    <CardTitle className="text-xl font-bold text-center text-white group-hover:text-green-200 transition-colors">
+                      {service.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p className="text-white/70 text-center mb-6 leading-relaxed">
+                      {service.description}
+                    </p>
+                    
+                    <div className="space-y-3 mb-8">
+                      {service.features.map((feature, idx) => (
+                        <div key={idx} className="flex items-center space-x-3">
+                          <CheckCircle className="h-4 w-4 text-green-400 flex-shrink-0" />
+                          <span className="text-white/80 text-sm">{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <Button 
+                      className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white backdrop-blur-sm rounded-3xl py-3 font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+                    >
+                      Learn More
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </CardContent>
+                </Card>
               );
             })}
           </div>
@@ -296,31 +234,43 @@ export default function Services() {
       </div>
 
       {/* CTA Section */}
-      <div className="bg-gray-900 text-white py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">
+      <div className="relative z-10 py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-4xl font-bold text-white mb-6 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent">
             Ready to Transform Your Agricultural Insurance?
           </h2>
-          <p className="text-xl mb-8 max-w-3xl mx-auto text-gray-300">
+          <p className="text-xl text-white/80 mb-12 max-w-3xl mx-auto leading-relaxed">
             Join leading insurers and government agencies who trust STARHAWK for
             their agricultural insurance needs. Get started today with a free consultation.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" variant="secondary">
+            <Button 
+              size="lg" 
+              className="bg-white/10 hover:bg-white/20 border border-white/20 text-white backdrop-blur-sm rounded-3xl px-8 py-4 text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+            >
               <Phone className="h-5 w-5 mr-2" />
               Schedule Consultation
             </Button>
-            <Button size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white hover:text-gray-900">
+            <Button 
+              size="lg" 
+              className="bg-white/10 hover:bg-white/20 border border-white/20 text-white backdrop-blur-sm rounded-3xl px-8 py-4 text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+            >
               <Mail className="h-5 w-5 mr-2" />
               Contact Sales
             </Button>
-            <Button size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white hover:text-gray-900">
+            <Button 
+              size="lg" 
+              className="bg-white/10 hover:bg-white/20 border border-white/20 text-white backdrop-blur-sm rounded-3xl px-8 py-4 text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+            >
               <MessageCircle className="h-5 w-5 mr-2" />
               Live Chat
             </Button>
           </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <FooterSection />
     </div>
   );
 }

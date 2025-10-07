@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { dashboardTheme } from "@/utils/dashboardTheme";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -101,21 +102,21 @@ export default function InsurerNotifications() {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case "high": return "bg-red-100 text-red-800";
-      case "medium": return "bg-yellow-100 text-yellow-800";
-      case "low": return "bg-green-100 text-green-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "high": return "bg-red-400/20 text-red-400";
+      case "medium": return "bg-yellow-400/20 text-yellow-400";
+      case "low": return "bg-green-400/20 text-green-400";
+      default: return "bg-gray-400/20 text-gray-400";
     }
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case "risk_assessment": return "bg-blue-100 text-blue-800";
-      case "claim_submitted": return "bg-orange-100 text-orange-800";
-      case "payment_due": return "bg-purple-100 text-purple-800";
-      case "assessment_completed": return "bg-green-100 text-green-800";
-      case "system_alert": return "bg-gray-100 text-gray-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "risk_assessment": return "bg-blue-400/20 text-blue-400";
+      case "claim_submitted": return "bg-orange-400/20 text-orange-400";
+      case "payment_due": return "bg-purple-400/20 text-purple-400";
+      case "assessment_completed": return "bg-green-400/20 text-green-400";
+      case "system_alert": return "bg-gray-800/20 text-white";
+      default: return "bg-gray-800/20 text-white";
     }
   };
 
@@ -137,8 +138,8 @@ export default function InsurerNotifications() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Notifications</h2>
-          <p className="text-gray-600">Stay updated with system activities and alerts</p>
+          <h2 className="text-2xl font-bold text-white">Notifications</h2>
+          <p className="text-white/80">Stay updated with system activities and alerts</p>
         </div>
         <div className="flex items-center space-x-2">
           <Badge variant="outline" className="bg-blue-50 text-blue-700">
@@ -153,7 +154,7 @@ export default function InsurerNotifications() {
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
                 <Input
                   placeholder="Search notifications..."
                   value={searchTerm}
@@ -196,27 +197,27 @@ export default function InsurerNotifications() {
         {filteredNotifications.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
-              <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications found</h3>
-              <p className="text-gray-600">Try adjusting your search or filter criteria.</p>
+              <Bell className="h-12 w-12 text-white/60 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-white mb-2">No notifications found</h3>
+              <p className="text-white/70">Try adjusting your search or filter criteria.</p>
             </CardContent>
           </Card>
         ) : (
           filteredNotifications.map((notification) => (
-            <Card key={notification.id} className={`transition-all duration-200 hover:shadow-md ${
-              notification.status === "unread" ? "border-l-4 border-l-blue-500 bg-blue-50/30" : ""
+            <Card key={notification.id} className={`${dashboardTheme.card} transition-all duration-200 ${
+              notification.status === "unread" ? "border-l-4 border-l-green-500 bg-green-600/30" : ""
             }`}>
               <CardContent className="p-6">
                 <div className="flex items-start space-x-4">
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    notification.status === "unread" ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-600"
+                    notification.status === "unread" ? "bg-green-400/20 text-green-400" : "bg-gray-800/20 text-gray-400"
                   }`}>
                     {getNotificationIcon(notification.type)}
                   </div>
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-lg font-medium text-gray-900">
+                      <h3 className="text-lg font-medium text-white">
                         {notification.title}
                       </h3>
                       <div className="flex items-center space-x-2">
@@ -229,12 +230,12 @@ export default function InsurerNotifications() {
                       </div>
                     </div>
                     
-                    <p className="text-gray-600 mb-3">
+                    <p className="text-white/80 mb-3">
                       {notification.message}
                     </p>
                     
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4 text-sm text-gray-500">
+                      <div className="flex items-center space-x-4 text-sm text-white/60">
                         <div className="flex items-center">
                           <Clock className="h-4 w-4 mr-1" />
                           {notification.timestamp}

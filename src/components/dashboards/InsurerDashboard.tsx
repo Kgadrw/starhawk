@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { dashboardTheme } from "@/utils/dashboardTheme";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -187,8 +188,8 @@ export default function InsurerDashboard() {
       case "pending_review": return "bg-yellow-100 text-yellow-800";
       case "approved": return "bg-green-100 text-green-800";
       case "rejected": return "bg-red-100 text-red-800";
-      case "expired": return "bg-gray-100 text-gray-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "expired": return "bg-gray-800/20 text-white";
+      default: return "bg-gray-800/20 text-white";
     }
   };
 
@@ -208,7 +209,7 @@ export default function InsurerDashboard() {
       case "low": return "bg-green-100 text-green-800";
       case "medium": return "bg-yellow-100 text-yellow-800";
       case "high": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-800/20 text-white";
     }
   };
 
@@ -216,7 +217,7 @@ export default function InsurerDashboard() {
     <div className="space-y-6">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700/30 rounded-2xl p-6">
-        <h1 className="text-2xl font-bold mb-2 text-blue-800 dark:text-blue-200">
+        <h1 className="text-2xl font-bold mb-2 text-white">
           Welcome back, {insurerName}
         </h1>
         <p className="text-blue-600 dark:text-blue-400">
@@ -226,57 +227,57 @@ export default function InsurerDashboard() {
 
       {/* Stats Cards */}
       <div className="grid gap-6 md:grid-cols-4">
-        <Card className="hover:border-indigo-400/80 dark:hover:border-indigo-500/80 transition-all duration-300 bg-indigo-50/90 dark:bg-indigo-900/20 border border-indigo-200/60 dark:border-indigo-700/30">
+        <Card className={`${dashboardTheme.card} border-indigo-700/30`}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Risk Reviews</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-200">{riskAssessments.length}</p>
+                <p className="text-sm font-medium text-white/70">Risk Reviews</p>
+                <p className="text-2xl font-bold text-white">{riskAssessments.length}</p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center">
-                <FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div className="w-12 h-12 bg-blue-400/20 rounded-lg flex items-center justify-center">
+                <FileText className="h-6 w-6 text-blue-400" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:border-sky-400/80 dark:hover:border-sky-500/80 transition-all duration-300 bg-sky-50/90 dark:bg-sky-900/20 border border-sky-200/60 dark:border-sky-700/30">
+        <Card className={`${dashboardTheme.card} border-sky-700/30`}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Policies</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-200">{policies.length}</p>
+                <p className="text-sm font-medium text-white/70">Active Policies</p>
+                <p className="text-2xl font-bold text-white">{policies.length}</p>
               </div>
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-900/40 rounded-lg flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+              <div className="w-12 h-12 bg-green-400/20 rounded-lg flex items-center justify-center">
+                <CheckCircle className="h-6 w-6 text-green-400" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:border-cyan-400/80 dark:hover:border-cyan-500/80 transition-all duration-300 bg-cyan-50/90 dark:bg-cyan-900/20 border border-cyan-200/60 dark:border-cyan-700/30">
+        <Card className={`${dashboardTheme.card} border-cyan-700/30`}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Claim Reviews</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-200">{claims.length}</p>
+                <p className="text-sm font-medium text-white/70">Claim Reviews</p>
+                <p className="text-2xl font-bold text-white">{claims.length}</p>
               </div>
-              <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/40 rounded-lg flex items-center justify-center">
-                <AlertTriangle className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+              <div className="w-12 h-12 bg-orange-400/20 rounded-lg flex items-center justify-center">
+                <AlertTriangle className="h-6 w-6 text-orange-400" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:border-blue-400/80 dark:hover:border-blue-500/80 transition-all duration-300 bg-blue-50/90 dark:bg-blue-900/20 border border-blue-200/60 dark:border-blue-700/30">
+        <Card className={`${dashboardTheme.card} border-blue-700/30`}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Premium</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-200">2.4B RWF</p>
+                <p className="text-sm font-medium text-white/70">Total Premium</p>
+                <p className="text-2xl font-bold text-white">2.4B RWF</p>
               </div>
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/40 rounded-lg flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              <div className="w-12 h-12 bg-purple-400/20 rounded-lg flex items-center justify-center">
+                <DollarSign className="h-6 w-6 text-purple-400" />
               </div>
             </div>
           </CardContent>
@@ -288,7 +289,7 @@ export default function InsurerDashboard() {
         {/* Risk Distribution Pie Chart */}
         <Card className="bg-gradient-to-br from-white/90 to-blue-50/50 dark:from-gray-800/90 dark:to-gray-900/50 backdrop-blur-xl border border-blue-200/30 dark:border-gray-700/30 rounded-3xl shadow-2xl shadow-blue-200/20 dark:shadow-gray-900/20 hover:shadow-blue-300/30 dark:hover:shadow-gray-800/30 transition-all duration-500">
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center text-gray-800 dark:text-gray-200 text-lg font-bold">
+            <CardTitle className="flex items-center text-white text-lg font-bold">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center mr-3 shadow-lg shadow-blue-200/50">
                 <AlertTriangle className="h-5 w-5 text-white" />
               </div>
@@ -344,21 +345,21 @@ export default function InsurerDashboard() {
               {/* Center text */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-800">
+                  <div className="text-2xl font-bold text-white">
                     {riskDistributionData.reduce((sum, item) => sum + item.value, 0)}%
                   </div>
-                  <div className="text-sm text-gray-500 font-medium">Total Coverage</div>
+                  <div className="text-sm text-white/70 font-medium">Total Coverage</div>
                 </div>
               </div>
             </div>
             <div className="mt-6 space-y-3">
               {riskDistributionData.map((item, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-white/60 backdrop-blur-sm rounded-xl border border-white/40 hover:bg-white/80 transition-all duration-300">
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/40 hover:bg-gray-700/80 transition-all duration-300">
                   <div className="flex items-center space-x-3">
                     <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: item.color }}></div>
-                    <span className="text-gray-700 font-medium">{item.name}</span>
+                    <span className="text-white/80 font-medium">{item.name}</span>
                   </div>
-                  <span className="font-bold text-gray-800 bg-gray-100/80 px-3 py-1 rounded-lg">{item.value}%</span>
+                  <span className="font-bold text-white bg-gray-800/80 px-3 py-1 rounded-lg">{item.value}%</span>
                 </div>
               ))}
             </div>
@@ -368,7 +369,7 @@ export default function InsurerDashboard() {
         {/* Claims Over Time Bar Chart */}
         <Card className="bg-gradient-to-br from-white/90 to-orange-50/50 dark:from-gray-800/90 dark:to-gray-900/50 backdrop-blur-xl border border-orange-200/30 dark:border-gray-700/30 rounded-3xl shadow-2xl shadow-orange-200/20 dark:shadow-gray-900/20 hover:shadow-orange-300/30 dark:hover:shadow-gray-800/30 transition-all duration-500">
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center text-gray-800 dark:text-gray-200 text-lg font-bold">
+            <CardTitle className="flex items-center text-white text-lg font-bold">
               <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-amber-500 rounded-xl flex items-center justify-center mr-3 shadow-lg shadow-orange-200/50">
                 <TrendingUp className="h-5 w-5 text-white" />
               </div>
@@ -439,7 +440,7 @@ export default function InsurerDashboard() {
         {/* Revenue vs Expenses Area Chart */}
         <Card className="bg-gradient-to-br from-white/90 to-green-50/50 dark:from-gray-800/90 dark:to-gray-900/50 backdrop-blur-xl border border-green-200/30 dark:border-gray-700/30 rounded-3xl shadow-2xl shadow-green-200/20 dark:shadow-gray-900/20 hover:shadow-green-300/30 dark:hover:shadow-gray-800/30 transition-all duration-500">
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center text-gray-800 dark:text-gray-200 text-lg font-bold">
+            <CardTitle className="flex items-center text-white text-lg font-bold">
               <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl flex items-center justify-center mr-3 shadow-lg shadow-green-200/50">
                 <DollarSign className="h-5 w-5 text-white" />
               </div>
@@ -528,7 +529,7 @@ export default function InsurerDashboard() {
         {/* Crop Type Distribution */}
         <Card className="bg-gradient-to-br from-white/90 to-purple-50/50 dark:from-gray-800/90 dark:to-gray-900/50 backdrop-blur-xl border border-purple-200/30 dark:border-gray-700/30 rounded-3xl shadow-2xl shadow-purple-200/20 dark:shadow-gray-900/20 hover:shadow-purple-300/30 dark:hover:shadow-gray-800/30 transition-all duration-500">
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center text-gray-800 dark:text-gray-200 text-lg font-bold">
+            <CardTitle className="flex items-center text-white text-lg font-bold">
               <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-violet-500 rounded-xl flex items-center justify-center mr-3 shadow-lg shadow-purple-200/50">
                 <BarChart3 className="h-5 w-5 text-white" />
               </div>
@@ -616,10 +617,10 @@ export default function InsurerDashboard() {
                       {assessment.riskLevel} risk
                     </Badge>
                   </div>
-                  <p className="text-sm text-gray-600 mb-1">
+                  <p className="text-sm text-white/80 mb-1">
                     {assessment.farmerName} • {assessment.cropType}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-white/60">
                     Assessor: {assessment.assessorName}
                   </p>
                   <div className="flex gap-2 mt-2">
@@ -655,10 +656,10 @@ export default function InsurerDashboard() {
                       {claim.claimAmount.toLocaleString()} RWF
                     </Badge>
                   </div>
-                  <p className="text-sm text-gray-600 mb-1">
+                  <p className="text-sm text-white/80 mb-1">
                     {claim.farmerName} • {claim.cropType}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-white/60">
                     Policy: {claim.policyId}
                   </p>
                   <div className="flex gap-2 mt-2">

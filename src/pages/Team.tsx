@@ -1,238 +1,129 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { 
-  Users, 
-  Award, 
-  Linkedin, 
-  Mail, 
-  GraduationCap,
-  Briefcase,
-  Globe,
-  Shield,
-  Brain,
-  Database,
-  BarChart3
-} from "lucide-react";
+import { HomeNavbar } from "@/components/layout/HomeNavbar";
+import { FooterSection } from "@/components/home/FooterSection";
+import { Users, ArrowLeft, Linkedin, Github } from "lucide-react";
+import { Link } from "react-router-dom";
 
-export default function Team() {
+const Team = () => {
   const teamMembers = [
     {
-      name: "Dr. Sarah Johnson",
-      role: "Chief Technology Officer",
-      expertise: "AI & Machine Learning",
-      experience: "15+ years",
-      education: "PhD Computer Science, MIT",
-      image: "/api/placeholder/300/300",
-      description: "Leading our AI initiatives with expertise in machine learning and satellite imagery analysis.",
-      achievements: ["Published 50+ research papers", "Former Google AI researcher", "Patent holder in agricultural AI"],
-      icon: Brain,
-      color: "bg-blue-500"
+      image: "https://i.pravatar.cc/300?img=1",
+      title: "Victor Muragwa",
+      subtitle: "Chief Executive Officer",
+      handle: "@victormuragwa",
+      borderColor: "#22C55E",
+      gradient: "linear-gradient(145deg, #22C55E, #000)",
+      url: "https://linkedin.com/in/victormuragwa"
     },
     {
-      name: "Michael Chen",
-      role: "Head of Agriculture",
-      expertise: "Crop Science & Risk Assessment",
-      experience: "12+ years",
-      education: "MS Agricultural Science, UC Davis",
-      image: "/api/placeholder/300/300",
-      description: "Expert in crop science with deep understanding of agricultural risk factors and mitigation strategies.",
-      achievements: ["Worked with FAO on global projects", "Developed 20+ crop models", "International agriculture consultant"],
-      icon: Globe,
-      color: "bg-green-500"
-    },
-    {
-      name: "Dr. Aisha Patel",
-      role: "Data Science Director",
-      expertise: "Satellite Imagery Analysis",
-      experience: "10+ years",
-      education: "PhD Remote Sensing, Stanford",
-      image: "/api/placeholder/300/300",
-      description: "Specialist in satellite imagery processing and geospatial analysis for agricultural monitoring.",
-      achievements: ["NASA Earth Science Fellow", "Developed satellite algorithms", "Published in Nature journals"],
-      icon: Database,
-      color: "bg-purple-500"
-    },
-    {
-      name: "James Wilson",
-      role: "Product Manager",
-      expertise: "Insurance Technology",
-      experience: "8+ years",
-      education: "MBA Technology Management, Wharton",
-      image: "/api/placeholder/300/300",
-      description: "Bridging technology and insurance to create innovative solutions for agricultural risk management.",
-      achievements: ["Led 10+ product launches", "Former McKinsey consultant", "Insurance industry expert"],
-      icon: Briefcase,
-      color: "bg-orange-500"
-    },
-    {
-      name: "Dr. Maria Rodriguez",
-      role: "Chief Risk Officer",
-      expertise: "Agricultural Risk Modeling",
-      experience: "14+ years",
-      education: "PhD Agricultural Economics, Cornell",
-      image: "/api/placeholder/300/300",
-      description: "Expert in developing sophisticated risk models for agricultural insurance and climate adaptation.",
-      achievements: ["World Bank consultant", "Climate risk expert", "Published risk models"],
-      icon: Shield,
-      color: "bg-red-500"
-    },
-    {
-      name: "David Kim",
-      role: "Head of Engineering",
-      expertise: "Full-Stack Development",
-      experience: "11+ years",
-      education: "MS Computer Science, Carnegie Mellon",
-      image: "/api/placeholder/300/300",
-      description: "Leading our engineering team to build scalable and robust agricultural insurance platforms.",
-      achievements: ["Former Amazon engineer", "Open source contributor", "Scalability expert"],
-      icon: BarChart3,
-      color: "bg-indigo-500"
+      image: "https://i.pravatar.cc/300?img=2",
+      title: "Gad Kalisa",
+      subtitle: "Software Engineer & Product Designer",
+      handle: "@gadkalisa",
+      borderColor: "#3B82F6",
+      gradient: "linear-gradient(180deg, #3B82F6, #000)",
+      url: "https://github.com/gadkalisa"
     }
   ];
 
-  const stats = [
-    { label: "Team Members", value: "25+", icon: Users },
-    { label: "Years Combined Experience", value: "150+", icon: Award },
-    { label: "Research Papers Published", value: "200+", icon: GraduationCap },
-    { label: "Countries Served", value: "15+", icon: Globe }
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 min-h-screen">
+      {/* Navigation */}
+      <HomeNavbar />
+
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-blue-900 to-green-900 text-white">
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="relative container mx-auto px-4 py-20">
-          <div className="text-center max-w-4xl mx-auto">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              Meet Our Expert Team
-            </h1>
-            <p className="text-xl md:text-2xl mb-8 text-blue-100">
-              World-class professionals dedicated to revolutionizing agricultural insurance
-              through cutting-edge technology and deep industry expertise.
-            </p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-12">
-              {stats.map((stat, index) => {
-                const Icon = stat.icon;
-                return (
-                  <div key={index} className="text-center">
-                    <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <Icon className="h-8 w-8" />
-                    </div>
-                    <div className="text-3xl font-bold">{stat.value}</div>
-                    <div className="text-sm text-blue-200">{stat.label}</div>
+      <section className="relative pt-32 pb-16 px-4">
+        {/* Grid Pattern Background */}
+        <div className="absolute inset-0 opacity-70 flex items-center justify-center">
+          <img
+            src="/lines.png"
+            alt="Grid lines"
+            className="w-3/4 h-3/4 object-contain"
+          />
+      </div>
+
+        {/* Bottom Corner Lines */}
+        <div className="absolute bottom-0 left-0 opacity-60">
+          <img
+            src="/lines2.png"
+            alt="Bottom left lines"
+            className="w-[32rem] h-[32rem]"
+          />
+        </div>
+        <div className="absolute bottom-0 right-0 opacity-60">
+          <img
+            src="/lines2.png"
+            alt="Bottom right lines"
+            className="w-[32rem] h-[32rem]"
+          />
+        </div>
+
+        <div className="relative z-10 max-w-7xl mx-auto text-center">
+          <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
+            <Users className="h-4 w-4 text-yellow-400" />
+            <span className="text-white/90 text-sm font-medium">Meet Our Team</span>
                   </div>
-                );
-              })}
-            </div>
+
+          <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent">
+            Our Expert Team
+          </h1>
+          
+          <p className="text-lg md:text-xl text-white/80 max-w-3xl mx-auto leading-relaxed mb-8">
+            The talented individuals behind STARHAWK's revolutionary agricultural insurance platform.
+            Our team combines expertise in technology, agriculture, and insurance to deliver 
+            innovative solutions for farmers worldwide.
+          </p>
+
+          <Link 
+            to="/"
+            className="inline-flex items-center gap-2 text-green-400 hover:text-green-300 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Home
+          </Link>
+                  </div>
+      </section>
+
+      {/* Team Grid */}
+      <section className="relative z-10 py-16 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            {teamMembers.map((member, index) => (
+              <div key={index} className="relative bg-white/5 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden w-72 h-80">
+                <img 
+                  src={member.image} 
+                  alt={member.title}
+                  className="w-full h-full object-cover"
+                />
+                
+                {/* LinkedIn Icon - Top Right */}
+                <div className="absolute top-3 right-3">
+                  <a 
+                    href={member.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full backdrop-blur-sm transition-colors"
+                  >
+                    <Linkedin className="h-4 w-4 text-white" />
+                  </a>
+                </div>
+                
+                {/* Text Overlay - Bottom */}
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent p-4">
+                  <h3 className="text-lg font-bold text-white mb-1">{member.title}</h3>
+                  <p className="text-green-400 text-sm font-medium mb-1">{member.subtitle}</p>
+                  <p className="text-white/70 text-xs">{member.handle}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Team Members */}
-      <div className="container mx-auto px-4 py-20">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Our Leadership Team
-          </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Meet the visionaries and experts who are transforming agricultural insurance 
-            through innovation, technology, and deep industry knowledge.
-          </p>
-        </div>
 
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {teamMembers.map((member, index) => {
-            const Icon = member.icon;
-            return (
-              <Card key={index} className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
-                <CardHeader className="text-center pb-4">
-                  <div className="relative mx-auto mb-4">
-                    <div className="w-32 h-32 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full mx-auto flex items-center justify-center">
-                      <Icon className="h-16 w-16 text-gray-500" />
-                    </div>
-                    <div className={`absolute -top-2 -right-2 w-8 h-8 ${member.color} rounded-full flex items-center justify-center`}>
-                      <Award className="h-4 w-4 text-white" />
-                    </div>
-                  </div>
-                  <CardTitle className="text-xl">{member.name}</CardTitle>
-                  <p className="text-primary font-semibold">{member.role}</p>
-                  <Badge variant="outline" className="mt-2">
-                    {member.expertise}
-                  </Badge>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground text-center">
-                    {member.description}
-                  </p>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <GraduationCap className="h-4 w-4 text-primary" />
-                      <span className="font-medium">Education:</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground ml-6">{member.education}</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Briefcase className="h-4 w-4 text-primary" />
-                      <span className="font-medium">Experience:</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground ml-6">{member.experience}</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Key Achievements:</div>
-                    <ul className="text-sm text-muted-foreground space-y-1">
-                      {member.achievements.map((achievement, idx) => (
-                        <li key={idx} className="flex items-start gap-2">
-                          <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-                          {achievement}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="flex justify-center gap-2 pt-4">
-                    <Button size="sm" variant="outline">
-                      <Linkedin className="h-4 w-4 mr-2" />
-                      LinkedIn
-                    </Button>
-                    <Button size="sm" variant="outline">
-                      <Mail className="h-4 w-4 mr-2" />
-                      Contact
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Join Our Team Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-green-600 text-white py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            Join Our Mission
-          </h2>
-          <p className="text-xl mb-8 max-w-3xl mx-auto">
-            We're always looking for talented individuals who share our passion for 
-            transforming agriculture through technology. Join us in building the future 
-            of agricultural insurance.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" variant="secondary">
-              View Open Positions
-            </Button>
-            <Button size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white hover:text-blue-600">
-              Send Your Resume
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* Footer */}
+      <FooterSection />
     </div>
   );
-}
+};
+
+export default Team;

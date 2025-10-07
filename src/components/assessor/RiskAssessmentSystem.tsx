@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { dashboardTheme } from "@/utils/dashboardTheme";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -280,6 +281,7 @@ export default function RiskAssessmentSystem() {
               <div className="space-y-2">
                 <Label>Farmer ID</Label>
                 <Input
+                  className={dashboardTheme.input}
                   value={formData.farmerId}
                   onChange={(e) => setFormData({...formData, farmerId: e.target.value})}
                   placeholder="FMR-0247"
@@ -288,6 +290,7 @@ export default function RiskAssessmentSystem() {
               <div className="space-y-2">
                 <Label>Farmer Name</Label>
                 <Input
+                  className={dashboardTheme.input}
                   value={formData.farmerName}
                   onChange={(e) => setFormData({...formData, farmerName: e.target.value})}
                   placeholder="Jean Baptiste"
@@ -522,14 +525,14 @@ export default function RiskAssessmentSystem() {
         </Tabs>
 
         <div className="flex justify-end space-x-3 pt-4 border-t">
-          <Button variant="outline" onClick={() => {
+          <Button className={`${dashboardTheme.buttonSecondary}`} onClick={() => {
             setIsCreating(false);
             setEditingAssessment(null);
             resetForm();
           }}>
             Cancel
           </Button>
-          <Button onClick={handleSaveAssessment}>
+          <Button className={`${dashboardTheme.buttonPrimary}`} onClick={handleSaveAssessment}>
             <Save className="h-4 w-4 mr-2" />
             {editingAssessment ? "Update Assessment" : "Save Assessment"}
           </Button>
@@ -543,10 +546,10 @@ export default function RiskAssessmentSystem() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Risk Assessments</h1>
-          <p className="text-gray-600 mt-1">Manage and submit risk assessments for farmers</p>
+          <h1 className="text-3xl font-bold text-white">Risk Assessments</h1>
+          <p className="text-white/70 mt-1">Manage and submit risk assessments for farmers</p>
         </div>
-        <Button onClick={() => setIsCreating(true)}>
+        <Button className={`${dashboardTheme.buttonPrimary}`} onClick={() => setIsCreating(true)}>
           <Plus className="h-4 w-4 mr-2" />
           New Assessment
         </Button>
@@ -654,7 +657,7 @@ export default function RiskAssessmentSystem() {
       {/* Assessments Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Risk Assessments ({filteredAssessments.length})</CardTitle>
+          <CardTitle className="text-white">Risk Assessments ({filteredAssessments.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">

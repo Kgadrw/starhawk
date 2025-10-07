@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { dashboardTheme } from "@/utils/dashboardTheme";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -185,7 +186,7 @@ export default function ClaimsTable() {
       case "approved": return "bg-green-100 text-green-800";
       case "rejected": return "bg-red-100 text-red-800";
       case "under_investigation": return "bg-blue-100 text-blue-800";
-      default: return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-800/20 text-white";
     }
   };
 
@@ -204,7 +205,7 @@ export default function ClaimsTable() {
       case "high": return "bg-red-100 text-red-800 border-red-200";
       case "medium": return "bg-yellow-100 text-yellow-800 border-yellow-200";
       case "low": return "bg-green-100 text-green-800 border-green-200";
-      default: return "bg-gray-100 text-gray-800 border-gray-200";
+      default: return "bg-gray-800/20 text-white border-gray-700";
     }
   };
 
@@ -263,12 +264,12 @@ export default function ClaimsTable() {
   };
 
   const renderClaimCard = (claim: Claim) => (
-    <Card key={claim.id} className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-blue-500">
+    <Card key={claim.id} className={`${dashboardTheme.card} cursor-pointer border-l-4 border-l-blue-400`}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-3">
           <div>
-            <h3 className="font-semibold text-gray-900">{claim.id}</h3>
-            <p className="text-sm text-gray-600">{claim.farmerName}</p>
+            <h3 className="font-semibold text-white">{claim.id}</h3>
+            <p className="text-sm text-white/70">{claim.farmerName}</p>
           </div>
           <div className="flex items-center space-x-2">
             <Badge className={getStatusColor(claim.status)}>
@@ -280,22 +281,22 @@ export default function ClaimsTable() {
 
         <div className="space-y-2 mb-3">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Amount:</span>
+            <span className="text-white/80">Amount:</span>
             <span className="font-semibold text-green-600">
               {claim.claimAmount.toLocaleString()} RWF
             </span>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Crop:</span>
+            <span className="text-white/80">Crop:</span>
             <span className="font-medium">{claim.cropType}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Filed:</span>
+            <span className="text-white/80">Filed:</span>
             <span className="font-medium">{claim.filedDate}</span>
           </div>
         </div>
 
-        <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+        <div className="flex items-center justify-between text-xs text-white/60 mb-3">
           <div className="flex items-center">
             <MapPin className="h-3 w-3 mr-1" />
             {claim.location}
@@ -336,9 +337,9 @@ export default function ClaimsTable() {
 
     return (
       <div key={priority} className="mb-6">
-        <Card className="mb-4">
+        <Card className={`${dashboardTheme.card} mb-4`}>
           <CardHeader 
-            className="cursor-pointer hover:bg-gray-50 transition-colors"
+            className="cursor-pointer"
             onClick={() => togglePriority(priority)}
           >
             <div className="flex items-center justify-between">
@@ -348,7 +349,7 @@ export default function ClaimsTable() {
                 </div>
                 <div>
                   <CardTitle className="text-lg">{priorityLabels[priority as keyof typeof priorityLabels]}</CardTitle>
-                  <p className="text-sm text-gray-600">{claims.length} claims</p>
+                  <p className="text-sm text-white/80">{claims.length} claims</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -387,8 +388,8 @@ export default function ClaimsTable() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Claims Review</h2>
-          <p className="text-gray-600">Review and manage insurance claims by priority</p>
+          <h2 className="text-2xl font-bold text-white">Claims Review</h2>
+          <p className="text-white/80">Review and manage insurance claims by priority</p>
         </div>
         <div className="flex items-center space-x-2">
           <Badge variant="outline" className="bg-blue-50 text-blue-700">
@@ -403,7 +404,7 @@ export default function ClaimsTable() {
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
                 <Input
                   placeholder="Search claims by ID, farmer name, or crop type..."
                   value={searchTerm}
@@ -450,9 +451,9 @@ export default function ClaimsTable() {
       {filteredClaims.length === 0 && (
         <Card>
           <CardContent className="p-8 text-center">
-            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No claims found</h3>
-            <p className="text-gray-600">Try adjusting your search or filter criteria.</p>
+            <FileText className="h-12 w-12 text-white/60 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-white mb-2">No claims found</h3>
+            <p className="text-white/70">Try adjusting your search or filter criteria.</p>
           </CardContent>
         </Card>
       )}
@@ -464,7 +465,7 @@ export default function ClaimsTable() {
             <div className="text-2xl font-bold text-red-600">
               {groupedClaims.high.length}
             </div>
-            <p className="text-sm text-gray-600">High Priority</p>
+            <p className="text-sm text-white/80">High Priority</p>
           </CardContent>
         </Card>
         <Card>
@@ -472,7 +473,7 @@ export default function ClaimsTable() {
             <div className="text-2xl font-bold text-yellow-600">
               {groupedClaims.medium.length}
             </div>
-            <p className="text-sm text-gray-600">Medium Priority</p>
+            <p className="text-sm text-white/80">Medium Priority</p>
           </CardContent>
         </Card>
         <Card>
@@ -480,7 +481,7 @@ export default function ClaimsTable() {
             <div className="text-2xl font-bold text-green-600">
               {groupedClaims.low.length}
             </div>
-            <p className="text-sm text-gray-600">Low Priority</p>
+            <p className="text-sm text-white/80">Low Priority</p>
           </CardContent>
         </Card>
         <Card>
@@ -488,7 +489,7 @@ export default function ClaimsTable() {
             <div className="text-2xl font-bold text-blue-600">
               {filteredClaims.length}
             </div>
-            <p className="text-sm text-gray-600">Total Claims</p>
+            <p className="text-sm text-white/80">Total Claims</p>
           </CardContent>
         </Card>
       </div>

@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { HomeNavbar } from "@/components/layout/HomeNavbar";
+import { FooterSection } from "@/components/home/FooterSection";
 import { 
   User, 
   ArrowLeft, 
@@ -48,21 +50,51 @@ export default function FarmerLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <User className="h-8 w-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Farmer Login</h1>
-          <p className="text-gray-600">Access your farmer dashboard</p>
-        </div>
+    <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 min-h-screen">
+      {/* Navigation */}
+      <HomeNavbar />
 
-        <Card className="shadow-xl">
+      {/* Grid Pattern Background */}
+      <div className="absolute inset-0 opacity-70 flex items-center justify-center">
+        <img
+          src="/lines.png"
+          alt="Grid lines"
+          className="w-3/4 h-3/4 object-contain"
+        />
+      </div>
+
+      {/* Bottom Corner Lines */}
+      <div className="absolute bottom-0 left-0 opacity-60">
+        <img
+          src="/lines2.png"
+          alt="Bottom left lines"
+          className="w-[32rem] h-[32rem]"
+        />
+      </div>
+      <div className="absolute bottom-0 right-0 opacity-60">
+        <img
+          src="/lines2.png"
+          alt="Bottom right lines"
+          className="w-[32rem] h-[32rem]"
+        />
+      </div>
+
+      {/* Login Form */}
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4 pt-32">
+        <div className="w-full max-w-md">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <User className="h-8 w-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-white mb-2">Farmer Login</h1>
+            <p className="text-white/70">Access your farmer dashboard</p>
+          </div>
+
+          <Card className="bg-white/5 backdrop-blur-xl border border-white/10 shadow-xl">
           <CardHeader>
-            <CardTitle className="text-center text-xl">Welcome Back</CardTitle>
-            <p className="text-center text-gray-600 text-sm">
+            <CardTitle className="text-center text-xl text-white">Welcome Back</CardTitle>
+            <p className="text-center text-white/70 text-sm">
               Enter your credentials to access your dashboard
             </p>
           </CardHeader>
@@ -75,18 +107,19 @@ export default function FarmerLogin() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="identifier">National ID or Farmer ID</Label>
+                <Label htmlFor="identifier" className="text-white">National ID or Farmer ID</Label>
                 <Input
                   id="identifier"
                   value={formData.identifier}
                   onChange={(e) => handleInputChange('identifier', e.target.value)}
                   placeholder="Enter National ID or Farmer ID (e.g., FMR-0247)"
                   required
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/50 backdrop-blur-sm"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-white">Password</Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -95,6 +128,7 @@ export default function FarmerLogin() {
                     onChange={(e) => handleInputChange('password', e.target.value)}
                     placeholder="Enter your password"
                     required
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50 backdrop-blur-sm"
                   />
                   <Button
                     type="button"
@@ -104,9 +138,9 @@ export default function FarmerLogin() {
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
-                      <EyeOff className="h-4 w-4 text-gray-400" />
+                      <EyeOff className="h-4 w-4 text-white/50" />
                     ) : (
-                      <Eye className="h-4 w-4 text-gray-400" />
+                      <Eye className="h-4 w-4 text-white/50" />
                     )}
                   </Button>
                 </div>
@@ -114,7 +148,7 @@ export default function FarmerLogin() {
 
               <Button
                 type="submit"
-                className="w-full bg-green-600 hover:bg-green-700"
+                className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white backdrop-blur-sm"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -129,15 +163,15 @@ export default function FarmerLogin() {
             </form>
 
             <div className="mt-6 text-center space-y-4">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-white/70">
                 Don't have an account yet?{" "}
-                <Link to="/farmer-register" className="text-green-600 hover:text-green-700 font-medium">
+                <Link to="/farmer-register" className="text-green-400 hover:text-green-300 font-medium">
                   Register as a Farmer
                 </Link>
               </div>
               
-              <div className="text-sm text-gray-600">
-                <Link to="/role-selection" className="flex items-center justify-center text-gray-600 hover:text-gray-900">
+              <div className="text-sm text-white/70">
+                <Link to="/role-selection" className="flex items-center justify-center text-white/70 hover:text-white">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Role Selection
                 </Link>
@@ -148,14 +182,18 @@ export default function FarmerLogin() {
 
         {/* Help Section */}
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-white/50">
             Need help? Contact support at{" "}
-            <a href="tel:+250788123456" className="text-green-600 hover:text-green-700">
+            <a href="tel:+250788123456" className="text-green-400 hover:text-green-300">
               +250 788 123 456
             </a>
           </p>
         </div>
+        </div>
       </div>
+
+      {/* Footer */}
+      <FooterSection />
     </div>
   );
 }

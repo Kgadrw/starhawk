@@ -672,8 +672,8 @@ export default function ClaimAssessmentSystem() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Claim Assessments</h1>
-          <p className="text-gray-600 mt-1">Assess and evaluate insurance claims for farmers</p>
+          <h1 className="text-3xl font-bold text-white">Claim Assessments</h1>
+          <p className="text-white/70 mt-1">Assess and evaluate insurance claims for farmers</p>
         </div>
         <Button onClick={() => setIsCreating(true)}>
           <Plus className="h-4 w-4 mr-2" />
@@ -798,7 +798,7 @@ export default function ClaimAssessmentSystem() {
       {/* Assessments Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Claim Assessments ({filteredAssessments.length})</CardTitle>
+          <CardTitle className="text-white">Claim Assessments ({filteredAssessments.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">

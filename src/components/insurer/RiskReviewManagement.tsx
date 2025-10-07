@@ -324,7 +324,7 @@ export default function RiskReviewManagement() {
       {/* Assessments Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Risk Assessments ({filteredAssessments.length})</CardTitle>
+          <CardTitle className="text-white">Risk Assessments ({filteredAssessments.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
