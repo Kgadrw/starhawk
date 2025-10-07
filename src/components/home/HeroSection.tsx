@@ -1,14 +1,22 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import LightRays from "@/components/ui/LightRays";
+import VariableProximity from "@/components/ui/VariableProximity";
+import { useRef } from 'react';
 import { 
   ArrowRight,
   Sparkles
 } from "lucide-react";
 
 export function HeroSection() {
+  const containerRef = useRef(null);
+
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <section 
+      ref={containerRef}
+      className="relative min-h-screen flex items-center justify-center overflow-hidden"
+      style={{ position: 'relative' }}
+    >
       {/* Grid Pattern Background */}
       <div className="absolute inset-0 opacity-70 flex items-center justify-center">
         <img 
@@ -54,18 +62,49 @@ export function HeroSection() {
       <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-full mb-6 sm:mb-8">
           <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400" />
-          <span className="text-white/90 text-xs sm:text-sm font-medium">Revolutionary Agricultural Technology</span>
+          <VariableProximity
+            label="Revolutionary Agricultural Technology"
+            className="text-white/90 text-xs sm:text-sm font-medium cursor-pointer"
+            fromFontVariationSettings="'wght' 400, 'opsz' 8"
+            toFontVariationSettings="'wght' 700, 'opsz' 16"
+            containerRef={containerRef}
+            radius={100}
+            falloff="linear"
+          />
         </div>
         
-        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-6 sm:mb-8 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent leading-tight px-2">
-          Revolutionizing Agricultural
-          <span className="block bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Insurance with AI</span>
-        </h1>
+        <div className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-6 sm:mb-8 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent leading-tight px-2">
+          <VariableProximity
+            label="Revolutionizing Agricultural"
+            className="block mb-4 cursor-pointer"
+            fromFontVariationSettings="'wght' 400, 'opsz' 9"
+            toFontVariationSettings="'wght' 1000, 'opsz' 40"
+            containerRef={containerRef}
+            radius={150}
+            falloff="linear"
+          />
+          <VariableProximity
+            label="Insurance with AI"
+            className="block bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent cursor-pointer"
+            fromFontVariationSettings="'wght' 400, 'opsz' 9"
+            toFontVariationSettings="'wght' 1000, 'opsz' 40"
+            containerRef={containerRef}
+            radius={150}
+            falloff="linear"
+          />
+        </div>
         
-        <p className="text-base sm:text-lg lg:text-xl text-white/80 mb-8 sm:mb-12 max-w-4xl mx-auto leading-relaxed px-4">
-          STARHAWK combines drone surveillance, satellite analytics, and AI to provide 
-          comprehensive agricultural insurance solutions for farmers, insurers, and governments.
-        </p>
+        <div className="text-base sm:text-lg lg:text-xl text-white/80 mb-8 sm:mb-12 max-w-4xl mx-auto leading-relaxed px-4">
+          <VariableProximity
+            label="STARHAWK combines drone surveillance, satellite analytics, and AI to provide comprehensive agricultural insurance solutions for farmers, insurers, and governments."
+            className="text-center cursor-pointer"
+            fromFontVariationSettings="'wght' 300, 'opsz' 8"
+            toFontVariationSettings="'wght' 600, 'opsz' 20"
+            containerRef={containerRef}
+            radius={120}
+            falloff="linear"
+          />
+        </div>
         
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center px-4">
           <Link to="/role-selection" className="w-full sm:w-auto">

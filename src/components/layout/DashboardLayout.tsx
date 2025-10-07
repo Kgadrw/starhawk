@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import CustomScrollbar from "@/components/ui/CustomScrollbar";
 import { 
   BarChart3,
   FileText,
@@ -247,6 +248,7 @@ export default function DashboardLayout({
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-3 overflow-y-auto">
+            <CustomScrollbar className="h-full">
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const isActive = activePage === item.id;
@@ -286,6 +288,7 @@ export default function DashboardLayout({
                 </button>
               );
             })}
+            </CustomScrollbar>
           </nav>
 
           {/* Sidebar Footer */}
@@ -354,9 +357,11 @@ export default function DashboardLayout({
 
          {/* Page Content */}
          <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto bg-gray-950">
-          <div className="max-w-7xl mx-auto">
-            {children}
-          </div>
+          <CustomScrollbar className="h-full">
+            <div className="max-w-7xl mx-auto">
+              {children}
+            </div>
+          </CustomScrollbar>
         </main>
       </div>
     </div>

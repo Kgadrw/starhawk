@@ -9,7 +9,6 @@ import {
 import { 
   Menu, 
   X, 
-  Users,
   ArrowRight,
   Satellite
 } from "lucide-react";
@@ -74,29 +73,12 @@ export function HomeNavbar() {
                     Contact
                   </Link>
                 </NavigationMenuItem>
-
-                <NavigationMenuItem>
-                  <Link 
-                    to="/claim" 
-                    className="px-3 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors rounded-lg hover:bg-white/10"
-                  >
-                    File a Claim
-                  </Link>
-                </NavigationMenuItem>
               </NavigationMenuList>
             </NavigationMenu>
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Button */}
           <div className="hidden lg:flex items-center gap-3">
-            <Button 
-              variant="ghost" 
-              className="flex items-center gap-2 text-white/80 hover:text-white hover:bg-white/10 border-0"
-              onClick={() => navigate("/role-selection")}
-            >
-              <Users className="h-4 w-4" />
-              Login
-            </Button>
             <Button 
               className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full px-6 shadow-lg hover:shadow-xl transition-all duration-300"
               onClick={() => navigate("/role-selection")}
@@ -149,25 +131,7 @@ export function HomeNavbar() {
               >
                 Contact
               </Link>
-              <Link
-                to="/claim"
-                className="block px-3 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors rounded-lg hover:bg-white/10"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                File a Claim
-              </Link>
-              <div className="px-3 py-2 space-y-3 pt-4 border-t border-white/20">
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start text-white/80 hover:text-white hover:bg-white/10 border-0"
-                  onClick={() => {
-                    navigate("/role-selection");
-                    setIsMenuOpen(false);
-                  }}
-                >
-                  <Users className="h-4 w-4 mr-2" />
-                  Login
-                </Button>
+              <div className="px-3 py-2 pt-4 border-t border-white/20">
                 <Button 
                   className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full"
                   onClick={() => {

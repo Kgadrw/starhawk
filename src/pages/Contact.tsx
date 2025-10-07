@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { HomeNavbar } from "@/components/layout/HomeNavbar";
 import { FooterSection } from "@/components/home/FooterSection";
+import CustomScrollbar from "@/components/ui/CustomScrollbar";
 import { 
   Phone, 
   Mail, 
@@ -112,9 +113,10 @@ export default function Contact() {
   ];
 
   return (
-    <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 relative">
-      {/* Navigation */}
-      <HomeNavbar />
+    <CustomScrollbar>
+      <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 relative">
+        {/* Navigation */}
+        <HomeNavbar />
       
       {/* Hero Section */}
       <div className="relative min-h-screen flex items-center justify-center">
@@ -482,8 +484,9 @@ export default function Contact() {
         </div>
       </div>
 
-      {/* Footer */}
-      <FooterSection />
-    </div>
+        {/* Footer */}
+        <FooterSection />
+      </div>
+    </CustomScrollbar>
   );
 }

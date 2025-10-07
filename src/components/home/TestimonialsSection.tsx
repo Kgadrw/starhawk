@@ -1,7 +1,11 @@
 import { Card, CardContent } from "@/components/ui/card";
+import VariableProximity from "@/components/ui/VariableProximity";
+import { useRef } from 'react';
 import { Star, Quote } from "lucide-react";
 
 export function TestimonialsSection() {
+  const containerRef = useRef(null);
+  
   const testimonials = [
     {
       name: "Sarah Johnson",
@@ -27,19 +31,47 @@ export function TestimonialsSection() {
   ];
 
   return (
-    <section className="relative z-10 py-24 px-4">
+    <section 
+      ref={containerRef}
+      className="relative z-10 py-24 px-4"
+      style={{ position: 'relative' }}
+    >
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
             <Quote className="h-4 w-4 text-yellow-400" />
-            <span className="text-white/90 text-sm font-medium">What Our Users Say</span>
+            <VariableProximity
+              label="What Our Users Say"
+              className="text-white/90 text-sm font-medium cursor-pointer"
+              fromFontVariationSettings="'wght' 400, 'opsz' 8"
+              toFontVariationSettings="'wght' 700, 'opsz' 16"
+              containerRef={containerRef}
+              radius={100}
+              falloff="linear"
+            />
           </div>
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent">
-            Trusted by Industry Leaders
-          </h2>
-          <p className="text-lg text-white/80 max-w-3xl mx-auto leading-relaxed">
-            See how farmers, insurers, and government officials are transforming agriculture with STARHAWK.
-          </p>
+          <div className="text-4xl md:text-5xl font-bold text-white mb-6 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent">
+            <VariableProximity
+              label="Trusted by Industry Leaders"
+              className="block cursor-pointer"
+              fromFontVariationSettings="'wght' 400, 'opsz' 9"
+              toFontVariationSettings="'wght' 1000, 'opsz' 40"
+              containerRef={containerRef}
+              radius={150}
+              falloff="linear"
+            />
+          </div>
+          <div className="text-lg text-white/80 max-w-3xl mx-auto leading-relaxed">
+            <VariableProximity
+              label="See how farmers, insurers, and government officials are transforming agriculture with STARHAWK."
+              className="text-center cursor-pointer"
+              fromFontVariationSettings="'wght' 300, 'opsz' 8"
+              toFontVariationSettings="'wght' 600, 'opsz' 20"
+              containerRef={containerRef}
+              radius={120}
+              falloff="linear"
+            />
+          </div>
         </div>
 
         <div className="grid gap-8 md:grid-cols-3">

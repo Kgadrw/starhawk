@@ -28,7 +28,6 @@ import { ContinuousMonitoringSystem } from "./components/monitoring/ContinuousMo
 import { EmailNotificationSystem } from "./components/notifications/EmailNotificationSystem";
 import Services from "./pages/Services";
 import Contact from "./pages/Contact";
-import Claim from "./pages/Claim";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,7 +45,6 @@ const App = () => {
               <Route path="/team" element={<Team />} />
               <Route path="/services" element={<Services />} />
               <Route path="/contact" element={<Contact />} />
-              <Route path="/claim" element={<Claim />} />
               
               {/* Role Selection and Authentication Routes */}
               <Route path="/role-selection" element={<RoleSelection />} />

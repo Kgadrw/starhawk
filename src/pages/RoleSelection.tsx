@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { HomeNavbar } from "@/components/layout/HomeNavbar";
 import { FooterSection } from "@/components/home/FooterSection";
 import { FarmerRegistrationModal } from "@/components/modals/FarmerRegistrationModal";
+import CustomScrollbar from "@/components/ui/CustomScrollbar";
 import { 
   User, 
   Building2, 
@@ -52,9 +53,10 @@ export default function RoleSelection() {
   ];
 
   return (
-    <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 min-h-screen">
-      {/* Navigation */}
-      <HomeNavbar />
+    <CustomScrollbar>
+      <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 min-h-screen">
+        {/* Navigation */}
+        <HomeNavbar />
 
       {/* Grid Pattern Background */}
       <div className="absolute inset-0 opacity-70 flex items-center justify-center">
@@ -205,14 +207,15 @@ export default function RoleSelection() {
 
       </div>
 
-      {/* Footer */}
-      <FooterSection />
+        {/* Footer */}
+        <FooterSection />
 
-      {/* Farmer Registration Modal */}
-      <FarmerRegistrationModal 
-        isOpen={isFarmerModalOpen} 
-        onClose={() => setIsFarmerModalOpen(false)} 
-      />
-    </div>
+        {/* Farmer Registration Modal */}
+        <FarmerRegistrationModal 
+          isOpen={isFarmerModalOpen} 
+          onClose={() => setIsFarmerModalOpen(false)} 
+        />
+      </div>
+    </CustomScrollbar>
   );
 }
