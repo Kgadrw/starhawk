@@ -87,18 +87,7 @@ const PartnersSection = () => {
         {/* Section Header */}
         <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-full mb-4 sm:mb-6">
           <span className="text-white/90 text-xs sm:text-sm font-medium">Trusted Partners</span>
-        </div>
-        
-        <VariableProximity
-          label="Trusted by Industry Leaders"
-          fromFontVariationSettings="'wght' 400, 'opsz' 14"
-          toFontVariationSettings="'wght' 700, 'opsz' 16"
-          containerRef={containerRef}
-          radius={80}
-          falloff="linear"
-          className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4 sm:mb-6 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent cursor-pointer leading-tight px-2"
-        />
-        
+        </div>        
 
         {/* Logo Loop */}
         <div className="max-w-6xl mx-auto">

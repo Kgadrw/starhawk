@@ -17,9 +17,7 @@ import {
   Home,
   User,
   Shield,
-  Building2,
-  Sun,
-  Moon
+  Building2
 } from "lucide-react";
 
 interface DashboardLayoutProps {
@@ -49,34 +47,12 @@ export default function DashboardLayout({
   onLogout
 }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const navigate = useNavigate();
 
-  // Load dark mode preference from localStorage on component mount
+  // Set dark mode by default
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-      setIsDarkMode(true);
-      document.documentElement.classList.add('dark');
-    } else {
-      setIsDarkMode(false);
-      document.documentElement.classList.remove('dark');
-    }
+    document.documentElement.classList.add('dark');
   }, []);
-
-  // Toggle dark mode
-  const toggleDarkMode = () => {
-    const newDarkMode = !isDarkMode;
-    setIsDarkMode(newDarkMode);
-    
-    if (newDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  };
 
   const handleLogout = () => {
     // Clear any stored authentication data
@@ -123,73 +99,35 @@ export default function DashboardLayout({
 
   const getMainContentTheme = () => {
     // Always use dark theme like Chainex dashboard
-    if (isDarkMode) {
-      switch (userType) {
-        case "farmer": return "from-green-50/90 to-emerald-50/90 border-green-200/30";
-        case "assessor": return "from-orange-50/90 to-red-50/90 border-orange-200/30";
-        case "insurer": return "from-blue-50/90 to-indigo-50/90 border-blue-200/30";
-        case "admin": return "from-purple-50/90 to-violet-50/90 border-purple-200/30";
-        case "government": return "from-indigo-50/90 to-blue-50/90 border-indigo-200/30";
-        default: return "from-gray-50/90 to-slate-50/90 border-gray-200/30";
-      }
-    }
+    return "";
   };
 
   const getNavigationColors = () => {
-    if (isDarkMode) {
-      switch (userType) {
-        case "farmer": return {
-          active: "from-green-500/80 to-emerald-600/80 shadow-green-500/20",
-          hover: "hover:text-green-400"
-        };
-        case "assessor": return {
-          active: "from-orange-500/80 to-red-600/80 shadow-orange-500/20",
-          hover: "hover:text-orange-400"
-        };
-        case "insurer": return {
-          active: "from-blue-500/80 to-indigo-600/80 shadow-blue-500/20",
-          hover: "hover:text-blue-400"
-        };
-        case "admin": return {
-          active: "from-purple-500/80 to-violet-600/80 shadow-purple-500/20",
-          hover: "hover:text-purple-400"
-        };
-        case "government": return {
-          active: "from-indigo-500/80 to-blue-600/80 shadow-indigo-500/20",
-          hover: "hover:text-indigo-400"
-        };
-        default: return {
-          active: "from-gray-500/80 to-slate-600/80 shadow-gray-500/20",
-          hover: "hover:text-gray-400"
-        };
-      }
-    } else {
-      switch (userType) {
-        case "farmer": return {
-          active: "from-green-400/80 to-emerald-500/80 shadow-green-200/50",
-          hover: "hover:text-green-600"
-        };
-        case "assessor": return {
-          active: "from-orange-400/80 to-red-500/80 shadow-orange-200/50",
-          hover: "hover:text-orange-600"
-        };
-        case "insurer": return {
-          active: "from-blue-400/80 to-indigo-500/80 shadow-blue-200/50",
-          hover: "hover:text-blue-600"
-        };
-        case "admin": return {
-          active: "from-purple-400/80 to-violet-500/80 shadow-purple-200/50",
-          hover: "hover:text-purple-600"
-        };
-        case "government": return {
-          active: "from-indigo-400/80 to-blue-500/80 shadow-indigo-200/50",
-          hover: "hover:text-indigo-600"
-        };
-        default: return {
-          active: "from-gray-400/80 to-slate-500/80 shadow-gray-200/50",
-          hover: "hover:text-gray-600"
-        };
-      }
+    switch (userType) {
+      case "farmer": return {
+        active: "from-green-500/80 to-emerald-600/80 shadow-green-500/20",
+        hover: "hover:text-green-400"
+      };
+      case "assessor": return {
+        active: "from-orange-500/80 to-red-600/80 shadow-orange-500/20",
+        hover: "hover:text-orange-400"
+      };
+      case "insurer": return {
+        active: "from-blue-500/80 to-indigo-600/80 shadow-blue-500/20",
+        hover: "hover:text-blue-400"
+      };
+      case "admin": return {
+        active: "from-purple-500/80 to-violet-600/80 shadow-purple-500/20",
+        hover: "hover:text-purple-400"
+      };
+      case "government": return {
+        active: "from-indigo-500/80 to-blue-600/80 shadow-indigo-500/20",
+        hover: "hover:text-indigo-400"
+      };
+      default: return {
+        active: "from-gray-500/80 to-slate-600/80 shadow-gray-500/20",
+        hover: "hover:text-gray-400"
+      };
     }
   };
 
@@ -293,29 +231,16 @@ export default function DashboardLayout({
 
           {/* Sidebar Footer */}
           <div className="p-4 border-t border-white/30 dark:border-gray-700/30">
-            <div className="flex items-center space-x-2">
-              {/* Dark Mode Toggle */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleDarkMode}
-                className="flex-1 justify-center hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-all duration-300"
-              >
-                {isDarkMode ? (
-                  <Sun className="h-4 w-4 text-yellow-500" />
-                ) : (
-                  <Moon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                )}
-              </Button>
-              
+            <div className="flex items-center justify-center">
               {/* Logout Button */}
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="flex-1 justify-center hover:text-red-600 dark:hover:text-red-400 transition-all duration-300 text-gray-600 dark:text-gray-300"
+                    className="w-full justify-center hover:text-red-600 dark:hover:text-red-400 transition-all duration-300 text-gray-300"
                   >
-                    <LogOut className="h-4 w-4" />
+                    <LogOut className="h-4 w-4 mr-2" />
+                    <span>Logout</span>
                   </Button>
                 </AlertDialogTrigger>
               <AlertDialogContent>
