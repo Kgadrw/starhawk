@@ -1,4 +1,4 @@
-import LogoLoop from '@/components/ui/LogoLoop';
+import { LogoLoop } from '@/components/ui/LogoLoop';
 import { useRef } from 'react';
 import VariableProximity from '@/components/ui/VariableProximity';
 

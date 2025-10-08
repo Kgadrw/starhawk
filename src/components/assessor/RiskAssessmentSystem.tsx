@@ -675,7 +675,7 @@ export default function RiskAssessmentSystem() {
               </thead>
               <tbody>
                 {filteredAssessments.map((assessment) => (
-                  <tr key={assessment.id} className="border-b hover:bg-gray-50">
+                  <tr key={assessment.id} className="border-b ">
                     <td className="p-3 font-medium">{assessment.id}</td>
                     <td className="p-3">
                       <div>
