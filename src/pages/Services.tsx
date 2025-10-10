@@ -3,7 +3,7 @@ import { FooterSection } from "@/components/home/FooterSection";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import CustomScrollbar from "@/components/ui/CustomScrollbar";
-import SplashCursor from "@/components/ui/SplashCursor";
+import { motion } from "framer-motion";
 import { 
   Shield, 
   FileText, 
@@ -101,9 +101,6 @@ export default function Services() {
   return (
     <CustomScrollbar>
       <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 relative">
-        {/* Splash Cursor Effect */}
-        <SplashCursor />
-        
         {/* Navigation */}
         <HomeNavbar />
       
@@ -136,35 +133,57 @@ export default function Services() {
 
         {/* Hero Content */}
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-32 pb-16 sm:pb-20 text-center">
-          <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-full mb-4 sm:mb-6">
-            <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-green-400" />
-            <span className="text-white/90 text-xs sm:text-sm font-medium">Our Services</span>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-full mb-4 sm:mb-6">
+              <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-green-400" />
+              <span className="text-white/90 text-xs sm:text-sm font-medium">Our Services</span>
+            </div>
+          </motion.div>
           
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 sm:mb-6 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent leading-tight px-2">
-            Comprehensive Solutions
-            </h1>
+          <motion.h1 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 leading-tight px-2"
+          >
+            <span className="text-white">Comprehensive </span>
+            <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Solutions</span>
+          </motion.h1>
           
-          <p className="text-base sm:text-lg lg:text-xl text-white/80 max-w-3xl mx-auto leading-relaxed mb-8 sm:mb-12 px-4">
-            AI-powered agricultural insurance solutions that revolutionize risk assessment, 
-            claims processing, and policy management for the modern farming industry.
-          </p>
+          <motion.p 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+            className="text-base sm:text-lg lg:text-xl max-w-3xl mx-auto leading-relaxed mb-8 sm:mb-12 px-4"
+          >
+            <span className="text-green-300/80">AI-powered agricultural insurance solutions</span> <span className="text-white/80">that revolutionize risk assessment, 
+            claims processing, and policy management for the modern farming industry.</span>
+          </motion.p>
 
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-4">
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.8 }}
+            className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-4"
+          >
             <Button 
               size="lg" 
-              className="w-full sm:w-auto bg-white/10 hover:bg-white/20 border border-white/20 text-white backdrop-blur-sm rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-white shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
             >
                 Get Started Today
               <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 ml-2" />
               </Button>
             <Button 
               size="lg" 
-              className="w-full sm:w-auto bg-white/10 hover:bg-white/20 border border-white/20 text-white backdrop-blur-sm rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-white shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
             >
                 Schedule Demo
               </Button>
-            </div>
+          </motion.div>
           </div>
         </div>
 
@@ -200,19 +219,26 @@ export default function Services() {
           {services.map((service, index) => {
             const Icon = service.icon;
             return (
-                <Card key={index} className="group bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 transition-all duration-500 rounded-2xl h-full">
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+              >
+                <Card className="group bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 transition-all duration-500 rounded-2xl h-full">
                   <CardHeader className="pb-4 sm:pb-6 p-4 sm:p-6">
                     <div className="flex items-center justify-center mb-4 sm:mb-6">
                       <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-500">
                         <Icon className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
                       </div>
                   </div>
-                    <CardTitle className="text-lg sm:text-xl font-bold text-center text-white group-hover:text-green-200 transition-colors leading-tight">
+                    <CardTitle className={`text-lg sm:text-xl font-bold text-center ${index % 2 === 0 ? 'text-green-400' : 'text-white'} group-hover:text-green-200 transition-colors leading-tight`}>
                       {service.title}
                     </CardTitle>
                 </CardHeader>
                   <CardContent className="pt-0 p-4 sm:p-6">
-                    <p className="text-white/70 text-center mb-4 sm:mb-6 leading-relaxed text-sm sm:text-base">
+                    <p className={`${index % 2 === 0 ? 'text-green-300/80' : 'text-white/70'} text-center mb-4 sm:mb-6 leading-relaxed text-sm sm:text-base`}>
                       {service.description}
                     </p>
                     
@@ -226,13 +252,14 @@ export default function Services() {
                     </div>
 
                     <Button 
-                      className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white backdrop-blur-sm rounded-3xl py-2.5 sm:py-3 font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1 text-sm sm:text-base"
+                      className="w-full bg-green-600 hover:bg-green-700 border-0 text-white shadow-lg shadow-green-500/30 rounded-3xl py-2.5 sm:py-3 font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1 text-sm sm:text-base"
                     >
                     Learn More
                       <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2" />
                   </Button>
                 </CardContent>
               </Card>
+              </motion.div>
               );
             })}
           </div>
@@ -242,36 +269,55 @@ export default function Services() {
       {/* CTA Section */}
       <div className="relative z-10 py-12 sm:py-16 lg:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4 sm:mb-6 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent leading-tight px-2">
-            Ready to Transform Your Agricultural Insurance?
-          </h2>
-          <p className="text-base sm:text-lg lg:text-xl text-white/80 mb-8 sm:mb-12 max-w-3xl mx-auto leading-relaxed px-4">
-            Join leading insurers and government agencies who trust STARHAWK for
-            their agricultural insurance needs. Get started today with a free consultation.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-4">
+          <motion.h2 
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6 leading-tight px-2"
+          >
+            <span className="text-white">Ready to Transform Your </span>
+            <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Agricultural Insurance?</span>
+          </motion.h2>
+          <motion.p 
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-base sm:text-lg lg:text-xl mb-8 sm:mb-12 max-w-3xl mx-auto leading-relaxed px-4"
+          >
+            <span className="text-green-300/80">Join leading insurers and government agencies</span> <span className="text-white/80">who trust STARHAWK for
+            their agricultural insurance needs. Get started today with a free consultation.</span>
+          </motion.p>
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-4"
+          >
             <Button 
               size="lg" 
-              className="w-full sm:w-auto bg-white/10 hover:bg-white/20 border border-white/20 text-white backdrop-blur-sm rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-white shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
             >
               <Phone className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               Schedule Consultation
             </Button>
             <Button 
               size="lg" 
-              className="w-full sm:w-auto bg-white/10 hover:bg-white/20 border border-white/20 text-white backdrop-blur-sm rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-white shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
             >
               <Mail className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               Contact Sales
             </Button>
             <Button 
               size="lg" 
-              className="w-full sm:w-auto bg-white/10 hover:bg-white/20 border border-white/20 text-white backdrop-blur-sm rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-white shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
             >
               <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               Live Chat
             </Button>
-          </div>
+          </motion.div>
         </div>
       </div>
 

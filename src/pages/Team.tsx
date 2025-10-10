@@ -3,6 +3,7 @@ import { FooterSection } from "@/components/home/FooterSection";
 import { Users, ArrowLeft, Linkedin, Github } from "lucide-react";
 import { Link } from "react-router-dom";
 import CustomScrollbar from "@/components/ui/CustomScrollbar";
+import { motion } from "framer-motion";
 
 const Team = () => {
   const teamMembers = [
@@ -69,20 +70,26 @@ const Team = () => {
       </div>
 
         <div className="relative z-10 max-w-7xl mx-auto text-center">
-          <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
-            <Users className="h-4 w-4 text-yellow-400" />
-            <span className="text-white/90 text-sm font-medium">Meet Our Team</span>
-        </div>
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
+              <Users className="h-4 w-4 text-yellow-400" />
+              <span className="text-white/90 text-sm font-medium">Meet Our Team</span>
+            </div>
 
-          <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent">
-            Our Expert Team
-          </h1>
-          
-          <p className="text-lg md:text-xl text-white/80 max-w-3xl mx-auto leading-relaxed mb-8">
-            The talented individuals behind STARHAWK's revolutionary agricultural insurance platform.
-            Our team combines expertise in technology, agriculture, and insurance to deliver 
-            innovative solutions for farmers worldwide.
-          </p>
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent">
+              Our Expert Team
+            </h1>
+            
+            <p className="text-lg md:text-xl text-white/80 max-w-3xl mx-auto leading-relaxed mb-8">
+              The talented individuals behind STARHAWK's revolutionary agricultural insurance platform.
+              Our team combines expertise in technology, agriculture, and insurance to deliver 
+              innovative solutions for farmers worldwide.
+            </p>
+          </motion.div>
 
                     </div>
       </section>
@@ -92,7 +99,14 @@ const Team = () => {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {teamMembers.map((member, index) => (
-              <div key={index} className="relative bg-white/5 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden w-full max-w-80 h-80 mx-auto">
+              <motion.div 
+                key={index}
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: index * 0.2 }}
+                className="relative bg-white/5 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden w-full max-w-80 h-80 mx-auto"
+              >
                 <img 
                   src={member.image} 
                   alt={member.title}
@@ -115,9 +129,9 @@ const Team = () => {
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent p-4">
                   <h3 className="text-lg font-bold text-white mb-1">{member.title}</h3>
                   <p className="text-green-400 text-sm font-medium mb-1">{member.subtitle}</p>
-                  <p className="text-white/70 text-xs">{member.handle}</p>
-        </div>
-      </div>
+                  <p className="text-white/70 text-xs">{member.handle}</p>      
+                </div>
+              </motion.div>
             ))}
           </div>
         </div>

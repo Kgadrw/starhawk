@@ -127,8 +127,8 @@ export default function PolicyManagement() {
       case "active": return "bg-green-100 text-green-800";
       case "pending": return "bg-yellow-100 text-yellow-800";
       case "expired": return "bg-red-100 text-red-800";
-      case "cancelled": return "bg-gray-100 text-gray-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "cancelled": return "bg-gray-700 text-white";
+      default: return "bg-gray-700 text-white";
     }
   };
 
@@ -147,7 +147,7 @@ export default function PolicyManagement() {
       case "low": return "bg-green-100 text-green-800";
       case "medium": return "bg-yellow-100 text-yellow-800";
       case "high": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-700 text-white";
     }
   };
 
@@ -420,8 +420,8 @@ export default function PolicyManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Policy Management</h1>
-          <p className="text-gray-600 mt-1">Manage insurance policies for farmers</p>
+          <h1 className="text-3xl font-bold text-white">Policy Management</h1>
+          <p className="text-white/60 mt-1">Manage insurance policies for farmers</p>
         </div>
         <div className="flex items-center space-x-3">
           <Button
@@ -506,8 +506,8 @@ export default function PolicyManagement() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Policies</p>
-                <p className="text-2xl font-bold text-gray-900">{policies.length}</p>
+                <p className="text-sm font-medium text-white/70">Total Policies</p>
+                <p className="text-2xl font-bold text-white">{policies.length}</p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                 <Shield className="h-6 w-6 text-blue-600" />
@@ -520,8 +520,8 @@ export default function PolicyManagement() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Active Policies</p>
-                <p className="text-2xl font-bold text-gray-900">{policies.filter(p => p.status === 'active').length}</p>
+                <p className="text-sm font-medium text-white/70">Active Policies</p>
+                <p className="text-2xl font-bold text-white">{policies.filter(p => p.status === 'active').length}</p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                 <CheckCircle className="h-6 w-6 text-green-600" />
@@ -534,8 +534,8 @@ export default function PolicyManagement() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Pending Policies</p>
-                <p className="text-2xl font-bold text-gray-900">{policies.filter(p => p.status === 'pending').length}</p>
+                <p className="text-sm font-medium text-white/70">Pending Policies</p>
+                <p className="text-2xl font-bold text-white">{policies.filter(p => p.status === 'pending').length}</p>
               </div>
               <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
                 <Clock className="h-6 w-6 text-yellow-600" />
@@ -548,8 +548,8 @@ export default function PolicyManagement() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Coverage</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-white/70">Total Coverage</p>
+                <p className="text-2xl font-bold text-white">
                   {(policies.reduce((sum, p) => sum + p.coverageAmount, 0) / 1000000).toFixed(1)}M RWF
                 </p>
               </div>

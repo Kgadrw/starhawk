@@ -225,7 +225,7 @@ export default function AssessorProfileSettings() {
               <User className="h-8 w-8 text-gray-400" />
             </div>
             <div className="flex-1">
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-sm text-white/70 mb-2">
                 Upload a profile photo (PNG, JPG up to 2MB)
               </p>
               <Button variant="outline" size="sm">
@@ -323,7 +323,7 @@ export default function AssessorProfileSettings() {
                     defaultChecked={workData.equipment.includes(equipment)}
                     className="mr-2" 
                   />
-                  <span className="text-sm text-gray-600">{equipment}</span>
+                  <span className="text-sm text-white/70">{equipment}</span>
                 </label>
               ))}
             </div>
@@ -339,7 +339,7 @@ export default function AssessorProfileSettings() {
                     defaultChecked={workData.languages.includes(language)}
                     className="mr-2" 
                   />
-                  <span className="text-sm text-gray-600">{language}</span>
+                  <span className="text-sm text-white/70">{language}</span>
                 </label>
               ))}
             </div>
@@ -450,8 +450,8 @@ export default function AssessorProfileSettings() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-medium text-gray-900">Two-Factor Authentication</h4>
-              <p className="text-sm text-gray-600">Add an extra layer of security to your account</p>
+              <h4 className="font-medium text-white">Two-Factor Authentication</h4>
+              <p className="text-sm text-white/70">Add an extra layer of security to your account</p>
             </div>
             <Switch
               checked={securityData.twoFactorEnabled}
@@ -492,12 +492,12 @@ export default function AssessorProfileSettings() {
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
-            <h4 className="font-medium text-gray-900 mb-3">Communication Channels</h4>
+            <h4 className="font-medium text-white mb-3">Communication Channels</h4>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900">Email Notifications</p>
-                  <p className="text-sm text-gray-600">Receive notifications via email</p>
+                  <p className="font-medium text-white">Email Notifications</p>
+                  <p className="text-sm text-white/70">Receive notifications via email</p>
                 </div>
                 <Switch
                   checked={notificationSettings.emailNotifications}
@@ -506,8 +506,8 @@ export default function AssessorProfileSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900">SMS Notifications</p>
-                  <p className="text-sm text-gray-600">Receive notifications via SMS</p>
+                  <p className="font-medium text-white">SMS Notifications</p>
+                  <p className="text-sm text-white/70">Receive notifications via SMS</p>
                 </div>
                 <Switch
                   checked={notificationSettings.smsNotifications}
@@ -516,8 +516,8 @@ export default function AssessorProfileSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900">Push Notifications</p>
-                  <p className="text-sm text-gray-600">Receive browser push notifications</p>
+                  <p className="font-medium text-white">Push Notifications</p>
+                  <p className="text-sm text-white/70">Receive browser push notifications</p>
                 </div>
                 <Switch
                   checked={notificationSettings.pushNotifications}
@@ -530,12 +530,12 @@ export default function AssessorProfileSettings() {
           <Separator />
 
           <div>
-            <h4 className="font-medium text-gray-900 mb-3">Assessment Alerts</h4>
+            <h4 className="font-medium text-white mb-3">Assessment Alerts</h4>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900">New Assignment Alerts</p>
-                  <p className="text-sm text-gray-600">New assessment assignments</p>
+                  <p className="font-medium text-white">New Assignment Alerts</p>
+                  <p className="text-sm text-white/70">New assessment assignments</p>
                 </div>
                 <Switch
                   checked={notificationSettings.assignmentAlerts}
@@ -544,8 +544,8 @@ export default function AssessorProfileSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900">Due Date Reminders</p>
-                  <p className="text-sm text-gray-600">Assessment due date reminders</p>
+                  <p className="font-medium text-white">Due Date Reminders</p>
+                  <p className="text-sm text-white/70">Assessment due date reminders</p>
                 </div>
                 <Switch
                   checked={notificationSettings.dueDateReminders}
@@ -554,8 +554,8 @@ export default function AssessorProfileSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900">Weather Alerts</p>
-                  <p className="text-sm text-gray-600">Weather conditions for field work</p>
+                  <p className="font-medium text-white">Weather Alerts</p>
+                  <p className="text-sm text-white/70">Weather conditions for field work</p>
                 </div>
                 <Switch
                   checked={notificationSettings.weatherAlerts}
@@ -568,12 +568,12 @@ export default function AssessorProfileSettings() {
           <Separator />
 
           <div>
-            <h4 className="font-medium text-gray-900 mb-3">Professional Development</h4>
+            <h4 className="font-medium text-white mb-3">Professional Development</h4>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900">Training Alerts</p>
-                  <p className="text-sm text-gray-600">Training session reminders</p>
+                  <p className="font-medium text-white">Training Alerts</p>
+                  <p className="text-sm text-white/70">Training session reminders</p>
                 </div>
                 <Switch
                   checked={notificationSettings.trainingAlerts}
@@ -582,8 +582,8 @@ export default function AssessorProfileSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900">Equipment Alerts</p>
-                  <p className="text-sm text-gray-600">Equipment maintenance reminders</p>
+                  <p className="font-medium text-white">Equipment Alerts</p>
+                  <p className="text-sm text-white/70">Equipment maintenance reminders</p>
                 </div>
                 <Switch
                   checked={notificationSettings.equipmentAlerts}
@@ -592,8 +592,8 @@ export default function AssessorProfileSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900">Performance Reports</p>
-                  <p className="text-sm text-gray-600">Monthly performance summaries</p>
+                  <p className="font-medium text-white">Performance Reports</p>
+                  <p className="text-sm text-white/70">Monthly performance summaries</p>
                 </div>
                 <Switch
                   checked={notificationSettings.performanceReports}
@@ -612,8 +612,8 @@ export default function AssessorProfileSettings() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Profile Settings</h2>
-          <p className="text-gray-600">Manage your assessor profile and preferences</p>
+          <h2 className="text-2xl font-bold text-white">Profile Settings</h2>
+          <p className="text-white/70">Manage your assessor profile and preferences</p>
         </div>
       </div>
 
@@ -634,7 +634,7 @@ export default function AssessorProfileSettings() {
                 className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === tab.id
                     ? "border-orange-500 text-orange-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    : "border-transparent text-gray-500 hover:text-white/80 hover:border-gray-300"
                 }`}
               >
                 <Icon className="h-4 w-4 mr-2" />

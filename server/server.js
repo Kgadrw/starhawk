@@ -10,6 +10,7 @@ import insurerRoutes from './routes/insurer.js';
 import assessorRoutes from './routes/assessor.js';
 import governmentRoutes from './routes/government.js';
 import adminRoutes from './routes/admin.js';
+import satelliteRoutes from './routes/satellite.js';
 
 // Import middleware
 import { authenticateToken, requireRole } from './middleware/auth.js';
@@ -21,7 +22,13 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'], // Vite dev server and other origins
+  origin: [
+    'http://localhost:5173', 
+    'http://localhost:3000',
+    'http://localhost:8080',
+    'https://dashboard-blueprint-nexus.vercel.app',
+    /\.vercel\.app$/ // Allow all Vercel preview deployments
+  ],
   credentials: true
 }));
 app.use(express.json());
@@ -43,6 +50,7 @@ app.use('/api/insurer', authenticateToken, requireRole(['insurer']), insurerRout
 app.use('/api/assessor', authenticateToken, requireRole(['assessor']), assessorRoutes);
 app.use('/api/government', authenticateToken, requireRole(['government']), governmentRoutes);
 app.use('/api/admin', authenticateToken, requireRole(['admin']), adminRoutes);
+app.use('/api/satellite', satelliteRoutes); // No auth required for satellite API proxy
 
 // Error handling middleware
 app.use((err, req, res, next) => {

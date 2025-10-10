@@ -72,7 +72,7 @@ export default function ClaimDetailView({ claim, onBack, onApprove, onReject }: 
       case "high": return "bg-red-100 text-red-800 border-red-200";
       case "medium": return "bg-yellow-100 text-yellow-800 border-yellow-200";
       case "low": return "bg-green-100 text-green-800 border-green-200";
-      default: return "bg-gray-100 text-gray-800 border-gray-200";
+      default: return "bg-gray-100 text-white/90 border-gray-200";
     }
   };
 
@@ -82,7 +82,7 @@ export default function ClaimDetailView({ claim, onBack, onApprove, onReject }: 
       case "approved": return "bg-green-100 text-green-800 border-green-200";
       case "rejected": return "bg-red-100 text-red-800 border-red-200";
       case "in_review": return "bg-blue-100 text-blue-800 border-blue-200";
-      default: return "bg-gray-100 text-gray-800 border-gray-200";
+      default: return "bg-gray-100 text-white/90 border-gray-200";
     }
   };
 
@@ -117,7 +117,7 @@ export default function ClaimDetailView({ claim, onBack, onApprove, onReject }: 
             Back to Claims
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Claim Review</h1>
+            <h1 className="text-2xl font-bold text-white/90">Claim Review</h1>
             <p className="text-gray-500">Claim ID: {claim.id}</p>
           </div>
         </div>
@@ -137,7 +137,7 @@ export default function ClaimDetailView({ claim, onBack, onApprove, onReject }: 
           {/* Claim Overview */}
           <Card className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl shadow-lg shadow-green-100/20">
             <CardHeader>
-              <CardTitle className="flex items-center text-gray-800">
+              <CardTitle className="flex items-center text-white/90">
                 <FileText className="h-5 w-5 mr-2" />
                 Claim Overview
               </CardTitle>
@@ -148,28 +148,28 @@ export default function ClaimDetailView({ claim, onBack, onApprove, onReject }: 
                   <DollarSign className="h-5 w-5 text-green-600" />
                   <div>
                     <p className="text-sm text-gray-500">Claim Amount</p>
-                    <p className="text-lg font-semibold text-gray-800">{claim.claimAmount.toLocaleString()} RWF</p>
+                    <p className="text-lg font-semibold text-white/90">{claim.claimAmount.toLocaleString()} RWF</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3 p-3 bg-white/60 backdrop-blur-sm rounded-xl border border-white/40">
                   <Crop className="h-5 w-5 text-green-600" />
                   <div>
                     <p className="text-sm text-gray-500">Crop Type</p>
-                    <p className="text-lg font-semibold text-gray-800">{claim.cropType}</p>
+                    <p className="text-lg font-semibold text-white/90">{claim.cropType}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3 p-3 bg-white/60 backdrop-blur-sm rounded-xl border border-white/40">
                   <Calendar className="h-5 w-5 text-green-600" />
                   <div>
                     <p className="text-sm text-gray-500">Incident Date</p>
-                    <p className="text-lg font-semibold text-gray-800">{claim.incidentDate}</p>
+                    <p className="text-lg font-semibold text-white/90">{claim.incidentDate}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3 p-3 bg-white/60 backdrop-blur-sm rounded-xl border border-white/40">
                   <MapPin className="h-5 w-5 text-green-600" />
                   <div>
                     <p className="text-sm text-gray-500">Location</p>
-                    <p className="text-lg font-semibold text-gray-800">{claim.location}</p>
+                    <p className="text-lg font-semibold text-white/90">{claim.location}</p>
                   </div>
                 </div>
               </div>
@@ -179,20 +179,20 @@ export default function ClaimDetailView({ claim, onBack, onApprove, onReject }: 
           {/* Claim Description */}
           <Card className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl shadow-lg shadow-blue-100/20">
             <CardHeader>
-              <CardTitle className="flex items-center text-gray-800">
+              <CardTitle className="flex items-center text-white/90">
                 <MessageSquare className="h-5 w-5 mr-2" />
                 Claim Description
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-700 leading-relaxed">{claim.description}</p>
+              <p className="text-white/80 leading-relaxed">{claim.description}</p>
             </CardContent>
           </Card>
 
           {/* Assessment Report */}
           <Card className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl shadow-lg shadow-orange-100/20">
             <CardHeader>
-              <CardTitle className="flex items-center text-gray-800">
+              <CardTitle className="flex items-center text-white/90">
                 <Shield className="h-5 w-5 mr-2" />
                 Assessment Report
               </CardTitle>
@@ -201,15 +201,15 @@ export default function ClaimDetailView({ claim, onBack, onApprove, onReject }: 
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-3 bg-white/60 backdrop-blur-sm rounded-xl border border-white/40">
                   <span className="text-sm text-gray-500">Assessor</span>
-                  <span className="font-semibold text-gray-800">{claim.assessorName}</span>
+                  <span className="font-semibold text-white/90">{claim.assessorName}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-white/60 backdrop-blur-sm rounded-xl border border-white/40">
                   <span className="text-sm text-gray-500">Assessment Date</span>
-                  <span className="font-semibold text-gray-800">{claim.filedDate}</span>
+                  <span className="font-semibold text-white/90">{claim.filedDate}</span>
                 </div>
                 <div className="p-3 bg-white/60 backdrop-blur-sm rounded-xl border border-white/40">
                   <p className="text-sm text-gray-500 mb-2">Assessment Details</p>
-                  <p className="text-gray-700">{claim.assessmentReport || "Assessment report will be available after field visit."}</p>
+                  <p className="text-white/80">{claim.assessmentReport || "Assessment report will be available after field visit."}</p>
                 </div>
               </div>
             </CardContent>
@@ -218,7 +218,7 @@ export default function ClaimDetailView({ claim, onBack, onApprove, onReject }: 
           {/* Evidence & Documents */}
           <Card className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl shadow-lg shadow-purple-100/20">
             <CardHeader>
-              <CardTitle className="flex items-center text-gray-800">
+              <CardTitle className="flex items-center text-white/90">
                 <Camera className="h-5 w-5 mr-2" />
                 Evidence & Documents
               </CardTitle>
@@ -246,7 +246,7 @@ export default function ClaimDetailView({ claim, onBack, onApprove, onReject }: 
                       <div key={index} className="flex items-center justify-between p-3 bg-white/60 backdrop-blur-sm rounded-xl border border-white/40">
                         <div className="flex items-center space-x-3">
                           <FileText className="h-5 w-5 text-gray-500" />
-                          <span className="text-gray-700">Document {index + 1}</span>
+                          <span className="text-white/80">Document {index + 1}</span>
                         </div>
                         <Button size="sm" variant="outline" className="hover:bg-green-50/60">
                           <Download className="h-4 w-4 mr-2" />
@@ -266,7 +266,7 @@ export default function ClaimDetailView({ claim, onBack, onApprove, onReject }: 
           {/* Farmer Information */}
           <Card className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl shadow-lg shadow-green-100/20">
             <CardHeader>
-              <CardTitle className="flex items-center text-gray-800">
+              <CardTitle className="flex items-center text-white/90">
                 <User className="h-5 w-5 mr-2" />
                 Farmer Information
               </CardTitle>
@@ -276,21 +276,21 @@ export default function ClaimDetailView({ claim, onBack, onApprove, onReject }: 
                 <User className="h-5 w-5 text-gray-500" />
                 <div>
                   <p className="text-sm text-gray-500">Name</p>
-                  <p className="font-semibold text-gray-800">{claim.farmerName}</p>
+                  <p className="font-semibold text-white/90">{claim.farmerName}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3 p-3 bg-white/60 backdrop-blur-sm rounded-xl border border-white/40">
                 <Building2 className="h-5 w-5 text-gray-500" />
                 <div>
                   <p className="text-sm text-gray-500">Farmer ID</p>
-                  <p className="font-semibold text-gray-800">{claim.farmerId}</p>
+                  <p className="font-semibold text-white/90">{claim.farmerId}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3 p-3 bg-white/60 backdrop-blur-sm rounded-xl border border-white/40">
                 <MapPin className="h-5 w-5 text-gray-500" />
                 <div>
                   <p className="text-sm text-gray-500">Location</p>
-                  <p className="font-semibold text-gray-800">{claim.location}</p>
+                  <p className="font-semibold text-white/90">{claim.location}</p>
                 </div>
               </div>
             </CardContent>
@@ -299,7 +299,7 @@ export default function ClaimDetailView({ claim, onBack, onApprove, onReject }: 
           {/* Policy Information */}
           <Card className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl shadow-lg shadow-blue-100/20">
             <CardHeader>
-              <CardTitle className="flex items-center text-gray-800">
+              <CardTitle className="flex items-center text-white/90">
                 <Shield className="h-5 w-5 mr-2" />
                 Policy Information
               </CardTitle>
@@ -322,7 +322,7 @@ export default function ClaimDetailView({ claim, onBack, onApprove, onReject }: 
                 <Crop className="h-5 w-5 text-gray-500" />
                 <div>
                   <p className="text-sm text-gray-500">Coverage</p>
-                  <p className="font-semibold text-gray-800">{claim.cropType}</p>
+                  <p className="font-semibold text-white/90">{claim.cropType}</p>
                 </div>
               </div>
             </CardContent>
@@ -331,7 +331,7 @@ export default function ClaimDetailView({ claim, onBack, onApprove, onReject }: 
           {/* Action Buttons */}
           <Card className="bg-white/70 backdrop-blur-sm border border-white/50 rounded-2xl shadow-lg shadow-orange-100/20">
             <CardHeader>
-              <CardTitle className="text-gray-800">Review Actions</CardTitle>
+              <CardTitle className="text-white/90">Review Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {!showApprovalForm && !showRejectionForm && (

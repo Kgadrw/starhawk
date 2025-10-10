@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   NavigationMenu,
@@ -16,6 +16,7 @@ import {
 export function HomeNavbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
 
   return (
@@ -41,7 +42,11 @@ export function HomeNavbar() {
                 <NavigationMenuItem>
                   <Link 
                     to="/" 
-                    className="px-3 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors rounded-lg hover:bg-white/10"
+                    className={`px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                      location.pathname === '/' 
+                        ? 'text-green-400 bg-green-500/20 shadow-lg shadow-green-500/20' 
+                        : 'text-white/80 hover:text-green-400 hover:bg-white/10'
+                    }`}
                   >
                     Home
                   </Link>
@@ -50,7 +55,11 @@ export function HomeNavbar() {
                 <NavigationMenuItem>
                   <Link 
                     to="/services" 
-                    className="px-3 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors rounded-lg hover:bg-white/10"
+                    className={`px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                      location.pathname === '/services' 
+                        ? 'text-green-400 bg-green-500/20 shadow-lg shadow-green-500/20' 
+                        : 'text-white/80 hover:text-green-400 hover:bg-white/10'
+                    }`}
                   >
                     Services
                   </Link>
@@ -59,7 +68,11 @@ export function HomeNavbar() {
                 <NavigationMenuItem>
                   <Link 
                     to="/team" 
-                    className="px-3 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors rounded-lg hover:bg-white/10"
+                    className={`px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                      location.pathname === '/team' 
+                        ? 'text-green-400 bg-green-500/20 shadow-lg shadow-green-500/20' 
+                        : 'text-white/80 hover:text-green-400 hover:bg-white/10'
+                    }`}
                   >
                     Team
                   </Link>
@@ -68,7 +81,11 @@ export function HomeNavbar() {
                 <NavigationMenuItem>
                   <Link 
                     to="/contact" 
-                    className="px-3 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors rounded-lg hover:bg-white/10"
+                    className={`px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                      location.pathname === '/contact' 
+                        ? 'text-green-400 bg-green-500/20 shadow-lg shadow-green-500/20' 
+                        : 'text-white/80 hover:text-green-400 hover:bg-white/10'
+                    }`}
                   >
                     Contact
                   </Link>
@@ -105,28 +122,44 @@ export function HomeNavbar() {
             <div className="space-y-6">
               <Link
                 to="/"
-                className="block px-3 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors rounded-lg hover:bg-white/10"
+                className={`block px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                  location.pathname === '/' 
+                    ? 'text-green-400 bg-green-500/20 shadow-lg shadow-green-500/20' 
+                    : 'text-white/80 hover:text-green-400 hover:bg-white/10'
+                }`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 Home
               </Link>
               <Link
                 to="/services"
-                className="block px-3 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors rounded-lg hover:bg-white/10"
+                className={`block px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                  location.pathname === '/services' 
+                    ? 'text-green-400 bg-green-500/20 shadow-lg shadow-green-500/20' 
+                    : 'text-white/80 hover:text-green-400 hover:bg-white/10'
+                }`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 Services
               </Link>
               <Link
                 to="/team"
-                className="block px-3 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors rounded-lg hover:bg-white/10"
+                className={`block px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                  location.pathname === '/team' 
+                    ? 'text-green-400 bg-green-500/20 shadow-lg shadow-green-500/20' 
+                    : 'text-white/80 hover:text-green-400 hover:bg-white/10'
+                }`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 Team
               </Link>
               <Link
                 to="/contact"
-                className="block px-3 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors rounded-lg hover:bg-white/10"
+                className={`block px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                  location.pathname === '/contact' 
+                    ? 'text-green-400 bg-green-500/20 shadow-lg shadow-green-500/20' 
+                    : 'text-white/80 hover:text-green-400 hover:bg-white/10'
+                }`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 Contact

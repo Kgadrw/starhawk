@@ -211,7 +211,7 @@ export default function CropMonitoringSystem() {
       case "completed": return "bg-blue-100 text-blue-800";
       case "scheduled": return "bg-yellow-100 text-yellow-800";
       case "paused": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-700 text-white";
     }
   };
 
@@ -233,7 +233,7 @@ export default function CropMonitoringSystem() {
       case "flowering": return "bg-purple-100 text-purple-800";
       case "fruiting": return "bg-orange-100 text-orange-800";
       case "harvesting": return "bg-yellow-100 text-yellow-800";
-      default: return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-700 text-white";
     }
   };
 
@@ -242,7 +242,7 @@ export default function CropMonitoringSystem() {
       case "critical": return "bg-red-100 text-red-800";
       case "warning": return "bg-yellow-100 text-yellow-800";
       case "info": return "bg-blue-100 text-blue-800";
-      default: return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-700 text-white";
     }
   };
 
@@ -261,8 +261,8 @@ export default function CropMonitoringSystem() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Crop Monitoring Dashboard</h1>
-          <p className="text-gray-600 mt-1">Real-time monitoring of crop health and field conditions</p>
+          <h1 className="text-3xl font-bold text-white">Crop Monitoring Dashboard</h1>
+          <p className="text-white/60 mt-1">Real-time monitoring of crop health and field conditions</p>
         </div>
         <Button>
           <Plus className="h-4 w-4 mr-2" />
@@ -276,8 +276,8 @@ export default function CropMonitoringSystem() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Active Sessions</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-white/70">Active Sessions</p>
+                <p className="text-2xl font-bold text-white">
                   {sessions.filter(s => s.status === 'active').length}
                 </p>
               </div>
@@ -292,8 +292,8 @@ export default function CropMonitoringSystem() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Alerts</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-white/70">Total Alerts</p>
+                <p className="text-2xl font-bold text-white">
                   {sessions.reduce((acc, s) => acc + s.alerts.filter(a => !a.resolved).length, 0)}
                 </p>
               </div>
@@ -308,8 +308,8 @@ export default function CropMonitoringSystem() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Avg. Crop Health</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-white/70">Avg. Crop Health</p>
+                <p className="text-2xl font-bold text-white">
                   {Math.round(sessions.reduce((acc, s) => acc + s.cropHealth.overall, 0) / sessions.length)}%
                 </p>
               </div>
@@ -324,8 +324,8 @@ export default function CropMonitoringSystem() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Fields Monitored</p>
-                <p className="text-2xl font-bold text-gray-900">{sessions.length}</p>
+                <p className="text-sm font-medium text-white/70">Fields Monitored</p>
+                <p className="text-2xl font-bold text-white">{sessions.length}</p>
               </div>
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
                 <Satellite className="h-6 w-6 text-purple-600" />
@@ -343,15 +343,15 @@ export default function CropMonitoringSystem() {
         <CardContent>
           <div className="space-y-4">
             {sessions.filter(s => s.status === 'active').map((session) => (
-              <div key={session.id} className="p-4 border rounded-lg hover:bg-gray-50">
+              <div key={session.id} className="p-4 border rounded-lg border-gray-700">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
                       <Activity className="h-5 w-5 text-green-600" />
                     </div>
                     <div>
-                      <h3 className="font-medium">{session.farmerName}</h3>
-                      <p className="text-sm text-gray-500">{session.cropType} - {session.location}</p>
+                      <h3 className="font-medium text-white">{session.farmerName}</h3>
+                      <p className="text-sm text-white/60">{session.cropType} - {session.location}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
@@ -371,21 +371,21 @@ export default function CropMonitoringSystem() {
                       <Thermometer className="h-4 w-4 text-orange-500 mr-1" />
                       <span className="text-sm font-medium">{session.weatherData.temperature}°C</span>
                     </div>
-                    <p className="text-xs text-gray-500">Temperature</p>
+                    <p className="text-xs text-white/60">Temperature</p>
                   </div>
                   <div className="text-center">
                     <div className="flex items-center justify-center mb-1">
                       <Droplets className="h-4 w-4 text-blue-500 mr-1" />
                       <span className="text-sm font-medium">{session.soilData.moisture}%</span>
                     </div>
-                    <p className="text-xs text-gray-500">Soil Moisture</p>
+                    <p className="text-xs text-white/60">Soil Moisture</p>
                   </div>
                   <div className="text-center">
                     <div className="flex items-center justify-center mb-1">
                       <Leaf className="h-4 w-4 text-green-500 mr-1" />
                       <span className="text-sm font-medium">{session.cropHealth.overall}%</span>
                     </div>
-                    <p className="text-xs text-gray-500">Crop Health</p>
+                    <p className="text-xs text-white/60">Crop Health</p>
                   </div>
                   <div className="text-center">
                     <div className="flex items-center justify-center mb-1">
@@ -394,7 +394,7 @@ export default function CropMonitoringSystem() {
                         {session.alerts.filter(a => !a.resolved).length}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500">Active Alerts</p>
+                    <p className="text-xs text-white/60">Active Alerts</p>
                   </div>
                 </div>
 
@@ -402,7 +402,7 @@ export default function CropMonitoringSystem() {
                   <div className="flex-1 mr-4">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm font-medium">Growth Progress</span>
-                      <span className="text-sm text-gray-500">{session.progress}%</span>
+                      <span className="text-sm text-white/60">{session.progress}%</span>
                     </div>
                     <Progress value={session.progress} className="h-2" />
                   </div>
@@ -432,28 +432,28 @@ export default function CropMonitoringSystem() {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             {weatherForecast.map((forecast, index) => (
-              <div key={index} className="p-4 border rounded-lg">
+              <div key={index} className="p-4 border border-gray-700 rounded-lg">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium">{forecast.date}</h3>
+                  <h3 className="font-medium text-white">{forecast.date}</h3>
                   <Badge variant="outline">{forecast.conditions}</Badge>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Temperature</span>
+                    <span className="text-sm text-white/70">Temperature</span>
                     <span className="text-sm font-medium">
                       {forecast.temperature.min}°C - {forecast.temperature.max}°C
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Humidity</span>
+                    <span className="text-sm text-white/70">Humidity</span>
                     <span className="text-sm font-medium">{forecast.humidity}%</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Rainfall</span>
+                    <span className="text-sm text-white/70">Rainfall</span>
                     <span className="text-sm font-medium">{forecast.rainfall}mm</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Wind Speed</span>
+                    <span className="text-sm text-white/70">Wind Speed</span>
                     <span className="text-sm font-medium">{forecast.windSpeed} km/h</span>
                   </div>
                 </div>
@@ -477,8 +477,8 @@ export default function CropMonitoringSystem() {
               Back to Dashboard
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Monitoring Session Details</h1>
-              <p className="text-gray-600 mt-1">Session ID: {selectedSession.id}</p>
+              <h1 className="text-3xl font-bold text-white">Monitoring Session Details</h1>
+              <p className="text-white/70 mt-1">Session ID: {selectedSession.id}</p>
             </div>
           </div>
           <div className="flex items-center space-x-3">
@@ -510,33 +510,33 @@ export default function CropMonitoringSystem() {
                 <CardContent className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
-                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Farmer</Label>
-                      <p className="text-sm text-gray-600">{selectedSession.farmerName}</p>
+                      <Label className="text-sm font-medium text-white/80">Farmer</Label>
+                      <p className="text-sm text-white">{selectedSession.farmerName}</p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Crop Type</Label>
-                      <p className="text-sm text-gray-600">{selectedSession.cropType}</p>
-                    </div>
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Farm Size</Label>
-                      <p className="text-sm text-gray-600">{selectedSession.farmSize} hectares</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Location</Label>
-                      <p className="text-sm text-gray-600">{selectedSession.location}</p>
+                      <Label className="text-sm font-medium text-white/80">Crop Type</Label>
+                      <p className="text-sm text-white">{selectedSession.cropType}</p>
                     </div>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
-                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Current Stage</Label>
+                      <Label className="text-sm font-medium text-white/80">Farm Size</Label>
+                      <p className="text-sm text-white">{selectedSession.farmSize} hectares</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-white/80">Location</Label>
+                      <p className="text-sm text-white">{selectedSession.location}</p>
+                    </div>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label className="text-sm font-medium text-white/80">Current Stage</Label>
                       <Badge className={getStageColor(selectedSession.stage)}>
                         {selectedSession.stage}
                       </Badge>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Progress</Label>
+                      <Label className="text-sm font-medium text-white/80">Progress</Label>
                       <div className="flex items-center space-x-2">
                         <Progress value={selectedSession.progress} className="flex-1" />
                         <span className="text-sm font-medium">{selectedSession.progress}%</span>
@@ -642,15 +642,15 @@ export default function CropMonitoringSystem() {
                       <span className="text-sm font-medium">Nutrient Levels</span>
                       <div className="space-y-1">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-600">Nitrogen</span>
+                          <span className="text-xs text-white/70">Nitrogen</span>
                           <span className="text-xs font-medium">{selectedSession.soilData.nutrients.nitrogen}%</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-600">Phosphorus</span>
+                          <span className="text-xs text-white/70">Phosphorus</span>
                           <span className="text-xs font-medium">{selectedSession.soilData.nutrients.phosphorus}%</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-600">Potassium</span>
+                          <span className="text-xs text-white/70">Potassium</span>
                           <span className="text-xs font-medium">{selectedSession.soilData.nutrients.potassium}%</span>
                         </div>
                       </div>
@@ -727,11 +727,11 @@ export default function CropMonitoringSystem() {
                               <Badge className={getAlertTypeColor(alert.type)}>
                                 {alert.type}
                               </Badge>
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-white/60">
                                 {new Date(alert.timestamp).toLocaleString()}
                               </span>
                             </div>
-                            <p className="text-sm">{alert.message}</p>
+                            <p className="text-sm text-white/80">{alert.message}</p>
                           </div>
                         </div>
                       </div>

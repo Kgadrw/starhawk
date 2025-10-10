@@ -12,9 +12,13 @@ import FarmerRegistration from "./pages/FarmerRegistration";
 import FarmerLogin from "./pages/FarmerLogin";
 import AssessorLogin from "./pages/AssessorLogin";
 import InsurerLogin from "./pages/InsurerLogin";
+import AdminLogin from "./pages/AdminLogin";
+import GovernmentLogin from "./pages/GovernmentLogin";
 import FarmerDashboard from "./components/dashboards/FarmerDashboard";
 import AssessorDashboard from "./components/dashboards/AssessorDashboard";
 import InsurerDashboard from "./components/dashboards/InsurerDashboard";
+import { AdminDashboard } from "./components/dashboards/AdminDashboard";
+import { GovernmentDashboard } from "./components/dashboards/GovernmentDashboard";
 import PolicyDetailsPage from "./components/insurer/PolicyDetailsPage";
 import { PolicyRequestForm } from "./components/requests/PolicyRequestForm";
 import { RiskAssessmentModule } from "./components/assessment/RiskAssessmentModule";
@@ -52,11 +56,15 @@ const App = () => {
               <Route path="/farmer-login" element={<FarmerLogin />} />
               <Route path="/assessor-login" element={<AssessorLogin />} />
               <Route path="/insurer-login" element={<InsurerLogin />} />
+              <Route path="/admin-login" element={<AdminLogin />} />
+              <Route path="/government-login" element={<GovernmentLogin />} />
               
               {/* Dashboard Routes */}
               <Route path="/farmer-dashboard" element={<FarmerDashboard />} />
               <Route path="/assessor-dashboard" element={<AssessorDashboard />} />
               <Route path="/insurer-dashboard" element={<InsurerDashboard />} />
+              <Route path="/admin-dashboard" element={<AdminDashboard />} />
+              <Route path="/government-dashboard" element={<GovernmentDashboard />} />
               
               {/* Policy Details Route */}
               <Route path="/policy-details/:policyId" element={<PolicyDetailsPage />} />

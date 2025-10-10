@@ -209,7 +209,7 @@ export default function InsurerProfileSettings() {
               <Building2 className="h-8 w-8 text-gray-400" />
             </div>
             <div className="flex-1">
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-sm text-white/70 mb-2">
                 Upload a company logo (PNG, JPG up to 2MB)
               </p>
               <Button variant="outline" size="sm">
@@ -324,8 +324,8 @@ export default function InsurerProfileSettings() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-medium text-gray-900">Two-Factor Authentication</h4>
-              <p className="text-sm text-gray-600">Add an extra layer of security to your account</p>
+              <h4 className="font-medium text-white">Two-Factor Authentication</h4>
+              <p className="text-sm text-white/70">Add an extra layer of security to your account</p>
             </div>
             <Switch
               checked={securityData.twoFactorEnabled}
@@ -366,12 +366,12 @@ export default function InsurerProfileSettings() {
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
-            <h4 className="font-medium text-gray-900 mb-3">Communication Channels</h4>
+            <h4 className="font-medium text-white mb-3">Communication Channels</h4>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900">Email Notifications</p>
-                  <p className="text-sm text-gray-600">Receive notifications via email</p>
+                  <p className="font-medium text-white">Email Notifications</p>
+                  <p className="text-sm text-white/70">Receive notifications via email</p>
                 </div>
                 <Switch
                   checked={notificationSettings.emailNotifications}
@@ -380,8 +380,8 @@ export default function InsurerProfileSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900">SMS Notifications</p>
-                  <p className="text-sm text-gray-600">Receive notifications via SMS</p>
+                  <p className="font-medium text-white">SMS Notifications</p>
+                  <p className="text-sm text-white/70">Receive notifications via SMS</p>
                 </div>
                 <Switch
                   checked={notificationSettings.smsNotifications}
@@ -390,8 +390,8 @@ export default function InsurerProfileSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900">Push Notifications</p>
-                  <p className="text-sm text-gray-600">Receive browser push notifications</p>
+                  <p className="font-medium text-white">Push Notifications</p>
+                  <p className="text-sm text-white/70">Receive browser push notifications</p>
                 </div>
                 <Switch
                   checked={notificationSettings.pushNotifications}
@@ -404,12 +404,12 @@ export default function InsurerProfileSettings() {
           <Separator />
 
           <div>
-            <h4 className="font-medium text-gray-900 mb-3">Alert Types</h4>
+            <h4 className="font-medium text-white mb-3">Alert Types</h4>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900">Risk Assessment Alerts</p>
-                  <p className="text-sm text-gray-600">New risk assessments requiring review</p>
+                  <p className="font-medium text-white">Risk Assessment Alerts</p>
+                  <p className="text-sm text-white/70">New risk assessments requiring review</p>
                 </div>
                 <Switch
                   checked={notificationSettings.riskAssessmentAlerts}
@@ -418,8 +418,8 @@ export default function InsurerProfileSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900">Claim Alerts</p>
-                  <p className="text-sm text-gray-600">New claims filed by farmers</p>
+                  <p className="font-medium text-white">Claim Alerts</p>
+                  <p className="text-sm text-white/70">New claims filed by farmers</p>
                 </div>
                 <Switch
                   checked={notificationSettings.claimAlerts}
@@ -428,8 +428,8 @@ export default function InsurerProfileSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900">Payment Alerts</p>
-                  <p className="text-sm text-gray-600">Premium payments and due dates</p>
+                  <p className="font-medium text-white">Payment Alerts</p>
+                  <p className="text-sm text-white/70">Premium payments and due dates</p>
                 </div>
                 <Switch
                   checked={notificationSettings.paymentAlerts}
@@ -438,8 +438,8 @@ export default function InsurerProfileSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900">System Alerts</p>
-                  <p className="text-sm text-gray-600">System maintenance and updates</p>
+                  <p className="font-medium text-white">System Alerts</p>
+                  <p className="text-sm text-white/70">System maintenance and updates</p>
                 </div>
                 <Switch
                   checked={notificationSettings.systemAlerts}
@@ -452,12 +452,12 @@ export default function InsurerProfileSettings() {
           <Separator />
 
           <div>
-            <h4 className="font-medium text-gray-900 mb-3">Reports</h4>
+            <h4 className="font-medium text-white mb-3">Reports</h4>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900">Weekly Reports</p>
-                  <p className="text-sm text-gray-600">Receive weekly summary reports</p>
+                  <p className="font-medium text-white">Weekly Reports</p>
+                  <p className="text-sm text-white/70">Receive weekly summary reports</p>
                 </div>
                 <Switch
                   checked={notificationSettings.weeklyReports}
@@ -466,8 +466,8 @@ export default function InsurerProfileSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900">Monthly Reports</p>
-                  <p className="text-sm text-gray-600">Receive monthly summary reports</p>
+                  <p className="font-medium text-white">Monthly Reports</p>
+                  <p className="text-sm text-white/70">Receive monthly summary reports</p>
                 </div>
                 <Switch
                   checked={notificationSettings.monthlyReports}
@@ -486,8 +486,8 @@ export default function InsurerProfileSettings() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Profile Settings</h2>
-          <p className="text-gray-600">Manage your account settings and preferences</p>
+          <h2 className="text-2xl font-bold text-white">Profile Settings</h2>
+          <p className="text-white/70">Manage your account settings and preferences</p>
         </div>
       </div>
 
@@ -507,7 +507,7 @@ export default function InsurerProfileSettings() {
                 className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === tab.id
                     ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    : "border-transparent text-white/60 hover:text-white/80 hover:border-gray-300"
                 }`}
               >
                 <Icon className="h-4 w-4 mr-2" />

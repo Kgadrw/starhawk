@@ -4,6 +4,7 @@ import {
   Target,
   TrendingUp
 } from "lucide-react";
+import { motion } from "framer-motion";
 
 export function StatsSection() {
   return (
@@ -34,38 +35,68 @@ export function StatsSection() {
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto">
-        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-12">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+          className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-12"
+        >
           <div className="grid gap-8 md:grid-cols-4">
-            <div className="text-center">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="text-center"
+            >
               <div className="w-16 h-16 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ease-out">
                 <Users className="h-8 w-8 text-white/90" />
               </div>
               <h3 className="text-3xl font-bold text-white mb-2">10,000+</h3>
               <p className="text-white/70">Active Farmers</p>
-            </div>
-            <div className="text-center">
+            </motion.div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="text-center"
+            >
               <div className="w-16 h-16 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ease-out">
                 <Shield className="h-8 w-8 text-white/90" />
               </div>
               <h3 className="text-3xl font-bold text-white mb-2">99.9%</h3>
               <p className="text-white/70">Uptime Guarantee</p>
-            </div>
-            <div className="text-center">
+            </motion.div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="text-center"
+            >
               <div className="w-16 h-16 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ease-out">
                 <Target className="h-8 w-8 text-white/90" />
               </div>
               <h3 className="text-3xl font-bold text-white mb-2">24/7</h3>
               <p className="text-white/70">Support Available</p>
-            </div>
-            <div className="text-center">
+            </motion.div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="text-center"
+            >
               <div className="w-16 h-16 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ease-out">
                 <TrendingUp className="h-8 w-8 text-white/90" />
               </div>
               <h3 className="text-3xl font-bold text-white mb-2">95%</h3>
               <p className="text-white/70">Claim Accuracy</p>
-            </div>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );

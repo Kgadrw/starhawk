@@ -278,41 +278,41 @@ export default function InsurerNotifications() {
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-3">
-              <h4 className="font-medium text-gray-900">Email Notifications</h4>
+              <h4 className="font-medium text-white">Email Notifications</h4>
               <div className="space-y-2">
                 <label className="flex items-center">
                   <input type="checkbox" defaultChecked className="mr-2" />
-                  <span className="text-sm text-gray-600">Risk assessment submissions</span>
+                  <span className="text-sm text-white/70">Risk assessment submissions</span>
                 </label>
                 <label className="flex items-center">
                   <input type="checkbox" defaultChecked className="mr-2" />
-                  <span className="text-sm text-gray-600">New claim filings</span>
+                  <span className="text-sm text-white/70">New claim filings</span>
                 </label>
                 <label className="flex items-center">
                   <input type="checkbox" defaultChecked className="mr-2" />
-                  <span className="text-sm text-gray-600">Payment due reminders</span>
+                  <span className="text-sm text-white/70">Payment due reminders</span>
                 </label>
                 <label className="flex items-center">
                   <input type="checkbox" className="mr-2" />
-                  <span className="text-sm text-gray-600">System maintenance alerts</span>
+                  <span className="text-sm text-white/70">System maintenance alerts</span>
                 </label>
               </div>
             </div>
             
             <div className="space-y-3">
-              <h4 className="font-medium text-gray-900">Push Notifications</h4>
+              <h4 className="font-medium text-white">Push Notifications</h4>
               <div className="space-y-2">
                 <label className="flex items-center">
                   <input type="checkbox" defaultChecked className="mr-2" />
-                  <span className="text-sm text-gray-600">High priority alerts</span>
+                  <span className="text-sm text-white/70">High priority alerts</span>
                 </label>
                 <label className="flex items-center">
                   <input type="checkbox" className="mr-2" />
-                  <span className="text-sm text-gray-600">Medium priority alerts</span>
+                  <span className="text-sm text-white/70">Medium priority alerts</span>
                 </label>
                 <label className="flex items-center">
                   <input type="checkbox" className="mr-2" />
-                  <span className="text-sm text-gray-600">Low priority alerts</span>
+                  <span className="text-sm text-white/70">Low priority alerts</span>
                 </label>
               </div>
             </div>

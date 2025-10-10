@@ -74,8 +74,8 @@ export default function PolicyDetailsView({ policy, onBack, onEdit, onDelete }: 
       case "active": return "bg-green-100 text-green-800";
       case "pending": return "bg-yellow-100 text-yellow-800";
       case "expired": return "bg-red-100 text-red-800";
-      case "cancelled": return "bg-gray-100 text-gray-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "cancelled": return "bg-gray-100 text-white/90";
+      default: return "bg-gray-100 text-white/90";
     }
   };
 
@@ -94,7 +94,7 @@ export default function PolicyDetailsView({ policy, onBack, onEdit, onDelete }: 
       case "low": return "bg-green-100 text-green-800";
       case "medium": return "bg-yellow-100 text-yellow-800";
       case "high": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-100 text-white/90";
     }
   };
 
@@ -160,8 +160,8 @@ export default function PolicyDetailsView({ policy, onBack, onEdit, onDelete }: 
             Back to Policies
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Policy Details</h1>
-            <p className="text-gray-600 mt-1">Policy ID: {policy.id}</p>
+            <h1 className="text-3xl font-bold text-white">Policy Details</h1>
+            <p className="text-white/70 mt-1">Policy ID: {policy.id}</p>
           </div>
         </div>
         <div className="flex items-center space-x-3">
@@ -203,8 +203,8 @@ export default function PolicyDetailsView({ policy, onBack, onEdit, onDelete }: 
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Coverage Amount</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-white/70">Coverage Amount</p>
+                <p className="text-2xl font-bold text-white">
                   {policy.coverageAmount.toLocaleString()} RWF
                 </p>
               </div>
@@ -219,8 +219,8 @@ export default function PolicyDetailsView({ policy, onBack, onEdit, onDelete }: 
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Premium Amount</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-white/70">Premium Amount</p>
+                <p className="text-2xl font-bold text-white">
                   {policy.premiumAmount.toLocaleString()} RWF
                 </p>
               </div>
@@ -235,8 +235,8 @@ export default function PolicyDetailsView({ policy, onBack, onEdit, onDelete }: 
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Risk Level</p>
-                <p className="text-2xl font-bold text-gray-900 capitalize">
+                <p className="text-sm font-medium text-white/70">Risk Level</p>
+                <p className="text-2xl font-bold text-white capitalize">
                   {policy.riskLevel}
                 </p>
               </div>
@@ -251,8 +251,8 @@ export default function PolicyDetailsView({ policy, onBack, onEdit, onDelete }: 
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Claims Filed</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-white/70">Claims Filed</p>
+                <p className="text-2xl font-bold text-white">
                   {policy.claimsCount || 0}
                 </p>
               </div>

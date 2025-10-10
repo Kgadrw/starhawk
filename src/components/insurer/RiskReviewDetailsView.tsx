@@ -87,7 +87,7 @@ export default function RiskReviewDetailsView({
       case "approved": return "bg-green-100 text-green-800";
       case "rejected": return "bg-red-100 text-red-800";
       case "under_review": return "bg-blue-100 text-blue-800";
-      default: return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-100 text-white/90";
     }
   };
 
@@ -106,7 +106,7 @@ export default function RiskReviewDetailsView({
       case "low": return "bg-green-100 text-green-800";
       case "medium": return "bg-yellow-100 text-yellow-800";
       case "high": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-100 text-white/90";
     }
   };
 
@@ -172,8 +172,8 @@ export default function RiskReviewDetailsView({
             Back to Risk Reviews
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Risk Assessment Review</h1>
-            <p className="text-gray-600 mt-1">Assessment ID: {assessment.id}</p>
+            <h1 className="text-3xl font-bold text-white">Risk Assessment Review</h1>
+            <p className="text-white/70 mt-1">Assessment ID: {assessment.id}</p>
           </div>
         </div>
         <div className="flex items-center space-x-3">
@@ -215,8 +215,8 @@ export default function RiskReviewDetailsView({
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Risk Level</p>
-                <p className="text-2xl font-bold text-gray-900 capitalize">
+                <p className="text-sm font-medium text-white/70">Risk Level</p>
+                <p className="text-2xl font-bold text-white capitalize">
                   {assessment.riskLevel}
                 </p>
               </div>
@@ -231,7 +231,7 @@ export default function RiskReviewDetailsView({
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Overall Score</p>
+                <p className="text-sm font-medium text-white/70">Overall Score</p>
                 <p className={`text-2xl font-bold ${getScoreColor(assessment.overallScore)}`}>
                   {assessment.overallScore}/100
                 </p>
@@ -247,8 +247,8 @@ export default function RiskReviewDetailsView({
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Farm Size</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-white/70">Farm Size</p>
+                <p className="text-2xl font-bold text-white">
                   {assessment.farmSize} ha
                 </p>
               </div>
@@ -263,8 +263,8 @@ export default function RiskReviewDetailsView({
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Assessor</p>
-                <p className="text-lg font-bold text-gray-900">
+                <p className="text-sm font-medium text-white/70">Assessor</p>
+                <p className="text-lg font-bold text-white">
                   {assessment.assessorName}
                 </p>
               </div>

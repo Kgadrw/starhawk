@@ -139,12 +139,12 @@ export default function RiskAssessmentSystem() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "draft": return "bg-gray-100 text-gray-800";
+      case "draft": return "bg-gray-100 text-white/90";
       case "submitted": return "bg-blue-100 text-blue-800";
       case "under_review": return "bg-yellow-100 text-yellow-800";
       case "approved": return "bg-green-100 text-green-800";
       case "rejected": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-100 text-white/90";
     }
   };
 
@@ -164,7 +164,7 @@ export default function RiskAssessmentSystem() {
       case "low": return "bg-green-100 text-green-800";
       case "medium": return "bg-yellow-100 text-yellow-800";
       case "high": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-100 text-white/90";
     }
   };
 
@@ -340,7 +340,7 @@ export default function RiskAssessmentSystem() {
           <TabsContent value="risk-factors" className="space-y-4">
             <div className="space-y-4">
               <div>
-                <Label className="text-base font-medium text-gray-700 dark:text-gray-300">Risk Factors</Label>
+                <Label className="text-base font-medium text-white/80 dark:text-gray-300">Risk Factors</Label>
                 <p className="text-sm text-gray-500 mb-3">Select all applicable risk factors</p>
                 <div className="grid gap-3 md:grid-cols-2">
                   {[
@@ -369,14 +369,14 @@ export default function RiskAssessmentSystem() {
                           }
                         }}
                       />
-                      <Label htmlFor={factor} className="text-sm text-gray-700 dark:text-gray-300">{factor}</Label>
+                      <Label htmlFor={factor} className="text-sm text-white/80 dark:text-gray-300">{factor}</Label>
                     </div>
                   ))}
                 </div>
               </div>
 
               <div>
-                <Label className="text-base font-medium text-gray-700 dark:text-gray-300">Mitigation Measures</Label>
+                <Label className="text-base font-medium text-white/80 dark:text-gray-300">Mitigation Measures</Label>
                 <p className="text-sm text-gray-500 mb-3">Select recommended mitigation measures</p>
                 <div className="grid gap-3 md:grid-cols-2">
                   {[
@@ -405,7 +405,7 @@ export default function RiskAssessmentSystem() {
                           }
                         }}
                       />
-                      <Label htmlFor={measure} className="text-sm text-gray-700 dark:text-gray-300">{measure}</Label>
+                      <Label htmlFor={measure} className="text-sm text-white/80 dark:text-gray-300">{measure}</Label>
                     </div>
                   ))}
                 </div>
@@ -493,7 +493,7 @@ export default function RiskAssessmentSystem() {
                   <span className="text-2xl font-bold">{calculateOverallScore()}/100</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Risk Level</span>
+                  <span className="text-sm text-white/70">Risk Level</span>
                   <Badge className={getRiskLevelColor(getRiskLevel(calculateOverallScore()))}>
                     {getRiskLevel(calculateOverallScore())} risk
                   </Badge>
@@ -595,8 +595,8 @@ export default function RiskAssessmentSystem() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Assessments</p>
-                <p className="text-2xl font-bold text-gray-900">{assessments.length}</p>
+                <p className="text-sm font-medium text-white/70">Total Assessments</p>
+                <p className="text-2xl font-bold text-white">{assessments.length}</p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                 <FileText className="h-6 w-6 text-blue-600" />
@@ -609,13 +609,13 @@ export default function RiskAssessmentSystem() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Draft</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-white/70">Draft</p>
+                <p className="text-2xl font-bold text-white">
                   {assessments.filter(a => a.status === 'draft').length}
                 </p>
               </div>
               <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                <Edit className="h-6 w-6 text-gray-600" />
+                <Edit className="h-6 w-6 text-white/70" />
               </div>
             </div>
           </CardContent>
@@ -625,8 +625,8 @@ export default function RiskAssessmentSystem() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Submitted</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-white/70">Submitted</p>
+                <p className="text-2xl font-bold text-white">
                   {assessments.filter(a => a.status === 'submitted').length}
                 </p>
               </div>
@@ -641,8 +641,8 @@ export default function RiskAssessmentSystem() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Approved</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-white/70">Approved</p>
+                <p className="text-2xl font-bold text-white">
                   {assessments.filter(a => a.status === 'approved').length}
                 </p>
               </div>

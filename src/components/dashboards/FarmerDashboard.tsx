@@ -40,7 +40,8 @@ import {
   Bell,
   Settings,
   Upload,
-  Camera
+  Camera,
+  Info
 } from "lucide-react";
 
 export default function FarmerDashboard() {

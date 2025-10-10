@@ -102,6 +102,14 @@ This file contains test user credentials for different roles in the system. Use 
 
 ### **4. Government Role**
 
+#### **Quick Access (Demo)**
+- **Username**: `government`
+- **Password**: `gov123`
+- **Role**: `government`
+- **Name**: Government Demo User
+- **Department**: Ministry of Agriculture
+- **Note**: Simplified credentials for quick access during demonstrations
+
 #### **Agricultural Officer**
 - **Email**: `gov.officer@nexus.com`
 - **Password**: `Gov123!`
@@ -123,6 +131,14 @@ This file contains test user credentials for different roles in the system. Use 
 ---
 
 ### **5. Admin Role**
+
+#### **Quick Access (Demo)**
+- **Username**: `admin`
+- **Password**: `admin123`
+- **Role**: `admin`
+- **Name**: Admin Demo User
+- **Permissions**: Full system access, user management, system configuration
+- **Note**: Simplified credentials for quick access during demonstrations
 
 #### **System Administrator**
 - **Email**: `admin@nexus.com`

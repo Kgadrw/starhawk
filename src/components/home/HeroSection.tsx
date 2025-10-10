@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import LightRays from "@/components/ui/LightRays";
 import VariableProximity from "@/components/ui/VariableProximity";
 import { useRef } from 'react';
+import { motion } from "framer-motion";
 import { 
   ArrowRight,
   Sparkles
@@ -60,7 +61,12 @@ export function HeroSection() {
 
       {/* Content */}
       <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-full mb-6 sm:mb-8">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-full mb-6 sm:mb-8"
+        >
           <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400" />
           <VariableProximity
             label="Revolutionary Agricultural Technology"
@@ -71,9 +77,14 @@ export function HeroSection() {
             radius={100}
             falloff="linear"
           />
-        </div>
+        </motion.div>
         
-        <div className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-6 sm:mb-8 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent leading-tight px-2">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.4 }}
+          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-6 sm:mb-8 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent leading-tight px-2"
+        >
           <VariableProximity
             label="Revolutionizing Agricultural"
             className="block mb-4 cursor-pointer"
@@ -92,9 +103,14 @@ export function HeroSection() {
             radius={150}
             falloff="linear"
           />
-        </div>
+        </motion.div>
         
-        <div className="text-base sm:text-lg lg:text-xl text-white/80 mb-8 sm:mb-12 max-w-4xl mx-auto leading-relaxed px-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.6 }}
+          className="text-base sm:text-lg lg:text-xl text-white/80 mb-8 sm:mb-12 max-w-4xl mx-auto leading-relaxed px-4"
+        >
           <VariableProximity
             label="STARHAWK combines drone surveillance, satellite analytics, and AI to provide comprehensive agricultural insurance solutions for farmers, insurers, and governments."
             className="text-center cursor-pointer"
@@ -104,9 +120,14 @@ export function HeroSection() {
             radius={120}
             falloff="linear"
           />
-        </div>
+        </motion.div>
         
-        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center px-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.8 }}
+          className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center px-4"
+        >
           <Link to="/role-selection" className="w-full sm:w-auto">
             <Button 
               size="lg" 
@@ -123,7 +144,7 @@ export function HeroSection() {
           >
             Learn More
           </Button>
-        </div>
+        </motion.div>
       </div>
     </section>
   );

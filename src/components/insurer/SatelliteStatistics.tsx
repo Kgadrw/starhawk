@@ -32,8 +32,10 @@ import {
   Legend
 } from "recharts";
 
-const API_KEY = "apk.bdae00480670eca2619075475aad287b0683f9288af574b219eb3c9e203a4664";
-const API_BASE_URL = "https://api-connect.eos.com/api/gdw/api";
+// Use local backend proxy to avoid CORS issues
+const API_BASE_URL = import.meta.env.PROD 
+  ? "https://your-backend-url.com/api/satellite" // Replace with your deployed backend URL
+  : "http://localhost:3001/api/satellite";
 
 interface StatisticsResult {
   scene_id: string;
@@ -124,7 +126,7 @@ export default function SatelliteStatistics() {
         }
       };
 
-      const response = await fetch(`${API_BASE_URL}?api_key=${API_KEY}`, {
+      const response = await fetch(`${API_BASE_URL}/task`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -154,7 +156,7 @@ export default function SatelliteStatistics() {
 
     const poll = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/${id}?api_key=${API_KEY}`);
+        const response = await fetch(`${API_BASE_URL}/task/${id}`);
         
         if (!response.ok) {
           throw new Error(`API Error: ${response.statusText}`);

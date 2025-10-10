@@ -4,6 +4,7 @@ import { FeaturesSection } from "@/components/home/FeaturesSection";
 import PartnersSection from "@/components/home/PartnersSection";
 import { TestimonialsSection } from "@/components/home/TestimonialsSection";
 import { CTASection } from "@/components/home/CTASection";
+import { FAQSection } from "@/components/home/FAQSection";
 import { FooterSection } from "@/components/home/FooterSection";
 import CustomScrollbar from "@/components/ui/CustomScrollbar";
 
@@ -28,6 +29,7 @@ function HomePage() {
           <PartnersSection />
           <TestimonialsSection />
           <CTASection />
+          <FAQSection />
           <FooterSection />
               </div>
             </div>

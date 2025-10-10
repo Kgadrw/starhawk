@@ -6,6 +6,7 @@ import { HomeNavbar } from "@/components/layout/HomeNavbar";
 import { FooterSection } from "@/components/home/FooterSection";
 import { FarmerRegistrationModal } from "@/components/modals/FarmerRegistrationModal";
 import CustomScrollbar from "@/components/ui/CustomScrollbar";
+import { motion } from "framer-motion";
 import { 
   User, 
   Building2, 
@@ -49,6 +50,25 @@ export default function RoleSelection() {
       hoverGradient: "from-blue-600 to-indigo-700",
       href: "/insurer-login",
       features: ["Policy Management", "Claim Processing", "Risk Analysis", "Payment Processing"]
+    },
+    {
+      title: "Government Portal",
+      description: "Analytics, monitoring, and policy oversight for government officials",
+      icon: Building2,
+      gradient: "from-purple-500 to-blue-600",
+      hoverGradient: "from-purple-600 to-blue-700",
+      href: "/government-login",
+      features: ["National Analytics", "Regional Monitoring", "Policy Oversight", "Trend Analysis"]
+    },
+    {
+      title: "Admin Portal",
+      description: "System administration and user management",
+      icon: Shield,
+      gradient: "from-red-500 to-orange-600",
+      hoverGradient: "from-red-600 to-orange-700",
+      href: "/admin-login",
+      features: ["User Management", "System Configuration", "Security Controls", "Activity Monitoring"],
+      badge: "Admin Only"
     }
   ];
 
@@ -85,27 +105,40 @@ export default function RoleSelection() {
 
       {/* Hero Section */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20">
-        <div className="text-center mb-20">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="text-center mb-20"
+        >
           <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
             <Sparkles className="h-4 w-4 text-yellow-400" />
             <span className="text-white/90 text-sm font-medium">Choose Your Portal</span>
           </div>
-          <h2 className="text-6xl font-bold text-white mb-6 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent">
-            Welcome to the Future
+          <h2 className="text-6xl font-bold mb-6">
+            <span className="text-white">Welcome to </span>
+            <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">the Future</span>
           </h2>
           <p className="text-xl text-white/80 max-w-3xl mx-auto leading-relaxed">
             Select your role to access the appropriate portal and begin your journey with our cutting-edge digital insurance platform.
           </p>
-        </div>
+        </motion.div>
 
         {/* Role Cards */}
-        <div className="grid gap-8 md:grid-cols-3">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
           {roles.map((role, index) => {
             const Icon = role.icon;
             
             if (role.isModal) {
               return (
-                <div key={index} className="block group cursor-pointer" onClick={() => setIsFarmerModalOpen(true)}>
+                <motion.div 
+                  key={index}
+                  initial={{ opacity: 0, y: 50 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.4 + index * 0.1 }}
+                  className="block group cursor-pointer" 
+                  onClick={() => setIsFarmerModalOpen(true)}
+                >
                 <Card className="bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-500 rounded-2xl cursor-pointer h-full relative overflow-hidden">
                   {/* Badge */}
                   {role.badge && (
@@ -143,18 +176,24 @@ export default function RoleSelection() {
                     </div>
 
                     <Button 
-                      className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white py-3 rounded-xl font-medium text-base backdrop-blur-sm transition-all duration-300 group-hover:scale-105"
+                      className="w-full bg-green-600 hover:bg-green-700 border-0 text-white py-3 rounded-xl font-medium text-base shadow-lg shadow-green-500/30 transition-all duration-300 group-hover:scale-105"
                     >
                       Register Now
                       <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
                     </Button>
                   </CardContent>
                 </Card>
-              </div>
+              </motion.div>
               );
             } else {
             return (
-              <Link key={index} to={role.href} className="block group">
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 + index * 0.1 }}
+              >
+                <Link to={role.href} className="block group">
                   <Card className="bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-500 rounded-2xl cursor-pointer h-full relative overflow-hidden">
                   {/* Badge */}
                   {role.badge && (
@@ -192,7 +231,7 @@ export default function RoleSelection() {
                     </div>
 
                     <Button 
-                        className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white py-3 rounded-xl font-medium text-base backdrop-blur-sm transition-all duration-300 group-hover:scale-105"
+                        className="w-full bg-green-600 hover:bg-green-700 border-0 text-white py-3 rounded-xl font-medium text-base shadow-lg shadow-green-500/30 transition-all duration-300 group-hover:scale-105"
                     >
                       Access Portal
                         <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -200,6 +239,7 @@ export default function RoleSelection() {
                   </CardContent>
                 </Card>
               </Link>
+              </motion.div>
             );
             }
           })}

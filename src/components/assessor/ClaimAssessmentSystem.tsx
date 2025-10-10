@@ -166,12 +166,12 @@ export default function ClaimAssessmentSystem() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "draft": return "bg-gray-100 text-gray-800";
+      case "draft": return "bg-gray-100 text-white/90";
       case "submitted": return "bg-blue-100 text-blue-800";
       case "under_review": return "bg-yellow-100 text-yellow-800";
       case "approved": return "bg-green-100 text-green-800";
       case "rejected": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-100 text-white/90";
     }
   };
 
@@ -192,10 +192,10 @@ export default function ClaimAssessmentSystem() {
       case "flood": return "bg-blue-100 text-blue-800";
       case "pest": return "bg-red-100 text-red-800";
       case "disease": return "bg-purple-100 text-purple-800";
-      case "hail": return "bg-gray-100 text-gray-800";
+      case "hail": return "bg-gray-100 text-white/90";
       case "fire": return "bg-red-100 text-red-800";
-      case "other": return "bg-gray-100 text-gray-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "other": return "bg-gray-100 text-white/90";
+      default: return "bg-gray-100 text-white/90";
     }
   };
 
@@ -455,18 +455,18 @@ export default function ClaimAssessmentSystem() {
               <div className="p-4 bg-gray-50 rounded-lg">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Damage Percentage</Label>
+                    <Label className="text-sm font-medium text-white/80 dark:text-gray-300">Damage Percentage</Label>
                     <p className="text-2xl font-bold text-red-600">{calculateDamagePercentage()}%</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Estimated Loss</Label>
+                    <Label className="text-sm font-medium text-white/80 dark:text-gray-300">Estimated Loss</Label>
                     <p className="text-2xl font-bold text-red-600">{calculateEstimatedLoss().toLocaleString()} RWF</p>
                   </div>
                 </div>
               </div>
 
               <div>
-                <Label className="text-base font-medium text-gray-700 dark:text-gray-300">Damage Factors</Label>
+                <Label className="text-base font-medium text-white/80 dark:text-gray-300">Damage Factors</Label>
                 <p className="text-sm text-gray-500 mb-3">Select all applicable damage factors</p>
                 <div className="grid gap-3 md:grid-cols-2">
                   {[
@@ -495,14 +495,14 @@ export default function ClaimAssessmentSystem() {
                           }
                         }}
                       />
-                      <Label htmlFor={factor} className="text-sm text-gray-700 dark:text-gray-300">{factor}</Label>
+                      <Label htmlFor={factor} className="text-sm text-white/80 dark:text-gray-300">{factor}</Label>
                     </div>
                   ))}
                 </div>
               </div>
 
               <div>
-                <Label className="text-base font-medium text-gray-700 dark:text-gray-300">Recovery Measures</Label>
+                <Label className="text-base font-medium text-white/80 dark:text-gray-300">Recovery Measures</Label>
                 <p className="text-sm text-gray-500 mb-3">Select recommended recovery measures</p>
                 <div className="grid gap-3 md:grid-cols-2">
                   {[
@@ -531,7 +531,7 @@ export default function ClaimAssessmentSystem() {
                           }
                         }}
                       />
-                      <Label htmlFor={measure} className="text-sm text-gray-700 dark:text-gray-300">{measure}</Label>
+                      <Label htmlFor={measure} className="text-sm text-white/80 dark:text-gray-300">{measure}</Label>
                     </div>
                   ))}
                 </div>
@@ -619,7 +619,7 @@ export default function ClaimAssessmentSystem() {
                   <span className="text-2xl font-bold">{calculateOverallScore()}/100</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Recommended Compensation</span>
+                  <span className="text-sm text-white/70">Recommended Compensation</span>
                   <span className="text-lg font-bold text-green-600">
                     {calculateEstimatedLoss().toLocaleString()} RWF
                   </span>
@@ -736,8 +736,8 @@ export default function ClaimAssessmentSystem() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Assessments</p>
-                <p className="text-2xl font-bold text-gray-900">{assessments.length}</p>
+                <p className="text-sm font-medium text-white/70">Total Assessments</p>
+                <p className="text-2xl font-bold text-white">{assessments.length}</p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                 <FileText className="h-6 w-6 text-blue-600" />
@@ -750,13 +750,13 @@ export default function ClaimAssessmentSystem() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Draft</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-white/70">Draft</p>
+                <p className="text-2xl font-bold text-white">
                   {assessments.filter(a => a.status === 'draft').length}
                 </p>
               </div>
               <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                <Edit className="h-6 w-6 text-gray-600" />
+                <Edit className="h-6 w-6 text-white/70" />
               </div>
             </div>
           </CardContent>
@@ -766,8 +766,8 @@ export default function ClaimAssessmentSystem() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Submitted</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-white/70">Submitted</p>
+                <p className="text-2xl font-bold text-white">
                   {assessments.filter(a => a.status === 'submitted').length}
                 </p>
               </div>
@@ -782,8 +782,8 @@ export default function ClaimAssessmentSystem() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Approved</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-white/70">Approved</p>
+                <p className="text-2xl font-bold text-white">
                   {assessments.filter(a => a.status === 'approved').length}
                 </p>
               </div>
@@ -817,7 +817,7 @@ export default function ClaimAssessmentSystem() {
               </thead>
               <tbody>
                 {filteredAssessments.map((assessment) => (
-                  <tr key={assessment.id} className="border-b hover:bg-gray-50">
+                  <tr key={assessment.id} className="border-b hover:bg-gray-800/30">
                     <td className="p-3 font-medium">{assessment.id}</td>
                     <td className="p-3 font-medium">{assessment.claimId}</td>
                     <td className="p-3">

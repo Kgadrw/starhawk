@@ -330,33 +330,33 @@ export default function AssessorNotifications() {
                 </label>
                 <label className="flex items-center">
                   <input type="checkbox" defaultChecked className="mr-2" />
-                  <span className="text-sm text-gray-600">Claim assessment assignments</span>
+                  <span className="text-sm text-white/70">Claim assessment assignments</span>
                 </label>
                 <label className="flex items-center">
                   <input type="checkbox" className="mr-2" />
-                  <span className="text-sm text-gray-600">Assessment approval notifications</span>
+                  <span className="text-sm text-white/70">Assessment approval notifications</span>
                 </label>
               </div>
             </div>
             
             <div className="space-y-3">
-              <h4 className="font-medium text-gray-900">System Notifications</h4>
+              <h4 className="font-medium text-white">System Notifications</h4>
               <div className="space-y-2">
                 <label className="flex items-center">
                   <input type="checkbox" defaultChecked className="mr-2" />
-                  <span className="text-sm text-gray-600">Training reminders</span>
+                  <span className="text-sm text-white/70">Training reminders</span>
                 </label>
                 <label className="flex items-center">
                   <input type="checkbox" className="mr-2" />
-                  <span className="text-sm text-gray-600">Equipment maintenance alerts</span>
+                  <span className="text-sm text-white/70">Equipment maintenance alerts</span>
                 </label>
                 <label className="flex items-center">
                   <input type="checkbox" className="mr-2" />
-                  <span className="text-sm text-gray-600">System updates</span>
+                  <span className="text-sm text-white/70">System updates</span>
                 </label>
                 <label className="flex items-center">
                   <input type="checkbox" defaultChecked className="mr-2" />
-                  <span className="text-sm text-gray-600">Performance reports</span>
+                  <span className="text-sm text-white/70">Performance reports</span>
                 </label>
               </div>
             </div>

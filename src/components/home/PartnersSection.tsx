@@ -1,6 +1,7 @@
 import { LogoLoop } from '@/components/ui/LogoLoop';
 import { useRef } from 'react';
 import VariableProximity from '@/components/ui/VariableProximity';
+import { motion } from 'framer-motion';
 
 const PartnersSection = () => {
   const containerRef = useRef(null);
@@ -58,7 +59,7 @@ const PartnersSection = () => {
   ];
 
   return (
-    <section className="relative py-16 sm:py-20 lg:py-24">
+    <section className="relative py-16 sm:py-20 lg:py-24" ref={containerRef}>
       {/* Background decorations */}
       <div className="absolute inset-0 opacity-70 flex items-center justify-center">
         <img
@@ -83,14 +84,27 @@ const PartnersSection = () => {
         />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center" ref={containerRef} style={{ position: 'relative' }}>
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center" style={{ position: 'relative' }}>
         {/* Section Header */}
-        <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-full mb-4 sm:mb-6">
-          <span className="text-white/90 text-xs sm:text-sm font-medium">Trusted Partners</span>
-        </div>        
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+        >
+          <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-full mb-4 sm:mb-6">
+            <span className="text-white/90 text-xs sm:text-sm font-medium">Trusted Partners</span>
+          </div>
+        </motion.div>        
 
         {/* Logo Loop */}
-        <div className="max-w-6xl mx-auto">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="max-w-6xl mx-auto"
+        >
           <div style={{ height: '120px', position: 'relative', overflow: 'hidden' }}>
             <LogoLoop
               logos={partnerLogos}
@@ -105,18 +119,25 @@ const PartnersSection = () => {
               ariaLabel="Technology partners"
             />
           </div>
-        </div>
+        </motion.div>
 
         {/* Additional Info */}
-        <VariableProximity
-          label="Join 500+ companies already using STARHAWK"
-          fromFontVariationSettings="'wght' 400, 'opsz' 14"
-          toFontVariationSettings="'wght' 600, 'opsz' 15"
-          containerRef={containerRef}
-          radius={50}
-          falloff="linear"
-          className="text-sm sm:text-base text-white/70 mt-8 sm:mt-12 cursor-pointer"
-        />
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+        >
+          <VariableProximity
+            label="Join 500+ companies already using STARHAWK"
+            fromFontVariationSettings="'wght' 400, 'opsz' 14"
+            toFontVariationSettings="'wght' 600, 'opsz' 15"
+            containerRef={containerRef}
+            radius={50}
+            falloff="linear"
+            className="text-sm sm:text-base text-white/70 mt-8 sm:mt-12 cursor-pointer"
+          />
+        </motion.div>
       </div>
     </section>
   );

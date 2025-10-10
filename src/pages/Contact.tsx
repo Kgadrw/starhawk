@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { HomeNavbar } from "@/components/layout/HomeNavbar";
 import { FooterSection } from "@/components/home/FooterSection";
 import CustomScrollbar from "@/components/ui/CustomScrollbar";
-import DarkVeil from "@/components/ui/DarkVeil";
+import { motion } from "framer-motion";
 import { 
   Phone, 
   Mail, 
@@ -121,21 +121,23 @@ export default function Contact() {
       
       {/* Hero Section with Contact Form */}
       <div className="relative min-h-screen flex items-center justify-center">
-        {/* DarkVeil Background */}
-        <div style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}>
-          <DarkVeil 
-            hueShift={120}
-            noiseIntensity={0.02}
-            scanlineIntensity={0.1}
-            speed={0.3}
-            scanlineFrequency={0.8}
-            warpAmount={0.1}
+        {/* Grid Pattern Background */}
+        <div className="absolute inset-0 opacity-70 flex items-center justify-center">
+          <img
+            src="/lines.png"
+            alt="Grid lines"
+            className="w-3/4 h-3/4 object-contain"
           />
         </div>
 
         {/* Hero Content */}
         <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20">
-          <div className="text-center mb-12">
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-center mb-12"
+          >
             <div className="inline-flex items-center space-x-2 bg-gray-800/10 backdrop-blur-sm px-3 py-1.5 rounded-full mb-4">
               <Sparkles className="h-3 w-3 text-green-400" />
               <span className="text-white/90 text-xs font-medium">Get in Touch</span>
@@ -148,10 +150,15 @@ export default function Contact() {
             <p className="text-base text-white/80 max-w-2xl mx-auto leading-relaxed">
               Ready to transform your agricultural insurance? Send us a message and we'll get back to you within 24 hours.
             </p>
-          </div>
+          </motion.div>
 
           {/* Contact Form */}
-          <Card className="bg-transparent backdrop-blur-sm border border-green-400/20 max-w-2xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+          >
+            <Card className="bg-transparent backdrop-blur-sm border border-green-400/20 max-w-2xl mx-auto">
             <CardContent className="p-8">
               {submitSuccess && (
                 <div className="mb-6 p-4 bg-green-500/20 border border-green-500/30 rounded-lg">
@@ -248,6 +255,7 @@ export default function Contact() {
               </form>
             </CardContent>
           </Card>
+          </motion.div>
         </div>
       </div>
 

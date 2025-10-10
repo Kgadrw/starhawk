@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import VariableProximity from "@/components/ui/VariableProximity";
 import { useRef } from 'react';
+import { motion } from "framer-motion";
 import { ArrowRight, Star } from "lucide-react";
 
 export function CTASection() {
@@ -14,7 +15,13 @@ export function CTASection() {
       style={{ position: 'relative' }}
     >
       <div className="max-w-4xl mx-auto text-center">
-        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-12">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+          className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-12"
+        >
           <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-8">
             <Star className="h-4 w-4 text-yellow-400" />
             <VariableProximity
@@ -67,7 +74,7 @@ export function CTASection() {
               Learn More
             </Button>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );

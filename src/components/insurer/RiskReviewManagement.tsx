@@ -121,7 +121,7 @@ export default function RiskReviewManagement() {
       case "approved": return "bg-green-100 text-green-800";
       case "rejected": return "bg-red-100 text-red-800";
       case "under_review": return "bg-blue-100 text-blue-800";
-      default: return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-100 text-white/90";
     }
   };
 
@@ -140,7 +140,7 @@ export default function RiskReviewManagement() {
       case "low": return "bg-green-100 text-green-800";
       case "medium": return "bg-yellow-100 text-yellow-800";
       case "high": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-100 text-white/90";
     }
   };
 
@@ -207,8 +207,8 @@ export default function RiskReviewManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Risk Assessment Reviews</h1>
-          <p className="text-gray-600 mt-1">Review and approve risk assessments for farmers</p>
+          <h1 className="text-3xl font-bold text-white">Risk Assessment Reviews</h1>
+          <p className="text-white/70 mt-1">Review and approve risk assessments for farmers</p>
         </div>
       </div>
 
@@ -262,8 +262,8 @@ export default function RiskReviewManagement() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Assessments</p>
-                <p className="text-2xl font-bold text-gray-900">{assessments.length}</p>
+                <p className="text-sm font-medium text-white/70">Total Assessments</p>
+                <p className="text-2xl font-bold text-white">{assessments.length}</p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                 <BarChart3 className="h-6 w-6 text-blue-600" />
@@ -276,8 +276,8 @@ export default function RiskReviewManagement() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Pending Review</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-white/70">Pending Review</p>
+                <p className="text-2xl font-bold text-white">
                   {assessments.filter(a => a.status === 'pending_review').length}
                 </p>
               </div>
@@ -292,8 +292,8 @@ export default function RiskReviewManagement() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Approved</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-white/70">Approved</p>
+                <p className="text-2xl font-bold text-white">
                   {assessments.filter(a => a.status === 'approved').length}
                 </p>
               </div>
@@ -308,8 +308,8 @@ export default function RiskReviewManagement() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">High Risk</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-white/70">High Risk</p>
+                <p className="text-2xl font-bold text-white">
                   {assessments.filter(a => a.riskLevel === 'high').length}
                 </p>
               </div>

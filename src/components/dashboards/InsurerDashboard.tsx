@@ -9,6 +9,8 @@ import RiskReviewManagement from "../insurer/RiskReviewManagement";
 import RiskAssessmentSystem from "../assessor/RiskAssessmentSystem";
 import CropMonitoringSystem from "../monitoring/CropMonitoringSystem";
 import SatelliteStatistics from "../insurer/SatelliteStatistics";
+import WeatherForecast from "../insurer/WeatherForecast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   BarChart3,
   Bell,
@@ -17,7 +19,9 @@ import {
   Activity,
   FileText,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  Satellite,
+  CloudRain
 } from "lucide-react";
 
 export default function InsurerDashboard() {
@@ -27,7 +31,26 @@ export default function InsurerDashboard() {
 
 
   const renderDashboard = () => (
-    <SatelliteStatistics />
+    <Tabs defaultValue="satellite" className="w-full">
+      <TabsList className="grid w-full max-w-md grid-cols-2 mb-6 bg-gray-800/50">
+        <TabsTrigger value="satellite" className="data-[state=active]:bg-blue-600">
+          <Satellite className="h-4 w-4 mr-2" />
+          Satellite Analytics
+        </TabsTrigger>
+        <TabsTrigger value="weather" className="data-[state=active]:bg-blue-600">
+          <CloudRain className="h-4 w-4 mr-2" />
+          Weather Forecast
+        </TabsTrigger>
+      </TabsList>
+      
+      <TabsContent value="satellite" className="mt-0">
+        <SatelliteStatistics />
+      </TabsContent>
+      
+      <TabsContent value="weather" className="mt-0">
+        <WeatherForecast />
+      </TabsContent>
+    </Tabs>
   );
 
 

@@ -144,7 +144,7 @@ export default function ClaimsCarousel() {
       case "approved": return "bg-green-100 text-green-800";
       case "rejected": return "bg-red-100 text-red-800";
       case "under_investigation": return "bg-blue-100 text-blue-800";
-      default: return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-100 text-white/90";
     }
   };
 
@@ -163,7 +163,7 @@ export default function ClaimsCarousel() {
       case "high": return "bg-red-100 text-red-800";
       case "medium": return "bg-yellow-100 text-yellow-800";
       case "low": return "bg-green-100 text-green-800";
-      default: return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-100 text-white/90";
     }
   };
 
@@ -190,8 +190,8 @@ export default function ClaimsCarousel() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Claims Review</h2>
-          <p className="text-gray-600">Browse through claims for review and decision making</p>
+          <h2 className="text-2xl font-bold text-white">Claims Review</h2>
+          <p className="text-white/70">Browse through claims for review and decision making</p>
         </div>
         <div className="flex items-center space-x-2">
           <Badge variant="outline" className="bg-blue-50 text-blue-700">
@@ -227,7 +227,7 @@ export default function ClaimsCarousel() {
               <div className="flex items-center space-x-4">
                 <div>
                   <CardTitle className="text-xl">{currentClaim.id}</CardTitle>
-                  <p className="text-sm text-gray-600">Filed on {currentClaim.filedDate}</p>
+                  <p className="text-sm text-white/70">Filed on {currentClaim.filedDate}</p>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Badge className={getPriorityColor(currentClaim.priority)}>
@@ -247,31 +247,31 @@ export default function ClaimsCarousel() {
               {/* Left Column - Claim Details */}
               <div className="space-y-4">
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-gray-900 mb-3">Claim Information</h3>
+                  <h3 className="font-semibold text-white mb-3">Claim Information</h3>
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Claim Amount:</span>
+                      <span className="text-white/70">Claim Amount:</span>
                       <span className="font-semibold text-green-600">
                         {currentClaim.claimAmount.toLocaleString()} RWF
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Policy ID:</span>
+                      <span className="text-white/70">Policy ID:</span>
                       <span className="font-medium">{currentClaim.policyId}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Crop Type:</span>
+                      <span className="text-white/70">Crop Type:</span>
                       <span className="font-medium">{currentClaim.cropType}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Incident Date:</span>
+                      <span className="text-white/70">Incident Date:</span>
                       <span className="font-medium">{currentClaim.incidentDate}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="bg-blue-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-gray-900 mb-3">Farmer Information</h3>
+                  <h3 className="font-semibold text-white mb-3">Farmer Information</h3>
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
                       <User className="h-4 w-4 text-gray-500" />
@@ -279,11 +279,11 @@ export default function ClaimsCarousel() {
                     </div>
                     <div className="flex items-center space-x-2">
                       <FileText className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">ID: {currentClaim.farmerId}</span>
+                      <span className="text-sm text-white/70">ID: {currentClaim.farmerId}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <MapPin className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">{currentClaim.location}</span>
+                      <span className="text-sm text-white/70">{currentClaim.location}</span>
                     </div>
                   </div>
                   <div className="flex space-x-2 mt-3">
@@ -302,7 +302,7 @@ export default function ClaimsCarousel() {
               {/* Right Column - Assessment & Actions */}
               <div className="space-y-4">
                 <div className="bg-orange-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-gray-900 mb-3">Assessment Information</h3>
+                  <h3 className="font-semibold text-white mb-3">Assessment Information</h3>
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
                       <User className="h-4 w-4 text-gray-500" />
@@ -310,7 +310,7 @@ export default function ClaimsCarousel() {
                     </div>
                     <div className="flex items-center space-x-2">
                       <FileText className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">ID: {currentClaim.assessorId}</span>
+                      <span className="text-sm text-white/70">ID: {currentClaim.assessorId}</span>
                     </div>
                   </div>
                   <div className="mt-3">
@@ -322,8 +322,8 @@ export default function ClaimsCarousel() {
                 </div>
 
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-gray-900 mb-3">Description</h3>
-                  <p className="text-sm text-gray-700 leading-relaxed">
+                  <h3 className="font-semibold text-white mb-3">Description</h3>
+                  <p className="text-sm text-white/80 leading-relaxed">
                     {currentClaim.description}
                   </p>
                 </div>
@@ -377,7 +377,7 @@ export default function ClaimsCarousel() {
             <div className="text-2xl font-bold text-yellow-600">
               {claims.filter(c => c.status === 'pending_review').length}
             </div>
-            <p className="text-sm text-gray-600">Pending Review</p>
+            <p className="text-sm text-white/70">Pending Review</p>
           </CardContent>
         </Card>
         <Card>
@@ -385,7 +385,7 @@ export default function ClaimsCarousel() {
             <div className="text-2xl font-bold text-blue-600">
               {claims.filter(c => c.status === 'under_investigation').length}
             </div>
-            <p className="text-sm text-gray-600">Under Investigation</p>
+            <p className="text-sm text-white/70">Under Investigation</p>
           </CardContent>
         </Card>
         <Card>
@@ -393,7 +393,7 @@ export default function ClaimsCarousel() {
             <div className="text-2xl font-bold text-green-600">
               {claims.filter(c => c.status === 'approved').length}
             </div>
-            <p className="text-sm text-gray-600">Approved</p>
+            <p className="text-sm text-white/70">Approved</p>
           </CardContent>
         </Card>
         <Card>
@@ -401,7 +401,7 @@ export default function ClaimsCarousel() {
             <div className="text-2xl font-bold text-red-600">
               {claims.filter(c => c.status === 'rejected').length}
             </div>
-            <p className="text-sm text-gray-600">Rejected</p>
+            <p className="text-sm text-white/70">Rejected</p>
           </CardContent>
         </Card>
       </div>
