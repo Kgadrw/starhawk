@@ -1,771 +1,399 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { dashboardTheme } from "@/utils/dashboardTheme";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
 import { 
-  MapPin,
-  Calendar,
-  User,
-  Crop,
   AlertTriangle,
-  Shield,
-  BarChart3,
-  Camera,
-  FileText,
-  Save,
-  Send,
-  Eye,
-  Edit,
-  Trash2,
-  Plus,
-  Search,
-  Filter,
-  Clock,
-  CheckCircle,
-  X,
-  CloudRain,
-  Sun,
-  Wind,
-  Thermometer,
-  Droplets,
-  Leaf,
-  Bug,
-  TrendingUp,
-  TrendingDown,
-  Activity,
   Satellite,
-  Drone,
-  Smartphone,
-  Wifi,
-  Battery,
-  Signal,
-  Navigation,
-  Target,
-  Zap,
-  Globe,
   Layers,
-  ArrowLeft
+  Calendar
 } from "lucide-react";
 
-interface MonitoringSession {
-  id: string;
-  farmerId: string;
-  farmerName: string;
-  cropType: string;
-  farmSize: number;
-  location: string;
-  monitorId: string;
-  monitorName: string;
-  status: "active" | "completed" | "scheduled" | "paused";
-  startDate: string;
-  endDate?: string;
-  stage: "planting" | "germination" | "vegetative" | "flowering" | "fruiting" | "harvesting";
-  progress: number;
-  weatherData: {
-    temperature: number;
-    humidity: number;
-    rainfall: number;
-    windSpeed: number;
-    uvIndex: number;
-  };
-  soilData: {
-    moisture: number;
-    ph: number;
-    nutrients: {
-      nitrogen: number;
-      phosphorus: number;
-      potassium: number;
-    };
-  };
-  cropHealth: {
-    overall: number;
-    pestDamage: number;
-    diseasePresence: number;
-    growthRate: number;
-  };
-  alerts: Array<{
-    id: string;
-    type: "warning" | "critical" | "info";
-    message: string;
-    timestamp: string;
-    resolved: boolean;
-  }>;
-  photos: string[];
-  notes: string;
-  gpsCoordinates: { lat: number; lng: number };
-  lastUpdate: string;
-}
 
-interface WeatherForecast {
-  date: string;
-  temperature: { min: number; max: number };
-  humidity: number;
-  rainfall: number;
-  windSpeed: number;
-  conditions: string;
-}
+// EOS Statistics API Service (via backend proxy)
+const eosStatisticsApi = {
+  async createTask(geometry, dateStart, dateEnd, bmType = ["ndvi"]) {
+    const response = await fetch('/api/eos-statistics', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        geometry,
+        dateStart,
+        dateEnd,
+        bmType
+      })
+    });
+    
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (e) {
+        // If JSON parsing fails, use the status text
+        const errorText = await response.text();
+        errorMessage = errorText || errorMessage;
+      }
+      throw new Error(`EOS API error: ${errorMessage}`);
+    }
+    
+    try {
+      return await response.json();
+    } catch (e) {
+      throw new Error('Invalid JSON response from server');
+    }
+  },
+  
+  async checkTaskStatus(taskId) {
+    const response = await fetch(`/api/eos-statistics?taskId=${taskId}`);
+    
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (e) {
+        // If JSON parsing fails, use the status text
+        const errorText = await response.text();
+        errorMessage = errorText || errorMessage;
+      }
+      throw new Error(`EOS API error: ${errorMessage}`);
+    }
+    
+    try {
+      return await response.json();
+    } catch (e) {
+      throw new Error('Invalid JSON response from server');
+    }
+  }
+};
+
+// EOS Statistics Component
+const EOSStatisticsWidget = ({ bbox = "-2.0,29.5,-1.5,30.0", timeRange = "2024-10-01/2024-10-15" }) => {
+  const [statistics, setStatistics] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [taskId, setTaskId] = useState(null);
+  const [taskStatus, setTaskStatus] = useState(null);
+
+  const convertBboxToPolygon = (bbox) => {
+    const [minLon, minLat, maxLon, maxLat] = bbox.split(',').map(Number);
+    return [
+      [minLon, minLat],
+      [maxLon, minLat],
+      [maxLon, maxLat],
+      [minLon, maxLat],
+      [minLon, minLat] // Close the polygon
+    ];
+  };
+
+  const fetchStatistics = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // For now, show demo statistics due to CORS limitations
+      // TODO: Implement proper backend API for EOS integration
+      console.log('EOS Statistics API temporarily disabled due to CORS - showing demo data');
+      
+      // Simulate API delay
+      setTimeout(() => {
+        const demoStats = [
+          {
+            scene_id: "demo_scene_1",
+            date: "2024-10-01",
+            cloud: 15,
+            average: 0.65,
+            std: 0.12,
+            max: 0.89,
+            min: 0.23,
+            median: 0.67,
+            variance: 0.014,
+            q1: 0.58,
+            q3: 0.74,
+            p10: 0.45,
+            p90: 0.82
+          },
+          {
+            scene_id: "demo_scene_2", 
+            date: "2024-10-05",
+            cloud: 8,
+            average: 0.72,
+            std: 0.08,
+            max: 0.91,
+            min: 0.34,
+            median: 0.74,
+            variance: 0.006,
+            q1: 0.68,
+            q3: 0.78,
+            p10: 0.52,
+            p90: 0.85
+          },
+          {
+            scene_id: "demo_scene_3",
+            date: "2024-10-10", 
+            cloud: 22,
+            average: 0.58,
+            std: 0.15,
+            max: 0.83,
+            min: 0.18,
+            median: 0.61,
+            variance: 0.023,
+            q1: 0.48,
+            q3: 0.71,
+            p10: 0.35,
+            p90: 0.79
+          }
+        ];
+        
+        setStatistics(demoStats);
+        setLoading(false);
+        setTaskStatus("completed");
+        setError(null); // Clear error since we have demo data
+      }, 2000);
+      
+      // Uncomment below when proper backend API is implemented:
+      /*
+      const geometry = convertBboxToPolygon(bbox);
+      const [dateStart, dateEnd] = timeRange.split('/');
+      
+      console.log('Creating EOS statistics task...');
+      const taskResponse = await eosStatisticsApi.createTask(geometry, dateStart, dateEnd, ["ndvi"]);
+      
+      if (taskResponse.status === "created") {
+        setTaskId(taskResponse.task_id);
+        setTaskStatus("created");
+        console.log('Task created:', taskResponse.task_id);
+        
+        // Start polling for results
+        pollTaskStatus(taskResponse.task_id);
+      } else {
+        throw new Error(`Task creation failed: ${taskResponse.status}`);
+      }
+      */
+    } catch (err) {
+      console.error('EOS statistics error:', err);
+      setError(err.message);
+      setLoading(false);
+    }
+  };
+
+  const pollTaskStatus = async (taskId) => {
+    const maxAttempts = 30; // 5 minutes max
+    let attempts = 0;
+    
+    const poll = async () => {
+      try {
+        attempts++;
+        console.log(`Checking task status (attempt ${attempts}/${maxAttempts})...`);
+        
+        const statusResponse = await eosStatisticsApi.checkTaskStatus(taskId);
+        setTaskStatus(statusResponse.status || "unknown");
+        
+        if (statusResponse.result && statusResponse.result.length > 0) {
+          console.log('Statistics received:', statusResponse.result);
+          setStatistics(statusResponse.result);
+          setLoading(false);
+          return;
+        }
+        
+        if (attempts >= maxAttempts) {
+          setError('Task timeout - statistics processing took too long');
+          setLoading(false);
+          return;
+        }
+        
+        // Poll every 10 seconds
+        setTimeout(poll, 10000);
+      } catch (err) {
+        console.error('Polling error:', err);
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+    
+    poll();
+  };
+
+  useEffect(() => {
+    // Auto-fetch statistics when component mounts
+    fetchStatistics();
+  }, [bbox, timeRange]);
+
+  if (loading) {
+    return (
+      <div className="w-full h-[200px] bg-gray-800 rounded-lg flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+          <p className="text-white/70">Processing satellite statistics...</p>
+          <p className="text-xs text-white/50 mt-1">Status: {taskStatus || 'Starting...'}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="w-full h-[200px] bg-red-900/20 border border-red-700 rounded-lg flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+          <p className="text-red-400">Statistics unavailable</p>
+          <p className="text-red-300 text-sm mt-1">{error}</p>
+          <button 
+            onClick={fetchStatistics}
+            className="mt-2 px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+          >
+            Retry
+          </button>
+              </div>
+            </div>
+    );
+  }
+
+  if (!statistics || statistics.length === 0) {
+    return (
+      <div className="w-full h-[200px] bg-gray-800 rounded-lg flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-white/70">No statistics data available</p>
+          <button 
+            onClick={fetchStatistics}
+            className="mt-2 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+          >
+            Load Statistics
+          </button>
+              </div>
+            </div>
+    );
+  }
+
+  // Calculate average statistics across all scenes
+  const avgStats = statistics.reduce((acc, scene) => {
+    Object.keys(scene).forEach(key => {
+      if (typeof scene[key] === 'number' && !isNaN(scene[key])) {
+        acc[key] = (acc[key] || 0) + scene[key];
+      }
+    });
+    return acc;
+  }, {});
+
+  const sceneCount = statistics.length;
+  Object.keys(avgStats).forEach(key => {
+    if (typeof avgStats[key] === 'number') {
+      avgStats[key] = avgStats[key] / sceneCount;
+    }
+  });
+
+  return (
+    <div className="w-full bg-gray-800 rounded-lg p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-lg font-semibold text-white">NDVI Statistics Analysis</h3>
+        <div className="flex items-center space-x-2">
+          <Badge variant="outline" className="bg-orange-100 text-orange-800">
+            Demo Data
+          </Badge>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-green-400">{avgStats.average?.toFixed(3) || 'N/A'}</div>
+          <div className="text-xs text-white/70">Average NDVI</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-blue-400">{avgStats.std?.toFixed(3) || 'N/A'}</div>
+          <div className="text-xs text-white/70">Std Deviation</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-yellow-400">{avgStats.max?.toFixed(3) || 'N/A'}</div>
+          <div className="text-xs text-white/70">Max NDVI</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-red-400">{avgStats.min?.toFixed(3) || 'N/A'}</div>
+          <div className="text-xs text-white/70">Min NDVI</div>
+        </div>
+      </div>
+      <div className="mt-3 text-xs text-white/60">
+        <p>Analysis based on {sceneCount} satellite scenes</p>
+        <p>Time range: {timeRange}</p>
+        <p className="text-orange-400 mt-1">📊 Demo data - CORS limitations prevent live API access</p>
+      </div>
+    </div>
+  );
+};
+
 
 export default function CropMonitoringSystem() {
-  const [sessions, setSessions] = useState<MonitoringSession[]>([
-    {
-      id: "MON-001",
-      farmerId: "FMR-0247",
-      farmerName: "Jean Baptiste",
-      cropType: "Maize",
-      farmSize: 2.5,
-      location: "Nyagatare District",
-      monitorId: "MON-001",
-      monitorName: "Drone Pilot Alpha",
-      status: "active",
-      startDate: "2024-09-15",
-      stage: "vegetative",
-      progress: 65,
-      weatherData: {
-        temperature: 24,
-        humidity: 68,
-        rainfall: 0,
-        windSpeed: 12,
-        uvIndex: 7
-      },
-      soilData: {
-        moisture: 45,
-        ph: 6.8,
-        nutrients: {
-          nitrogen: 75,
-          phosphorus: 60,
-          potassium: 80
-        }
-      },
-      cropHealth: {
-        overall: 85,
-        pestDamage: 15,
-        diseasePresence: 5,
-        growthRate: 90
-      },
-      alerts: [
-        {
-          id: "ALT-001",
-          type: "warning",
-          message: "Low soil moisture detected in sector 3",
-          timestamp: "2024-10-05T10:30:00Z",
-          resolved: false
-        },
-        {
-          id: "ALT-002",
-          type: "info",
-          message: "Optimal growth conditions in sector 1",
-          timestamp: "2024-10-05T09:15:00Z",
-          resolved: true
-        }
-      ],
-      photos: ["crop1.jpg", "crop2.jpg"],
-      notes: "Crops showing good growth. Monitor soil moisture levels.",
-      gpsCoordinates: { lat: -1.9441, lng: 30.0619 },
-      lastUpdate: "2024-10-05T11:00:00Z"
-    }
-  ]);
-
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [selectedSession, setSelectedSession] = useState<MonitoringSession | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [stageFilter, setStageFilter] = useState("all");
 
-  const [weatherForecast] = useState<WeatherForecast[]>([
-    {
-      date: "2024-10-06",
-      temperature: { min: 18, max: 26 },
-      humidity: 72,
-      rainfall: 5,
-      windSpeed: 8,
-      conditions: "Partly Cloudy"
-    },
-    {
-      date: "2024-10-07",
-      temperature: { min: 16, max: 24 },
-      humidity: 78,
-      rainfall: 15,
-      windSpeed: 10,
-      conditions: "Light Rain"
-    },
-    {
-      date: "2024-10-08",
-      temperature: { min: 19, max: 27 },
-      humidity: 65,
-      rainfall: 0,
-      windSpeed: 6,
-      conditions: "Sunny"
-    }
-  ]);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active": return "bg-green-100 text-green-800";
-      case "completed": return "bg-blue-100 text-blue-800";
-      case "scheduled": return "bg-yellow-100 text-yellow-800";
-      case "paused": return "bg-red-100 text-red-800";
-      default: return "bg-gray-700 text-white";
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "active": return <Activity className="h-4 w-4" />;
-      case "completed": return <CheckCircle className="h-4 w-4" />;
-      case "scheduled": return <Clock className="h-4 w-4" />;
-      case "paused": return <X className="h-4 w-4" />;
-      default: return <Activity className="h-4 w-4" />;
-    }
-  };
-
-  const getStageColor = (stage: string) => {
-    switch (stage) {
-      case "planting": return "bg-brown-100 text-brown-800";
-      case "germination": return "bg-green-100 text-green-800";
-      case "vegetative": return "bg-blue-100 text-blue-800";
-      case "flowering": return "bg-purple-100 text-purple-800";
-      case "fruiting": return "bg-orange-100 text-orange-800";
-      case "harvesting": return "bg-yellow-100 text-yellow-800";
-      default: return "bg-gray-700 text-white";
-    }
-  };
-
-  const getAlertTypeColor = (type: string) => {
-    switch (type) {
-      case "critical": return "bg-red-100 text-red-800";
-      case "warning": return "bg-yellow-100 text-yellow-800";
-      case "info": return "bg-blue-100 text-blue-800";
-      default: return "bg-gray-700 text-white";
-    }
-  };
-
-  const filteredSessions = sessions.filter(session => {
-    const matchesSearch = session.farmerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         session.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         session.farmerId.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || session.status === statusFilter;
-    const matchesStage = stageFilter === "all" || session.stage === stageFilter;
-    
-    return matchesSearch && matchesStatus && matchesStage;
-  });
 
   const renderDashboard = () => (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Crop Monitoring Dashboard</h1>
-          <p className="text-white/60 mt-1">Real-time monitoring of crop health and field conditions</p>
-        </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          New Monitoring Session
-        </Button>
-      </div>
-
-      {/* Key Metrics */}
-      <div className="grid gap-6 md:grid-cols-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-white/70">Active Sessions</p>
-                <p className="text-2xl font-bold text-white">
-                  {sessions.filter(s => s.status === 'active').length}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <Activity className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-white/70">Total Alerts</p>
-                <p className="text-2xl font-bold text-white">
-                  {sessions.reduce((acc, s) => acc + s.alerts.filter(a => !a.resolved).length, 0)}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-white/70">Avg. Crop Health</p>
-                <p className="text-2xl font-bold text-white">
-                  {Math.round(sessions.reduce((acc, s) => acc + s.cropHealth.overall, 0) / sessions.length)}%
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Leaf className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-white/70">Fields Monitored</p>
-                <p className="text-2xl font-bold text-white">{sessions.length}</p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Satellite className="h-6 w-6 text-purple-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Active Monitoring Sessions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Active Monitoring Sessions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {sessions.filter(s => s.status === 'active').map((session) => (
-              <div key={session.id} className="p-4 border rounded-lg border-gray-700">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                      <Activity className="h-5 w-5 text-green-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-white">{session.farmerName}</h3>
-                      <p className="text-sm text-white/60">{session.cropType} - {session.location}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Badge className={getStageColor(session.stage)}>
-                      {session.stage}
-                    </Badge>
-                    <Badge className={getStatusColor(session.status)}>
-                      {getStatusIcon(session.status)}
-                      <span className="ml-1 capitalize">{session.status}</span>
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-4 mb-3">
-                  <div className="text-center">
-                    <div className="flex items-center justify-center mb-1">
-                      <Thermometer className="h-4 w-4 text-orange-500 mr-1" />
-                      <span className="text-sm font-medium">{session.weatherData.temperature}°C</span>
-                    </div>
-                    <p className="text-xs text-white/60">Temperature</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="flex items-center justify-center mb-1">
-                      <Droplets className="h-4 w-4 text-blue-500 mr-1" />
-                      <span className="text-sm font-medium">{session.soilData.moisture}%</span>
-                    </div>
-                    <p className="text-xs text-white/60">Soil Moisture</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="flex items-center justify-center mb-1">
-                      <Leaf className="h-4 w-4 text-green-500 mr-1" />
-                      <span className="text-sm font-medium">{session.cropHealth.overall}%</span>
-                    </div>
-                    <p className="text-xs text-white/60">Crop Health</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="flex items-center justify-center mb-1">
-                      <AlertTriangle className="h-4 w-4 text-red-500 mr-1" />
-                      <span className="text-sm font-medium">
-                        {session.alerts.filter(a => !a.resolved).length}
-                      </span>
-                    </div>
-                    <p className="text-xs text-white/60">Active Alerts</p>
-                  </div>
-                </div>
-
                 <div className="flex items-center justify-between">
-                  <div className="flex-1 mr-4">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">Growth Progress</span>
-                      <span className="text-sm text-white/60">{session.progress}%</span>
-                    </div>
-                    <Progress value={session.progress} className="h-2" />
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedSession(session)}
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    View Details
-                  </Button>
+        <div>
+          <h1 className="text-3xl font-bold text-white">Crop Monitoring</h1>
+          <p className="text-white/60 mt-1">Satellite-based crop health analysis</p>
                 </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Weather Forecast */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <CloudRain className="h-5 w-5 mr-2" />
-            Weather Forecast
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            {weatherForecast.map((forecast, index) => (
-              <div key={index} className="p-4 border border-gray-700 rounded-lg">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium text-white">{forecast.date}</h3>
-                  <Badge variant="outline">{forecast.conditions}</Badge>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-white/70">Temperature</span>
-                    <span className="text-sm font-medium">
-                      {forecast.temperature.min}°C - {forecast.temperature.max}°C
-                    </span>
+              {/* EOS Statistics Analysis */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Satellite className="h-5 w-5 mr-2" />
+                    Crop Health Analysis (NDVI Statistics)
+                  </CardTitle>
+                  <p className="text-sm text-white/70">Statistical analysis of vegetation health using satellite data</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="text-sm text-white/70">
+                          <span className="font-medium">Rwanda Region:</span> -2.0°S, 29.5°E to -1.5°S, 30.0°E
+                        </div>
+                        <Badge variant="outline" className="bg-orange-100 text-orange-800">
+                          Demo Mode
+                        </Badge>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button variant="outline" size="sm">
+                          <Calendar className="h-4 w-4 mr-1" />
+                          Time Range
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* EOS Statistics Widget */}
+                    <EOSStatisticsWidget 
+                      bbox="-2.0,29.5,-1.5,30.0" 
+                      timeRange="2024-10-01/2024-10-15" 
+                    />
+                    
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div className="p-3 bg-red-900/20 border border-red-700 rounded-lg">
+                        <div className="text-red-400 font-semibold">Low Vegetation</div>
+                        <div className="text-xs text-red-300">NDVI: 0.0 - 0.3</div>
+                      </div>
+                      <div className="p-3 bg-yellow-900/20 border border-yellow-700 rounded-lg">
+                        <div className="text-yellow-400 font-semibold">Moderate Vegetation</div>
+                        <div className="text-xs text-yellow-300">NDVI: 0.3 - 0.6</div>
+                      </div>
+                      <div className="p-3 bg-green-900/20 border border-green-700 rounded-lg">
+                        <div className="text-green-400 font-semibold">High Vegetation</div>
+                        <div className="text-xs text-green-300">NDVI: 0.6 - 1.0</div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-white/70">Humidity</span>
-                    <span className="text-sm font-medium">{forecast.humidity}%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-white/70">Rainfall</span>
-                    <span className="text-sm font-medium">{forecast.rainfall}mm</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-white/70">Wind Speed</span>
-                    <span className="text-sm font-medium">{forecast.windSpeed} km/h</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+                </CardContent>
+              </Card>
     </div>
   );
 
-  const renderSessionDetails = () => {
-    if (!selectedSession) return null;
-
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="sm" onClick={() => setSelectedSession(null)}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-white">Monitoring Session Details</h1>
-              <p className="text-white/70 mt-1">Session ID: {selectedSession.id}</p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3">
-            <Badge className={getStatusColor(selectedSession.status)}>
-              {getStatusIcon(selectedSession.status)}
-              <span className="ml-1 capitalize">{selectedSession.status}</span>
-            </Badge>
-            <Button variant="outline">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Session
-            </Button>
-          </div>
-        </div>
-
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="environmental">Environmental Data</TabsTrigger>
-            <TabsTrigger value="crop-health">Crop Health</TabsTrigger>
-            <TabsTrigger value="alerts">Alerts & Notes</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid gap-6 lg:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Session Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <Label className="text-sm font-medium text-white/80">Farmer</Label>
-                      <p className="text-sm text-white">{selectedSession.farmerName}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-white/80">Crop Type</Label>
-                      <p className="text-sm text-white">{selectedSession.cropType}</p>
-                    </div>
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <Label className="text-sm font-medium text-white/80">Farm Size</Label>
-                      <p className="text-sm text-white">{selectedSession.farmSize} hectares</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-white/80">Location</Label>
-                      <p className="text-sm text-white">{selectedSession.location}</p>
-                    </div>
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <Label className="text-sm font-medium text-white/80">Current Stage</Label>
-                      <Badge className={getStageColor(selectedSession.stage)}>
-                        {selectedSession.stage}
-                      </Badge>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-white/80">Progress</Label>
-                      <div className="flex items-center space-x-2">
-                        <Progress value={selectedSession.progress} className="flex-1" />
-                        <span className="text-sm font-medium">{selectedSession.progress}%</span>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Real-time Data</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <Thermometer className="h-5 w-5 text-orange-500 mr-2" />
-                        <span className="text-sm font-medium">Temperature</span>
-                      </div>
-                      <span className="text-lg font-bold">{selectedSession.weatherData.temperature}°C</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <Droplets className="h-5 w-5 text-blue-500 mr-2" />
-                        <span className="text-sm font-medium">Humidity</span>
-                      </div>
-                      <span className="text-lg font-bold">{selectedSession.weatherData.humidity}%</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <Leaf className="h-5 w-5 text-green-500 mr-2" />
-                        <span className="text-sm font-medium">Soil Moisture</span>
-                      </div>
-                      <span className="text-lg font-bold">{selectedSession.soilData.moisture}%</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <Activity className="h-5 w-5 text-purple-500 mr-2" />
-                        <span className="text-sm font-medium">Crop Health</span>
-                      </div>
-                      <span className="text-lg font-bold">{selectedSession.cropHealth.overall}%</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="environmental" className="space-y-6">
-            <div className="grid gap-6 lg:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <CloudRain className="h-5 w-5 mr-2" />
-                    Weather Conditions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Temperature</span>
-                      <span className="font-bold">{selectedSession.weatherData.temperature}°C</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Humidity</span>
-                      <span className="font-bold">{selectedSession.weatherData.humidity}%</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Rainfall (24h)</span>
-                      <span className="font-bold">{selectedSession.weatherData.rainfall}mm</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Wind Speed</span>
-                      <span className="font-bold">{selectedSession.weatherData.windSpeed} km/h</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">UV Index</span>
-                      <span className="font-bold">{selectedSession.weatherData.uvIndex}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Layers className="h-5 w-5 mr-2" />
-                    Soil Conditions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Moisture Level</span>
-                      <span className="font-bold">{selectedSession.soilData.moisture}%</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">pH Level</span>
-                      <span className="font-bold">{selectedSession.soilData.ph}</span>
-                    </div>
-                    <div className="space-y-2">
-                      <span className="text-sm font-medium">Nutrient Levels</span>
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-white/70">Nitrogen</span>
-                          <span className="text-xs font-medium">{selectedSession.soilData.nutrients.nitrogen}%</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-white/70">Phosphorus</span>
-                          <span className="text-xs font-medium">{selectedSession.soilData.nutrients.phosphorus}%</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-white/70">Potassium</span>
-                          <span className="text-xs font-medium">{selectedSession.soilData.nutrients.potassium}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="crop-health" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Leaf className="h-5 w-5 mr-2" />
-                  Crop Health Analysis
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Overall Health</span>
-                        <span className="font-bold">{selectedSession.cropHealth.overall}%</span>
-                      </div>
-                      <Progress value={selectedSession.cropHealth.overall} className="h-2" />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Growth Rate</span>
-                        <span className="font-bold">{selectedSession.cropHealth.growthRate}%</span>
-                      </div>
-                      <Progress value={selectedSession.cropHealth.growthRate} className="h-2" />
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Pest Damage</span>
-                        <span className="font-bold">{selectedSession.cropHealth.pestDamage}%</span>
-                      </div>
-                      <Progress value={selectedSession.cropHealth.pestDamage} className="h-2" />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Disease Presence</span>
-                        <span className="font-bold">{selectedSession.cropHealth.diseasePresence}%</span>
-                      </div>
-                      <Progress value={selectedSession.cropHealth.diseasePresence} className="h-2" />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="alerts" className="space-y-6">
-            <div className="grid gap-6 lg:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <AlertTriangle className="h-5 w-5 mr-2" />
-                    Active Alerts
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {selectedSession.alerts.filter(alert => !alert.resolved).map((alert) => (
-                      <div key={alert.id} className="p-3 border rounded-lg">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2 mb-1">
-                              <Badge className={getAlertTypeColor(alert.type)}>
-                                {alert.type}
-                              </Badge>
-                              <span className="text-xs text-white/60">
-                                {new Date(alert.timestamp).toLocaleString()}
-                              </span>
-                            </div>
-                            <p className="text-sm text-white/80">{alert.message}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <FileText className="h-5 w-5 mr-2" />
-                    Session Notes
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Textarea
-                    value={selectedSession.notes}
-                    readOnly
-                    rows={6}
-                    className="resize-none"
-                  />
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
-    );
-  };
-
   return (
     <div className="space-y-6">
-      {selectedSession ? renderSessionDetails() : renderDashboard()}
+      {renderDashboard()}
     </div>
   );
 }

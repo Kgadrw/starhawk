@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { HomeNavbar } from "@/components/layout/HomeNavbar";
 import { FooterSection } from "@/components/home/FooterSection";
+import RwandaLocationSelector from "@/components/common/RwandaLocationSelector";
 import { 
   User, 
   ArrowLeft, 
@@ -51,21 +52,14 @@ export default function FarmerRegistration() {
     village: ""
   });
 
-  const provinces = [
-    "Kigali City",
-    "Northern Province", 
-    "Southern Province",
-    "Eastern Province",
-    "Western Province"
-  ];
-
-  const districts = {
-    "Kigali City": ["Nyarugenge", "Gasabo", "Kicukiro"],
-    "Northern Province": ["Burera", "Gakenke", "Gicumbi", "Musanze", "Rulindo"],
-    "Southern Province": ["Gisagara", "Huye", "Kamonyi", "Muhanga", "Nyamagabe", "Nyanza", "Nyaruguru", "Ruhango"],
-    "Eastern Province": ["Bugesera", "Gatsibo", "Kayonza", "Kirehe", "Ngoma", "Nyagatare", "Rwamagana"],
-    "Western Province": ["Karongi", "Ngororero", "Nyabihu", "Nyamasheke", "Rubavu", "Rusizi", "Rutsiro"]
-  };
+  // Location state for Rwanda API integration
+  const [selectedLocation, setSelectedLocation] = useState({
+    province: null,
+    district: null,
+    sector: null,
+    village: null,
+    cell: null
+  });
 
   const handleInputChange = (field: keyof RegistrationData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -90,7 +84,7 @@ export default function FarmerRegistration() {
   };
 
   const isStep1Valid = formData.fullName && formData.gender && formData.nationalId && formData.phoneNumber;
-  const isStep2Valid = formData.province && formData.district && formData.sector && formData.cell && formData.village;
+  const isStep2Valid = selectedLocation.province && selectedLocation.district && selectedLocation.sector && selectedLocation.village && selectedLocation.cell;
 
   if (step === 3) {
     return (
@@ -289,69 +283,27 @@ export default function FarmerRegistration() {
 
               {step === 2 && (
                 <>
-                  <div className="space-y-2">
-                    <Label htmlFor="province">Province *</Label>
-                    <Select value={formData.province} onValueChange={(value) => handleInputChange('province', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select province" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {provinces.map((province) => (
-                          <SelectItem key={province} value={province}>{province}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="space-y-4">
+                    <div className="text-center mb-6">
+                      <h3 className="text-lg font-semibold text-white mb-2">Select Your Location</h3>
+                      <p className="text-white/70">Choose your province, district, sector, village, and cell</p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="district">District *</Label>
-                    <Select 
-                      value={formData.district} 
-                      onValueChange={(value) => handleInputChange('district', value)}
-                      disabled={!formData.province}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select district" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {formData.province && districts[formData.province as keyof typeof districts]?.map((district) => (
-                          <SelectItem key={district} value={district}>{district}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="sector">Sector *</Label>
-                      <Input
-                        id="sector"
-                        value={formData.sector}
-                        onChange={(e) => handleInputChange('sector', e.target.value)}
-                        placeholder="Enter sector name"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cell">Cell *</Label>
-                      <Input
-                        id="cell"
-                        value={formData.cell}
-                        onChange={(e) => handleInputChange('cell', e.target.value)}
-                        placeholder="Enter cell name"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="village">Village *</Label>
-                    <Input
-                      id="village"
-                      value={formData.village}
-                      onChange={(e) => handleInputChange('village', e.target.value)}
-                      placeholder="Enter village name"
-                      required
+                    <RwandaLocationSelector
+                      onLocationChange={(location) => {
+                        setSelectedLocation(location);
+                        // Update form data with selected location
+                        setFormData(prev => ({
+                          ...prev,
+                          province: location.province?.name || '',
+                          district: location.district?.name || '',
+                          sector: location.sector?.name || '',
+                          village: location.village?.name || '',
+                          cell: location.cell?.name || ''
+                        }));
+                      }}
+                      levels={['province', 'district', 'sector', 'village', 'cell']}
+                      className="space-y-4"
                     />
                   </div>
                 </>
