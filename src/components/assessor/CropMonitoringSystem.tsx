@@ -6,28 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import DashboardLayout from "../layout/DashboardLayout";
-import AssessorNotifications from "../assessor/AssessorNotifications";
-import AssessorProfileSettings from "../assessor/AssessorProfileSettings";
-import RiskAssessmentSystem from "../assessor/RiskAssessmentSystem";
-import LossAssessmentSystem from "../assessor/LossAssessmentSystem";
-import CropMonitoringSystem from "../assessor/CropMonitoringSystem";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import meteosourceApiService from "@/services/meteosourceApi";
 import { 
-  FileText, 
-  Bell,
-  User,
-  BarChart3,
-  Shield,
-  Activity,
-  Cloud,
   MapPin,
-  Calendar,
   Search,
   Filter,
   Plus,
-  Eye,
-  Edit,
+  FileText,
+  Activity,
   CloudRain,
   Leaf,
   FileSpreadsheet,
@@ -35,17 +22,13 @@ import {
   Wind,
   Droplets,
   Thermometer,
-  CloudSnow,
-  Zap,
   Clock,
   AlertTriangle,
-  Satellite,
-  CheckCircle,
-  AlertCircle
+  Calendar,
+  Cloud
 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-interface AssessmentSummary {
+interface MonitoringSummary {
   id: string;
   farmerName: string;
   location: string;
@@ -99,94 +82,95 @@ interface WeatherData {
     windSpeed: number;
     windDir: string;
     precipitation: number;
-    cloudCover: number;
+    humidity: number;
   }>;
   daily: Array<{
     date: Date;
-    temperature: { max: number; min: number; day: number };
     summary: string;
     weather: string;
     icon: number;
+    maxTemp: number;
+    minTemp: number;
+    precipitation: number;
+    humidity: number;
     windSpeed: number;
     windDir: string;
-    precipitation: number;
-    precipitationType: string;
-    cloudCover: number;
+    sunrise: string;
+    sunset: string;
   }>;
-  location: {
-    name: string;
-    country: string;
-    lat: string;
-    lon: string;
-    timezone: string;
-  };
 }
 
-export default function AssessorDashboard() {
-  const [activePage, setActivePage] = useState("dashboard");
-  const [assessorId] = useState("ASS-001");
-  const [assessorName] = useState("Richard Nkurunziza");
-  const [activeView, setActiveView] = useState("assessments");
+export default function CropMonitoringSystem() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [selectedAssessment, setSelectedAssessment] = useState<AssessmentSummary | null>(null);
+  const [selectedMonitoring, setSelectedMonitoring] = useState<MonitoringSummary | null>(null);
   const [selectedField, setSelectedField] = useState<Field | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "fieldSelection" | "fieldDetail">("list");
   const [activeTab, setActiveTab] = useState("basic-info");
   
-  // Mock data for dashboard
-  const totalAssessments = 12;
-  const totalRiskAssessments = 8;
-  const totalClaimAssessments = 4;
-  const pendingAssessments = 3;
-  
-  const assessments: AssessmentSummary[] = [
+  // Mock data for Crop Monitoring
+  const monitorings: MonitoringSummary[] = [
     {
-      id: "RISK-001",
+      id: "MON-001",
       farmerName: "Jean Baptiste",
       location: "Nyagatare, Eastern Province",
-      type: "Risk Assessment",
-      status: "Submitted",
+      type: "Crop Monitoring",
+      status: "Active",
       date: "2024-10-03"
     },
     {
-      id: "RISK-002",
+      id: "MON-002",
       farmerName: "Kamali Peace",
       location: "Gatsibo, Eastern Province",
-      type: "Risk Assessment",
-      status: "Pending",
+      type: "Crop Monitoring",
+      status: "Active",
       date: "2024-10-02"
     },
     {
-      id: "CLAIM-001",
-      farmerName: "Uwase Marie",
-      location: "Bugesera, Eastern Province",
-      type: "Claim Assessment",
-      status: "Under Review",
-      date: "2024-10-01"
-    },
-    {
-      id: "RISK-003",
+      id: "MON-003",
       farmerName: "Mugabo John",
       location: "Gatsibo, Eastern Province",
-      type: "Risk Assessment",
-      status: "Submitted",
+      type: "Crop Monitoring",
+      status: "Active",
       date: "2024-09-30"
     },
     {
-      id: "CLAIM-002",
-      farmerName: "Kayitesi Grace",
-      location: "Kirehe, Eastern Province",
-      type: "Claim Assessment",
-      status: "Pending",
-      date: "2024-09-28"
+      id: "MON-004",
+      farmerName: "Nkurunziza Richard",
+      location: "Nyagatare, Eastern Province",
+      type: "Crop Monitoring",
+      status: "Active",
+      date: "2024-09-25"
     }
   ];
 
   // Mock field data for farmers
   const fieldsByFarmer: Record<string, Field[]> = {
+    "Jean Baptiste": [
+      {
+        id: "FLD-002",
+        farmerName: "Jean Baptiste",
+        crop: "Maize",
+        area: 2.8,
+        season: "A",
+        status: "Processed",
+        fieldName: "Main Maize Field",
+        sowingDate: "2025-03-05"
+      }
+    ],
+    "Kamali Peace": [
+      {
+        id: "FLD-003",
+        farmerName: "Kamali Peace",
+        crop: "Rice",
+        area: 1.5,
+        season: "B",
+        status: "Processed",
+        fieldName: "Central Rice Field",
+        sowingDate: "2025-09-20"
+      }
+    ],
     "Mugabo John": [
       {
         id: "FLD-001",
@@ -219,22 +203,61 @@ export default function AssessorDashboard() {
         sowingDate: "2025-09-10"
       }
     ],
-    "Jean Baptiste": [
+    "Nkurunziza Richard": [
       {
-        id: "FLD-002",
-        farmerName: "Jean Baptiste",
-        crop: "Maize",
-        area: 2.8,
+        id: "FLD-005",
+        farmerName: "Nkurunziza Richard",
+        crop: "Potatoes",
+        area: 2.0,
         season: "A",
         status: "Processed",
-        fieldName: "Main Maize Field",
-        sowingDate: "2025-03-05"
+        fieldName: "West Potato Field",
+        sowingDate: "2025-03-10"
       }
     ]
   };
 
-  const getFieldsForAssessment = (assessment: AssessmentSummary): Field[] => {
-    return fieldsByFarmer[assessment.farmerName] || [];
+  const getFieldsForMonitoring = (monitoring: MonitoringSummary): Field[] => {
+    return fieldsByFarmer[monitoring.farmerName] || [];
+  };
+
+  // Filter monitorings
+  const filteredMonitorings = monitorings.filter(monitoring => {
+    const matchesSearch = searchQuery === "" ||
+      monitoring.farmerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      monitoring.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      monitoring.location.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = statusFilter === "all" || monitoring.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  // Clear all filters
+  const clearFilters = () => {
+    setStatusFilter("all");
+    setSearchQuery("");
+  };
+
+  const handleMonitoringClick = (monitoring: MonitoringSummary) => {
+    setSelectedMonitoring(monitoring);
+    setViewMode("fieldSelection");
+  };
+
+  const handleFieldClick = (field: Field) => {
+    setSelectedField(field);
+    setViewMode("fieldDetail");
+  };
+
+  const handleBackToList = () => {
+    setViewMode("list");
+    setSelectedMonitoring(null);
+    setSelectedField(null);
+  };
+
+  const handleBackToFields = () => {
+    setViewMode("fieldSelection");
+    setSelectedField(null);
   };
 
   const getFieldDetails = (field: Field): FieldDetail => {
@@ -246,8 +269,75 @@ export default function AssessorDashboard() {
       area: field.area,
       season: field.season,
       sowingDate: field.sowingDate,
-      location: assessments.find(a => a.farmerName === field.farmerName)?.location || ""
+      location: monitorings.find(m => m.farmerName === field.farmerName)?.location || ""
     };
+  };
+
+  const renderFieldSelection = () => {
+    if (!selectedMonitoring) return null;
+    const fields = getFieldsForMonitoring(selectedMonitoring);
+    
+    return (
+      <div className="space-y-6">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm">
+          <button 
+            onClick={handleBackToList}
+            className="text-teal-400 hover:text-teal-300"
+          >
+            Crop Monitoring
+          </button>
+          <span className="text-white/60">/</span>
+          <span className="text-white">{selectedMonitoring.farmerName}</span>
+        </div>
+
+        {/* Table */}
+        <Card className={`${dashboardTheme.card}`}>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-800">
+                    <th className="text-left py-4 px-6 font-medium text-white/80">Field ID</th>
+                    <th className="text-left py-4 px-6 font-medium text-white/80">Farmer</th>
+                    <th className="text-left py-4 px-6 font-medium text-white/80">Crop</th>
+                    <th className="text-left py-4 px-6 font-medium text-white/80">Area (ha)</th>
+                    <th className="text-left py-4 px-6 font-medium text-white/80">Season</th>
+                    <th className="text-left py-4 px-6 font-medium text-white/80">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fields.map((field, index) => (
+                    <tr
+                      key={field.id}
+                      onClick={() => handleFieldClick(field)}
+                      className={`border-b border-gray-800/50 hover:bg-gray-900/50 transition-colors cursor-pointer ${
+                        index % 2 === 0 ? "bg-gray-950/30" : ""
+                      }`}
+                    >
+                      <td className="py-4 px-6 text-white">{field.id}</td>
+                      <td className="py-4 px-6 text-white">{field.farmerName}</td>
+                      <td className="py-4 px-6 text-white">{field.crop}</td>
+                      <td className="py-4 px-6 text-white">{field.area} ha</td>
+                      <td className="py-4 px-6 text-white">{field.season}</td>
+                      <td className="py-4 px-6">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          field.status === "Processed"
+                            ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                            : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                        }`}>
+                          {field.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   };
 
   // Weather Analysis Component
@@ -266,7 +356,6 @@ export default function AssessorDashboard() {
       setError(null);
       
       try {
-        // Use 'kigali' as place_id for all locations in Rwanda
         const data = await meteosourceApiService.getCompleteWeatherData('kigali');
         setWeatherData(data);
         setLastUpdated(new Date());
@@ -286,10 +375,6 @@ export default function AssessorDashboard() {
         return <Cloud className="h-8 w-8 text-gray-500" />;
       } else if (summaryLower.includes('rain') || summaryLower.includes('drizzle')) {
         return <CloudRain className="h-8 w-8 text-blue-500" />;
-      } else if (summaryLower.includes('storm') || summaryLower.includes('thunder')) {
-        return <Zap className="h-8 w-8 text-purple-500" />;
-      } else if (summaryLower.includes('snow')) {
-        return <CloudSnow className="h-8 w-8 text-blue-200" />;
       } else {
         return <Cloud className="h-8 w-8 text-gray-400" />;
       }
@@ -329,8 +414,7 @@ export default function AssessorDashboard() {
     }
 
     return (
-    <div className="space-y-6">
-        {/* Current Weather */}
+      <div className="space-y-6">
         <Card className={`${dashboardTheme.card}`}>
           <CardHeader>
             <CardTitle className="flex items-center justify-between text-white">
@@ -344,57 +428,52 @@ export default function AssessorDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  {getWeatherIcon(weatherData.current.summary)}
-                  <div>
-                    <div className="text-4xl font-bold text-white">
-                      {weatherData.current.temperature}°C
-                    </div>
-                    <div className="text-lg text-white/70 capitalize">
-                      {weatherData.current.summary}
-                    </div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                {getWeatherIcon(weatherData.current.summary)}
+                <div>
+                  <div className="text-4xl font-bold text-white">
+                    {weatherData.current.temperature}°C
+                  </div>
+                  <div className="text-lg text-white/70 capitalize">
+                    {weatherData.current.summary}
                   </div>
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-800">
-                <div className="flex items-center text-white/80">
-                  <Wind className="h-5 w-5 mr-2 text-teal-500" />
-                  <div>
-                    <div className="text-xs text-white/60">Wind</div>
-                    <div className="font-medium">{weatherData.current.windSpeed} km/h</div>
-                    <div className="text-xs">{weatherData.current.windDir}</div>
-                  </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-800">
+              <div className="flex items-center text-white/80">
+                <Wind className="h-5 w-5 mr-2 text-teal-500" />
+                <div>
+                  <div className="text-xs text-white/60">Wind</div>
+                  <div className="font-medium">{weatherData.current.windSpeed} km/h</div>
                 </div>
-                <div className="flex items-center text-white/80">
-                  <Droplets className="h-5 w-5 mr-2 text-blue-500" />
-                  <div>
-                    <div className="text-xs text-white/60">Humidity</div>
-                    <div className="font-medium">{weatherData.current.humidity}%</div>
-                  </div>
+              </div>
+              <div className="flex items-center text-white/80">
+                <Droplets className="h-5 w-5 mr-2 text-blue-500" />
+                <div>
+                  <div className="text-xs text-white/60">Humidity</div>
+                  <div className="font-medium">{weatherData.current.humidity}%</div>
                 </div>
-                <div className="flex items-center text-white/80">
-                  <CloudRain className="h-5 w-5 mr-2 text-cyan-500" />
-                  <div>
-                    <div className="text-xs text-white/60">Precipitation</div>
-                    <div className="font-medium">{weatherData.current.precipitation}mm</div>
-                  </div>
+              </div>
+              <div className="flex items-center text-white/80">
+                <CloudRain className="h-5 w-5 mr-2 text-cyan-500" />
+                <div>
+                  <div className="text-xs text-white/60">Precipitation</div>
+                  <div className="font-medium">{weatherData.current.precipitation}mm</div>
                 </div>
-                <div className="flex items-center text-white/80">
-                  <Thermometer className="h-5 w-5 mr-2 text-orange-500" />
-                  <div>
-                    <div className="text-xs text-white/60">Pressure</div>
-                    <div className="font-medium">{weatherData.current.pressure} hPa</div>
-                  </div>
+              </div>
+              <div className="flex items-center text-white/80">
+                <Thermometer className="h-5 w-5 mr-2 text-orange-500" />
+                <div>
+                  <div className="text-xs text-white/60">Pressure</div>
+                  <div className="font-medium">{weatherData.current.pressure} hPa</div>
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Hourly Forecast */}
         <Card className={`${dashboardTheme.card}`}>
           <CardHeader>
             <CardTitle className="flex items-center text-white">
@@ -413,10 +492,6 @@ export default function AssessorDashboard() {
                     </div>
                     <div className="text-white font-bold mb-1">{hour.temperature}°</div>
                     <div className="text-white/60 text-xs capitalize">{hour.summary}</div>
-                    <div className="text-white/40 text-xs mt-2">
-                      <Wind className="h-3 w-3 inline mr-1" />
-                      {hour.windSpeed}km/h
-                    </div>
                   </div>
                 ))}
               </div>
@@ -424,7 +499,6 @@ export default function AssessorDashboard() {
           </CardContent>
         </Card>
 
-        {/* Daily Forecast */}
         <Card className={`${dashboardTheme.card}`}>
           <CardHeader>
             <CardTitle className="flex items-center text-white">
@@ -474,10 +548,8 @@ export default function AssessorDashboard() {
     const loadCropData = async () => {
       setLoading(true);
       try {
-        // Simulate API call delay
         await new Promise(resolve => setTimeout(resolve, 800));
         
-        // Mock crop analysis data
         const mockData = {
           currentStage: fieldDetails.cropType === "Maize" ? "flowering" : "vegetation",
           growthProgress: fieldDetails.cropType === "Maize" ? 65 : 45,
@@ -530,8 +602,6 @@ export default function AssessorDashboard() {
       return "text-orange-500";
     };
 
-    const formatDate = (date: Date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
     if (loading) {
       return (
         <div className="flex items-center justify-center py-12">
@@ -558,7 +628,6 @@ export default function AssessorDashboard() {
 
     return (
       <div className="space-y-6">
-        {/* Overall Health Overview */}
         <div className="grid gap-6 md:grid-cols-3">
           <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
             <CardContent className="p-6">
@@ -587,7 +656,7 @@ export default function AssessorDashboard() {
                   <p className="text-xs text-white/60 mt-1">Stage: {cropData.currentStage}</p>
                 </div>
                 <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center">
-                  <Activity className="h-8 w-8 text-blue-500" />
+                  <AlertTriangle className="h-8 w-8 text-blue-500" />
                 </div>
               </div>
             </CardContent>
@@ -604,66 +673,13 @@ export default function AssessorDashboard() {
                   <p className="text-xs text-white/60 mt-1">Healthy vegetation</p>
                 </div>
                 <div className="w-16 h-16 bg-teal-500/20 rounded-full flex items-center justify-center">
-                  <Satellite className="h-8 w-8 text-teal-500" />
+                  <Leaf className="h-8 w-8 text-teal-500" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Crop Health Metrics */}
-        <Card className={`${dashboardTheme.card}`}>
-          <CardHeader>
-            <CardTitle className="flex items-center text-white">
-              <Leaf className="h-5 w-5 mr-2" />
-              Crop Health Metrics
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/70">Color Index</span>
-                  <span className="text-white font-medium">{cropData.colorIndex.toFixed(2)}</span>
-                </div>
-                <div className="w-full bg-gray-800 rounded-full h-2">
-                  <div 
-                    className="bg-green-500 h-2 rounded-full" 
-                    style={{ width: `${cropData.colorIndex * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/70">Moisture Level</span>
-                  <span className="text-white font-medium">{cropData.moistureLevel}%</span>
-                </div>
-                <div className="w-full bg-gray-800 rounded-full h-2">
-                  <div 
-                    className="bg-blue-500 h-2 rounded-full" 
-                    style={{ width: `${cropData.moistureLevel}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/70">Growth Rate</span>
-                  <span className="text-white font-medium">{cropData.growthRate} cm/week</span>
-                </div>
-                <div className="w-full bg-gray-800 rounded-full h-2">
-                  <div 
-                    className="bg-teal-500 h-2 rounded-full" 
-                    style={{ width: `${(cropData.growthRate / 5) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Threats Assessment */}
         <Card className={`${dashboardTheme.card}`}>
           <CardHeader>
             <CardTitle className="flex items-center text-white">
@@ -684,7 +700,6 @@ export default function AssessorDashboard() {
                   <div className="text-sm text-white/70">
                     <p>Species: {cropData.threats.weedInfestation.species.join(', ')}</p>
                     <p>Density: {cropData.threats.weedInfestation.density} plants/m²</p>
-                    <p>Coverage: {cropData.threats.weedInfestation.coverage}% of field</p>
                   </div>
                 )}
               </div>
@@ -699,13 +714,27 @@ export default function AssessorDashboard() {
                 {cropData.threats.pestActivity.detected && (
                   <div className="text-sm text-white/70">
                     <p>Type: {cropData.threats.pestActivity.pestType.join(', ')}</p>
-                    <p>Population: {cropData.threats.pestActivity.population} per plant</p>
-                    <p>Damage: {cropData.threats.pestActivity.damage}% of crop</p>
+                    <p>Population: {cropData.threats.pestActivity.population}</p>
                   </div>
                 )}
               </div>
 
-              <div className={`p-4 rounded-lg border ${cropData.threats.diseaseOutbreak.detected ? 'border-red-500/30 bg-red-500/10' : 'border-gray-800 bg-gray-800/30'}`}>
+              <div className={`p-4 rounded-lg border ${cropData.threats.nutrientDeficiency.detected ? 'border-red-500/30 bg-red-500/10' : 'border-gray-800 bg-gray-800/30'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-white font-medium">Nutrient Deficiency</span>
+                  <span className={`text-sm ${getThreatColor(cropData.threats.nutrientDeficiency.detected, cropData.threats.nutrientDeficiency.severity)}`}>
+                    {cropData.threats.nutrientDeficiency.detected ? 'Detected' : 'None'}
+                  </span>
+                </div>
+                {cropData.threats.nutrientDeficiency.detected && (
+                  <div className="text-sm text-white/70">
+                    <p>Nutrients: {cropData.threats.nutrientDeficiency.deficientNutrients.join(', ')}</p>
+                    <p>Severity: {cropData.threats.nutrientDeficiency.severity}%</p>
+                  </div>
+                )}
+              </div>
+
+              <div className={`p-4 rounded-lg border ${cropData.threats.diseaseOutbreak.detected ? 'border-purple-500/30 bg-purple-500/10' : 'border-gray-800 bg-gray-800/30'}`}>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-white font-medium">Disease Outbreak</span>
                   <span className={`text-sm ${getThreatColor(cropData.threats.diseaseOutbreak.detected, cropData.threats.diseaseOutbreak.severity)}`}>
@@ -716,22 +745,6 @@ export default function AssessorDashboard() {
                   <div className="text-sm text-white/70">
                     <p>Type: {cropData.threats.diseaseOutbreak.diseaseType.join(', ')}</p>
                     <p>Severity: {cropData.threats.diseaseOutbreak.severity}%</p>
-                    <p>Affected Area: {cropData.threats.diseaseOutbreak.affectedArea}% of field</p>
-                  </div>
-                )}
-              </div>
-
-              <div className={`p-4 rounded-lg border ${cropData.threats.nutrientDeficiency.detected ? 'border-yellow-500/30 bg-yellow-500/10' : 'border-gray-800 bg-gray-800/30'}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-white font-medium">Nutrient Deficiency</span>
-                  <span className={`text-sm ${getThreatColor(cropData.threats.nutrientDeficiency.detected, cropData.threats.nutrientDeficiency.severity)}`}>
-                    {cropData.threats.nutrientDeficiency.detected ? 'Detected' : 'None'}
-                  </span>
-                </div>
-                {cropData.threats.nutrientDeficiency.detected && (
-                  <div className="text-sm text-white/70">
-                    <p>Deficient: {cropData.threats.nutrientDeficiency.deficientNutrients.join(', ')}</p>
-                    <p>Severity: {cropData.threats.nutrientDeficiency.severity}%</p>
                   </div>
                 )}
               </div>
@@ -739,228 +752,47 @@ export default function AssessorDashboard() {
           </CardContent>
         </Card>
 
-        {/* Growth Stages */}
         <Card className={`${dashboardTheme.card}`}>
           <CardHeader>
-            <CardTitle className="flex items-center text-white">
-              <Calendar className="h-5 w-5 mr-2" />
-              Growth Stages
-            </CardTitle>
+            <CardTitle className="text-white">Recommendations</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {cropData.growthStages.map((stage: any, idx: number) => (
-                <div key={idx} className="flex items-center justify-between py-3 border-b border-gray-800 last:border-0">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      stage.completed 
-                        ? 'bg-green-500/20 border-2 border-green-500' 
-                        : 'bg-gray-800 border-2 border-gray-700'
-                    }`}>
-                      {stage.completed ? (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <Clock className="h-5 w-5 text-white/40" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-white font-medium capitalize">{stage.stage}</div>
-                      <div className="text-sm text-white/60">{formatDate(stage.date)}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recommendations */}
-        <Card className={`${dashboardTheme.card}`}>
-          <CardHeader>
-            <CardTitle className="flex items-center text-white">
-              <Activity className="h-5 w-5 mr-2" />
-              Recommendations
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+            <ul className="space-y-2">
               {cropData.recommendations.map((rec: string, idx: number) => (
-                <div key={idx} className="flex items-start space-x-3 p-3 bg-gray-800/50 rounded-lg">
-                  <div className="w-6 h-6 rounded-full bg-teal-500/20 border border-teal-500/30 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-teal-500 text-sm font-bold">{idx + 1}</span>
-                  </div>
-                  <p className="text-white/90">{rec}</p>
-                </div>
+                <li key={idx} className="flex items-start text-white/80">
+                  <span className="mr-2 text-teal-500">•</span>
+                  {rec}
+                </li>
               ))}
-            </div>
+            </ul>
           </CardContent>
         </Card>
       </div>
     );
   };
 
-  // Filter assessments based on current filters
-  const filteredAssessments = assessments.filter(assessment => {
-    // Search filter
-    const matchesSearch = searchQuery === "" ||
-      assessment.farmerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      assessment.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      assessment.location.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    // Status filter
-    const matchesStatus = statusFilter === "all" || assessment.status === statusFilter;
-    
-    // Type filter
-    const matchesType = typeFilter === "all" || assessment.type === typeFilter;
-    
-    return matchesSearch && matchesStatus && matchesType;
-  });
-
-  // Clear all filters
-  const clearFilters = () => {
-    setStatusFilter("all");
-    setTypeFilter("all");
-    setSearchQuery("");
-  };
-
-  const handleAssessmentClick = (assessment: AssessmentSummary) => {
-    setSelectedAssessment(assessment);
-    setViewMode("fieldSelection");
-  };
-
-  const handleFieldClick = (field: Field) => {
-    setSelectedField(field);
-    setViewMode("fieldDetail");
-  };
-
-  const handleBackToList = () => {
-    setViewMode("list");
-    setSelectedAssessment(null);
-    setSelectedField(null);
-  };
-
-  const handleBackToFields = () => {
-    setViewMode("fieldSelection");
-    setSelectedField(null);
-  };
-
-  // Field Selection View
-  const renderFieldSelection = () => {
-    if (!selectedAssessment) return null;
-    const fields = getFieldsForAssessment(selectedAssessment);
-    
-    return (
-      <div className="space-y-6">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm">
-          <button 
-            onClick={handleBackToList}
-            className="text-teal-400 hover:text-teal-300"
-          >
-            All Assessments
-          </button>
-          <span className="text-white/60">/</span>
-          <span className="text-white">{selectedAssessment.farmerName}</span>
-        </div>
-
-        {/* Table */}
-        <Card className={`${dashboardTheme.card}`}>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-800">
-                    <th className="text-left py-4 px-6 font-medium text-white/80">Field ID</th>
-                    <th className="text-left py-4 px-6 font-medium text-white/80">Farmer</th>
-                    <th className="text-left py-4 px-6 font-medium text-white/80">Crop</th>
-                    <th className="text-left py-4 px-6 font-medium text-white/80">Area (ha)</th>
-                    <th className="text-left py-4 px-6 font-medium text-white/80">Season</th>
-                    <th className="text-left py-4 px-6 font-medium text-white/80">Status</th>
-                    <th className="text-left py-4 px-6 font-medium text-white/80">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {fields.map((field, index) => (
-                    <tr
-                      key={field.id}
-                      className={`border-b border-gray-800/50 hover:bg-gray-900/50 transition-colors ${
-                        index % 2 === 0 ? "bg-gray-950/30" : ""
-                      }`}
-                    >
-                      <td className="py-4 px-6 text-white">{field.id}</td>
-                      <td className="py-4 px-6 text-white">{field.farmerName}</td>
-                      <td className="py-4 px-6 text-white">
-                        <div className="flex items-center gap-2">
-                          <Leaf className="h-4 w-4 text-teal-500" />
-                          {field.crop}
-                        </div>
-                      </td>
-                      <td className="py-4 px-6 text-white">{field.area} ha</td>
-                      <td className="py-4 px-6 text-white">{field.season}</td>
-                      <td className="py-4 px-6">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          field.status === "Processed"
-                            ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                            : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
-                        }`}>
-                          {field.status}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        {field.status === "Processed" ? (
-                          <Button
-                            onClick={() => handleFieldClick(field)}
-                            className="bg-gray-800 hover:bg-gray-700 text-white border border-gray-700"
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            View Data
-                          </Button>
-                        ) : (
-                          <Button
-                            onClick={() => handleFieldClick(field)}
-                            className="bg-gray-800 hover:bg-gray-700 text-white border border-gray-700"
-                          >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Process
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  };
-
-  // Field Detail View
   const renderFieldDetail = () => {
     if (!selectedField) return null;
     const fieldDetails = getFieldDetails(selectedField);
 
     return (
       <div className="space-y-6">
-        {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm">
           <button 
             onClick={handleBackToList}
             className="text-teal-400 hover:text-teal-300"
           >
-            All Assessments
+            Crop Monitoring
           </button>
           <span className="text-white/60">/</span>
           <button 
             onClick={handleBackToFields}
             className="text-teal-400 hover:text-teal-300"
           >
-            {selectedAssessment?.farmerName}
+            {selectedMonitoring?.farmerName}
           </button>
         </div>
         
-        {/* Header */}
         <div>
           <h1 className="text-4xl font-bold text-white">
             Field Detail View: {fieldDetails.fieldId}
@@ -970,7 +802,6 @@ export default function AssessorDashboard() {
           </p>
         </div>
 
-        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className={`${dashboardTheme.card} border border-gray-800`}>
             <TabsTrigger 
@@ -994,19 +825,10 @@ export default function AssessorDashboard() {
               <Leaf className="h-4 w-4 mr-2" />
               Crop Analysis
             </TabsTrigger>
-            <TabsTrigger 
-              value="overview" 
-              className="data-[state=active]:bg-gray-800 data-[state=active]:text-white text-white/70"
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Overview
-            </TabsTrigger>
           </TabsList>
 
-          {/* Tab Contents */}
           <TabsContent value="basic-info" className="mt-6">
             <div className="grid gap-6 md:grid-cols-2">
-              {/* Field Information */}
               <Card className={`${dashboardTheme.card}`}>
                 <CardHeader>
                   <CardTitle className="text-white">Field Information</CardTitle>
@@ -1056,7 +878,6 @@ export default function AssessorDashboard() {
                 </CardContent>
               </Card>
 
-              {/* Field Map */}
               <Card className={`${dashboardTheme.card}`}>
                 <CardHeader>
                   <CardTitle className="text-white">Field Map</CardTitle>
@@ -1079,17 +900,6 @@ export default function AssessorDashboard() {
           <TabsContent value="crop" className="mt-6">
             <CropAnalysisTab fieldDetails={fieldDetails} />
           </TabsContent>
-
-          <TabsContent value="overview" className="mt-6">
-            <Card className={`${dashboardTheme.card}`}>
-              <CardHeader>
-                <CardTitle className="text-white">Overview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-white/60">Field overview and summary will be displayed here.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
     );
@@ -1097,89 +907,8 @@ export default function AssessorDashboard() {
 
   const renderDashboard = () => (
     <div className="space-y-6">
-      {/* Header Section */}
-      <div>
-        <h1 className="text-4xl font-bold text-white">Assessment Management</h1>
-        <p className="text-white/70 mt-2">Manage risk and claim assessments for farmers</p>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-white/80">Total Assessments</CardTitle>
-            <FileText className="h-5 w-5 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-white">{totalAssessments}</div>
-            <p className="text-xs text-white/60 mt-1">All assessments</p>
-          </CardContent>
-        </Card>
-
-        <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-white/80">Risk Assessments</CardTitle>
-            <Shield className="h-5 w-5 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-white">{totalRiskAssessments}</div>
-            <p className="text-xs text-white/60 mt-1">Risk evaluations</p>
-          </CardContent>
-        </Card>
-
-        <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-white/80">Claim Assessments</CardTitle>
-            <FileText className="h-5 w-5 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-white">{totalClaimAssessments}</div>
-            <p className="text-xs text-white/60 mt-1">Claims processed</p>
-          </CardContent>
-        </Card>
-
-        <Card className={`${dashboardTheme.card} border-l-4 border-l-purple-500`}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-white/80">Pending Reviews</CardTitle>
-            <Calendar className="h-5 w-5 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-white">{pendingAssessments}</div>
-            <p className="text-xs text-white/60 mt-1">Awaiting action</p>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Action Bar */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex gap-2">
-          <Button
-            onClick={() => {
-              setActiveView("assessments");
-              setTypeFilter("all");
-            }}
-            className={`${
-              activeView === "assessments"
-                ? "bg-teal-600 hover:bg-teal-700 text-white"
-                : `${dashboardTheme.card} text-white hover:bg-gray-800 border border-gray-700`
-            }`}
-          >
-            View Assessments
-          </Button>
-          <Button
-            onClick={() => {
-              setActiveView("all");
-              setTypeFilter("all");
-            }}
-            className={`${
-              activeView === "all"
-                ? "bg-teal-600 hover:bg-teal-700 text-white"
-                : `${dashboardTheme.card} text-white hover:bg-gray-800 border border-gray-700`
-            }`}
-          >
-            View All Fields
-          </Button>
-        </div>
+      <div className="flex items-center justify-end gap-4">
         <div className="flex gap-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
@@ -1199,7 +928,7 @@ export default function AssessorDashboard() {
             </DialogTrigger>
             <DialogContent className={`${dashboardTheme.card} border-gray-800`}>
               <DialogHeader>
-                <DialogTitle className="text-white">Filter Assessments</DialogTitle>
+                <DialogTitle className="text-white">Filter Crop Monitoring</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 mt-4">
                 <div>
@@ -1210,24 +939,9 @@ export default function AssessorDashboard() {
                     </SelectTrigger>
                     <SelectContent className={dashboardTheme.card}>
                       <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="Active">Active</SelectItem>
                       <SelectItem value="Pending">Pending</SelectItem>
-                      <SelectItem value="Submitted">Submitted</SelectItem>
-                      <SelectItem value="Under Review">Under Review</SelectItem>
-                      <SelectItem value="Approved">Approved</SelectItem>
-                      <SelectItem value="Rejected">Rejected</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="type-filter" className="text-white/80">Type</Label>
-                  <Select value={typeFilter} onValueChange={setTypeFilter}>
-                    <SelectTrigger id="type-filter" className={`${dashboardTheme.select} mt-1`}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className={dashboardTheme.card}>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="Risk Assessment">Risk Assessment</SelectItem>
-                      <SelectItem value="Claim Assessment">Claim Assessment</SelectItem>
+                      <SelectItem value="Completed">Completed</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1246,15 +960,14 @@ export default function AssessorDashboard() {
                     Apply Filters
                   </Button>
                 </div>
-          </div>
+              </div>
             </DialogContent>
           </Dialog>
           <Button 
-            onClick={() => setActivePage("risk-assessments")}
             className="bg-teal-600 hover:bg-teal-700 text-white"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Assessment
+            New Crop Monitoring
           </Button>
         </div>
       </div>
@@ -1266,42 +979,36 @@ export default function AssessorDashboard() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-800">
-                  <th className="text-left py-4 px-6 font-medium text-white/80">Assessment ID</th>
+                  <th className="text-left py-4 px-6 font-medium text-white/80">Monitoring ID</th>
                   <th className="text-left py-4 px-6 font-medium text-white/80">Farmer Name</th>
                   <th className="text-left py-4 px-6 font-medium text-white/80">Location</th>
-                  <th className="text-left py-4 px-6 font-medium text-white/80">Type</th>
                   <th className="text-left py-4 px-6 font-medium text-white/80">Status</th>
                   <th className="text-left py-4 px-6 font-medium text-white/80">Date</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredAssessments.map((assessment, index) => (
+                {filteredMonitorings.map((monitoring, index) => (
                     <tr
-                      key={assessment.id}
-                      onClick={() => handleAssessmentClick(assessment)}
+                      key={monitoring.id}
+                      onClick={() => handleMonitoringClick(monitoring)}
                       className={`border-b border-gray-800/50 hover:bg-gray-900/50 transition-colors cursor-pointer ${
                         index % 2 === 0 ? "bg-gray-950/30" : ""
                       }`}
                     >
-                      <td className="py-4 px-6 text-white">{assessment.id}</td>
-                      <td className="py-4 px-6 text-white">{assessment.farmerName}</td>
+                      <td className="py-4 px-6 text-white">{monitoring.id}</td>
+                      <td className="py-4 px-6 text-white">{monitoring.farmerName}</td>
                       <td className="py-4 px-6 text-white/80">
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-teal-500" />
-                          {assessment.location}
+                          {monitoring.location}
                         </div>
                       </td>
                       <td className="py-4 px-6">
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                          {assessment.type}
+                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
+                          {monitoring.status}
                         </span>
                       </td>
-                      <td className="py-4 px-6">
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                          {assessment.status}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-white/80">{assessment.date}</td>
+                      <td className="py-4 px-6 text-white/80">{monitoring.date}</td>
                     </tr>
                   ))}
               </tbody>
@@ -1312,62 +1019,15 @@ export default function AssessorDashboard() {
     </div>
   );
 
-// Complex assessment forms removed - using simplified dashboard
+  // Render view based on mode
+  if (viewMode === "fieldSelection") {
+    return renderFieldSelection();
+  }
 
-  const handlePageChange = (page: string) => {
-    setActivePage(page);
-    // Reset view mode when navigating away from dashboard
-    if (page !== "dashboard") {
-      setViewMode("list");
-      setSelectedAssessment(null);
-      setSelectedField(null);
-    }
-  };
+  if (viewMode === "fieldDetail") {
+    return renderFieldDetail();
+  }
 
-  const renderPage = () => {
-    // Handle view modes within dashboard
-    if (activePage === "dashboard") {
-      switch (viewMode) {
-        case "fieldDetail":
-          return renderFieldDetail();
-        case "fieldSelection":
-          return renderFieldSelection();
-        default:
-          return renderDashboard();
-      }
-    }
-
-    // Handle other pages
-    switch (activePage) {
-      case "risk-assessments": return <RiskAssessmentSystem />;
-      case "loss-assessments": return <LossAssessmentSystem />;
-      case "crop-monitoring": return <CropMonitoringSystem />;
-      case "notifications": return <AssessorNotifications />;
-      case "profile-settings": return <AssessorProfileSettings />;
-      default: return renderDashboard();
-    }
-  };
-
-  const navigationItems = [
-    { id: "dashboard", label: "Dashboard", icon: BarChart3 },
-    { id: "risk-assessments", label: "Risk Assessments", icon: Shield },
-    { id: "loss-assessments", label: "Loss Assessment", icon: AlertCircle },
-    { id: "crop-monitoring", label: "Crop Monitoring", icon: Activity },
-    { id: "notifications", label: "Notifications", icon: Bell },
-    { id: "profile-settings", label: "Profile Settings", icon: User }
-  ];
-
-  return (
-    <DashboardLayout
-      userType="assessor"
-      userId={assessorId}
-      userName="Richard Nkurunziza"
-      navigationItems={navigationItems}
-      activePage={activePage} 
-      onPageChange={handlePageChange}
-      onLogout={() => {}}
-    >
-      {renderPage()}
-    </DashboardLayout>
-  );
+  return renderDashboard();
 }
+
