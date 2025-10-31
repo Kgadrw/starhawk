@@ -94,13 +94,13 @@ export default function AssessorProfileSettings() {
   const renderProfileTab = () => (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <User className="h-5 w-5 mr-2" />
+        <CardHeader className="border-b border-white/10">
+          <CardTitle className="flex items-center text-white">
+            <User className="h-5 w-5 mr-2 text-orange-400" />
             Personal Information
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="fullName">Full Name</Label>
@@ -116,7 +116,7 @@ export default function AssessorProfileSettings() {
                 id="assessorId"
                 value={profileData.assessorId}
                 disabled
-                className="bg-gray-50"
+                className="bg-orange-500/10 border-orange-600/30 text-orange-100 cursor-not-allowed"
               />
             </div>
           </div>
@@ -163,13 +163,13 @@ export default function AssessorProfileSettings() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Award className="h-5 w-5 mr-2" />
+        <CardHeader className="border-b border-white/10">
+          <CardTitle className="flex items-center text-white">
+            <Award className="h-5 w-5 mr-2 text-orange-400" />
             Professional Information
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="specialization">Specialization</Label>
@@ -196,7 +196,7 @@ export default function AssessorProfileSettings() {
                 id="licenseNumber"
                 value={profileData.licenseNumber}
                 disabled
-                className="bg-gray-50"
+                className="bg-orange-500/10 border-orange-600/30 text-orange-100 cursor-not-allowed"
               />
             </div>
             <div className="space-y-2">
@@ -205,33 +205,8 @@ export default function AssessorProfileSettings() {
                 id="certificationDate"
                 value={profileData.certificationDate}
                 disabled
-                className="bg-gray-50"
+                className="bg-orange-500/10 border-orange-600/30 text-orange-100 cursor-not-allowed"
               />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Camera className="h-5 w-5 mr-2" />
-            Profile Photo
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center space-x-6">
-            <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
-              <User className="h-8 w-8 text-gray-400" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm text-white/70 mb-2">
-                Upload a profile photo (PNG, JPG up to 2MB)
-              </p>
-              <Button variant="outline" size="sm">
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Photo
-              </Button>
             </div>
           </div>
         </CardContent>
@@ -242,13 +217,13 @@ export default function AssessorProfileSettings() {
   const renderWorkTab = () => (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Map className="h-5 w-5 mr-2" />
+        <CardHeader className="border-b border-white/10">
+          <CardTitle className="flex items-center text-white">
+            <Map className="h-5 w-5 mr-2 text-orange-400" />
             Work Preferences
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="assignedRegion">Assigned Region</Label>
@@ -314,32 +289,32 @@ export default function AssessorProfileSettings() {
           </div>
 
           <div className="space-y-2">
-            <Label>Available Equipment</Label>
-            <div className="grid gap-2 md:grid-cols-2">
+            <Label className="text-white">Available Equipment</Label>
+            <div className="flex flex-wrap gap-3">
               {["GPS Device", "Camera", "Soil Testing Kit", "Drone", "Weather Station", "Tablet"].map((equipment) => (
-                <label key={equipment} className="flex items-center">
+                <label key={equipment} className="flex items-center cursor-pointer group">
                   <input 
                     type="checkbox" 
                     defaultChecked={workData.equipment.includes(equipment)}
-                    className="mr-2" 
+                    className="mr-2 w-4 h-4 text-orange-600 border-gray-600 rounded focus:ring-orange-500 bg-gray-800/50 cursor-pointer group-hover:border-orange-500/50 transition-colors" 
                   />
-                  <span className="text-sm text-white/70">{equipment}</span>
+                  <span className="text-sm text-white/80 group-hover:text-white transition-colors">{equipment}</span>
                 </label>
               ))}
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Languages</Label>
-            <div className="grid gap-2 md:grid-cols-3">
+            <Label className="text-white">Languages</Label>
+            <div className="flex flex-wrap gap-3">
               {["Kinyarwanda", "English", "French", "Swahili"].map((language) => (
-                <label key={language} className="flex items-center">
+                <label key={language} className="flex items-center cursor-pointer group">
                   <input 
                     type="checkbox" 
                     defaultChecked={workData.languages.includes(language)}
-                    className="mr-2" 
+                    className="mr-2 w-4 h-4 text-orange-600 border-gray-600 rounded focus:ring-orange-500 bg-gray-800/50 cursor-pointer group-hover:border-orange-500/50 transition-colors" 
                   />
-                  <span className="text-sm text-white/70">{language}</span>
+                  <span className="text-sm text-white/80 group-hover:text-white transition-colors">{language}</span>
                 </label>
               ))}
             </div>
@@ -352,13 +327,13 @@ export default function AssessorProfileSettings() {
   const renderSecurityTab = () => (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Key className="h-5 w-5 mr-2" />
+        <CardHeader className="border-b border-white/10">
+          <CardTitle className="flex items-center text-white">
+            <Key className="h-5 w-5 mr-2 text-orange-400" />
             Change Password
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           <div className="space-y-2">
             <Label htmlFor="currentPassword">Current Password</Label>
             <div className="relative">
@@ -441,13 +416,13 @@ export default function AssessorProfileSettings() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Shield className="h-5 w-5 mr-2" />
+        <CardHeader className="border-b border-white/10">
+          <CardTitle className="flex items-center text-white">
+            <Shield className="h-5 w-5 mr-2 text-orange-400" />
             Security Settings
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           <div className="flex items-center justify-between">
             <div>
               <h4 className="font-medium text-white">Two-Factor Authentication</h4>
@@ -484,13 +459,13 @@ export default function AssessorProfileSettings() {
   const renderNotificationsTab = () => (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Bell className="h-5 w-5 mr-2" />
+        <CardHeader className="border-b border-white/10">
+          <CardTitle className="flex items-center text-white">
+            <Bell className="h-5 w-5 mr-2 text-orange-400" />
             Notification Preferences
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 pt-6">
           <div>
             <h4 className="font-medium text-white mb-3">Communication Channels</h4>
             <div className="space-y-3">
@@ -609,17 +584,43 @@ export default function AssessorProfileSettings() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white">Profile Settings</h2>
-          <p className="text-white/70">Manage your assessor profile and preferences</p>
-        </div>
-      </div>
+      {/* Header with Profile Photo */}
+      <Card className="bg-gradient-to-r from-orange-600/20 to-red-600/20 border-orange-600/30">
+        <CardContent className="p-6">
+          <div className="flex items-center gap-6">
+            <div className="relative group">
+              <div className="w-24 h-24 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center shadow-lg ring-4 ring-orange-500/20">
+                <User className="h-12 w-12 text-white" />
+              </div>
+              <button className="absolute bottom-0 right-0 w-8 h-8 bg-orange-600 rounded-full flex items-center justify-center hover:bg-orange-700 transition-colors shadow-lg border-2 border-gray-900">
+                <Camera className="h-4 w-4 text-white" />
+              </button>
+            </div>
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold text-white mb-1">{profileData.fullName}</h2>
+              <p className="text-white/80 mb-2">{profileData.specialization}</p>
+              <div className="flex items-center gap-4 text-sm text-white/70">
+                <div className="flex items-center gap-1">
+                  <User className="h-4 w-4" />
+                  <span>{profileData.assessorId}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Award className="h-4 w-4" />
+                  <span>{profileData.experience}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <MapPin className="h-4 w-4" />
+                  <span>{workData.assignedRegion}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
+      <div className="border-b border-white/10">
+        <nav className="-mb-px flex space-x-6">
           {[
             { id: "profile", label: "Profile", icon: User },
             { id: "work", label: "Work", icon: Map },
@@ -631,10 +632,10 @@ export default function AssessorProfileSettings() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm ${
+                className={`flex items-center py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
                   activeTab === tab.id
-                    ? "border-orange-500 text-orange-600"
-                    : "border-transparent text-gray-500 hover:text-white/80 hover:border-gray-300"
+                    ? "border-orange-500 text-orange-400"
+                    : "border-transparent text-white/60 hover:text-white/90 hover:border-white/20"
                 }`}
               >
                 <Icon className="h-4 w-4 mr-2" />
@@ -654,8 +655,8 @@ export default function AssessorProfileSettings() {
       </div>
 
       {/* Save Button */}
-      <div className="flex justify-end pt-6 border-t">
-        <Button className="bg-orange-600 hover:bg-orange-700">
+      <div className="flex justify-end pt-6 border-t border-white/10">
+        <Button className="bg-orange-600 hover:bg-orange-700 min-w-[120px]">
           <Save className="h-4 w-4 mr-2" />
           Save Changes
         </Button>

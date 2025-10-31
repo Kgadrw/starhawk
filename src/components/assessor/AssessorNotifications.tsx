@@ -6,6 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { 
   Bell, 
   Search, 
   Filter,
@@ -19,13 +26,16 @@ import {
   Settings,
   Phone,
   Mail,
-  Calendar
+  Calendar,
+  X
 } from "lucide-react";
 
 export default function AssessorNotifications() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [selectedNotification, setSelectedNotification] = useState<any>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   // Mock notifications data for assessors
   const notifications = [
@@ -154,6 +164,16 @@ export default function AssessorNotifications() {
 
   const unreadCount = notifications.filter(n => n.status === "unread").length;
 
+  const handleNotificationClick = (notification: any) => {
+    setSelectedNotification(notification);
+    setIsDetailOpen(true);
+  };
+
+  const handleMarkAsRead = (e: React.MouseEvent, notificationId: number) => {
+    e.stopPropagation();
+    // Handle mark as read logic here
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -226,78 +246,52 @@ export default function AssessorNotifications() {
           </Card>
         ) : (
           filteredNotifications.map((notification) => (
-            <Card key={notification.id} className={`${dashboardTheme.card} transition-all duration-200 ${
-              notification.status === "unread" ? "border-l-4 border-l-green-500 bg-green-600/30" : ""
-            }`}>
-              <CardContent className="p-6">
-                <div className="flex items-start space-x-4">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+            <Card 
+              key={notification.id} 
+              className={`${dashboardTheme.card} transition-all duration-200 cursor-pointer hover:bg-white/5 ${
+                notification.status === "unread" ? "border-l-4 border-l-green-500 bg-green-600/30" : ""
+              }`}
+              onClick={() => handleNotificationClick(notification)}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className={`flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center ${
                     notification.status === "unread" ? "bg-green-400/20 text-green-400" : "bg-gray-800/20 text-gray-400"
                   }`}>
                     {getNotificationIcon(notification.type)}
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-lg font-medium text-white">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <h3 className="text-base font-semibold text-white leading-tight">
                         {notification.title}
                       </h3>
-                      <div className="flex items-center space-x-2">
-                        <Badge className={getPriorityColor(notification.priority)}>
-                          {notification.priority}
-                        </Badge>
-                        <Badge className={getTypeColor(notification.type)}>
-                          {notification.type.replace('_', ' ')}
-                        </Badge>
-                      </div>
+                      <Badge className={`${getPriorityColor(notification.priority)} text-xs`}>
+                        {notification.priority}
+                      </Badge>
                     </div>
                     
-                    <p className="text-white/80 mb-3">
+                    <p className="text-sm text-white/70 mb-3 line-clamp-2">
                       {notification.message}
                     </p>
                     
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4 text-sm text-white/60">
-                        <div className="flex items-center">
-                          <Clock className="h-4 w-4 mr-1" />
-                          {notification.timestamp}
+                    <div className="flex items-center gap-4 text-xs text-white/60">
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {notification.timestamp}
+                      </div>
+                      {notification.farmerName && (
+                        <div className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          {notification.farmerName}
                         </div>
-                        {notification.farmerName && (
-                          <div className="flex items-center">
-                            <User className="h-4 w-4 mr-1" />
-                            {notification.farmerName} ({notification.farmerId})
-                          </div>
-                        )}
-                        {notification.location && (
-                          <div className="flex items-center">
-                            <MapPin className="h-4 w-4 mr-1" />
-                            {notification.location}
-                          </div>
-                        )}
-                        {notification.dueDate && (
-                          <div className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            Due: {notification.dueDate}
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        {notification.status === "unread" && (
-                          <Button size="sm" variant="outline">
-                            Mark as Read
-                          </Button>
-                        )}
-                        <Button size="sm" variant="outline">
-                          View Details
-                        </Button>
-                        {notification.farmerName && (
-                          <Button size="sm" variant="outline">
-                            <Phone className="h-3 w-3 mr-1" />
-                            Contact
-                          </Button>
-                        )}
-                      </div>
+                      )}
+                      {notification.location && (
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {notification.location}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -369,6 +363,166 @@ export default function AssessorNotifications() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Notification Detail Dialog */}
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white/5 backdrop-blur-xl border border-white/10">
+          {selectedNotification && (
+            <>
+              <DialogHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                      selectedNotification.status === "unread" ? "bg-green-400/20 text-green-400" : "bg-blue-400/20 text-blue-400"
+                    }`}>
+                      {getNotificationIcon(selectedNotification.type)}
+                    </div>
+                    <div>
+                      <DialogTitle className="text-xl">{selectedNotification.title}</DialogTitle>
+                      <DialogDescription className="text-sm text-gray-400 mt-1">
+                        {selectedNotification.type.replace(/_/g, ' ')}
+                      </DialogDescription>
+                    </div>
+                  </div>
+                  <Badge className={getPriorityColor(selectedNotification.priority)}>
+                    {selectedNotification.priority}
+                  </Badge>
+                </div>
+              </DialogHeader>
+              
+              <div className="space-y-6 mt-4">
+                <div>
+                  <p className="text-gray-300 leading-relaxed">{selectedNotification.message}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-900/50 rounded-lg">
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Timestamp</p>
+                    <div className="flex items-center gap-2 text-sm text-white">
+                      <Clock className="h-4 w-4 text-gray-400" />
+                      {selectedNotification.timestamp}
+                    </div>
+                  </div>
+                  {selectedNotification.dueDate && (
+                    <div>
+                      <p className="text-xs text-gray-400 mb-1">Due Date</p>
+                      <div className="flex items-center gap-2 text-sm text-white">
+                        <Calendar className="h-4 w-4 text-gray-400" />
+                        {selectedNotification.dueDate}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {selectedNotification.farmerName && (
+                  <div className="p-4 bg-blue-900/20 border border-blue-700/30 rounded-lg">
+                    <h4 className="text-sm font-semibold text-blue-300 mb-3 flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Farmer Information
+                    </h4>
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-xs text-gray-400">Name</p>
+                        <p className="text-sm text-white font-medium">{selectedNotification.farmerName}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400">Farmer ID</p>
+                        <p className="text-sm text-white font-medium">{selectedNotification.farmerId}</p>
+                      </div>
+                      {selectedNotification.location && (
+                        <div>
+                          <p className="text-xs text-gray-400">Location</p>
+                          <div className="flex items-center gap-2 text-sm text-white">
+                            <MapPin className="h-3 w-3 text-gray-400" />
+                            {selectedNotification.location}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {selectedNotification.claimId && (
+                  <div className="p-4 bg-orange-900/20 border border-orange-700/30 rounded-lg">
+                    <h4 className="text-sm font-semibold text-orange-300 mb-2">Claim Details</h4>
+                    <div>
+                      <p className="text-xs text-gray-400">Claim ID</p>
+                      <p className="text-sm text-white font-medium">{selectedNotification.claimId}</p>
+                    </div>
+                  </div>
+                )}
+
+                {selectedNotification.assessmentId && (
+                  <div className="p-4 bg-green-900/20 border border-green-700/30 rounded-lg">
+                    <h4 className="text-sm font-semibold text-green-300 mb-2">Assessment Details</h4>
+                    <div>
+                      <p className="text-xs text-gray-400">Assessment ID</p>
+                      <p className="text-sm text-white font-medium">{selectedNotification.assessmentId}</p>
+                    </div>
+                  </div>
+                )}
+
+                {selectedNotification.trainingDate && (
+                  <div className="p-4 bg-purple-900/20 border border-purple-700/30 rounded-lg">
+                    <h4 className="text-sm font-semibold text-purple-300 mb-2">Training Information</h4>
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-xs text-gray-400">Date</p>
+                        <p className="text-sm text-white font-medium">{selectedNotification.trainingDate}</p>
+                      </div>
+                      {selectedNotification.trainingTopic && (
+                        <div>
+                          <p className="text-xs text-gray-400">Topic</p>
+                          <p className="text-sm text-white font-medium">{selectedNotification.trainingTopic}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {selectedNotification.equipmentType && (
+                  <div className="p-4 bg-gray-900/50 border border-gray-700/30 rounded-lg">
+                    <h4 className="text-sm font-semibold text-gray-300 mb-2">Equipment Details</h4>
+                    <div>
+                      <p className="text-xs text-gray-400">Equipment</p>
+                      <p className="text-sm text-white font-medium">{selectedNotification.equipmentType}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-4 border-t border-gray-700">
+                  <Button 
+                    className="flex-1 bg-orange-600 hover:bg-orange-700"
+                    onClick={() => {
+                      // Handle action based on notification type
+                      setIsDetailOpen(false);
+                    }}
+                  >
+                    Take Action
+                  </Button>
+                  {selectedNotification.status === "unread" && (
+                    <Button 
+                      variant="outline" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMarkAsRead(e, selectedNotification.id);
+                        setIsDetailOpen(false);
+                      }}
+                    >
+                      Mark as Read
+                    </Button>
+                  )}
+                  {selectedNotification.farmerName && (
+                    <Button variant="outline">
+                      <Phone className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
