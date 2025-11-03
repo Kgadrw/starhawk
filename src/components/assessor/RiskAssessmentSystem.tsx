@@ -7,6 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import meteosourceApiService from "@/services/meteosourceApi";
 import { 
   MapPin,
@@ -25,7 +28,12 @@ import {
   Clock,
   AlertTriangle,
   Calendar,
-  Cloud
+  Cloud,
+  Upload,
+  Download,
+  CheckCircle,
+  Star,
+  Map
 } from "lucide-react";
 
 interface AssessmentSummary {
@@ -298,12 +306,12 @@ export default function RiskAssessmentSystem() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-800">
-                    <th className="text-left py-4 px-6 font-medium text-white/80">Field ID</th>
-                    <th className="text-left py-4 px-6 font-medium text-white/80">Farmer</th>
-                    <th className="text-left py-4 px-6 font-medium text-white/80">Crop</th>
-                    <th className="text-left py-4 px-6 font-medium text-white/80">Area (ha)</th>
-                    <th className="text-left py-4 px-6 font-medium text-white/80">Season</th>
-                    <th className="text-left py-4 px-6 font-medium text-white/80">Status</th>
+                    <th className="text-left py-4 px-6 font-medium text-cyan-400">Field ID</th>
+                    <th className="text-left py-4 px-6 font-medium text-teal-400">Farmer</th>
+                    <th className="text-left py-4 px-6 font-medium text-green-400">Crop</th>
+                    <th className="text-left py-4 px-6 font-medium text-blue-400">Area (ha)</th>
+                    <th className="text-left py-4 px-6 font-medium text-purple-400">Season</th>
+                    <th className="text-left py-4 px-6 font-medium text-yellow-400">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -315,11 +323,11 @@ export default function RiskAssessmentSystem() {
                         index % 2 === 0 ? "bg-gray-950/30" : ""
                       }`}
                     >
-                      <td className="py-4 px-6 text-white">{field.id}</td>
-                      <td className="py-4 px-6 text-white">{field.farmerName}</td>
-                      <td className="py-4 px-6 text-white">{field.crop}</td>
-                      <td className="py-4 px-6 text-white">{field.area} ha</td>
-                      <td className="py-4 px-6 text-white">{field.season}</td>
+                      <td className="py-4 px-6 text-cyan-300">{field.id}</td>
+                      <td className="py-4 px-6 text-teal-300">{field.farmerName}</td>
+                      <td className="py-4 px-6 text-green-300">{field.crop}</td>
+                      <td className="py-4 px-6 text-blue-300">{field.area} ha</td>
+                      <td className="py-4 px-6 text-purple-300">{field.season}</td>
                       <td className="py-4 px-6">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                           field.status === "Processed"
@@ -432,10 +440,10 @@ export default function RiskAssessmentSystem() {
               <div className="flex items-center space-x-3">
                 {getWeatherIcon(weatherData.current.summary)}
                 <div>
-                  <div className="text-4xl font-bold text-white">
+                  <div className="text-4xl font-bold text-blue-400">
                     {weatherData.current.temperature}°C
                   </div>
-                  <div className="text-lg text-white/70 capitalize">
+                  <div className="text-lg text-cyan-300 capitalize">
                     {weatherData.current.summary}
                   </div>
                 </div>
@@ -445,29 +453,29 @@ export default function RiskAssessmentSystem() {
               <div className="flex items-center text-white/80">
                 <Wind className="h-5 w-5 mr-2 text-teal-500" />
                 <div>
-                  <div className="text-xs text-white/60">Wind</div>
-                  <div className="font-medium">{weatherData.current.windSpeed} km/h</div>
+                  <div className="text-xs text-cyan-400">Wind</div>
+                  <div className="font-medium text-teal-300">{weatherData.current.windSpeed} km/h</div>
                 </div>
               </div>
               <div className="flex items-center text-white/80">
                 <Droplets className="h-5 w-5 mr-2 text-blue-500" />
                 <div>
-                  <div className="text-xs text-white/60">Humidity</div>
-                  <div className="font-medium">{weatherData.current.humidity}%</div>
+                  <div className="text-xs text-blue-400">Humidity</div>
+                  <div className="font-medium text-cyan-300">{weatherData.current.humidity}%</div>
                 </div>
               </div>
               <div className="flex items-center text-white/80">
                 <CloudRain className="h-5 w-5 mr-2 text-cyan-500" />
                 <div>
-                  <div className="text-xs text-white/60">Precipitation</div>
-                  <div className="font-medium">{weatherData.current.precipitation}mm</div>
+                  <div className="text-xs text-sky-400">Precipitation</div>
+                  <div className="font-medium text-cyan-300">{weatherData.current.precipitation}mm</div>
                 </div>
               </div>
               <div className="flex items-center text-white/80">
                 <Thermometer className="h-5 w-5 mr-2 text-orange-500" />
                 <div>
-                  <div className="text-xs text-white/60">Pressure</div>
-                  <div className="font-medium">{weatherData.current.pressure} hPa</div>
+                  <div className="text-xs text-orange-400">Pressure</div>
+                  <div className="font-medium text-orange-300">{weatherData.current.pressure} hPa</div>
                 </div>
               </div>
             </div>
@@ -486,12 +494,12 @@ export default function RiskAssessmentSystem() {
               <div className="flex gap-4">
                 {weatherData.hourly.map((hour, idx) => (
                   <div key={idx} className="min-w-[100px] text-center">
-                    <div className="text-white/60 text-sm mb-2">{formatTime(hour.time)}</div>
+                    <div className="text-cyan-400 text-sm mb-2 font-medium">{formatTime(hour.time)}</div>
                     <div className="flex justify-center mb-2">
                       {getWeatherIcon(hour.summary)}
                     </div>
-                    <div className="text-white font-bold mb-1">{hour.temperature}°</div>
-                    <div className="text-white/60 text-xs capitalize">{hour.summary}</div>
+                    <div className="text-blue-400 font-bold mb-1">{hour.temperature}°</div>
+                    <div className="text-cyan-300 text-xs capitalize">{hour.summary}</div>
                   </div>
                 ))}
               </div>
@@ -507,264 +515,577 @@ export default function RiskAssessmentSystem() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {weatherData.daily.map((day, idx) => (
-                <div key={idx} className="flex items-center justify-between py-3 border-b border-gray-800 last:border-0">
-                  <div className="flex items-center space-x-3 flex-1">
-                    <div className="text-white/70 w-20">{formatDate(day.date)}</div>
-                    <div className="flex justify-center w-12">
-                      {getWeatherIcon(day.summary)}
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-white capitalize">{day.summary}</div>
-                      <div className="text-white/60 text-xs">
-                        <Wind className="h-3 w-3 inline mr-1" />
-                        {day.windSpeed}km/h {day.windDir} • {day.precipitation}mm
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-white font-bold">{day.temperature.max}°</div>
-                    <div className="text-white/60 text-sm">{day.temperature.min}°</div>
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-800">
+                    <th className="text-left py-3 px-4 font-medium text-cyan-400">Date</th>
+                    <th className="text-left py-3 px-4 font-medium text-blue-400">Temp (°C)</th>
+                    <th className="text-left py-3 px-4 font-medium text-sky-400">Rain (mm)</th>
+                    <th className="text-left py-3 px-4 font-medium text-cyan-400">Humidity</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-400">Clouds</th>
+                    <th className="text-left py-3 px-4 font-medium text-teal-400">Wind</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {weatherData.daily.map((day, idx) => (
+                    <tr key={idx} className="border-b border-gray-800/50 hover:bg-gray-900/30 transition-colors">
+                      <td className="py-4 px-4 text-cyan-300 font-medium">{formatDate(day.date)}</td>
+                      <td className="py-4 px-4 text-blue-300">
+                        <span className="font-bold">{day.temperature.max}°</span> / <span>{day.temperature.min}°</span>
+                      </td>
+                      <td className="py-4 px-4 text-sky-300">{day.precipitation}</td>
+                      <td className="py-4 px-4 text-cyan-300">{day.humidity}%</td>
+                      <td className="py-4 px-4 text-gray-300">{day.icon < 2 ? '30%' : day.icon < 3 ? '45%' : day.icon < 4 ? '60%' : '75%'}</td>
+                      <td className="py-4 px-4 text-teal-300">{day.windSpeed} m/s</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </CardContent>
         </Card>
+
+        {/* Historical Weather Charts */}
+        {(() => {
+          // Generate historical data for year 2025
+          const generateHistoricalData = () => {
+            const data = [];
+            const startDate = new Date('2025-01-01');
+            const endDate = new Date('2025-12-29');
+            
+            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+              const dateStr = d.toISOString().split('T')[0];
+              const month = d.getMonth();
+              const dayOfYear = d.getDate() + (d.getMonth() * 30);
+              
+              // Generate precipitation (lower in summer, higher in rainy seasons)
+              let precipitation = 0;
+              const rand = Math.random();
+              // Simulate rainy seasons
+              if (month === 0 || month === 1 || month === 2 || month === 9 || month === 10 || month === 11) {
+                precipitation = rand > 0.3 ? Math.random() * 40 : 0;
+              } else {
+                precipitation = rand > 0.7 ? Math.random() * 25 : 0;
+              }
+              
+              // Generate temperatures with seasonal variation
+              const baseTemp = 20 + 10 * Math.sin((dayOfYear - 80) / 365 * 2 * Math.PI);
+              const maxTemp = baseTemp + 5 + Math.random() * 5;
+              const minTemp = baseTemp - 5 - Math.random() * 5;
+              
+              data.push({
+                date: dateStr,
+                dateLabel: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                precipitation: Math.round(precipitation * 10) / 10,
+                maxTemp: Math.round(maxTemp * 100) / 100,
+                minTemp: Math.round(minTemp * 100) / 100
+              });
+            }
+            
+            return data;
+          };
+          
+          const historicalData = generateHistoricalData();
+          
+          return (
+            <>
+              <Card className={`${dashboardTheme.card}`}>
+                <CardHeader>
+                  <CardTitle className="text-white">Daily precipitation, mm</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={historicalData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+                      <XAxis 
+                        dataKey="dateLabel" 
+                        tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                        tickCount={12}
+                        interval="preserveStartEnd"
+                        stroke="#4B5563"
+                      />
+                      <YAxis 
+                        label={{ value: 'Precipitation (mm)', angle: -90, position: 'insideLeft', style: { fill: '#9CA3AF' } }}
+                        tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                        domain={[0, 40]}
+                        stroke="#4B5563"
+                      />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#1F2937', 
+                          border: '1px solid #374151', 
+                          borderRadius: '6px',
+                          color: '#F3F4F6'
+                        }}
+                        labelStyle={{ color: '#9CA3AF' }}
+                      />
+                      <Legend wrapperStyle={{ color: '#F3F4F6' }} />
+                      <Bar 
+                        dataKey="precipitation" 
+                        fill="#06B6D4" 
+                        name="2025"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card className={`${dashboardTheme.card}`}>
+                <CardHeader>
+                  <CardTitle className="text-white">Daily temperatures, °C</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={historicalData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+                      <XAxis 
+                        dataKey="dateLabel" 
+                        tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                        tickCount={12}
+                        interval="preserveStartEnd"
+                        stroke="#4B5563"
+                      />
+                      <YAxis 
+                        label={{ value: 'Temperature (°C)', angle: -90, position: 'insideLeft', style: { fill: '#9CA3AF' } }}
+                        tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                        domain={[0, 40]}
+                        stroke="#4B5563"
+                      />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#1F2937', 
+                          border: '1px solid #374151', 
+                          borderRadius: '6px',
+                          color: '#F3F4F6'
+                        }}
+                        labelStyle={{ color: '#9CA3AF' }}
+                      />
+                      <Legend wrapperStyle={{ color: '#F3F4F6' }} />
+                      <Line 
+                        type="monotone" 
+                        dataKey="maxTemp" 
+                        stroke="#06B6D4" 
+                        strokeWidth={2}
+                        name="2025 Max t°C"
+                        dot={false}
+                        activeDot={{ r: 6 }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="minTemp" 
+                        stroke="#0891B2" 
+                        strokeWidth={2}
+                        name="2025 Min t°C"
+                        dot={false}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </>
+          );
+        })()}
       </div>
     );
   };
 
   // Crop Analysis Component
   const CropAnalysisTab = ({ fieldDetails }: { fieldDetails: FieldDetail }) => {
-    const [cropData, setCropData] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+    const [dataSource, setDataSource] = useState<string>("drone");
+    const [selectedFile, setSelectedFile] = useState<string>("");
+    const [flightDate, setFlightDate] = useState<string>("2025-10-22");
+    const [manualDate, setManualDate] = useState<string>("2025-10-28");
+    const [assessorNotes, setAssessorNotes] = useState<string>("Weed clusters in north. Pest minimal.");
+    
+    // Manual input metrics state
+    const [stressDetected, setStressDetected] = useState<number[]>([17.6]);
+    const [soilMoisture, setSoilMoisture] = useState<number[]>([58]);
+    const [weedArea, setWeedArea] = useState<number[]>([7.3]);
+    const [pestArea, setPestArea] = useState<number[]>([4.4]);
 
-    useEffect(() => {
-      loadCropData();
-    }, []);
-
-    const loadCropData = async () => {
-      setLoading(true);
-      try {
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        const mockData = {
-          currentStage: fieldDetails.cropType === "Maize" ? "flowering" : "vegetation",
-          growthProgress: fieldDetails.cropType === "Maize" ? 65 : 45,
-          overallHealth: 78,
-          ndvi: 0.72,
-          colorIndex: 0.68,
-          moistureLevel: 72,
-          growthRate: 2.3,
-          threats: {
-            weedInfestation: { detected: true, species: ["Amaranthus", "Bidens"], density: 25, coverage: 12 },
-            diseaseOutbreak: { detected: false, diseaseType: [], severity: 0, affectedArea: 0 },
-            pestActivity: { detected: true, pestType: ["Aphids"], population: 15, damage: 8 },
-            nutrientDeficiency: { detected: true, deficientNutrients: ["Nitrogen"], severity: 20 },
-            irrigationIssues: { detected: false, issueType: "", severity: 0 }
-          },
-          growthStages: [
-            { stage: "planting", date: new Date("2025-09-15"), completed: true },
-            { stage: "germination", date: new Date("2025-09-22"), completed: true },
-            { stage: "vegetation", date: new Date("2025-10-10"), completed: true },
-            { stage: "flowering", date: new Date("2025-10-28"), completed: false }
-          ],
-          recommendations: [
-            "Apply nitrogen fertilizer to address deficiency",
-            "Continue monitoring for aphid population growth",
-            "Mechanical weeding recommended in next 7 days",
-            "Increase irrigation frequency during flowering stage"
-          ],
-          lastUpdated: new Date()
-        };
-        
-        setCropData(mockData);
-      } catch (err: any) {
-        console.error('Failed to load crop data:', err);
-      } finally {
-        setLoading(false);
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        setSelectedFile(file.name);
       }
     };
 
-    const getHealthColor = (health: number) => {
-      if (health >= 80) return "text-green-500";
-      if (health >= 60) return "text-yellow-500";
-      if (health >= 40) return "text-orange-500";
-      return "text-red-500";
+    const handleSave = () => {
+      console.log('Saving crop analysis...');
     };
 
-    const getThreatColor = (detected: boolean, severity: number) => {
-      if (!detected) return "text-green-500";
-      if (severity >= 50) return "text-red-500";
-      if (severity >= 25) return "text-yellow-500";
-      return "text-orange-500";
+    const handleDownload = () => {
+      console.log('Downloading crop analysis...');
     };
-
-    if (loading) {
-      return (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
-            <p className="text-white/60">Loading crop analysis data...</p>
-          </div>
-        </div>
-      );
-    }
-
-    if (!cropData) {
-      return (
-        <Card className={`${dashboardTheme.card}`}>
-          <CardContent className="p-6">
-            <div className="text-center text-red-400">
-              <Leaf className="h-12 w-12 mx-auto mb-4" />
-              <p>Failed to load crop analysis data</p>
-            </div>
-          </CardContent>
-        </Card>
-      );
-    }
 
     return (
       <div className="space-y-6">
-        <div className="grid gap-6 md:grid-cols-3">
-          <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-white/70 mb-2">Overall Health</p>
-                  <p className={`text-3xl font-bold ${getHealthColor(cropData.overallHealth)}`}>
-                    {cropData.overallHealth}%
-                  </p>
-                </div>
-                <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center">
-                  <Leaf className="h-8 w-8 text-green-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-white/70 mb-2">Growth Progress</p>
-                  <p className="text-3xl font-bold text-white">
-                    {cropData.growthProgress}%
-                  </p>
-                  <p className="text-xs text-white/60 mt-1">Stage: {cropData.currentStage}</p>
-                </div>
-                <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center">
-                  <AlertTriangle className="h-8 w-8 text-blue-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className={`${dashboardTheme.card} border-l-4 border-l-teal-500`}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-white/70 mb-2">NDVI Index</p>
-                  <p className="text-3xl font-bold text-white">
-                    {cropData.ndvi.toFixed(2)}
-                  </p>
-                  <p className="text-xs text-white/60 mt-1">Healthy vegetation</p>
-                </div>
-                <div className="w-16 h-16 bg-teal-500/20 rounded-full flex items-center justify-center">
-                  <Leaf className="h-8 w-8 text-teal-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
+        {/* Field Summary */}
         <Card className={`${dashboardTheme.card}`}>
           <CardHeader>
-            <CardTitle className="flex items-center text-white">
-              <AlertTriangle className="h-5 w-5 mr-2" />
-              Threats Assessment
-            </CardTitle>
+            <CardTitle className="text-white">Field Summary</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className={`p-4 rounded-lg border ${cropData.threats.weedInfestation.detected ? 'border-yellow-500/30 bg-yellow-500/10' : 'border-gray-800 bg-gray-800/30'}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-white font-medium">Weed Infestation</span>
-                  <span className={`text-sm ${getThreatColor(cropData.threats.weedInfestation.detected, cropData.threats.weedInfestation.density)}`}>
-                    {cropData.threats.weedInfestation.detected ? 'Detected' : 'None'}
-                  </span>
-                </div>
-                {cropData.threats.weedInfestation.detected && (
-                  <div className="text-sm text-white/70">
-                    <p>Species: {cropData.threats.weedInfestation.species.join(', ')}</p>
-                    <p>Density: {cropData.threats.weedInfestation.density} plants/m²</p>
-                  </div>
-                )}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <p className="text-sm text-blue-400 mb-1 font-medium">Farmer</p>
+                <p className="text-blue-300 font-medium">{fieldDetails.farmer}</p>
               </div>
-
-              <div className={`p-4 rounded-lg border ${cropData.threats.pestActivity.detected ? 'border-orange-500/30 bg-orange-500/10' : 'border-gray-800 bg-gray-800/30'}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-white font-medium">Pest Activity</span>
-                  <span className={`text-sm ${getThreatColor(cropData.threats.pestActivity.detected, cropData.threats.pestActivity.damage)}`}>
-                    {cropData.threats.pestActivity.detected ? 'Detected' : 'None'}
-                  </span>
-                </div>
-                {cropData.threats.pestActivity.detected && (
-                  <div className="text-sm text-white/70">
-                    <p>Type: {cropData.threats.pestActivity.pestType.join(', ')}</p>
-                    <p>Population: {cropData.threats.pestActivity.population}</p>
-                  </div>
-                )}
+              <div>
+                <p className="text-sm text-green-400 mb-1 font-medium">Crop</p>
+                <p className="text-green-300 font-medium">{fieldDetails.cropType}</p>
               </div>
-
-              <div className={`p-4 rounded-lg border ${cropData.threats.nutrientDeficiency.detected ? 'border-red-500/30 bg-red-500/10' : 'border-gray-800 bg-gray-800/30'}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-white font-medium">Nutrient Deficiency</span>
-                  <span className={`text-sm ${getThreatColor(cropData.threats.nutrientDeficiency.detected, cropData.threats.nutrientDeficiency.severity)}`}>
-                    {cropData.threats.nutrientDeficiency.detected ? 'Detected' : 'None'}
-                  </span>
-                </div>
-                {cropData.threats.nutrientDeficiency.detected && (
-                  <div className="text-sm text-white/70">
-                    <p>Nutrients: {cropData.threats.nutrientDeficiency.deficientNutrients.join(', ')}</p>
-                    <p>Severity: {cropData.threats.nutrientDeficiency.severity}%</p>
-                  </div>
-                )}
-              </div>
-
-              <div className={`p-4 rounded-lg border ${cropData.threats.diseaseOutbreak.detected ? 'border-purple-500/30 bg-purple-500/10' : 'border-gray-800 bg-gray-800/30'}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-white font-medium">Disease Outbreak</span>
-                  <span className={`text-sm ${getThreatColor(cropData.threats.diseaseOutbreak.detected, cropData.threats.diseaseOutbreak.severity)}`}>
-                    {cropData.threats.diseaseOutbreak.detected ? 'Detected' : 'None'}
-                  </span>
-                </div>
-                {cropData.threats.diseaseOutbreak.detected && (
-                  <div className="text-sm text-white/70">
-                    <p>Type: {cropData.threats.diseaseOutbreak.diseaseType.join(', ')}</p>
-                    <p>Severity: {cropData.threats.diseaseOutbreak.severity}%</p>
-                  </div>
-                )}
+              <div>
+                <p className="text-sm text-purple-400 mb-1 font-medium">Area</p>
+                <p className="text-purple-300 font-medium">{fieldDetails.area} ha</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* Data Source */}
         <Card className={`${dashboardTheme.card}`}>
           <CardHeader>
-            <CardTitle className="text-white">Recommendations</CardTitle>
+            <CardTitle className="text-white">Data Source</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2">
-              {cropData.recommendations.map((rec: string, idx: number) => (
-                <li key={idx} className="flex items-start text-white/80">
-                  <span className="mr-2 text-teal-500">•</span>
-                  {rec}
-                </li>
-              ))}
-            </ul>
+            <Tabs value={dataSource} onValueChange={setDataSource}>
+              <TabsList className={`${dashboardTheme.card} border border-gray-800 w-fit`}>
+                <TabsTrigger 
+                  value="drone" 
+                  className="data-[state=active]:bg-gray-800 data-[state=active]:text-white text-white/70"
+                >
+                  Drone Upload
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="manual" 
+                  className="data-[state=active]:bg-gray-800 data-[state=active]:text-white text-white/70"
+                >
+                  Manual Check
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="drone" className="mt-6">
+                <div className="space-y-6">
+                  {/* Drone Data Upload */}
+                  <div>
+                    <Label className="text-white mb-2 block">Drone Data Upload</Label>
+                    <p className="text-sm text-white/60 mb-4">Upload JSON or GeoJSON</p>
+                    <div className="border-2 border-dashed border-gray-700 rounded-lg p-8 text-center hover:border-teal-500 transition-colors">
+                      <Upload className="h-12 w-12 mx-auto mb-4 text-white/40" />
+                      <p className="text-white mb-2">Drag file here or click to browse</p>
+                      {!selectedFile && (
+                        <p className="text-sm text-white/60 mb-4">No file chosen</p>
+                      )}
+                      <input
+                        type="file"
+                        id="drone-upload"
+                        className="hidden"
+                        accept=".json,.geojson"
+                        onChange={handleFileChange}
+                      />
+                      <Button
+                        onClick={() => document.getElementById('drone-upload')?.click()}
+                        className="bg-teal-600 hover:bg-teal-700 text-white"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Choose File
+                      </Button>
+                      {selectedFile && (
+                        <div className="mt-4 p-3 bg-teal-500/10 border border-teal-500/30 rounded-lg">
+                          <p className="text-white/80 text-sm">File selected: {selectedFile}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Flight Date */}
+                  <div>
+                    <Label htmlFor="flight-date" className="text-white mb-2 block">Flight Date</Label>
+                    <Input
+                      id="flight-date"
+                      type="date"
+                      value={flightDate}
+                      onChange={(e) => setFlightDate(e.target.value)}
+                      className={`${dashboardTheme.input} border-gray-700`}
+                    />
+                  </div>
+
+                  {/* Drone Metrics */}
+                  <div>
+                    <Label className="text-white mb-4 block">Drone Metrics</Label>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                      <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                        <p className="text-xs text-green-400 mb-1 font-medium">Healthy Area</p>
+                        <p className="text-xl font-bold text-green-300">2.8 ha</p>
+                      </div>
+                      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                        <p className="text-xs text-yellow-400 mb-1 font-medium">Stress Detected</p>
+                        <p className="text-xl font-bold text-yellow-300">17.6%</p>
+                      </div>
+                      <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                        <p className="text-xs text-blue-400 mb-1 font-medium">Soil Moisture</p>
+                        <p className="text-xl font-bold text-blue-300">58%</p>
+                      </div>
+                      <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4">
+                        <p className="text-xs text-orange-400 mb-1 font-medium">Weed Area</p>
+                        <p className="text-xl font-bold text-orange-300">0.25 ha</p>
+                        <p className="text-xs text-orange-300/70">(7.3%)</p>
+                      </div>
+                      <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                        <p className="text-xs text-red-400 mb-1 font-medium">Pest Area</p>
+                        <p className="text-xl font-bold text-red-300">0.15 ha</p>
+                        <p className="text-xs text-red-300/70">(4.4%)</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Field Visualization */}
+                  <div>
+                    <Label className="text-white mb-4 block">Field Visualization</Label>
+                    <Card className={`${dashboardTheme.card} border border-gray-800`}>
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-white font-medium">Map View</p>
+                            <p className="text-xs text-white/60">Field ID: {fieldDetails.fieldId}</p>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <p className="text-sm text-white/80">Layer: 🌱 Plant Health (NDVI)</p>
+                            <Select defaultValue="ndvi">
+                              <SelectTrigger className={`${dashboardTheme.select} w-64`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className={dashboardTheme.card}>
+                                <SelectItem value="ndvi">
+                                  🌱 Plant Health (NDVI) ⭐
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-[400px] bg-gray-900/50 rounded-lg border border-gray-800 flex items-center justify-center relative">
+                          <div className="text-center">
+                            <Map className="h-16 w-16 mx-auto mb-4 text-white/30" />
+                            <p className="text-white/60 text-lg">Field Visualization Map</p>
+                            <p className="text-white/40 text-sm mt-2">NDVI Data Visualization</p>
+                          </div>
+                          {/* Legend */}
+                          <div className="absolute bottom-4 left-4 bg-gray-900/90 border border-gray-800 rounded-lg p-4">
+                            <p className="text-white font-medium mb-3">Legend</p>
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-4 h-4 bg-green-500 rounded"></div>
+                                <span className="text-white text-sm">Healthy</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+                                <span className="text-white text-sm">Moderate</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-4 h-4 bg-red-500 rounded"></div>
+                                <span className="text-white text-sm">Stress</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Assessor Notes */}
+                  <div>
+                    <Label htmlFor="notes" className="text-white mb-2 block">Assessor Notes</Label>
+                    <Textarea
+                      id="notes"
+                      value={assessorNotes}
+                      onChange={(e) => setAssessorNotes(e.target.value)}
+                      className={`${dashboardTheme.input} border-gray-700 min-h-[100px]`}
+                      placeholder="Enter your notes here..."
+                    />
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-4">
+                    <Button
+                      onClick={handleSave}
+                      className="bg-teal-600 hover:bg-teal-700 text-white flex-1"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Save Analysis
+                    </Button>
+                    <Button
+                      onClick={handleDownload}
+                      variant="outline"
+                      className="border-gray-700 text-white hover:bg-gray-800 flex-1"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Summary JSON
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="manual" className="mt-6">
+                <div className="space-y-6">
+                  {/* Manual Assessment Date */}
+                  <div>
+                    <Label className="text-white mb-2 block">Manual Assessment Date</Label>
+                    <p className="text-sm text-white/60 mb-2">Physical Check Date:</p>
+                    <Input
+                      id="manual-date"
+                      type="date"
+                      value={manualDate}
+                      onChange={(e) => setManualDate(e.target.value)}
+                      className={`${dashboardTheme.input} border-gray-700`}
+                    />
+                  </div>
+
+                  {/* Manual Input Metrics */}
+                  <div>
+                    <Label className="text-white mb-4 block">Manual Input Metrics</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 space-y-3 hover:border-yellow-500/50 transition-colors">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-sm text-white/80 font-medium">Stress Detected</p>
+                          <p className="text-2xl font-bold text-yellow-400">{stressDetected[0].toFixed(1)}%</p>
+                        </div>
+                        <Slider
+                          value={stressDetected}
+                          onValueChange={setStressDetected}
+                          max={100}
+                          min={0}
+                          step={0.1}
+                          className="w-full [&_[role=slider]]:bg-yellow-500 [&_[role=slider]]:border-yellow-400 [&_[role=slider]]:shadow-lg [&_[role=slider]]:shadow-yellow-500/20 [&>span[data-range]]:bg-yellow-500"
+                        />
+                        <div className="flex justify-between text-xs text-white/40">
+                          <span>0%</span>
+                          <span>50%</span>
+                          <span>100%</span>
+                        </div>
+                      </div>
+                      <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 space-y-3 hover:border-blue-500/50 transition-colors">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-sm text-white/80 font-medium">Soil Moisture</p>
+                          <p className="text-2xl font-bold text-blue-400">{soilMoisture[0].toFixed(1)}%</p>
+                        </div>
+                        <Slider
+                          value={soilMoisture}
+                          onValueChange={setSoilMoisture}
+                          max={100}
+                          min={0}
+                          step={0.1}
+                          className="w-full [&_[role=slider]]:bg-blue-500 [&_[role=slider]]:border-blue-400 [&_[role=slider]]:shadow-lg [&_[role=slider]]:shadow-blue-500/20 [&>span[data-range]]:bg-blue-500"
+                        />
+                        <div className="flex justify-between text-xs text-white/40">
+                          <span>0%</span>
+                          <span>50%</span>
+                          <span>100%</span>
+                        </div>
+                      </div>
+                      <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4 space-y-3 hover:border-orange-500/50 transition-colors">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-sm text-white/80 font-medium">Weed Area (Estimated)</p>
+                          <p className="text-2xl font-bold text-orange-400">{weedArea[0].toFixed(1)}%</p>
+                        </div>
+                        <Slider
+                          value={weedArea}
+                          onValueChange={setWeedArea}
+                          max={100}
+                          min={0}
+                          step={0.1}
+                          className="w-full [&_[role=slider]]:bg-orange-500 [&_[role=slider]]:border-orange-400 [&_[role=slider]]:shadow-lg [&_[role=slider]]:shadow-orange-500/20 [&>span[data-range]]:bg-orange-500"
+                        />
+                        <div className="flex justify-between text-xs text-white/40">
+                          <span>0%</span>
+                          <span>50%</span>
+                          <span>100%</span>
+                        </div>
+                      </div>
+                      <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 space-y-3 hover:border-red-500/50 transition-colors">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-sm text-white/80 font-medium">Pest Area (Estimated)</p>
+                          <p className="text-2xl font-bold text-red-400">{pestArea[0].toFixed(1)}%</p>
+                        </div>
+                        <Slider
+                          value={pestArea}
+                          onValueChange={setPestArea}
+                          max={100}
+                          min={0}
+                          step={0.1}
+                          className="w-full [&_[role=slider]]:bg-red-500 [&_[role=slider]]:border-red-400 [&_[role=slider]]:shadow-lg [&_[role=slider]]:shadow-red-500/20 [&>span[data-range]]:bg-red-500"
+                        />
+                        <div className="flex justify-between text-xs text-white/40">
+                          <span>0%</span>
+                          <span>50%</span>
+                          <span>100%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Field Reference Map */}
+                  <div>
+                    <Label className="text-white mb-4 block">Field Reference Map</Label>
+                    <Card className={`${dashboardTheme.card} border border-gray-800`}>
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-white font-medium">Map View</p>
+                            <p className="text-xs text-white/60">Field ID: {fieldDetails.fieldId}</p>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-[400px] bg-gray-900/50 rounded-lg border border-gray-800 flex items-center justify-center relative">
+                          <div className="text-center">
+                            <Map className="h-16 w-16 mx-auto mb-4 text-white/30" />
+                            <p className="text-white/60 text-lg">Field Reference Map</p>
+                            <p className="text-white/40 text-sm mt-2">Physical Assessment Location</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Assessor Notes */}
+                  <div>
+                    <Label htmlFor="manual-notes" className="text-white mb-2 block">Assessor Notes</Label>
+                    <Textarea
+                      id="manual-notes"
+                      value={assessorNotes}
+                      onChange={(e) => setAssessorNotes(e.target.value)}
+                      className={`${dashboardTheme.input} border-gray-700 min-h-[100px]`}
+                      placeholder="Enter your notes here..."
+                    />
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-4">
+                    <Button
+                      onClick={handleSave}
+                      className="bg-teal-600 hover:bg-teal-700 text-white flex-1"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Save Analysis
+                    </Button>
+                    <Button
+                      onClick={handleDownload}
+                      variant="outline"
+                      className="border-gray-700 text-white hover:bg-gray-800 flex-1"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Summary JSON
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>
@@ -795,10 +1116,10 @@ export default function RiskAssessmentSystem() {
         
         <div>
           <h1 className="text-4xl font-bold text-white">
-            Field Detail View: {fieldDetails.fieldId}
+            Field Detail View: <span className="text-teal-400">{fieldDetails.fieldId}</span>
           </h1>
           <p className="text-white/70 mt-2">
-            {fieldDetails.farmer} - {fieldDetails.cropType}
+            <span className="text-blue-300">{fieldDetails.farmer}</span> - <span className="text-green-300">{fieldDetails.cropType}</span>
           </p>
         </div>
 
@@ -835,44 +1156,44 @@ export default function RiskAssessmentSystem() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex justify-between items-center border-b border-gray-800 pb-3">
-                    <span className="text-white/70">Field ID</span>
-                    <span className="text-white font-medium">{fieldDetails.fieldId}</span>
+                    <span className="text-cyan-400">Field ID</span>
+                    <span className="text-cyan-300 font-medium">{fieldDetails.fieldId}</span>
                   </div>
                   <div className="flex justify-between items-center border-b border-gray-800 pb-3">
-                    <span className="text-white/70">Field Name</span>
-                    <span className="text-white font-medium">{fieldDetails.fieldName}</span>
+                    <span className="text-teal-400">Field Name</span>
+                    <span className="text-teal-300 font-medium">{fieldDetails.fieldName}</span>
                   </div>
                   <div className="flex justify-between items-center border-b border-gray-800 pb-3">
-                    <span className="text-white/70">Farmer</span>
-                    <span className="text-white font-medium">{fieldDetails.farmer}</span>
+                    <span className="text-blue-400">Farmer</span>
+                    <span className="text-blue-300 font-medium">{fieldDetails.farmer}</span>
                   </div>
                   <div className="flex justify-between items-center border-b border-gray-800 pb-3">
-                    <span className="text-white/70">Crop Type</span>
+                    <span className="text-green-400">Crop Type</span>
                     <div className="flex items-center gap-2">
                       <Leaf className="h-4 w-4 text-green-500" />
-                      <span className="text-white font-medium">{fieldDetails.cropType}</span>
+                      <span className="text-green-300 font-medium">{fieldDetails.cropType}</span>
                     </div>
                   </div>
                   <div className="flex justify-between items-center border-b border-gray-800 pb-3">
-                    <span className="text-white/70">Area</span>
-                    <span className="text-white font-medium">{fieldDetails.area} hectares</span>
+                    <span className="text-purple-400">Area</span>
+                    <span className="text-purple-300 font-medium">{fieldDetails.area} hectares</span>
                   </div>
                   <div className="flex justify-between items-center border-b border-gray-800 pb-3">
-                    <span className="text-white/70">Season</span>
-                    <span className="text-white font-medium">Season {fieldDetails.season}</span>
+                    <span className="text-yellow-400">Season</span>
+                    <span className="text-yellow-300 font-medium">Season {fieldDetails.season}</span>
                   </div>
                   <div className="flex justify-between items-center border-b border-gray-800 pb-3">
-                    <span className="text-white/70">Sowing Date</span>
+                    <span className="text-orange-400">Sowing Date</span>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-teal-500" />
-                      <span className="text-white font-medium">{fieldDetails.sowingDate}</span>
+                      <span className="text-orange-300 font-medium">{fieldDetails.sowingDate}</span>
                     </div>
                   </div>
                   <div className="flex justify-between items-center pb-3">
-                    <span className="text-white/70">Location</span>
+                    <span className="text-pink-400">Location</span>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-teal-500" />
-                      <span className="text-white font-medium">{fieldDetails.location}</span>
+                      <span className="text-pink-300 font-medium">{fieldDetails.location}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -981,11 +1302,11 @@ export default function RiskAssessmentSystem() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-800">
-                  <th className="text-left py-4 px-6 font-medium text-white/80">Assessment ID</th>
-                  <th className="text-left py-4 px-6 font-medium text-white/80">Farmer Name</th>
-                  <th className="text-left py-4 px-6 font-medium text-white/80">Location</th>
-                  <th className="text-left py-4 px-6 font-medium text-white/80">Status</th>
-                  <th className="text-left py-4 px-6 font-medium text-white/80">Date</th>
+                  <th className="text-left py-4 px-6 font-medium text-cyan-400">Assessment ID</th>
+                  <th className="text-left py-4 px-6 font-medium text-teal-400">Farmer Name</th>
+                  <th className="text-left py-4 px-6 font-medium text-blue-400">Location</th>
+                  <th className="text-left py-4 px-6 font-medium text-yellow-400">Status</th>
+                  <th className="text-left py-4 px-6 font-medium text-green-400">Date</th>
                 </tr>
               </thead>
               <tbody>
@@ -997,9 +1318,9 @@ export default function RiskAssessmentSystem() {
                         index % 2 === 0 ? "bg-gray-950/30" : ""
                       }`}
                     >
-                      <td className="py-4 px-6 text-white">{assessment.id}</td>
-                      <td className="py-4 px-6 text-white">{assessment.farmerName}</td>
-                      <td className="py-4 px-6 text-white/80">
+                      <td className="py-4 px-6 text-cyan-300">{assessment.id}</td>
+                      <td className="py-4 px-6 text-teal-300">{assessment.farmerName}</td>
+                      <td className="py-4 px-6 text-blue-300">
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-teal-500" />
                           {assessment.location}
@@ -1010,7 +1331,7 @@ export default function RiskAssessmentSystem() {
                           {assessment.status}
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-white/80">{assessment.date}</td>
+                      <td className="py-4 px-6 text-green-300">{assessment.date}</td>
                     </tr>
                   ))}
               </tbody>

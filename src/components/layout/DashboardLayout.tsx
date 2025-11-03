@@ -185,7 +185,7 @@ export default function DashboardLayout({
 
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-3 overflow-y-auto">
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
             <CustomScrollbar className="h-full">
             {navigationItems.map((item) => {
               const Icon = item.icon;
@@ -199,9 +199,9 @@ export default function DashboardLayout({
                                 onPageChange(item.id);
                                 setSidebarOpen(false);
                               }}
-                              className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300 ${
+                              className={`w-full flex items-center justify-between px-4 py-4 text-sm font-medium rounded-xl transition-all duration-300 ease-in-out ${
                                 isActive
-                                  ? `bg-gradient-to-r ${colors.active} backdrop-blur-sm text-white transform scale-105`
+                                  ? `bg-white/10 backdrop-blur-md text-white shadow-lg shadow-white/5 border border-white/10`
                                   : `text-white/80 hover:bg-gray-800/20 hover:text-white ${colors.hover} hover:backdrop-blur-sm`
                               }`}
                             >
