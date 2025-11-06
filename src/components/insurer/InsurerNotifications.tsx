@@ -24,70 +24,8 @@ export default function InsurerNotifications() {
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
 
-  // Mock notifications data
-  const notifications = [
-    {
-      id: 1,
-      type: "risk_assessment",
-      title: "New Risk Assessment Submitted",
-      message: "Risk assessment RISK-001 for farmer FMR-0247 (Jean Baptiste) has been submitted and requires review.",
-      priority: "high",
-      status: "unread",
-      timestamp: "2024-10-05 14:30",
-      farmerId: "FMR-0247",
-      farmerName: "Jean Baptiste",
-      assessorId: "ASS-001",
-      assessorName: "Richard Nkurunziza"
-    },
-    {
-      id: 2,
-      type: "claim_submitted",
-      title: "New Claim Filed",
-      message: "Claim CLM-002 for policy POL-001 has been filed by farmer FMR-0248 (Marie Uwimana) for drought damage.",
-      priority: "medium",
-      status: "unread",
-      timestamp: "2024-10-05 12:15",
-      farmerId: "FMR-0248",
-      farmerName: "Marie Uwimana",
-      claimId: "CLM-002",
-      claimAmount: 150000
-    },
-    {
-      id: 3,
-      type: "payment_due",
-      title: "Premium Payment Due",
-      message: "Premium payment of 15,000 RWF is due for policy POL-001 (Farmer: Jean Baptiste).",
-      priority: "low",
-      status: "read",
-      timestamp: "2024-10-04 09:00",
-      farmerId: "FMR-0247",
-      farmerName: "Jean Baptiste",
-      policyId: "POL-001",
-      amount: 15000
-    },
-    {
-      id: 4,
-      type: "assessment_completed",
-      title: "Assessment Completed",
-      message: "Risk assessment RISK-002 has been completed by assessor Grace Mukamana for farmer FMR-0249.",
-      priority: "medium",
-      status: "read",
-      timestamp: "2024-10-04 16:45",
-      farmerId: "FMR-0249",
-      farmerName: "Paul Kagame",
-      assessorId: "ASS-002",
-      assessorName: "Grace Mukamana"
-    },
-    {
-      id: 5,
-      type: "system_alert",
-      title: "System Maintenance Scheduled",
-      message: "Scheduled system maintenance will occur on October 7th, 2024 from 2:00 AM to 4:00 AM.",
-      priority: "low",
-      status: "read",
-      timestamp: "2024-10-03 10:30"
-    }
-  ];
+  // Notifications will be loaded from API in the future
+  const notifications: any[] = [];
 
   const getNotificationIcon = (type: string) => {
     switch (type) {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { dashboardTheme } from "@/utils/dashboardTheme";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import DashboardLayout from "../layout/DashboardLayout";
+import { getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
+import { getFarms } from "@/services/farmsApi";
+import { getClaims } from "@/services/claimsApi";
+import { useToast } from "@/hooks/use-toast";
 import { 
   PieChart, 
   Pie, 
@@ -41,78 +45,101 @@ import {
   Settings,
   Upload,
   Camera,
-  Info
+  Info,
+  Crop,
+  BarChart3
 } from "lucide-react";
 
 export default function FarmerDashboard() {
+  const { toast } = useToast();
   const [activePage, setActivePage] = useState("dashboard");
-  const [farmerId] = useState("FMR-0247"); // This would come from auth context
-  const [farmerName] = useState("Jean Baptiste"); // This would come from auth context
   
-  // Mock data
-  const policies = [
-    {
-      id: "POL-001",
-      crop: "Maize",
-      coverage: 250000,
-      premium: 15000,
-      status: "active",
-      startDate: "2024-01-15",
-      endDate: "2024-12-31"
-    },
-    {
-      id: "POL-002",
-      crop: "Rice",
-      coverage: 180000,
-      premium: 12000,
-      status: "active",
-      startDate: "2024-03-01",
-      endDate: "2024-12-31"
-    },
-    {
-      id: "POL-003",
-      crop: "Beans",
-      coverage: 120000,
-      premium: 8000,
-      status: "pending",
-      startDate: "2024-06-01",
-      endDate: "2024-12-31"
+  // Get logged-in farmer data from localStorage
+  const farmerId = getUserId() || "";
+  const farmerPhone = getPhoneNumber() || "";
+  const farmerEmail = getEmail() || "";
+  const farmerName = farmerEmail || farmerPhone || "Farmer";
+  
+  // State for My Fields page
+  const [farms, setFarms] = useState<any[]>([]);
+  const [farmsLoading, setFarmsLoading] = useState(false);
+  const [farmsError, setFarmsError] = useState<string | null>(null);
+  
+  // State for Loss Reports page
+  const [claims, setClaims] = useState<any[]>([]);
+  const [claimsLoading, setClaimsLoading] = useState(false);
+  const [claimsError, setClaimsError] = useState<string | null>(null);
+  
+  // Load data for dashboard and pages
+  useEffect(() => {
+    if (farmerId) {
+      if (activePage === "dashboard") {
+        loadFarms();
+        loadClaims();
+      } else if (activePage === "my-fields") {
+        loadFarms();
+      } else if (activePage === "loss-reports") {
+        loadClaims();
+      }
     }
-  ];
+  }, [activePage, farmerId]);
+  
+  const loadFarms = async () => {
+    setFarmsLoading(true);
+    setFarmsError(null);
+    try {
+      const response: any = await getFarms(1, 100);
+      const farmsData = response.data || response || [];
+      const farmsArray = Array.isArray(farmsData) ? farmsData : (farmsData.items || farmsData.results || []);
+      
+      // Filter farms by the logged-in farmer
+      const farmerFarms = farmsArray.filter((farm: any) => {
+        const farmFarmerId = farm.farmerId?._id || farm.farmerId || farm.farmer?._id || farm.farmer;
+        return farmFarmerId === farmerId || farmFarmerId === farmerId.toString();
+      });
+      
+      setFarms(farmerFarms);
+    } catch (err: any) {
+      console.error('Failed to load farms:', err);
+      setFarmsError(err.message || 'Failed to load farms');
+      toast({
+        title: 'Error loading farms',
+        description: err.message || 'Failed to load farms',
+        variant: 'destructive'
+      });
+    } finally {
+      setFarmsLoading(false);
+    }
+  };
+  
+  const loadClaims = async () => {
+    setClaimsLoading(true);
+    setClaimsError(null);
+    try {
+      const response: any = await getClaims(1, 100);
+      const claimsData = response.data || response || [];
+      const claimsArray = Array.isArray(claimsData) ? claimsData : (claimsData.items || claimsData.results || []);
+      
+      // Filter claims by the logged-in farmer
+      const farmerClaims = claimsArray.filter((claim: any) => {
+        const claimFarmerId = claim.farmerId?._id || claim.farmerId || claim.farmer?._id || claim.farmer;
+        return claimFarmerId === farmerId || claimFarmerId === farmerId.toString();
+      });
+      
+      setClaims(farmerClaims);
+    } catch (err: any) {
+      console.error('Failed to load claims:', err);
+      setClaimsError(err.message || 'Failed to load claims');
+      toast({
+        title: 'Error loading claims',
+        description: err.message || 'Failed to load claims',
+        variant: 'destructive'
+      });
+    } finally {
+      setClaimsLoading(false);
+    }
+  };
 
-  const claims = [
-    {
-      id: "CLM-002",
-      crop: "Maize",
-      date: "2024-10-02",
-      status: "in_review",
-      assessor: "Richard",
-      description: "Drought damage affecting 60% of crop"
-    },
-    {
-      id: "CLM-003",
-      crop: "Rice",
-      date: "2024-09-15",
-      status: "approved",
-      assessor: "Marie",
-      description: "Flood damage to rice fields"
-    }
-  ];
-
-  const notifications = [
-    {
-      id: 1,
-      message: "Your policy POL-001 was approved.",
-      type: "success",
-      date: "2024-01-20"
-    },
-    {
-      id: 2,
-      message: "An assessor has been assigned to your claim CLM-002.",
-      type: "info",
-      date: "2024-10-03"
-    }
-  ];
 
   // Chart data
   const policyDistributionData = [
@@ -197,11 +224,11 @@ export default function FarmerDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-white/70">My Policies</p>
-                <p className="text-2xl font-bold text-white">{policies.length}</p>
+                <p className="text-sm font-medium text-white/70">My Fields</p>
+                <p className="text-2xl font-bold text-white">{farms.length}</p>
               </div>
               <div className="w-12 h-12 bg-green-400/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-md shadow-green-900/20">
-                <FileText className="h-6 w-6 text-green-400" />
+                <Crop className="h-6 w-6 text-green-400" />
               </div>
             </div>
           </CardContent>
@@ -211,13 +238,13 @@ export default function FarmerDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-white/70">Pending Requests</p>
-                <p className="text-2xl font-bold text-white">0</p>
+                <p className="text-sm font-medium text-white/70">Total Claims</p>
+                <p className="text-2xl font-bold text-white">{claims.length}</p>
               </div>
               <div className="w-12 h-12 bg-yellow-100/80 dark:bg-yellow-900/40 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-md shadow-yellow-200/30 dark:shadow-yellow-900/20">
-                <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+                <FileText className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
               </div>
-      </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -225,11 +252,11 @@ export default function FarmerDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-white/70">Claims Filed</p>
-                <p className="text-2xl font-bold text-white">{claims.length}</p>
+                <p className="text-sm font-medium text-white/70">Pending Claims</p>
+                <p className="text-2xl font-bold text-white">{claims.filter(c => c.status?.toLowerCase() === 'pending').length}</p>
               </div>
               <div className="w-12 h-12 bg-blue-100/80 dark:bg-blue-900/40 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-md shadow-blue-200/30 dark:shadow-blue-900/20">
-                <AlertTriangle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                <Clock className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
           </CardContent>
@@ -239,11 +266,11 @@ export default function FarmerDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-white/70">Claims in Review</p>
-                <p className="text-2xl font-bold text-white">{claims.filter(c => c.status === 'in_review').length}</p>
+                <p className="text-sm font-medium text-white/70">Approved Claims</p>
+                <p className="text-2xl font-bold text-white">{claims.filter(c => c.status?.toLowerCase() === 'approved').length}</p>
               </div>
               <div className="w-12 h-12 bg-orange-100/80 dark:bg-orange-900/40 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-md shadow-orange-200/30 dark:shadow-orange-900/20">
-                <TrendingUp className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                <CheckCircle className="h-6 w-6 text-orange-600 dark:text-orange-400" />
               </div>
             </div>
           </CardContent>
@@ -620,275 +647,221 @@ export default function FarmerDashboard() {
     </div>
   );
 
-  const renderRequestInsurance = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">Request Insurance</h2>
-        <Button variant="outline" onClick={() => setActivePage("dashboard")}>
-          Back to Dashboard
-        </Button>
-      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>New Insurance Request</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="farmerId">Farmer ID</Label>
-              <Input id="farmerId" value={farmerId} disabled />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="cropType">Crop Type</Label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select crop type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="maize">Maize</SelectItem>
-                  <SelectItem value="rice">Rice</SelectItem>
-                  <SelectItem value="beans">Beans</SelectItem>
-                  <SelectItem value="potatoes">Potatoes</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="farmSize">Farm Size (hectares)</Label>
-              <Input id="farmSize" type="number" placeholder="Enter farm size" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <Input id="location" placeholder="Auto-filled from profile" disabled />
-            </div>
-          </div>
-
-          <Button className="w-full bg-green-600 hover:bg-green-700">
-            Submit Request
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
-  );
-
-  const renderMyPolicies = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">My Policies</h2>
-        <Button variant="outline" onClick={() => setActivePage("dashboard")}>
-          Back to Dashboard
-        </Button>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Active Policies</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-3">Policy ID</th>
-                  <th className="text-left p-3">Crop</th>
-                  <th className="text-left p-3">Coverage</th>
-                  <th className="text-left p-3">Premium</th>
-                  <th className="text-left p-3">Status</th>
-                  <th className="text-left p-3">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {policies.map((policy) => (
-                  <tr key={policy.id} className="border-b">
-                    <td className="p-3 font-medium">{policy.id}</td>
-                    <td className="p-3">{policy.crop}</td>
-                    <td className="p-3">{policy.coverage.toLocaleString()} RWF</td>
-                    <td className="p-3">{policy.premium.toLocaleString()} RWF</td>
-                    <td className="p-3">
-                      <Badge className={getStatusColor(policy.status)}>
-                        {getStatusIcon(policy.status)}
-                        <span className="ml-1 capitalize">{policy.status}</span>
-                      </Badge>
-                    </td>
-                    <td className="p-3">
-                      <Button variant="outline" size="sm">View</Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-
-  const renderFileClaim = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">File a Claim</h2>
-        <Button variant="outline" onClick={() => setActivePage("dashboard")}>
-          Back to Dashboard
-        </Button>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>New Claim Submission</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="policySelect">Select Active Policy</Label>
-            <Select>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose policy to claim against" />
-              </SelectTrigger>
-              <SelectContent>
-                {policies.map((policy) => (
-                  <SelectItem key={policy.id} value={policy.id}>
-                    {policy.id} - {policy.crop} ({policy.coverage.toLocaleString()} RWF)
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="lossDescription">Describe Loss Event</Label>
-            <Textarea 
-              id="lossDescription" 
-              placeholder="Describe what happened to your crops..."
-              rows={4}
-            />
-              </div>
-
-          <div className="space-y-2">
-            <Label>Upload Photos</Label>
-            <div className="border-2 border-dashed border-gray-700/50 rounded-lg p-6 text-center">
-              <Upload className="h-8 w-8 mx-auto text-white/60 mb-2" />
-              <p className="text-sm text-white/80">Click to upload or drag and drop</p>
-              <p className="text-xs text-white/60">PNG, JPG up to 10MB</p>
-            </div>
-          </div>
-
-          <Button className="w-full bg-green-600 hover:bg-green-700">
-            Submit Claim
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
-  );
-
-  const renderClaimStatus = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">Claim Status</h2>
-        <Button variant="outline" onClick={() => setActivePage("dashboard")}>
-          Back to Dashboard
-        </Button>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Claim Tracking</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-3">Claim ID</th>
-                  <th className="text-left p-3">Crop</th>
-                  <th className="text-left p-3">Date</th>
-                  <th className="text-left p-3">Status</th>
-                  <th className="text-left p-3">Assessor</th>
-                  <th className="text-left p-3">Decision</th>
-                </tr>
-              </thead>
-              <tbody>
-                {claims.map((claim) => (
-                  <tr key={claim.id} className="border-b">
-                    <td className="p-3 font-medium">{claim.id}</td>
-                    <td className="p-3">{claim.crop}</td>
-                    <td className="p-3">{claim.date}</td>
-                    <td className="p-3">
-                      <Badge className={getStatusColor(claim.status)}>
-                        {getStatusIcon(claim.status)}
-                        <span className="ml-1 capitalize">{claim.status.replace('_', ' ')}</span>
-                      </Badge>
-                    </td>
-                    <td className="p-3">{claim.assessor}</td>
-                    <td className="p-3">—</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-                </div>
-  );
-
-  const renderNotifications = () => (
+  const renderMyFields = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Notifications</h2>
-          <p className="text-white/80">Stay updated with your policy status and claim updates</p>
+          <h2 className="text-2xl font-bold text-white">My Fields</h2>
+          <p className="text-white/80">Manage and view your registered fields</p>
         </div>
-        <Button variant="outline" onClick={() => setActivePage("dashboard")}>
-          Back to Dashboard
+        <Button 
+          variant="outline" 
+          onClick={loadFarms}
+          disabled={farmsLoading}
+          className="border-gray-700 text-white hover:bg-gray-800"
+        >
+          <Crop className={`h-4 w-4 mr-2 ${farmsLoading ? 'animate-spin' : ''}`} />
+          Refresh
         </Button>
       </div>
 
-      <div className="space-y-4">
-        {notifications.map((notification) => (
-          <Card key={notification.id} className={`${dashboardTheme.card} transition-all duration-200 ${
-            notification.type === 'success' ? "border-l-4 border-l-green-500 bg-green-600/30" : "border-l-4 border-l-blue-500 bg-blue-600/30"
-          }`}>
-            <CardContent className="p-6">
-              <div className="flex items-start space-x-4">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  notification.type === 'success' ? "bg-green-400/20 text-green-400" : "bg-blue-400/20 text-blue-400"
-                }`}>
-                  {notification.type === 'success' ? <CheckCircle className="h-5 w-5" /> : <Info className="h-5 w-5" />}
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-medium text-white">
-                      {notification.type === 'success' ? 'Policy Update' : 'System Notification'}
-                    </h3>
-                    <div className="flex items-center space-x-2">
-                      <Badge className={`${
-                        notification.type === 'success' ? "bg-green-400/20 text-green-400" : "bg-blue-400/20 text-blue-400"
-                      }`}>
-                        {notification.type}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <p className="text-white/80 mb-3">
-                    {notification.message}
-                  </p>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4 text-sm text-white/60">
-                      <div className="flex items-center">
-                        <Clock className="h-4 w-4 mr-1" />
-                        {notification.date}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+      {farmsLoading && (
+        <Card className={`${dashboardTheme.card}`}>
+          <CardContent className="p-12">
+            <div className="flex items-center justify-center">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
+                <p className="text-white/60">Loading fields...</p>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {farmsError && !farmsLoading && (
+        <Card className={`${dashboardTheme.card}`}>
+          <CardContent className="p-6">
+            <div className="text-center text-red-400">
+              <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
+              <p>{farmsError}</p>
+              <Button 
+                onClick={loadFarms} 
+                className="mt-4 bg-green-600 hover:bg-green-700 text-white"
+              >
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!farmsLoading && !farmsError && (
+        <Card className={`${dashboardTheme.card}`}>
+          <CardHeader>
+            <CardTitle className="text-white">Registered Fields</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {farms.length === 0 ? (
+              <div className="text-center py-12">
+                <Crop className="h-16 w-16 mx-auto text-white/40 mb-4" />
+                <p className="text-white/60 text-lg mb-2">No fields registered</p>
+                <p className="text-white/40 text-sm">Register your fields to get started with crop insurance</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-800">
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Field Name</th>
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Crop Type</th>
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Area (ha)</th>
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Location</th>
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {farms.map((farm, index) => (
+                      <tr 
+                        key={farm._id || farm.id || index} 
+                        className={`border-b border-gray-800/50 hover:bg-gray-900/50 transition-colors ${
+                          index % 2 === 0 ? "bg-gray-950/30" : ""
+                        }`}
+                      >
+                        <td className="py-4 px-6 text-white font-medium">{farm.name || "Unnamed Field"}</td>
+                        <td className="py-4 px-6 text-white">{farm.cropType || farm.crop || "N/A"}</td>
+                        <td className="py-4 px-6 text-white">{farm.area || farm.size || 0} ha</td>
+                        <td className="py-4 px-6 text-white">
+                          {farm.location?.coordinates 
+                            ? `${farm.location.coordinates[1]?.toFixed(4)}, ${farm.location.coordinates[0]?.toFixed(4)}`
+                            : farm.location || "N/A"}
+                        </td>
+                        <td className="py-4 px-6">
+                          <Badge className="bg-green-500/20 text-green-400 border border-green-500/30">
+                            {farm.status || "Active"}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+
+  const renderLossReports = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-white">Loss Reports</h2>
+          <p className="text-white/80">View and track your claim reports</p>
+        </div>
+        <Button 
+          variant="outline" 
+          onClick={loadClaims}
+          disabled={claimsLoading}
+          className="border-gray-700 text-white hover:bg-gray-800"
+        >
+          <BarChart3 className={`h-4 w-4 mr-2 ${claimsLoading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
+
+      {claimsLoading && (
+        <Card className={`${dashboardTheme.card}`}>
+          <CardContent className="p-12">
+            <div className="flex items-center justify-center">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
+                <p className="text-white/60">Loading loss reports...</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {claimsError && !claimsLoading && (
+        <Card className={`${dashboardTheme.card}`}>
+          <CardContent className="p-6">
+            <div className="text-center text-red-400">
+              <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
+              <p>{claimsError}</p>
+              <Button 
+                onClick={loadClaims} 
+                className="mt-4 bg-green-600 hover:bg-green-700 text-white"
+              >
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!claimsLoading && !claimsError && (
+        <Card className={`${dashboardTheme.card}`}>
+          <CardHeader>
+            <CardTitle className="text-white">Claim Reports</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {claims.length === 0 ? (
+              <div className="text-center py-12">
+                <FileText className="h-16 w-16 mx-auto text-white/40 mb-4" />
+                <p className="text-white/60 text-lg mb-2">No loss reports found</p>
+                <p className="text-white/40 text-sm">Your claim reports will appear here</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-800">
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Claim ID</th>
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Crop</th>
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Date</th>
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Damage Type</th>
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Amount</th>
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {claims.map((claim, index) => (
+                      <tr 
+                        key={claim._id || claim.id || index} 
+                        className={`border-b border-gray-800/50 hover:bg-gray-900/50 transition-colors ${
+                          index % 2 === 0 ? "bg-gray-950/30" : ""
+                        }`}
+                      >
+                        <td className="py-4 px-6 text-white font-medium">{claim.claimNumber || claim._id || claim.id || "N/A"}</td>
+                        <td className="py-4 px-6 text-white">{claim.cropType || claim.crop || "N/A"}</td>
+                        <td className="py-4 px-6 text-white">
+                          {claim.createdAt || claim.submittedAt || claim.date 
+                            ? new Date(claim.createdAt || claim.submittedAt || claim.date).toLocaleDateString()
+                            : "N/A"}
+                        </td>
+                        <td className="py-4 px-6 text-white">{claim.lossEventType || claim.damageType || "N/A"}</td>
+                        <td className="py-4 px-6 text-white">
+                          {claim.amount || claim.claimAmount 
+                            ? `${(claim.amount || claim.claimAmount).toLocaleString()} RWF`
+                            : "N/A"}
+                        </td>
+                        <td className="py-4 px-6">
+                          <Badge className={getStatusColor(claim.status?.toLowerCase() || "pending")}>
+                            {getStatusIcon(claim.status?.toLowerCase() || "pending")}
+                            <span className="ml-1 capitalize">{claim.status?.replace('_', ' ') || "Pending"}</span>
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 
@@ -944,35 +917,36 @@ export default function FarmerDashboard() {
   const renderPage = () => {
     switch (activePage) {
       case "dashboard": return renderDashboard();
-      case "my-policies": return renderMyPolicies();
-      case "request-insurance": return renderRequestInsurance();
-      case "file-claim": return renderFileClaim();
-      case "claim-status": return renderClaimStatus();
-      case "notifications": return renderNotifications();
-      case "profile-settings": return renderProfileSettings();
+      case "my-fields": return renderMyFields();
+      case "loss-reports": return renderLossReports();
+      case "profile": return renderProfileSettings();
       default: return renderDashboard();
     }
   };
 
   const navigationItems = [
-    { id: "dashboard", label: "Dashboard", icon: User },
-    { id: "my-policies", label: "My Policies", icon: FileText },
-    { id: "request-insurance", label: "Request Insurance", icon: Plus },
-    { id: "file-claim", label: "File Claim", icon: AlertTriangle },
-    { id: "claim-status", label: "Claim Status", icon: Clock },
-    { id: "notifications", label: "Notifications", icon: Bell },
-    { id: "profile-settings", label: "Profile Settings", icon: Settings }
+    { id: "dashboard", label: "Dashboard", icon: BarChart3 },
+    { id: "my-fields", label: "My Fields", icon: Crop },
+    { id: "loss-reports", label: "Loss Reports", icon: FileText },
+    { id: "profile", label: "Profile", icon: User }
   ];
 
   return (
     <DashboardLayout
       userType="farmer"
       userId={farmerId}
-      userName="Jean Baptiste"
+      userName={farmerName}
       navigationItems={navigationItems}
       activePage={activePage} 
       onPageChange={setActivePage}
-      onLogout={() => {}}
+      onLogout={() => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('role');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('phoneNumber');
+        localStorage.removeItem('email');
+        window.location.href = '/farmer-login';
+      }}
     >
       {renderPage()}
     </DashboardLayout>

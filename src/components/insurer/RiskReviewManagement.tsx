@@ -45,70 +45,7 @@ interface RiskAssessment {
 }
 
 export default function RiskReviewManagement() {
-  const [assessments, setAssessments] = useState<RiskAssessment[]>([
-    {
-      id: "RISK-001",
-      farmerId: "FMR-0247",
-      farmerName: "Jean Baptiste",
-      cropType: "Maize",
-      farmSize: 2.5,
-      location: "Nyagatare District",
-      assessorId: "ASS-001",
-      assessorName: "Richard Nkurunziza",
-      riskLevel: "low",
-      status: "pending_review",
-      submittedDate: "2024-10-03",
-      coverageRecommendation: 250000,
-      premiumRecommendation: 15000,
-      riskFactors: [
-        "Moderate rainfall variability",
-        "Occasional pest outbreaks",
-        "Market price fluctuations"
-      ],
-      mitigationMeasures: [
-        "Implement irrigation system",
-        "Regular pest monitoring",
-        "Diversify crop portfolio"
-      ],
-      weatherRisk: 45,
-      soilQuality: 85,
-      marketRisk: 60,
-      pestRisk: 35,
-      overallScore: 75,
-      notes: "Good soil quality and experienced farmer. Low overall risk profile."
-    },
-    {
-      id: "RISK-002",
-      farmerId: "FMR-0248",
-      farmerName: "Marie Uwimana",
-      cropType: "Rice",
-      farmSize: 1.8,
-      location: "Gatsibo District",
-      assessorId: "ASS-002",
-      assessorName: "Grace Mukamana",
-      riskLevel: "medium",
-      status: "pending_review",
-      submittedDate: "2024-10-04",
-      coverageRecommendation: 200000,
-      premiumRecommendation: 12000,
-      riskFactors: [
-        "High rainfall dependency",
-        "Flood risk in low-lying areas",
-        "Limited market access"
-      ],
-      mitigationMeasures: [
-        "Drainage system improvement",
-        "Flood-resistant crop varieties",
-        "Market linkage programs"
-      ],
-      weatherRisk: 70,
-      soilQuality: 60,
-      marketRisk: 75,
-      pestRisk: 50,
-      overallScore: 65,
-      notes: "Medium risk due to location and market access challenges."
-    }
-  ]);
+  const [assessments, setAssessments] = useState<RiskAssessment[]>([]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");

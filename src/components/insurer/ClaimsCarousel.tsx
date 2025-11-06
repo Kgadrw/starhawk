@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getClaims } from "@/services/claimsApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,106 +38,56 @@ interface Claim {
 
 export default function ClaimsCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [claims, setClaims] = useState<Claim[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock claims data
-  const claims: Claim[] = [
-    {
-      id: "CLM-001",
-      farmerId: "FMR-0247",
-      farmerName: "Jean Baptiste",
-      policyId: "POL-001",
-      cropType: "Maize",
-      claimAmount: 150000,
-      status: "pending_review",
-      filedDate: "2024-10-02",
-      incidentDate: "2024-09-28",
-      description: "Drought damage affecting 60% of crop due to prolonged dry season. Significant yield loss observed in the northern section of the farm.",
-      location: "Nyagatare District, Eastern Province",
-      assessorId: "ASS-001",
-      assessorName: "Richard Nkurunziza",
-      priority: "high"
-    },
-    {
-      id: "CLM-002",
-      farmerId: "FMR-0248",
-      farmerName: "Marie Uwimana",
-      policyId: "POL-002",
-      cropType: "Rice",
-      claimAmount: 200000,
-      status: "pending_review",
-      filedDate: "2024-10-04",
-      incidentDate: "2024-10-01",
-      description: "Flood damage from heavy rainfall causing waterlogging and crop loss in low-lying areas of the rice field.",
-      location: "Gatsibo District, Eastern Province",
-      assessorId: "ASS-002",
-      assessorName: "Grace Mukamana",
-      priority: "medium"
-    },
-    {
-      id: "CLM-003",
-      farmerId: "FMR-0249",
-      farmerName: "Paul Kagame",
-      policyId: "POL-003",
-      cropType: "Potatoes",
-      claimAmount: 180000,
-      status: "under_investigation",
-      filedDate: "2024-10-05",
-      incidentDate: "2024-10-02",
-      description: "Pest infestation causing significant damage to potato crops. Requires further investigation and assessment.",
-      location: "Musanze District, Northern Province",
-      assessorId: "ASS-003",
-      assessorName: "John Doe",
-      priority: "high"
-    },
-    {
-      id: "CLM-004",
-      farmerId: "FMR-0250",
-      farmerName: "Grace Mukamana",
-      policyId: "POL-004",
-      cropType: "Beans",
-      claimAmount: 120000,
-      status: "approved",
-      filedDate: "2024-09-28",
-      incidentDate: "2024-09-25",
-      description: "Hail damage affecting 40% of bean crops. Assessment completed and approved for payment.",
-      location: "Huye District, Southern Province",
-      assessorId: "ASS-004",
-      assessorName: "Jane Smith",
-      priority: "low"
-    },
-    {
-      id: "CLM-005",
-      farmerId: "FMR-0251",
-      farmerName: "Joseph Nkurunziza",
-      policyId: "POL-005",
-      cropType: "Coffee",
-      claimAmount: 300000,
-      status: "rejected",
-      filedDate: "2024-09-30",
-      incidentDate: "2024-09-27",
-      description: "Claim rejected due to insufficient evidence of damage. Farmer may resubmit with additional documentation.",
-      location: "Rubavu District, Western Province",
-      assessorId: "ASS-005",
-      assessorName: "Peter Wilson",
-      priority: "medium"
-    },
-    {
-      id: "CLM-006",
-      farmerId: "FMR-0252",
-      farmerName: "Sarah Uwimana",
-      policyId: "POL-006",
-      cropType: "Cassava",
-      claimAmount: 95000,
-      status: "pending_review",
-      filedDate: "2024-10-06",
-      incidentDate: "2024-10-03",
-      description: "Disease outbreak affecting cassava plants. Requires immediate assessment and treatment recommendations.",
-      location: "Rwamagana District, Eastern Province",
-      assessorId: "ASS-006",
-      assessorName: "Alice Brown",
-      priority: "high"
+  // Load claims from API
+  useEffect(() => {
+    loadClaims();
+  }, []);
+
+  const loadClaims = async () => {
+    setLoading(true);
+    try {
+      const response: any = await getClaims(1, 100);
+      let claimsData: any[] = [];
+      
+      if (Array.isArray(response)) {
+        claimsData = response;
+      } else if (response && typeof response === 'object') {
+        claimsData = response.data || response.claims || [];
+      }
+      
+      // Map API response to Claim interface
+      const mappedClaims: Claim[] = claimsData.map((claim: any) => ({
+        id: claim._id || claim.id || '',
+        farmerId: claim.farmerId || claim.farmer?._id || claim.farmer?.id || '',
+        farmerName: claim.farmer?.firstName && claim.farmer?.lastName 
+          ? `${claim.farmer.firstName} ${claim.farmer.lastName}` 
+          : claim.farmer?.name || claim.farmerName || 'Unknown Farmer',
+        policyId: claim.policyId || claim.policy?._id || claim.policy?.id || '',
+        cropType: claim.cropType || claim.policy?.cropType || 'Unknown',
+        claimAmount: claim.amount || claim.claimAmount || 0,
+        status: claim.status || 'pending_review',
+        filedDate: claim.filedDate || claim.createdAt || new Date().toISOString().split('T')[0],
+        incidentDate: claim.incidentDate || claim.incidentDate || new Date().toISOString().split('T')[0],
+        description: claim.description || claim.lossDescription || '',
+        location: claim.location || claim.farm?.location || 'Unknown',
+        assessorId: claim.assessorId || claim.assessor?._id || claim.assessor?.id || '',
+        assessorName: claim.assessor?.firstName && claim.assessor?.lastName
+          ? `${claim.assessor.firstName} ${claim.assessor.lastName}`
+          : claim.assessor?.name || claim.assessorName || 'Unassigned',
+        priority: claim.priority || 'medium',
+      }));
+      
+      setClaims(mappedClaims);
+    } catch (err: any) {
+      console.error('Failed to load claims:', err);
+      setClaims([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -226,16 +177,16 @@ export default function ClaimsCarousel() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div>
-                  <CardTitle className="text-xl">{currentClaim.id}</CardTitle>
-                  <p className="text-sm text-white/70">Filed on {currentClaim.filedDate}</p>
+                  <CardTitle className="text-xl">{currentClaim?.id || 'N/A'}</CardTitle>
+                  <p className="text-sm text-white/70">Filed on {currentClaim?.filedDate || 'N/A'}</p>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Badge className={getPriorityColor(currentClaim.priority)}>
-                    {currentClaim.priority} priority
+                  <Badge className={getPriorityColor(currentClaim?.priority || 'medium')}>
+                    {currentClaim?.priority || 'medium'} priority
                   </Badge>
-                  <Badge className={getStatusColor(currentClaim.status)}>
-                    {getStatusIcon(currentClaim.status)}
-                    <span className="ml-1 capitalize">{currentClaim.status.replace('_', ' ')}</span>
+                  <Badge className={getStatusColor(currentClaim?.status || 'pending')}>
+                    {getStatusIcon(currentClaim?.status || 'pending')}
+                    <span className="ml-1 capitalize">{(currentClaim?.status || 'pending').replace('_', ' ')}</span>
                   </Badge>
                 </div>
               </div>
@@ -252,20 +203,20 @@ export default function ClaimsCarousel() {
                     <div className="flex justify-between">
                       <span className="text-white/70">Claim Amount:</span>
                       <span className="font-semibold text-green-600">
-                        {currentClaim.claimAmount.toLocaleString()} RWF
+                        {(currentClaim?.claimAmount || 0).toLocaleString()} RWF
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-white/70">Policy ID:</span>
-                      <span className="font-medium">{currentClaim.policyId}</span>
+                      <span className="font-medium">{currentClaim?.policyId || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-white/70">Crop Type:</span>
-                      <span className="font-medium">{currentClaim.cropType}</span>
+                      <span className="font-medium">{currentClaim?.cropType || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-white/70">Incident Date:</span>
-                      <span className="font-medium">{currentClaim.incidentDate}</span>
+                      <span className="font-medium">{currentClaim?.incidentDate || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
@@ -275,15 +226,15 @@ export default function ClaimsCarousel() {
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
                       <User className="h-4 w-4 text-gray-500" />
-                      <span className="font-medium">{currentClaim.farmerName}</span>
+                      <span className="font-medium">{currentClaim?.farmerName || 'Unknown Farmer'}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <FileText className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-white/70">ID: {currentClaim.farmerId}</span>
+                      <span className="text-sm text-white/70">ID: {currentClaim?.farmerId || 'N/A'}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <MapPin className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-white/70">{currentClaim.location}</span>
+                      <span className="text-sm text-white/70">{currentClaim?.location || 'N/A'}</span>
                     </div>
                   </div>
                   <div className="flex space-x-2 mt-3">
@@ -306,11 +257,11 @@ export default function ClaimsCarousel() {
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
                       <User className="h-4 w-4 text-gray-500" />
-                      <span className="font-medium">{currentClaim.assessorName}</span>
+                      <span className="font-medium">{currentClaim?.assessorName || 'Unassigned'}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <FileText className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-white/70">ID: {currentClaim.assessorId}</span>
+                      <span className="text-sm text-white/70">ID: {currentClaim?.assessorId || 'N/A'}</span>
                     </div>
                   </div>
                   <div className="mt-3">
@@ -324,7 +275,7 @@ export default function ClaimsCarousel() {
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h3 className="font-semibold text-white mb-3">Description</h3>
                   <p className="text-sm text-white/80 leading-relaxed">
-                    {currentClaim.description}
+                    {currentClaim?.description || 'No description available'}
                   </p>
                 </div>
               </div>
@@ -336,7 +287,9 @@ export default function ClaimsCarousel() {
                 className="bg-blue-600 hover:bg-blue-700"
                 onClick={() => {
                   // Navigate to detailed claim review page
-                  window.location.href = `/claim-review/${currentClaim.id}`;
+                  if (currentClaim?.id) {
+                    window.location.href = `/claim-review/${currentClaim.id}`;
+                  }
                 }}
               >
                 <Eye className="h-4 w-4 mr-2" />

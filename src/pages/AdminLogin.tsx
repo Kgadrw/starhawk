@@ -7,14 +7,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { HomeNavbar } from "@/components/layout/HomeNavbar";
 import { FooterSection } from "@/components/home/FooterSection";
 import CustomScrollbar from "@/components/ui/CustomScrollbar";
-import { Shield, Lock, User, ArrowRight } from "lucide-react";
+import { Shield, Lock, Phone, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { adminLogin } from "@/services/authAPI";
 
 export default function AdminLogin() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
-    username: "",
+    phoneNumber: "",
     password: "",
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -23,23 +24,26 @@ export default function AdminLogin() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      if (formData.username === "admin" && formData.password === "admin123") {
-        toast({
-          title: "Login Successful",
-          description: "Welcome to the Admin Portal",
-        });
-        navigate("/admin-dashboard");
-      } else {
-        toast({
-          title: "Login Failed",
-          description: "Invalid credentials. Try admin/admin123",
-          variant: "destructive",
-        });
-      }
+    try {
+      const data = await adminLogin(formData.phoneNumber, formData.password);
+      
+      toast({
+        title: "Login Successful",
+        description: `Welcome Admin ${data.email || data.phoneNumber}`,
+      });
+      
+      // Redirect to admin dashboard
+      navigate("/admin-dashboard");
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast({
+        title: "Login Failed",
+        description: error.message || "Invalid credentials. Please check your phone number and password.",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -76,15 +80,15 @@ export default function AdminLogin() {
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="username" className="text-white">Username</Label>
+                  <Label htmlFor="phoneNumber" className="text-white">Phone Number</Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/40" />
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/40" />
                     <Input
-                      id="username"
+                      id="phoneNumber"
                       type="text"
-                      placeholder="Enter admin username"
-                      value={formData.username}
-                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      placeholder="e.g. 0721234567"
+                      value={formData.phoneNumber}
+                      onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                       className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-red-500"
                       required
                     />
@@ -105,12 +109,6 @@ export default function AdminLogin() {
                       required
                     />
                   </div>
-                </div>
-
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-sm text-white/70">
-                  <p className="font-medium mb-1">Test Credentials:</p>
-                  <p>Username: <span className="text-white font-mono">admin</span></p>
-                  <p>Password: <span className="text-white font-mono">admin123</span></p>
                 </div>
 
                 <Button

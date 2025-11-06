@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { dashboardTheme } from "@/utils/dashboardTheme";
 import { Button } from "@/components/ui/button";
@@ -17,8 +17,14 @@ import {
   Save,
   FileDown,
   MapPin,
-  Plus
+  Plus,
+  RefreshCw
 } from "lucide-react";
+import { getClaims, getClaimById } from "@/services/claimsApi";
+import { getUserId } from "@/services/authAPI";
+import { getUserById } from "@/services/usersAPI";
+import { getFarmById } from "@/services/farmsApi";
+import { useToast } from "@/hooks/use-toast";
 
 interface LossAssessment {
   id: string;
@@ -35,53 +41,163 @@ interface LossAssessment {
 }
 
 export default function LossAssessmentSystem() {
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAssessment, setSelectedAssessment] = useState<LossAssessment | null>(null);
-  const [assessmentNotes, setAssessmentNotes] = useState("Severe flood confirmed. Drone verified damage zone.");
+  const [assessmentNotes, setAssessmentNotes] = useState("");
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
+  const [assessments, setAssessments] = useState<LossAssessment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
-  // Mock data for loss assessments
-  const assessments: LossAssessment[] = [
-    {
-      id: "LOSS-001",
-      farmerName: "Mugabo John",
-      fieldId: "9812345",
-      crop: "Maize",
-      area: "3.4 ha",
-      cause: "Flood",
-      date: "16/04/2025",
-      severity: "Moderate",
-      affectedArea: "1.2 ha",
-      affectedPercentage: 35,
-      status: "Under Review"
-    },
-    {
-      id: "LOSS-002",
-      farmerName: "Kamali Peace",
-      fieldId: "9812346",
-      crop: "Rice",
-      area: "2.0 ha",
-      cause: "Drought",
-      date: "12/04/2025",
-      severity: "Severe",
-      affectedArea: "1.5 ha",
-      affectedPercentage: 75,
-      status: "Pending"
-    },
-    {
-      id: "LOSS-003",
-      farmerName: "Jean Baptiste",
-      fieldId: "9812347",
-      crop: "Beans",
-      area: "1.8 ha",
-      cause: "Pest Infestation",
-      date: "08/04/2025",
-      severity: "Mild",
-      affectedArea: "0.5 ha",
-      affectedPercentage: 28,
-      status: "Approved"
+  const assessorId = getUserId() || "";
+
+  useEffect(() => {
+    loadLossAssessments();
+  }, []);
+
+  useEffect(() => {
+    if (selectedAssessment && viewMode === "detail") {
+      loadAssessmentDetail(selectedAssessment.id);
     }
-  ];
+  }, [selectedAssessment, viewMode]);
+
+  const loadLossAssessments = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response: any = await getClaims();
+      const claimsData = response.data || response || [];
+      const claimsArray = Array.isArray(claimsData) ? claimsData : (claimsData.items || claimsData.results || []);
+
+      // Filter claims assigned to this assessor
+      const assignedClaims = claimsArray.filter((claim: any) => {
+        if (!assessorId) return false;
+        const claimAssessorId = claim.assessorId || claim.assessor?._id || claim.assessor?.id;
+        return claimAssessorId === assessorId || claimAssessorId === assessorId.toString();
+      });
+
+      // Map claims to LossAssessment interface
+      const mappedAssessments: LossAssessment[] = await Promise.all(
+        assignedClaims.map(async (claim: any) => {
+          const claimId = claim._id || claim.id || "";
+          const claimDate = claim.createdAt || claim.submittedAt || claim.date || new Date().toISOString();
+          const farmerId = claim.farmerId?._id || claim.farmerId || claim.farmer?.id || "";
+          let farmerName = "Unknown Farmer";
+          let fieldId = claim.fieldId || claim.farmId || "";
+          let crop = claim.cropType || claim.crop || "Unknown";
+          let area = "0 ha";
+          let location = "";
+
+          // Get farmer info
+          if (claim.farmer || claim.farmerId) {
+            const farmer = claim.farmer || claim.farmerId;
+            if (typeof farmer === 'object') {
+              farmerName = farmer.firstName && farmer.lastName
+                ? `${farmer.firstName} ${farmer.lastName}`
+                : farmer.email || farmer.phoneNumber || "Unknown Farmer";
+            }
+          }
+
+          // Try to get farmer info from API if needed
+          if (farmerName === "Unknown Farmer" && farmerId) {
+            try {
+              const farmerData: any = await getUserById(farmerId);
+              const farmer = farmerData.data || farmerData;
+              farmerName = farmer.firstName && farmer.lastName
+                ? `${farmer.firstName} ${farmer.lastName}`
+                : farmer.email || farmer.phoneNumber || "Unknown Farmer";
+            } catch (err) {
+              console.error('Failed to load farmer data:', err);
+            }
+          }
+
+          // Get farm/field info if available
+          if (fieldId) {
+            try {
+              const farmData = await getFarmById(fieldId);
+              const farm = farmData.data || farmData;
+              if (farm) {
+                crop = farm.cropType || farm.crop || crop;
+                if (farm.area || farm.size) {
+                  area = `${farm.area || farm.size} ha`;
+                }
+                if (farm.location) {
+                  if (typeof farm.location === 'string') {
+                    location = farm.location;
+                  } else if (farm.location.coordinates && Array.isArray(farm.location.coordinates)) {
+                    location = `${farm.location.coordinates[1]?.toFixed(4)}, ${farm.location.coordinates[0]?.toFixed(4)}`;
+                  }
+                }
+              }
+            } catch (err) {
+              console.error('Failed to load farm data:', err);
+            }
+          }
+
+          // Determine severity based on claim amount or damage description
+          const lossEventType = claim.lossEventType || claim.damageType || claim.cause || "Unknown";
+          const claimAmount = claim.amount || claim.claimAmount || 0;
+          let severity = "Mild";
+          if (claimAmount > 1000000 || lossEventType.toLowerCase().includes("severe") || lossEventType.toLowerCase().includes("drought")) {
+            severity = "Severe";
+          } else if (claimAmount > 500000 || lossEventType.toLowerCase().includes("moderate") || lossEventType.toLowerCase().includes("flood")) {
+            severity = "Moderate";
+          }
+
+          // Calculate affected area and percentage (if available in claim data)
+          const affectedArea = claim.affectedArea || claim.damagedArea || "0 ha";
+          const affectedPercentage = claim.affectedPercentage || claim.damagePercentage || 0;
+
+          return {
+            id: claimId,
+            farmerName,
+            fieldId: fieldId || claim.claimNumber || claimId,
+            crop,
+            area,
+            cause: lossEventType,
+            date: new Date(claimDate).toLocaleDateString(),
+            severity,
+            affectedArea: typeof affectedArea === 'number' ? `${affectedArea} ha` : affectedArea,
+            affectedPercentage,
+            status: claim.status || "Pending"
+          };
+        })
+      );
+
+      setAssessments(mappedAssessments);
+    } catch (err: any) {
+      console.error('Failed to load loss assessments:', err);
+      setError(err.message || 'Failed to load loss assessments');
+      toast({
+        title: 'Error loading loss assessments',
+        description: err.message || 'Failed to load loss assessments',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadAssessmentDetail = async (assessmentId: string) => {
+    setLoadingDetail(true);
+    try {
+      const claimData: any = await getClaimById(assessmentId);
+      const claim = claimData.data || claimData;
+      
+      if (claim && selectedAssessment) {
+        // Update assessment notes if available
+        if (claim.notes || claim.assessmentNotes) {
+          setAssessmentNotes(claim.notes || claim.assessmentNotes || "");
+        }
+      }
+    } catch (err: any) {
+      console.error('Failed to load assessment detail:', err);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
 
   const filteredAssessments = assessments.filter(assessment => {
     return searchQuery === "" ||
@@ -119,79 +235,123 @@ export default function LossAssessmentSystem() {
             className={`${dashboardTheme.input} pl-10 w-64 border-gray-700`}
           />
         </div>
-        <Button className={`${dashboardTheme.card} text-white hover:bg-gray-800 border border-gray-700`}>
-          <Filter className="h-4 w-4 mr-2" />
-          Filter
-        </Button>
-        <Button className="bg-teal-600 hover:bg-teal-700 text-white">
-          <Plus className="h-4 w-4 mr-2" />
-          New Assessment
+        <Button 
+          onClick={loadLossAssessments}
+          variant="outline"
+          className="border-gray-700 text-white hover:bg-gray-800"
+          disabled={loading}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
         </Button>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <Card className={`${dashboardTheme.card}`}>
+          <CardContent className="p-12">
+            <div className="flex items-center justify-center">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
+                <p className="text-white/60">Loading loss assessments...</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <Card className={`${dashboardTheme.card}`}>
+          <CardContent className="p-6">
+            <div className="text-center text-red-400">
+              <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
+              <p>{error}</p>
+              <Button 
+                onClick={loadLossAssessments} 
+                className="mt-4 bg-teal-600 hover:bg-teal-700 text-white"
+              >
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Data Table */}
-      <Card className={`${dashboardTheme.card}`}>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-800">
-                  <th className="text-left py-4 px-6 font-medium text-white/80">Assessment ID</th>
-                  <th className="text-left py-4 px-6 font-medium text-white/80">Farmer</th>
-                  <th className="text-left py-4 px-6 font-medium text-white/80">Field ID</th>
-                  <th className="text-left py-4 px-6 font-medium text-white/80">Crop</th>
-                  <th className="text-left py-4 px-6 font-medium text-white/80">Cause</th>
-                  <th className="text-left py-4 px-6 font-medium text-white/80">Severity</th>
-                  <th className="text-left py-4 px-6 font-medium text-white/80">Affected Area</th>
-                  <th className="text-left py-4 px-6 font-medium text-white/80">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAssessments.map((assessment, index) => (
-                  <tr
-                    key={assessment.id}
-                    onClick={() => handleAssessmentClick(assessment)}
-                    className={`border-b border-gray-800/50 hover:bg-gray-900/50 transition-colors cursor-pointer ${
-                      index % 2 === 0 ? "bg-gray-950/30" : ""
-                    }`}
-                  >
-                    <td className="py-4 px-6 text-white">{assessment.id}</td>
-                    <td className="py-4 px-6 text-white">{assessment.farmerName}</td>
-                    <td className="py-4 px-6 text-white">{assessment.fieldId}</td>
-                    <td className="py-4 px-6 text-white">{assessment.crop}</td>
-                    <td className="py-4 px-6 text-white">{assessment.cause}</td>
-                    <td className="py-4 px-6">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        assessment.severity === "Severe"
-                          ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                          : assessment.severity === "Moderate"
-                          ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
-                          : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
-                      }`}>
-                        {assessment.severity}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 text-white">
-                      {assessment.affectedArea} ({assessment.affectedPercentage}%)
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        assessment.status === "Approved"
-                          ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                          : assessment.status === "Under Review"
-                          ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                          : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
-                      }`}>
-                        {assessment.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      {!loading && !error && (
+        <Card className={`${dashboardTheme.card}`}>
+          <CardContent className="p-0">
+            {filteredAssessments.length === 0 ? (
+              <div className="p-12 text-center">
+                <p className="text-white/60">No loss assessments found.</p>
+                {assessments.length === 0 && !assessorId && (
+                  <p className="text-white/40 text-sm mt-2">Please log in to view loss assessments.</p>
+                )}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-800">
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Assessment ID</th>
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Farmer</th>
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Field ID</th>
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Crop</th>
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Cause</th>
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Severity</th>
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Affected Area</th>
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredAssessments.map((assessment, index) => (
+                      <tr
+                        key={assessment.id}
+                        onClick={() => handleAssessmentClick(assessment)}
+                        className={`border-b border-gray-800/50 hover:bg-gray-900/50 transition-colors cursor-pointer ${
+                          index % 2 === 0 ? "bg-gray-950/30" : ""
+                        }`}
+                      >
+                        <td className="py-4 px-6 text-white">{assessment.id}</td>
+                        <td className="py-4 px-6 text-white">{assessment.farmerName}</td>
+                        <td className="py-4 px-6 text-white">{assessment.fieldId}</td>
+                        <td className="py-4 px-6 text-white">{assessment.crop}</td>
+                        <td className="py-4 px-6 text-white">{assessment.cause}</td>
+                        <td className="py-4 px-6">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
+                            assessment.severity === "Severe"
+                              ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                              : assessment.severity === "Moderate"
+                              ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                              : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                          }`}>
+                            {assessment.severity}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-white">
+                          {assessment.affectedArea} ({assessment.affectedPercentage}%)
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
+                            assessment.status?.toLowerCase() === "approved"
+                              ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                              : assessment.status?.toLowerCase() === "under review" || assessment.status?.toLowerCase() === "review"
+                              ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                              : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                          }`}>
+                            {assessment.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 

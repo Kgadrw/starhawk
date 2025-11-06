@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { dashboardTheme } from "@/utils/dashboardTheme";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ClaimDetailView from "./ClaimDetailView";
+import claimsApiService, { getClaims, approveClaim as approveClaimApi, rejectClaim as rejectClaimApi, assignAssessor as assignAssessorApi } from "@/services/claimsApi";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Search,
   Filter,
@@ -42,143 +44,70 @@ interface Claim {
 }
 
 export default function ClaimsTable() {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [expandedPriority, setExpandedPriority] = useState<string | null>(null);
   const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null);
+  const [claims, setClaims] = useState<Claim[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock claims data
-  const claims: Claim[] = [
-    {
-      id: "CLM-001",
-      farmerId: "FMR-0247",
-      farmerName: "Jean Baptiste",
-      policyId: "POL-001",
-      cropType: "Maize",
-      claimAmount: 150000,
-      status: "pending_review",
-      filedDate: "2024-10-02",
-      incidentDate: "2024-09-28",
-      description: "Drought damage affecting 60% of crop due to prolonged dry season.",
-      location: "Nyagatare District",
-      assessorId: "ASS-001",
-      assessorName: "Richard Nkurunziza",
-      priority: "high"
-    },
-    {
-      id: "CLM-002",
-      farmerId: "FMR-0248",
-      farmerName: "Marie Uwimana",
-      policyId: "POL-002",
-      cropType: "Rice",
-      claimAmount: 200000,
-      status: "pending_review",
-      filedDate: "2024-10-04",
-      incidentDate: "2024-10-01",
-      description: "Flood damage from heavy rainfall causing waterlogging and crop loss.",
-      location: "Gatsibo District",
-      assessorId: "ASS-002",
-      assessorName: "Grace Mukamana",
-      priority: "high"
-    },
-    {
-      id: "CLM-003",
-      farmerId: "FMR-0249",
-      farmerName: "Paul Kagame",
-      policyId: "POL-003",
-      cropType: "Potatoes",
-      claimAmount: 180000,
-      status: "under_investigation",
-      filedDate: "2024-10-05",
-      incidentDate: "2024-10-02",
-      description: "Pest infestation causing significant damage to potato crops.",
-      location: "Musanze District",
-      assessorId: "ASS-003",
-      assessorName: "John Doe",
-      priority: "high"
-    },
-    {
-      id: "CLM-004",
-      farmerId: "FMR-0250",
-      farmerName: "Grace Mukamana",
-      policyId: "POL-004",
-      cropType: "Beans",
-      claimAmount: 120000,
-      status: "approved",
-      filedDate: "2024-09-28",
-      incidentDate: "2024-09-25",
-      description: "Hail damage affecting 40% of bean crops.",
-      location: "Huye District",
-      assessorId: "ASS-004",
-      assessorName: "Jane Smith",
-      priority: "medium"
-    },
-    {
-      id: "CLM-005",
-      farmerId: "FMR-0251",
-      farmerName: "Joseph Nkurunziza",
-      policyId: "POL-005",
-      cropType: "Coffee",
-      claimAmount: 300000,
-      status: "rejected",
-      filedDate: "2024-09-30",
-      incidentDate: "2024-09-27",
-      description: "Claim rejected due to insufficient evidence of damage.",
-      location: "Rubavu District",
-      assessorId: "ASS-005",
-      assessorName: "Peter Wilson",
-      priority: "medium"
-    },
-    {
-      id: "CLM-006",
-      farmerId: "FMR-0252",
-      farmerName: "Sarah Uwimana",
-      policyId: "POL-006",
-      cropType: "Cassava",
-      claimAmount: 95000,
-      status: "pending_review",
-      filedDate: "2024-10-06",
-      incidentDate: "2024-10-03",
-      description: "Disease outbreak affecting cassava plants.",
-      location: "Rwamagana District",
-      assessorId: "ASS-006",
-      assessorName: "Alice Brown",
-      priority: "medium"
-    },
-    {
-      id: "CLM-007",
-      farmerId: "FMR-0253",
-      farmerName: "David Nkurunziza",
-      policyId: "POL-007",
-      cropType: "Sorghum",
-      claimAmount: 80000,
-      status: "pending_review",
-      filedDate: "2024-10-07",
-      incidentDate: "2024-10-04",
-      description: "Minor weather damage to sorghum crops.",
-      location: "Karongi District",
-      assessorId: "ASS-007",
-      assessorName: "Mark Johnson",
-      priority: "low"
-    },
-    {
-      id: "CLM-008",
-      farmerId: "FMR-0254",
-      farmerName: "Esther Mukamana",
-      policyId: "POL-008",
-      cropType: "Wheat",
-      claimAmount: 110000,
-      status: "approved",
-      filedDate: "2024-09-25",
-      incidentDate: "2024-09-22",
-      description: "Wind damage to wheat fields.",
-      location: "Ngororero District",
-      assessorId: "ASS-008",
-      assessorName: "Lisa Davis",
-      priority: "low"
+  // Load claims from API
+  useEffect(() => {
+    loadClaims();
+  }, []);
+
+  const loadClaims = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response: any = await getClaims(1, 100);
+      let claimsData: any[] = [];
+      
+      if (Array.isArray(response)) {
+        claimsData = response;
+      } else if (response && typeof response === 'object') {
+        claimsData = response.data || response.claims || [];
+      }
+      
+      // Map API response to Claim interface
+      const mappedClaims: Claim[] = claimsData.map((claim: any) => ({
+        id: claim._id || claim.id || '',
+        farmerId: claim.farmerId || claim.farmer?._id || claim.farmer?.id || '',
+        farmerName: claim.farmer?.firstName && claim.farmer?.lastName 
+          ? `${claim.farmer.firstName} ${claim.farmer.lastName}` 
+          : claim.farmer?.name || claim.farmerName || 'Unknown Farmer',
+        policyId: claim.policyId || claim.policy?._id || claim.policy?.id || '',
+        cropType: claim.cropType || claim.policy?.cropType || 'Unknown',
+        claimAmount: claim.amount || claim.claimAmount || 0,
+        status: claim.status || 'pending_review',
+        filedDate: claim.filedDate || claim.createdAt || new Date().toISOString().split('T')[0],
+        incidentDate: claim.incidentDate || claim.incidentDate || new Date().toISOString().split('T')[0],
+        description: claim.description || claim.lossDescription || '',
+        location: claim.location || claim.farm?.location || 'Unknown',
+        assessorId: claim.assessorId || claim.assessor?._id || claim.assessor?.id || '',
+        assessorName: claim.assessor?.firstName && claim.assessor?.lastName
+          ? `${claim.assessor.firstName} ${claim.assessor.lastName}`
+          : claim.assessor?.name || claim.assessorName || 'Unassigned',
+        priority: claim.priority || 'medium',
+      }));
+      
+      setClaims(mappedClaims);
+    } catch (err: any) {
+      console.error('Failed to load claims:', err);
+      setError(err.message || 'Failed to load claims');
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to load claims',
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -217,18 +146,66 @@ export default function ClaimsTable() {
     setSelectedClaim(null);
   };
 
-  const handleApproveClaim = (claimId: string, notes: string) => {
-    // Handle claim approval logic here
-    console.log(`Approving claim ${claimId} with notes: ${notes}`);
-    // You would typically make an API call here
-    setSelectedClaim(null);
+  const handleApproveClaim = async (claimId: string, approvedAmount?: number, notes?: string) => {
+    try {
+      await approveClaimApi(claimId, approvedAmount, notes);
+      toast({
+        title: "Success",
+        description: "Claim approved successfully",
+        variant: "default",
+      });
+      // Reload claims
+      loadClaims();
+      setSelectedClaim(null);
+    } catch (err: any) {
+      console.error('Failed to approve claim:', err);
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to approve claim',
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleRejectClaim = (claimId: string, reason: string) => {
-    // Handle claim rejection logic here
-    console.log(`Rejecting claim ${claimId} with reason: ${reason}`);
-    // You would typically make an API call here
-    setSelectedClaim(null);
+  const handleRejectClaim = async (claimId: string, reason: string) => {
+    try {
+      await rejectClaimApi(claimId, reason);
+      toast({
+        title: "Success",
+        description: "Claim rejected successfully",
+        variant: "default",
+      });
+      // Reload claims
+      loadClaims();
+      setSelectedClaim(null);
+    } catch (err: any) {
+      console.error('Failed to reject claim:', err);
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to reject claim',
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAssignAssessor = async (claimId: string, assessorId: string) => {
+    try {
+      await assignAssessorApi(claimId, assessorId);
+      toast({
+        title: "Success",
+        description: "Assessor assigned successfully",
+        variant: "default",
+      });
+      // Reload claims
+      loadClaims();
+    } catch (err: any) {
+      console.error('Failed to assign assessor:', err);
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to assign assessor',
+        variant: "destructive",
+      });
+    }
   };
 
   const getPriorityIcon = (priority: string) => {

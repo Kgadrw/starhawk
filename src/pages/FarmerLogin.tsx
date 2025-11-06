@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { HomeNavbar } from "@/components/layout/HomeNavbar";
 import { FooterSection } from "@/components/home/FooterSection";
+import { farmerLogin } from "@/services/authAPI";
+import { useToast } from "@/hooks/use-toast";
 import { 
   User, 
   ArrowLeft, 
@@ -17,8 +19,9 @@ import {
 
 export default function FarmerLogin() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
-    identifier: "",
+    phoneNumber: "",
     password: ""
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -35,18 +38,37 @@ export default function FarmerLogin() {
     setIsLoading(true);
     setError("");
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Mock validation - in real app, this would be API call
-    if (formData.identifier && formData.password) {
-      // Successful login
+    try {
+      // Validate input
+      if (!formData.phoneNumber || !formData.password) {
+        setError("Please enter both phone number and password.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Call the farmer login API
+      await farmerLogin(formData.phoneNumber, formData.password);
+      
+      // Show success message
+      toast({
+        title: "Login successful",
+        description: "Welcome back! Redirecting to your dashboard...",
+      });
+
+      // Navigate to farmer dashboard
       navigate('/farmer-dashboard');
-    } else {
-      setError("Invalid credentials. Please check your National ID/Farmer ID and password.");
+    } catch (err: any) {
+      console.error('Login error:', err);
+      const errorMessage = err.message || "Invalid credentials. Please check your phone number and password.";
+      setError(errorMessage);
+      toast({
+        title: "Login failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   return (
@@ -107,12 +129,13 @@ export default function FarmerLogin() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="identifier" className="text-white">National ID or Farmer ID</Label>
+                <Label htmlFor="phoneNumber" className="text-white">Phone Number</Label>
                 <Input
-                  id="identifier"
-                  value={formData.identifier}
-                  onChange={(e) => handleInputChange('identifier', e.target.value)}
-                  placeholder="Enter National ID or Farmer ID (e.g., FMR-0247)"
+                  id="phoneNumber"
+                  type="tel"
+                  value={formData.phoneNumber}
+                  onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+                  placeholder="Enter your phone number (e.g., 0781234567)"
                   required
                   className="bg-white/10 border-white/20 text-white placeholder:text-white/50 backdrop-blur-sm"
                 />

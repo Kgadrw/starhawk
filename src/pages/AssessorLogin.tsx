@@ -7,18 +7,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
+import { assessorLogin } from "@/services/authAPI";
 import { 
   MapPin, 
   ArrowLeft, 
   LogIn,
   Eye,
-  EyeOff
+  EyeOff,
+  Phone
 } from "lucide-react";
 
 export default function AssessorLogin() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
-    assessorId: "",
+    phoneNumber: "",
     password: ""
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -35,17 +39,25 @@ export default function AssessorLogin() {
     setIsLoading(true);
     setError("");
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Mock validation
-    if (formData.assessorId && formData.password) {
+    try {
+      const data = await assessorLogin(formData.phoneNumber, formData.password);
+      toast({
+        title: "Login Successful",
+        description: `Welcome Assessor ${data.email || data.phoneNumber}`,
+      });
       navigate('/assessor-dashboard');
-    } else {
-      setError("Invalid credentials. Please check your Assessor ID and password.");
+    } catch (err: any) {
+      console.error("Login error:", err);
+      const errorMessage = err.message || "Invalid credentials. Please check your phone number and password.";
+      setError(errorMessage);
+      toast({
+        title: "Login Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   return (
@@ -106,12 +118,16 @@ export default function AssessorLogin() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="assessorId" className="text-white">Assessor ID</Label>
+                <Label htmlFor="phoneNumber" className="text-white flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  Phone Number
+                </Label>
                 <Input
-                  id="assessorId"
-                  value={formData.assessorId}
-                  onChange={(e) => handleInputChange('assessorId', e.target.value)}
-                  placeholder="Enter your Assessor ID (e.g., ASS-001)"
+                  id="phoneNumber"
+                  type="tel"
+                  value={formData.phoneNumber}
+                  onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+                  placeholder="Enter your phone number (e.g., 0721234567)"
                   required
                   className="bg-white/10 border-white/20 text-white placeholder:text-white/50 backdrop-blur-sm"
                 />

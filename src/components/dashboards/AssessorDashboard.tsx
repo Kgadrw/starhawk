@@ -15,6 +15,10 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, L
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import meteosourceApiService from "@/services/meteosourceApi";
+import assessmentsApiService from "@/services/assessmentsApi";
+import farmsApiService, { getFarms, getFarmById, getWeatherForecast, getHistoricalWeather, getVegetationStats, uploadShapefile, uploadKML, createFarm, createInsuranceRequest, updateFarm } from "@/services/farmsApi";
+import { getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
+import { useToast } from "@/hooks/use-toast";
 import { 
   FileText, 
   Bell,
@@ -133,9 +137,15 @@ interface WeatherData {
 }
 
 export default function AssessorDashboard() {
+  const { toast } = useToast();
   const [activePage, setActivePage] = useState("dashboard");
-  const [assessorId] = useState("ASS-001");
-  const [assessorName] = useState("Richard Nkurunziza");
+  
+  // Get logged-in assessor data from localStorage
+  const assessorId = getUserId() || "";
+  const assessorPhone = getPhoneNumber() || "";
+  const assessorEmail = getEmail() || "";
+  // Use email or phone number as display name, or fallback to "Assessor"
+  const assessorName = assessorEmail || assessorPhone || "Assessor";
   const [activeView, setActiveView] = useState("assessments");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
@@ -152,113 +162,145 @@ export default function AssessorDashboard() {
   const [fieldMethod, setFieldMethod] = useState<"upload" | "draw">("upload");
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   
-  // Mock data for dashboard
-  const totalAssessments = 12;
-  const totalRiskAssessments = 8;
-  const totalClaimAssessments = 4;
-  const pendingAssessments = 3;
+  // API state
+  const [assessments, setAssessments] = useState<AssessmentSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [updatingAssessment, setUpdatingAssessment] = useState<string | null>(null);
   
-  const [assessments, setAssessments] = useState<AssessmentSummary[]>([
-    {
-      id: "RISK-001",
-      farmerId: "FARM-001",
-      farmerName: "Jean Baptiste",
-      location: "Nyagatare, Eastern Province",
-      type: "Risk Assessment",
-      status: "Submitted",
-      date: "2024-10-03"
-    },
-    {
-      id: "RISK-002",
-      farmerId: "FARM-002",
-      farmerName: "Kamali Peace",
-      location: "Gatsibo, Eastern Province",
-      type: "Risk Assessment",
-      status: "Pending",
-      date: "2024-10-02"
-    },
-    {
-      id: "CLAIM-001",
-      farmerId: "FARM-003",
-      farmerName: "Uwase Marie",
-      location: "Bugesera, Eastern Province",
-      type: "Claim Assessment",
-      status: "Under Review",
-      date: "2024-10-01"
-    },
-    {
-      id: "RISK-003",
-      farmerId: "FARM-004",
-      farmerName: "Mugabo John",
-      location: "Gatsibo, Eastern Province",
-      type: "Risk Assessment",
-      status: "Submitted",
-      date: "2024-09-30"
-    },
-    {
-      id: "CLAIM-002",
-      farmerId: "FARM-005",
-      farmerName: "Kayitesi Grace",
-      location: "Kirehe, Eastern Province",
-      type: "Claim Assessment",
-      status: "Pending",
-      date: "2024-09-28"
-    }
-  ]);
+  // Farms API state
+  const [farms, setFarms] = useState<any[]>([]);
+  const [farmsLoading, setFarmsLoading] = useState(false);
+  const [farmsError, setFarmsError] = useState<string | null>(null);
+  const [selectedFarm, setSelectedFarm] = useState<any | null>(null);
+  const [weatherForecast, setWeatherForecast] = useState<any | null>(null);
+  const [historicalWeather, setHistoricalWeather] = useState<any | null>(null);
+  const [vegetationStats, setVegetationStats] = useState<any | null>(null);
+  const [loadingWeather, setLoadingWeather] = useState(false);
+  const [loadingVegetation, setLoadingVegetation] = useState(false);
 
-  // Mock field data for farmers
-  const fieldsByFarmer: Record<string, Field[]> = {
-    "Mugabo John": [
-      {
-        id: "FLD-001",
-        farmerName: "Mugabo John",
-        crop: "Maize",
-        area: 3.4,
-        season: "B",
-        status: "Processed",
-        fieldName: "North Maize Plot",
-        sowingDate: "2025-09-15"
-      },
-      {
-        id: "FLD-004",
-        farmerName: "Mugabo John",
-        crop: "Rice",
-        area: 2.5,
-        season: "A",
-        status: "Processed",
-        fieldName: "South Rice Field",
-        sowingDate: "2025-03-01"
-      },
-      {
-        id: "FLD-007",
-        farmerName: "Mugabo John",
-        crop: "Beans",
-        area: 1.4,
-        season: "B",
-        status: "Processing Needed",
-        fieldName: "East Beans Plot",
-        sowingDate: "2025-09-10"
+  // Computed values for dashboard stats
+  const totalAssessments = assessments.length;
+  const totalRiskAssessments = assessments.filter(a => a.type === "Risk Assessment").length;
+  const totalClaimAssessments = assessments.filter(a => a.type === "Claim Assessment").length;
+  const pendingAssessments = assessments.filter(a => a.status === "Pending").length;
+
+  // Fetch assessments from API
+  useEffect(() => {
+    loadAssessments();
+  }, []);
+
+  const loadAssessments = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response: any = await assessmentsApiService.getAllAssessments();
+      // Map API response to AssessmentSummary format
+      // Adjust mapping based on actual API response structure
+      let assessmentsData: any[] = [];
+      if (Array.isArray(response)) {
+        assessmentsData = response;
+      } else if (response && typeof response === 'object') {
+        const responseObj = response as { data?: any[]; assessments?: any[] };
+        assessmentsData = responseObj.data || responseObj.assessments || [];
       }
-    ],
-    "Jean Baptiste": [
-      {
-        id: "FLD-002",
-        farmerName: "Jean Baptiste",
-        crop: "Maize",
-        area: 2.8,
-        season: "A",
-        status: "Processed",
-        fieldName: "Main Maize Field",
-        sowingDate: "2025-03-05"
+      
+      const mappedAssessments: AssessmentSummary[] = assessmentsData.map((item: any) => ({
+        id: item._id || item.id || '',
+        farmerId: item.farmId || item.farmerId || '',
+        farmerName: item.farmerName || item.farmer?.name || 'Unknown',
+        location: item.location || item.farm?.location || '',
+        type: item.type || 'Risk Assessment',
+        status: item.status || 'Pending',
+        date: item.createdAt ? new Date(item.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+      }));
+      
+      setAssessments(mappedAssessments);
+    } catch (err: any) {
+      console.error('Failed to load assessments:', err);
+      // Handle 401 errors more gracefully - check if it's an auth error
+      if (err.message && err.message.includes('Authentication required')) {
+        setError('Authentication required. Please log in to view assessments.');
+        toast({
+          title: "Authentication Required",
+          description: "Your session has expired. Please log in again.",
+          variant: "destructive",
+        });
+      } else {
+        setError(err.message || 'Failed to load assessments. Please try again.');
+        toast({
+          title: "Load Failed",
+          description: err.message || "Failed to load assessments. Please try again.",
+          variant: "destructive",
+        });
       }
-    ]
+      // Keep empty array on error, or show error message
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // Load farms from API
+  const loadFarms = async () => {
+    setFarmsLoading(true);
+    setFarmsError(null);
+    try {
+      const response: any = await getFarms(1, 100);
+      let farmsData: any[] = [];
+      
+      if (Array.isArray(response)) {
+        farmsData = response;
+      } else if (response && typeof response === 'object') {
+        farmsData = response.data || response.farms || response.items || [];
+      }
+      
+      setFarms(farmsData);
+    } catch (err: any) {
+      console.error('Failed to load farms:', err);
+      setFarmsError(err.message || 'Failed to load farms');
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to load farms',
+        variant: "destructive",
+      });
+    } finally {
+      setFarmsLoading(false);
+    }
+  };
+
+  // Load farms when component mounts or when assessment is selected
+  useEffect(() => {
+    if (selectedAssessment) {
+      loadFarms();
+    }
+  }, [selectedAssessment]);
+
+  // Convert farms to fields format for display
   const getFieldsForAssessment = (assessment: AssessmentSummary): Field[] => {
-    return fieldsByFarmer[assessment.farmerName] || [];
+    // Filter farms by farmer name or farmerId
+    const relevantFarms = farms.filter(farm => 
+      farm.farmerName === assessment.farmerName || 
+      farm.farmerId === assessment.farmerId ||
+      farm.farmer?.name === assessment.farmerName ||
+      farm.farmer?._id === assessment.farmerId
+    );
+    
+    return relevantFarms.map((farm: any) => ({
+      id: farm._id || farm.id || '',
+      farmerName: farm.farmerName || farm.farmer?.name || assessment.farmerName,
+      crop: farm.cropType || 'Unknown',
+      area: farm.area || 0,
+      season: farm.season || 'N/A',
+      status: farm.status || 'Active',
+      fieldName: farm.name || 'Unnamed Field',
+      sowingDate: farm.sowingDate || farm.createdAt ? new Date(farm.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+    }));
   };
 
   const getFieldDetails = (field: Field): FieldDetail => {
+    // Find the farm data for this field
+    const farmData = farms.find(farm => (farm._id || farm.id) === field.id);
+    
     return {
       fieldId: field.id,
       fieldName: field.fieldName,
@@ -267,9 +309,91 @@ export default function AssessorDashboard() {
       area: field.area,
       season: field.season,
       sowingDate: field.sowingDate,
-      location: assessments.find(a => a.farmerName === field.farmerName)?.location || ""
+      location: farmData?.location?.coordinates 
+        ? `${farmData.location.coordinates[1]}, ${farmData.location.coordinates[0]}`
+        : assessments.find(a => a.farmerName === field.farmerName)?.location || ""
     };
   };
+
+  // Load weather data for selected farm/field
+  const loadFarmWeatherData = async (farmId: string) => {
+    if (!farmId) return;
+    
+    setLoadingWeather(true);
+    try {
+      const today = new Date();
+      const endDate = new Date();
+      endDate.setDate(today.getDate() + 7);
+      
+      const startDateStr = today.toISOString().split('T')[0];
+      const endDateStr = endDate.toISOString().split('T')[0];
+      
+      // Load forecast
+      const forecast = await getWeatherForecast(farmId, startDateStr, endDateStr);
+      setWeatherForecast(forecast.data || forecast);
+      
+      // Load historical (last 30 days)
+      const historicalStart = new Date();
+      historicalStart.setDate(today.getDate() - 30);
+      const historical = await getHistoricalWeather(farmId, historicalStart.toISOString().split('T')[0], startDateStr);
+      setHistoricalWeather(historical.data || historical);
+      
+    } catch (err: any) {
+      console.error('Failed to load farm weather data:', err);
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to load weather data',
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingWeather(false);
+    }
+  };
+
+  // Load vegetation statistics for selected farm/field
+  const loadVegetationStats = async (farmId: string) => {
+    if (!farmId) return;
+    
+    setLoadingVegetation(true);
+    try {
+      const today = new Date();
+      const startDate = new Date();
+      startDate.setDate(today.getDate() - 30);
+      
+      const startDateStr = startDate.toISOString().split('T')[0];
+      const endDateStr = today.toISOString().split('T')[0];
+      
+      const stats = await getVegetationStats(farmId, startDateStr, endDateStr, 'NDVI,MSAVI');
+      setVegetationStats(stats.data || stats);
+      
+    } catch (err: any) {
+      console.error('Failed to load vegetation stats:', err);
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to load vegetation statistics',
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingVegetation(false);
+    }
+  };
+
+  // Load farm data when field is selected
+  useEffect(() => {
+    if (selectedField) {
+      const farmId = selectedField.id;
+      setSelectedFarm(null);
+      loadFarmWeatherData(farmId);
+      loadVegetationStats(farmId);
+      
+      // Load full farm details
+      getFarmById(farmId).then((farm: any) => {
+        setSelectedFarm(farm.data || farm);
+      }).catch((err: any) => {
+        console.error('Failed to load farm details:', err);
+      });
+    }
+  }, [selectedField]);
 
   // Weather Analysis Component
   const WeatherAnalysisTab = ({ location }: { location: string }) => {
@@ -629,10 +753,35 @@ export default function AssessorDashboard() {
     const [weedArea, setWeedArea] = useState<number[]>([7.3]);
     const [pestArea, setPestArea] = useState<number[]>([4.4]);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
         setSelectedFile(file.name);
+        
+        // Upload file to farms API if it's a shapefile or KML
+        try {
+          const fileExtension = file.name.split('.').pop()?.toLowerCase();
+          if (fileExtension === 'kml' || fileExtension === 'kmz') {
+            await uploadKML(file);
+            toast({
+              title: "Success",
+              description: "KML file uploaded successfully",
+            });
+          } else if (fileExtension === 'shp' || fileExtension === 'zip') {
+            await uploadShapefile(file);
+            toast({
+              title: "Success",
+              description: "Shapefile uploaded successfully",
+            });
+          }
+        } catch (err: any) {
+          console.error('File upload failed:', err);
+          toast({
+            title: "Upload Failed",
+            description: err.message || 'Failed to upload file',
+            variant: "destructive",
+          });
+        }
       }
     };
 
@@ -1040,13 +1189,14 @@ export default function AssessorDashboard() {
   };
 
   // Handle status change
-  const handleStatusChange = (assessmentId: string, newStatus: string) => {
+  const handleStatusChange = async (assessmentId: string, newStatus: string) => {
     if (newStatus === "Processing") {
       // Find the assessment to get the farmer name
       const assessment = assessments.find(a => a.id === assessmentId);
       if (assessment) {
         setSelectedFarmerForProcessing(assessment.farmerName);
         setShowDrawField(true);
+        // Update locally for immediate UI feedback
         setAssessments(assessments.map(assessment => 
           assessment.id === assessmentId 
             ? { ...assessment, status: newStatus }
@@ -1054,19 +1204,117 @@ export default function AssessorDashboard() {
         ));
       }
     } else {
-      setAssessments(assessments.map(assessment => 
-        assessment.id === assessmentId 
-          ? { ...assessment, status: newStatus }
-          : assessment
-      ));
+      // Update via API
+      setUpdatingAssessment(assessmentId);
+      try {
+        await assessmentsApiService.updateAssessment(assessmentId, { status: newStatus });
+        // Update local state after successful API call
+        setAssessments(assessments.map(assessment => 
+          assessment.id === assessmentId 
+            ? { ...assessment, status: newStatus }
+            : assessment
+        ));
+      } catch (err: any) {
+        console.error('Failed to update assessment:', err);
+        toast({
+          title: "Update Failed",
+          description: err.message || "Failed to update assessment. Please try again.",
+          variant: "destructive",
+        });
+        // Reload assessments to revert to original state
+        loadAssessments();
+      } finally {
+        setUpdatingAssessment(null);
+      }
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle calculate risk score
+  const handleCalculateRisk = async (assessmentId: string) => {
+    setUpdatingAssessment(assessmentId);
+    try {
+      const response = await assessmentsApiService.calculateRiskScore(assessmentId);
+      console.log('Risk calculated:', response);
+      // Reload assessments to get updated risk score
+      await loadAssessments();
+      toast({
+        title: "Success",
+        description: "Risk score calculated successfully!",
+        variant: "default",
+      });
+    } catch (err: any) {
+      console.error('Failed to calculate risk:', err);
+      toast({
+        title: "Calculation Failed",
+        description: err.message || "Failed to calculate risk score. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingAssessment(null);
+    }
+  };
+
+  // Handle submit assessment
+  const handleSubmitAssessment = async (assessmentId: string) => {
+    setUpdatingAssessment(assessmentId);
+    try {
+      const response = await assessmentsApiService.submitAssessment(assessmentId);
+      console.log('Assessment submitted:', response);
+      // Reload assessments to get updated status
+      await loadAssessments();
+      toast({
+        title: "Success",
+        description: "Assessment submitted successfully!",
+        variant: "default",
+      });
+    } catch (err: any) {
+      console.error('Failed to submit assessment:', err);
+      toast({
+        title: "Submission Failed",
+        description: err.message || "Failed to submit assessment. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingAssessment(null);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
       const fileNames = Array.from(files).map(file => file.name);
       setUploadedFiles(fileNames);
+      
+      // Upload files to farms API
+      for (const file of Array.from(files)) {
+        try {
+          const fileExtension = file.name.split('.').pop()?.toLowerCase();
+          if (fileExtension === 'kml' || fileExtension === 'kmz') {
+            await uploadKML(file);
+          } else if (fileExtension === 'shp' || fileExtension === 'zip' || fileExtension === 'dbf' || fileExtension === 'shx') {
+            // For shapefiles, upload the zip file
+            if (fileExtension === 'zip') {
+              await uploadShapefile(file);
+            }
+          }
+        } catch (err: any) {
+          console.error(`Failed to upload ${file.name}:`, err);
+          toast({
+            title: "Upload Failed",
+            description: `Failed to upload ${file.name}: ${err.message || 'Unknown error'}`,
+            variant: "destructive",
+          });
+        }
+      }
+      
+      if (files.length > 0) {
+        toast({
+          title: "Success",
+          description: `${files.length} file(s) uploaded successfully`,
+        });
+        // Reload farms after upload
+        await loadFarms();
+      }
     }
   };
 
@@ -1077,23 +1325,86 @@ export default function AssessorDashboard() {
     setFieldStatus("Ready to Sync");
   };
 
-  const handleSyncField = () => {
-    console.log('Syncing field for:', selectedFarmerForProcessing);
-    console.log('Method:', fieldMethod);
-    if (fieldMethod === "draw") {
-      console.log('Calculated Area:', calculatedArea);
-    } else if (fieldMethod === "upload") {
-      console.log('Uploaded files:', uploadedFiles);
+  const handleSyncField = async () => {
+    if (!selectedFarmerForProcessing) {
+      toast({
+        title: "Error",
+        description: "Please select a farmer first",
+        variant: "destructive",
+      });
+      return;
     }
-    setShowDrawField(false);
-    setCalculatedArea("");
-    setFieldStatus("Awaiting Geometry");
-    setUploadedFiles([]);
+
+    try {
+      if (fieldMethod === "draw") {
+        // When drawing, create farm with boundary coordinates
+        // Note: This is a placeholder - you'll need to get actual coordinates from the map drawing
+        const farmData = {
+          name: `Farm for ${selectedFarmerForProcessing}`,
+          location: {
+            type: "Point",
+            coordinates: [30.0619, -1.9441] // Default coordinates - should come from map
+          },
+          boundary: {
+            type: "Polygon",
+            coordinates: [[[30.0619, -1.9441], [30.0625, -1.9435], [30.0612, -1.9438], [30.0619, -1.9441]]] // Default boundary - should come from map
+          },
+          cropType: "MAIZE"
+        };
+
+        await createFarm(farmData);
+        toast({
+          title: "Success",
+          description: "Farm created successfully",
+        });
+      } else if (fieldMethod === "upload") {
+        // Files are already uploaded via handleFileUpload
+        // After upload, we might need to create a farm record
+        if (uploadedFiles.length > 0) {
+          toast({
+            title: "Success",
+            description: "Farm boundaries uploaded successfully. Farm record will be created from uploaded files.",
+          });
+        }
+      }
+
+      // Reload farms after creation
+      await loadFarms();
+      setShowDrawField(false);
+      setCalculatedArea("");
+      setFieldStatus("Awaiting Geometry");
+      setUploadedFiles([]);
+    } catch (err: any) {
+      console.error('Failed to sync field:', err);
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to create farm',
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleAssessmentClick = (assessment: AssessmentSummary) => {
+  const handleAssessmentClick = async (assessment: AssessmentSummary) => {
     setSelectedAssessment(assessment);
     setViewMode("fieldSelection");
+    
+    // Load full assessment details from API
+    try {
+      const fullAssessment: any = await assessmentsApiService.getAssessmentById(assessment.id);
+      console.log('Full assessment details:', fullAssessment);
+      // Update selected assessment with full details if needed
+      if (fullAssessment && typeof fullAssessment === 'object' && !Array.isArray(fullAssessment)) {
+        setSelectedAssessment(Object.assign({}, assessment, fullAssessment) as AssessmentSummary);
+      }
+    } catch (err: any) {
+      console.error('Failed to load assessment details:', err);
+      toast({
+        title: "Warning",
+        description: err.message || "Could not load full assessment details. Showing summary only.",
+        variant: "default",
+      });
+      // Continue with summary data even if full details fail
+    }
   };
 
   const handleFieldClick = (field: Field) => {
@@ -1418,8 +1729,40 @@ export default function AssessorDashboard() {
         </Card>
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <Card className={`${dashboardTheme.card} border-l-4 border-l-red-500`}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-red-400" />
+                <p className="text-red-400">{error}</p>
+              </div>
+              <Button
+                onClick={loadAssessments}
+                variant="outline"
+                size="sm"
+                className="border-gray-700 text-white hover:bg-gray-800"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Action Bar */}
-      <div className="flex items-center justify-end gap-4">
+      <div className="flex items-center justify-between">
+        <Button
+          onClick={loadAssessments}
+          disabled={loading}
+          variant="outline"
+          className="border-gray-700 text-white hover:bg-gray-800"
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
         <div className="flex gap-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
@@ -1495,20 +1838,46 @@ export default function AssessorDashboard() {
       {/* Data Table */}
       <Card className={`${dashboardTheme.card}`}>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-800">
-                  <th className="text-left py-4 px-6 font-medium text-white/80">Farmer ID</th>
-                  <th className="text-left py-4 px-6 font-medium text-white/80">Farmer Name</th>
-                  <th className="text-left py-4 px-6 font-medium text-white/80">Location</th>
-                  <th className="text-left py-4 px-6 font-medium text-white/80">Type</th>
-                  <th className="text-left py-4 px-6 font-medium text-white/80">Status</th>
-                  <th className="text-left py-4 px-6 font-medium text-white/80">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAssessments.map((assessment, index) => (
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
+                <p className="text-white/60">Loading assessments...</p>
+              </div>
+            </div>
+          ) : filteredAssessments.length === 0 ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <FileText className="h-12 w-12 mx-auto mb-4 text-white/40" />
+                <p className="text-white/60">No assessments found</p>
+                {!error && (
+                  <Button
+                    onClick={loadAssessments}
+                    variant="outline"
+                    className="mt-4 border-gray-700 text-white hover:bg-gray-800"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </Button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-800">
+                    <th className="text-left py-4 px-6 font-medium text-white/80">Farmer ID</th>
+                    <th className="text-left py-4 px-6 font-medium text-white/80">Farmer Name</th>
+                    <th className="text-left py-4 px-6 font-medium text-white/80">Location</th>
+                    <th className="text-left py-4 px-6 font-medium text-white/80">Type</th>
+                    <th className="text-left py-4 px-6 font-medium text-white/80">Status</th>
+                    <th className="text-left py-4 px-6 font-medium text-white/80">Date</th>
+                    <th className="text-left py-4 px-6 font-medium text-white/80">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAssessments.map((assessment, index) => (
                     <tr
                       key={assessment.id}
                       onClick={() => handleAssessmentClick(assessment)}
@@ -1534,6 +1903,7 @@ export default function AssessorDashboard() {
                           <Select 
                             value={assessment.status} 
                             onValueChange={(value) => handleStatusChange(assessment.id, value)}
+                            disabled={updatingAssessment === assessment.id}
                           >
                             <SelectTrigger className={`${dashboardTheme.select} border-yellow-500/30 bg-yellow-500/20 text-yellow-400 h-auto py-1 px-3 w-32`}>
                               <SelectValue />
@@ -1550,11 +1920,37 @@ export default function AssessorDashboard() {
                         </div>
                       </td>
                       <td className="py-4 px-6 text-white/80">{assessment.date}</td>
+                      <td className="py-4 px-6">
+                        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                          {assessment.status !== "Submitted" && (
+                            <>
+                              <Button
+                                onClick={() => handleCalculateRisk(assessment.id)}
+                                disabled={updatingAssessment === assessment.id}
+                                size="sm"
+                                variant="outline"
+                                className="border-gray-700 text-white hover:bg-gray-800"
+                              >
+                                <Shield className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                onClick={() => handleSubmitAssessment(assessment.id)}
+                                disabled={updatingAssessment === assessment.id}
+                                size="sm"
+                                className="bg-teal-600 hover:bg-teal-700 text-white"
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
-              </tbody>
-            </table>
-          </div>
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -1755,11 +2151,19 @@ export default function AssessorDashboard() {
     <DashboardLayout
       userType="assessor"
       userId={assessorId}
-      userName="Richard Nkurunziza"
+      userName={assessorName}
       navigationItems={navigationItems}
       activePage={activePage} 
       onPageChange={handlePageChange}
-      onLogout={() => {}}
+      onLogout={() => {
+        // Clear localStorage and redirect to login
+        localStorage.removeItem('token');
+        localStorage.removeItem('role');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('phoneNumber');
+        localStorage.removeItem('email');
+        window.location.href = '/assessor-login';
+      }}
     >
       {renderPage()}
     </DashboardLayout>

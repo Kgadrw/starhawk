@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { dashboardTheme } from "@/utils/dashboardTheme";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import PolicyDetailsView from "./PolicyDetailsView";
+import { getPolicies, createPolicy as createPolicyApi, getPolicyById, updatePolicy as updatePolicyApi, deletePolicy as deletePolicyApi } from "@/services/policiesApi";
+import { getAllUsers } from "@/services/usersAPI";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Plus,
   Search,
@@ -47,56 +50,12 @@ interface Policy {
 }
 
 export default function PolicyManagement() {
-  const [policies, setPolicies] = useState<Policy[]>([
-    {
-      id: "POL-001",
-      farmerId: "FMR-0247",
-      farmerName: "Jean Baptiste",
-      cropType: "Maize",
-      coverageAmount: 250000,
-      premiumAmount: 15000,
-      startDate: "2024-01-15",
-      endDate: "2024-12-31",
-      status: "active",
-      location: "Nyagatare District",
-      farmSize: 2.5,
-      riskLevel: "low",
-      deductible: 25000,
-      createdAt: "2024-01-10"
-    },
-    {
-      id: "POL-002",
-      farmerId: "FMR-0248",
-      farmerName: "Marie Uwimana",
-      cropType: "Rice",
-      coverageAmount: 200000,
-      premiumAmount: 12000,
-      startDate: "2024-02-01",
-      endDate: "2024-12-31",
-      status: "active",
-      location: "Gatsibo District",
-      farmSize: 1.8,
-      riskLevel: "medium",
-      deductible: 20000,
-      createdAt: "2024-01-25"
-    },
-    {
-      id: "POL-003",
-      farmerId: "FMR-0249",
-      farmerName: "Paul Kagame",
-      cropType: "Potatoes",
-      coverageAmount: 180000,
-      premiumAmount: 10000,
-      startDate: "2024-03-01",
-      endDate: "2024-12-31",
-      status: "pending",
-      location: "Musanze District",
-      farmSize: 3.2,
-      riskLevel: "high",
-      deductible: 18000,
-      createdAt: "2024-02-15"
-    }
-  ]);
+  const { toast } = useToast();
+  const [policies, setPolicies] = useState<Policy[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [farmers, setFarmers] = useState<any[]>([]);
+  const [loadingFarmers, setLoadingFarmers] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -106,6 +65,90 @@ export default function PolicyManagement() {
   const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null);
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const [viewingPolicy, setViewingPolicy] = useState<Policy | null>(null);
+
+  // Load policies from API
+  useEffect(() => {
+    loadPolicies();
+    loadFarmers();
+  }, []);
+
+  const loadPolicies = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response: any = await getPolicies(1, 100);
+      let policiesData: any[] = [];
+      
+      if (Array.isArray(response)) {
+        policiesData = response;
+      } else if (response && typeof response === 'object') {
+        policiesData = response.data || response.policies || [];
+      }
+      
+      // Map API response to Policy interface
+      const mappedPolicies: Policy[] = policiesData.map((policy: any) => ({
+        id: policy._id || policy.id || '',
+        farmerId: policy.farmerId || policy.farmer?._id || policy.farmer?.id || '',
+        farmerName: policy.farmer?.firstName && policy.farmer?.lastName 
+          ? `${policy.farmer.firstName} ${policy.farmer.lastName}` 
+          : policy.farmer?.name || policy.farmerName || 'Unknown Farmer',
+        cropType: policy.cropType || 'Unknown',
+        coverageAmount: policy.coverageAmount || policy.coverage || 0,
+        premiumAmount: policy.premiumAmount || policy.premium || 0,
+        startDate: policy.startDate || policy.validityPeriod?.start || new Date().toISOString().split('T')[0],
+        endDate: policy.endDate || policy.validityPeriod?.end || policy.validityPeriod || new Date().toISOString().split('T')[0],
+        status: (policy.status || 'pending').toLowerCase() as "active" | "pending" | "expired" | "cancelled",
+        location: policy.location || policy.farm?.location || 'Unknown',
+        farmSize: policy.farmSize || policy.farm?.size || 0,
+        riskLevel: (policy.riskLevel || 'medium').toLowerCase() as "low" | "medium" | "high",
+        deductible: policy.deductible || 0,
+        createdAt: policy.createdAt || policy.created || new Date().toISOString().split('T')[0],
+      }));
+      
+      setPolicies(mappedPolicies);
+    } catch (err: any) {
+      console.error('Failed to load policies:', err);
+      setError(err.message || 'Failed to load policies');
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to load policies',
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadFarmers = async () => {
+    setLoadingFarmers(true);
+    try {
+      const response: any = await getAllUsers();
+      let usersData: any[] = [];
+      
+      if (Array.isArray(response)) {
+        usersData = response;
+      } else if (response && typeof response === 'object') {
+        usersData = response.data || response.users || [];
+      }
+      
+      // Filter for farmers only
+      const farmersData = usersData.filter((user: any) => 
+        (user.role || '').toUpperCase() === 'FARMER' || 
+        (user.role || '').toLowerCase() === 'farmer'
+      );
+      
+      setFarmers(farmersData);
+    } catch (err: any) {
+      console.error('Failed to load farmers:', err);
+      toast({
+        title: "Warning",
+        description: "Could not load farmers list. You may need to enter farmer ID manually.",
+        variant: "default",
+      });
+    } finally {
+      setLoadingFarmers(false);
+    }
+  };
 
   // Form state for create/edit
   const [formData, setFormData] = useState({
@@ -161,65 +204,132 @@ export default function PolicyManagement() {
     return matchesSearch && matchesStatus && matchesCrop;
   });
 
-  const handleCreatePolicy = () => {
-    const newPolicy: Policy = {
-      id: `POL-${String(policies.length + 1).padStart(3, '0')}`,
-      farmerId: formData.farmerId,
-      farmerName: formData.farmerName,
-      cropType: formData.cropType,
-      coverageAmount: parseFloat(formData.coverageAmount),
-      premiumAmount: parseFloat(formData.premiumAmount),
-      startDate: formData.startDate,
-      endDate: formData.endDate,
-      status: "pending",
-      location: formData.location,
-      farmSize: parseFloat(formData.farmSize),
-      riskLevel: formData.riskLevel as "low" | "medium" | "high",
-      deductible: parseFloat(formData.deductible),
-      createdAt: new Date().toISOString().split('T')[0]
-    };
+  const handleCreatePolicy = async () => {
+    if (!formData.farmerId || !formData.cropType || !formData.coverageAmount || !formData.premiumAmount) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    setPolicies([...policies, newPolicy]);
-    setIsCreateDialogOpen(false);
-    resetForm();
+    try {
+      const policyData = {
+        farmerId: formData.farmerId,
+        cropType: formData.cropType,
+        coverageAmount: parseFloat(formData.coverageAmount),
+        premium: parseFloat(formData.premiumAmount),
+        startDate: formData.startDate || new Date().toISOString().split('T')[0],
+        endDate: formData.endDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        status: "pending",
+        notes: formData.location ? `Location: ${formData.location}` : undefined,
+      };
+
+      const response: any = await createPolicyApi(policyData);
+      const newPolicy = response.data || response;
+      
+      toast({
+        title: "Success",
+        description: "Policy created successfully",
+        variant: "default",
+      });
+      
+      // Reload policies
+      loadPolicies();
+      setIsCreateDialogOpen(false);
+      resetForm();
+    } catch (err: any) {
+      console.error('Failed to create policy:', err);
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to create policy',
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleEditPolicy = () => {
+  const handleEditPolicy = async () => {
     if (!selectedPolicy) return;
 
-    const updatedPolicies = policies.map(policy => 
-      policy.id === selectedPolicy.id 
-        ? {
-            ...policy,
-            farmerId: formData.farmerId,
-            farmerName: formData.farmerName,
-            cropType: formData.cropType,
-            coverageAmount: parseFloat(formData.coverageAmount),
-            premiumAmount: parseFloat(formData.premiumAmount),
-            startDate: formData.startDate,
-            endDate: formData.endDate,
-            location: formData.location,
-            farmSize: parseFloat(formData.farmSize),
-            riskLevel: formData.riskLevel as "low" | "medium" | "high",
-            deductible: parseFloat(formData.deductible)
-          }
-        : policy
-    );
+    try {
+      const updateData = {
+        coverageAmount: parseFloat(formData.coverageAmount),
+        premium: parseFloat(formData.premiumAmount),
+        endDate: formData.endDate,
+        status: selectedPolicy.status,
+        notes: formData.location ? `Location: ${formData.location}` : undefined,
+      };
 
-    setPolicies(updatedPolicies);
-    setIsEditDialogOpen(false);
-    setSelectedPolicy(null);
-    resetForm();
+      await updatePolicyApi(selectedPolicy.id, updateData);
+      
+      toast({
+        title: "Success",
+        description: "Policy updated successfully",
+        variant: "default",
+      });
+      
+      // Reload policies
+      loadPolicies();
+      setIsEditDialogOpen(false);
+      setSelectedPolicy(null);
+      resetForm();
+    } catch (err: any) {
+      console.error('Failed to update policy:', err);
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to update policy',
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDeletePolicy = (policyId: string) => {
-    setPolicies(policies.filter(policy => policy.id !== policyId));
+  const handleDeletePolicy = async (policyId: string) => {
+    if (!confirm('Are you sure you want to delete this policy?')) {
+      return;
+    }
+
+    try {
+      await deletePolicyApi(policyId);
+      
+      toast({
+        title: "Success",
+        description: "Policy deleted successfully",
+        variant: "default",
+      });
+      
+      // Reload policies
+      loadPolicies();
+    } catch (err: any) {
+      console.error('Failed to delete policy:', err);
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to delete policy',
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleUpdateStatus = (policyId: string, newStatus: Policy["status"]) => {
-    setPolicies(policies.map(policy => 
-      policy.id === policyId ? { ...policy, status: newStatus } : policy
-    ));
+  const handleUpdateStatus = async (policyId: string, newStatus: Policy["status"]) => {
+    try {
+      await updatePolicyApi(policyId, { status: newStatus });
+      
+      toast({
+        title: "Success",
+        description: "Policy status updated successfully",
+        variant: "default",
+      });
+      
+      // Reload policies
+      loadPolicies();
+    } catch (err: any) {
+      console.error('Failed to update policy status:', err);
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to update policy status',
+        variant: "destructive",
+      });
+    }
   };
 
   const openEditDialog = (policy: Policy) => {
@@ -274,21 +384,49 @@ export default function PolicyManagement() {
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="farmerId">Farmer ID</Label>
-          <Input
-            id="farmerId"
-            value={formData.farmerId}
-            onChange={(e) => setFormData({...formData, farmerId: e.target.value})}
-            placeholder="FMR-XXXX"
-          />
+          <Label htmlFor="farmerId">Farmer</Label>
+          <Select 
+            value={formData.farmerId} 
+            onValueChange={(value) => {
+              const selectedFarmer = farmers.find((f: any) => (f._id || f.id) === value);
+              setFormData({
+                ...formData, 
+                farmerId: value,
+                farmerName: selectedFarmer 
+                  ? `${selectedFarmer.firstName || ''} ${selectedFarmer.lastName || ''}`.trim() || selectedFarmer.name || selectedFarmer.email || ''
+                  : ''
+              });
+            }}
+          >
+            <SelectTrigger id="farmerId" className="bg-gray-800 border-gray-700 text-white">
+              <SelectValue placeholder={loadingFarmers ? "Loading farmers..." : "Select a farmer"} />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-900 border-gray-700">
+              {loadingFarmers ? (
+                <SelectItem value="loading" disabled>Loading farmers...</SelectItem>
+              ) : !Array.isArray(farmers) || farmers.length === 0 ? (
+                <SelectItem value="none" disabled>No farmers available</SelectItem>
+              ) : (
+                farmers.map((farmer: any) => (
+                  <SelectItem key={farmer._id || farmer.id} value={farmer._id || farmer.id}>
+                    {farmer.firstName && farmer.lastName 
+                      ? `${farmer.firstName} ${farmer.lastName}` 
+                      : farmer.name || farmer.email || farmer.phoneNumber || 'Unknown Farmer'}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="farmerName">Farmer Name</Label>
+          <Label htmlFor="farmerName">Farmer Name (auto-filled)</Label>
           <Input
             id="farmerName"
             value={formData.farmerName}
             onChange={(e) => setFormData({...formData, farmerName: e.target.value})}
-            placeholder="Enter farmer name"
+            placeholder="Auto-filled from selection"
+            disabled
+            className="bg-gray-700/50"
           />
         </div>
       </div>
@@ -500,6 +638,28 @@ export default function PolicyManagement() {
         </CardContent>
       </Card>
 
+      {/* Error Message */}
+      {error && (
+        <Card className="bg-red-900/20 border-red-700">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-400" />
+                <p className="text-red-400">{error}</p>
+              </div>
+              <Button
+                onClick={loadPolicies}
+                variant="outline"
+                size="sm"
+                className="border-gray-700 text-white hover:bg-gray-800"
+              >
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stats Cards */}
       <div className="grid gap-6 md:grid-cols-4">
         <Card>
@@ -567,22 +727,50 @@ export default function PolicyManagement() {
           <CardTitle>Policies ({filteredPolicies.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-3 font-medium">Policy ID</th>
-                  <th className="text-left p-3 font-medium">Farmer</th>
-                  <th className="text-left p-3 font-medium">Crop</th>
-                  <th className="text-left p-3 font-medium">Coverage</th>
-                  <th className="text-left p-3 font-medium">Premium</th>
-                  <th className="text-left p-3 font-medium">Status</th>
-                  <th className="text-left p-3 font-medium">Risk</th>
-                  <th className="text-left p-3 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPolicies.map((policy) => (
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <Clock className="h-12 w-12 animate-spin text-blue-500 mx-auto mb-4" />
+                <p className="text-white/60">Loading policies...</p>
+              </div>
+            </div>
+          ) : filteredPolicies.length === 0 ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <Shield className="h-12 w-12 mx-auto mb-4 text-white/40" />
+                <p className="text-white/60">No policies found</p>
+                {searchTerm || statusFilter !== "all" || cropFilter !== "all" ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setStatusFilter("all");
+                      setCropFilter("all");
+                    }}
+                    className="mt-4"
+                  >
+                    Clear Filters
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-3 font-medium">Policy ID</th>
+                    <th className="text-left p-3 font-medium">Farmer</th>
+                    <th className="text-left p-3 font-medium">Crop</th>
+                    <th className="text-left p-3 font-medium">Coverage</th>
+                    <th className="text-left p-3 font-medium">Premium</th>
+                    <th className="text-left p-3 font-medium">Status</th>
+                    <th className="text-left p-3 font-medium">Risk</th>
+                    <th className="text-left p-3 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPolicies.map((policy) => (
                   <tr key={policy.id} className="border-b hover:bg-gray-50">
                     <td className="p-3 font-medium">{policy.id}</td>
                     <td className="p-3">
@@ -645,10 +833,11 @@ export default function PolicyManagement() {
                       </div>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
 

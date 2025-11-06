@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { approveClaim as approveClaimApi, rejectClaim as rejectClaimApi, getClaimById, getClaims } from "@/services/claimsApi";
+import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft,
   FileText, 
@@ -32,85 +34,76 @@ import {
 } from "lucide-react";
 
 export default function ClaimReviewPage() {
-  const [selectedClaim, setSelectedClaim] = useState("CLM-002");
+  const { toast } = useToast();
+  const [selectedClaimId, setSelectedClaimId] = useState<string>("");
+  const [claims, setClaims] = useState<any[]>([]);
+  const [currentClaim, setCurrentClaim] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingClaim, setLoadingClaim] = useState(false);
   const [reviewDecision, setReviewDecision] = useState("");
   const [reviewComments, setReviewComments] = useState("");
   const [approvedAmount, setApprovedAmount] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Mock claim data
-  const claims = [
-    {
-      id: "CLM-002",
-      farmerId: "FMR-0247",
-      farmerName: "Jean Baptiste",
-      policyId: "POL-001",
-      cropType: "Maize",
-      claimAmount: 150000,
-      filedDate: "2024-10-02",
-      incidentDate: "2024-09-28",
-      status: "pending_review",
-      description: "Drought damage affecting 60% of crop due to prolonged dry season. Significant yield loss observed in the northern section of the farm.",
-      location: "Nyagatare District, Eastern Province",
-      farmSize: 2.5,
-      assessorId: "ASS-001",
-      assessorName: "Richard Nkurunziza",
-      assessmentDate: "2024-10-03",
-      assessmentNotes: "Field inspection confirmed drought damage. Soil moisture levels critically low. Crop health assessment shows 60% damage in affected areas.",
-      photos: [
-        { id: 1, url: "/api/placeholder/400/300", description: "Drought-affected maize field" },
-        { id: 2, url: "/api/placeholder/400/300", description: "Close-up of damaged crops" },
-        { id: 3, url: "/api/placeholder/400/300", description: "Soil condition assessment" }
-      ],
-      documents: [
-        { id: 1, name: "Field Assessment Report", type: "PDF", size: "2.3 MB" },
-        { id: 2, name: "Weather Data Report", type: "PDF", size: "1.8 MB" },
-        { id: 3, name: "Soil Analysis", type: "PDF", size: "1.2 MB" }
-      ],
-      policyDetails: {
-        coverage: 250000,
-        premium: 15000,
-        deductible: 10000,
-        startDate: "2024-01-15",
-        endDate: "2024-12-31"
-      }
-    },
-    {
-      id: "CLM-003",
-      farmerId: "FMR-0248",
-      farmerName: "Marie Uwimana",
-      policyId: "POL-002",
-      cropType: "Rice",
-      claimAmount: 200000,
-      filedDate: "2024-10-04",
-      incidentDate: "2024-10-01",
-      status: "pending_review",
-      description: "Flood damage from heavy rainfall causing waterlogging and crop loss in low-lying areas of the rice field.",
-      location: "Gatsibo District, Eastern Province",
-      farmSize: 1.8,
-      assessorId: "ASS-002",
-      assessorName: "Grace Mukamana",
-      assessmentDate: "2024-10-05",
-      assessmentNotes: "Flood damage confirmed. Water levels exceeded normal thresholds. Rice plants showing signs of water stress and root damage.",
-      photos: [
-        { id: 1, url: "/api/placeholder/400/300", description: "Flooded rice field" },
-        { id: 2, url: "/api/placeholder/400/300", description: "Waterlogged crops" }
-      ],
-      documents: [
-        { id: 1, name: "Flood Assessment Report", type: "PDF", size: "3.1 MB" },
-        { id: 2, name: "Weather Station Data", type: "PDF", size: "2.2 MB" }
-      ],
-      policyDetails: {
-        coverage: 200000,
-        premium: 12000,
-        deductible: 8000,
-        startDate: "2024-02-01",
-        endDate: "2024-12-31"
-      }
-    }
-  ];
+  // Load claims list
+  useEffect(() => {
+    loadClaims();
+  }, []);
 
-  const currentClaim = claims.find(claim => claim.id === selectedClaim);
+  // Load specific claim when selected
+  useEffect(() => {
+    if (selectedClaimId) {
+      loadClaimDetails(selectedClaimId);
+    }
+  }, [selectedClaimId]);
+
+  const loadClaims = async () => {
+    setLoading(true);
+    try {
+      const response: any = await getClaims(1, 100);
+      let claimsData: any[] = [];
+      
+      if (Array.isArray(response)) {
+        claimsData = response;
+      } else if (response && typeof response === 'object') {
+        claimsData = response.data || response.claims || [];
+      }
+      
+      setClaims(claimsData);
+      // Auto-select first pending claim if available
+      const firstPending = claimsData.find((c: any) => c.status === 'pending_review' || c.status === 'pending');
+      if (firstPending && !selectedClaimId) {
+        setSelectedClaimId(firstPending._id || firstPending.id);
+      }
+    } catch (err: any) {
+      console.error('Failed to load claims:', err);
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to load claims',
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadClaimDetails = async (claimId: string) => {
+    setLoadingClaim(true);
+    try {
+      const response: any = await getClaimById(claimId);
+      const claimData = response.data || response;
+      setCurrentClaim(claimData);
+    } catch (err: any) {
+      console.error('Failed to load claim details:', err);
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to load claim details',
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingClaim(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -134,16 +127,62 @@ export default function ClaimReviewPage() {
 
   const handleSubmitReview = async () => {
     if (!reviewDecision || !reviewComments) {
-      alert("Please provide both decision and comments");
+      toast({
+        title: "Error",
+        description: "Please provide both decision and comments",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedClaimId) {
+      toast({
+        title: "Error",
+        description: "No claim selected",
+        variant: "destructive",
+      });
       return;
     }
 
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsSubmitting(false);
+    try {
+      if (reviewDecision === "approve") {
+        const amount = approvedAmount ? parseFloat(approvedAmount) : undefined;
+        await approveClaimApi(selectedClaimId, amount, reviewComments);
+        toast({
+          title: "Success",
+          description: "Claim approved successfully",
+          variant: "default",
+        });
+        // Reload claims
+        loadClaims();
+        if (selectedClaimId) {
+          loadClaimDetails(selectedClaimId);
+        }
+      } else if (reviewDecision === "reject") {
+        await rejectClaimApi(selectedClaimId, reviewComments);
+        toast({
+          title: "Success",
+          description: "Claim rejected successfully",
+          variant: "default",
+        });
+        // Reload claims
+        loadClaims();
+        if (selectedClaimId) {
+          loadClaimDetails(selectedClaimId);
+        }
+      }
+    } catch (err: any) {
+      console.error('Failed to submit review:', err);
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to submit review',
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
     
-    alert(`Claim ${reviewDecision} successfully!`);
     // Reset form
     setReviewDecision("");
     setReviewComments("");
@@ -162,7 +201,7 @@ export default function ClaimReviewPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <Label className="text-sm font-medium text-white/70 dark:text-gray-400">Claim ID</Label>
-            <p className="text-lg font-semibold">{currentClaim?.id}</p>
+            <p className="text-lg font-semibold">{currentClaim?._id || currentClaim?.id || 'N/A'}</p>
           </div>
           <div>
             <Label className="text-sm font-medium text-white/70 dark:text-gray-400">Status</Label>
@@ -179,18 +218,18 @@ export default function ClaimReviewPage() {
           <div>
             <Label className="text-sm font-medium text-white/70 dark:text-gray-400">Claim Amount</Label>
             <p className="text-lg font-semibold text-green-600">
-              {currentClaim?.claimAmount.toLocaleString()} RWF
+              {(currentClaim?.amount || currentClaim?.claimAmount || 0).toLocaleString()} RWF
             </p>
           </div>
           <div>
             <Label className="text-sm font-medium text-white/70 dark:text-gray-400">Filed Date</Label>
-            <p className="text-lg">{currentClaim?.filedDate}</p>
+            <p className="text-lg">{currentClaim?.filedDate || currentClaim?.createdAt || 'N/A'}</p>
           </div>
         </div>
 
         <div>
           <Label className="text-sm font-medium text-white/70 dark:text-gray-400">Description</Label>
-          <p className="text-white/80 mt-1">{currentClaim?.description}</p>
+          <p className="text-white/80 mt-1">{currentClaim?.description || currentClaim?.lossDescription || 'No description available'}</p>
         </div>
       </CardContent>
     </Card>
@@ -208,22 +247,26 @@ export default function ClaimReviewPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <Label className="text-sm font-medium text-white/70">Farmer Name</Label>
-            <p className="text-lg font-semibold">{currentClaim?.farmerName}</p>
+            <p className="text-lg font-semibold">
+              {currentClaim?.farmer?.firstName && currentClaim?.farmer?.lastName
+                ? `${currentClaim.farmer.firstName} ${currentClaim.farmer.lastName}`
+                : currentClaim?.farmer?.name || currentClaim?.farmerName || 'Unknown Farmer'}
+            </p>
           </div>
           <div>
             <Label className="text-sm font-medium text-white/70">Farmer ID</Label>
-            <p className="text-lg">{currentClaim?.farmerId}</p>
+            <p className="text-lg">{currentClaim?.farmerId || currentClaim?.farmer?._id || currentClaim?.farmer?.id || 'N/A'}</p>
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <Label className="text-sm font-medium text-white/70">Location</Label>
-            <p className="text-white/80">{currentClaim?.location}</p>
+            <p className="text-white/80">{currentClaim?.location || currentClaim?.farm?.location || 'N/A'}</p>
           </div>
           <div>
             <Label className="text-sm font-medium text-white/70">Farm Size</Label>
-            <p className="text-white/80">{currentClaim?.farmSize} hectares</p>
+            <p className="text-white/80">{currentClaim?.farmSize || currentClaim?.farm?.size || 'N/A'} {currentClaim?.farmSize ? 'hectares' : ''}</p>
           </div>
         </div>
 
@@ -265,27 +308,27 @@ export default function ClaimReviewPage() {
           <div>
             <Label className="text-sm font-medium text-white/70">Coverage</Label>
             <p className="text-lg font-semibold text-blue-600">
-              {currentClaim?.policyDetails.coverage.toLocaleString()} RWF
+              {(currentClaim?.policy?.coverageAmount || currentClaim?.policy?.coverage || currentClaim?.policyDetails?.coverage || 0).toLocaleString()} RWF
             </p>
           </div>
           <div>
             <Label className="text-sm font-medium text-white/70">Premium</Label>
-            <p className="text-lg">{currentClaim?.policyDetails.premium.toLocaleString()} RWF</p>
+            <p className="text-lg">{(currentClaim?.policy?.premiumAmount || currentClaim?.policy?.premium || currentClaim?.policyDetails?.premium || 0).toLocaleString()} RWF</p>
           </div>
           <div>
             <Label className="text-sm font-medium text-white/70">Deductible</Label>
-            <p className="text-lg">{currentClaim?.policyDetails.deductible.toLocaleString()} RWF</p>
+            <p className="text-lg">{(currentClaim?.policy?.deductible || currentClaim?.policyDetails?.deductible || 0).toLocaleString()} RWF</p>
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <Label className="text-sm font-medium text-white/70">Policy Start</Label>
-            <p className="text-white/80">{currentClaim?.policyDetails.startDate}</p>
+            <p className="text-white/80">{currentClaim?.policy?.startDate || currentClaim?.policy?.validityPeriod?.start || currentClaim?.policyDetails?.startDate || 'N/A'}</p>
           </div>
           <div>
             <Label className="text-sm font-medium text-white/70">Policy End</Label>
-            <p className="text-white/80">{currentClaim?.policyDetails.endDate}</p>
+            <p className="text-white/80">{currentClaim?.policy?.endDate || currentClaim?.policy?.validityPeriod?.end || currentClaim?.policy?.validityPeriod || currentClaim?.policyDetails?.endDate || 'N/A'}</p>
           </div>
         </div>
       </CardContent>
@@ -304,17 +347,21 @@ export default function ClaimReviewPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <Label className="text-sm font-medium text-white/70">Assessor</Label>
-            <p className="text-lg font-semibold">{currentClaim?.assessorName}</p>
+            <p className="text-lg font-semibold">
+              {currentClaim?.assessor?.firstName && currentClaim?.assessor?.lastName
+                ? `${currentClaim.assessor.firstName} ${currentClaim.assessor.lastName}`
+                : currentClaim?.assessor?.name || currentClaim?.assessorName || 'Unassigned'}
+            </p>
           </div>
           <div>
             <Label className="text-sm font-medium text-white/70">Assessment Date</Label>
-            <p className="text-lg">{currentClaim?.assessmentDate}</p>
+            <p className="text-lg">{currentClaim?.assessmentDate || currentClaim?.assessment?.date || currentClaim?.createdAt || 'N/A'}</p>
           </div>
         </div>
 
         <div>
           <Label className="text-sm font-medium text-white/70">Assessment Notes</Label>
-          <p className="text-white/80 mt-1">{currentClaim?.assessmentNotes}</p>
+          <p className="text-white/80 mt-1">{currentClaim?.assessmentNotes || currentClaim?.assessment?.notes || currentClaim?.notes || 'No assessment notes available'}</p>
         </div>
 
         <div className="flex space-x-4">
@@ -341,18 +388,35 @@ export default function ClaimReviewPage() {
       </CardHeader>
       <CardContent>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {currentClaim?.photos.map((photo) => (
-            <div key={photo.id} className="space-y-2">
-              <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
-                <img 
-                  src={photo.url} 
-                  alt={photo.description}
-                  className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                />
+          {currentClaim?.photos && Array.isArray(currentClaim.photos) && currentClaim.photos.length > 0 ? (
+            currentClaim.photos.map((photo: any, index: number) => (
+              <div key={photo.id || photo._id || index} className="space-y-2">
+                <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                  <img 
+                    src={photo.url || photo.photoUrl || photo.src || '/api/placeholder/400/300'} 
+                    alt={photo.description || photo.alt || 'Claim photo'}
+                    className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                  />
+                </div>
+                <p className="text-sm text-white/70 text-center">{photo.description || 'Claim photo'}</p>
               </div>
-              <p className="text-sm text-white/70 text-center">{photo.description}</p>
-            </div>
-          ))}
+            ))
+          ) : currentClaim?.damagePhotos && Array.isArray(currentClaim.damagePhotos) && currentClaim.damagePhotos.length > 0 ? (
+            currentClaim.damagePhotos.map((photoUrl: string, index: number) => (
+              <div key={index} className="space-y-2">
+                <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                  <img 
+                    src={photoUrl || '/api/placeholder/400/300'} 
+                    alt="Claim photo"
+                    className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                  />
+                </div>
+                <p className="text-sm text-white/70 text-center">Damage photo {index + 1}</p>
+              </div>
+            ))
+          ) : (
+            <p className="text-white/60 col-span-full text-center py-8">No photos available</p>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -368,21 +432,25 @@ export default function ClaimReviewPage() {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {currentClaim?.documents.map((doc) => (
-            <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex items-center space-x-3">
-                <FileText className="h-5 w-5 text-gray-400" />
-                <div>
-                  <p className="font-medium text-white">{doc.name}</p>
-                  <p className="text-sm text-gray-500">{doc.type} • {doc.size}</p>
+          {currentClaim?.documents && Array.isArray(currentClaim.documents) && currentClaim.documents.length > 0 ? (
+            currentClaim.documents.map((doc: any, index: number) => (
+              <div key={doc.id || doc._id || index} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <FileText className="h-5 w-5 text-gray-400" />
+                  <div>
+                    <p className="font-medium text-white">{doc.name || doc.fileName || 'Document'}</p>
+                    <p className="text-sm text-gray-500">{doc.type || 'File'} • {doc.size || 'N/A'}</p>
+                  </div>
                 </div>
+                <Button variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </Button>
               </div>
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </Button>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="text-white/60 text-center py-8">No documents available</p>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -472,73 +540,102 @@ export default function ClaimReviewPage() {
         </div>
         
         <div className="flex items-center space-x-2">
-          <Select value={selectedClaim} onValueChange={setSelectedClaim}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {claims.map((claim) => (
-                <SelectItem key={claim.id} value={claim.id}>
-                  {claim.id} - {claim.farmerName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {loading ? (
+            <div className="text-white/60">Loading claims...</div>
+          ) : (
+            <Select value={selectedClaimId} onValueChange={setSelectedClaimId}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Select a claim" />
+              </SelectTrigger>
+              <SelectContent>
+                {claims.length === 0 ? (
+                  <SelectItem value="none" disabled>No claims available</SelectItem>
+                ) : (
+                  claims.map((claim: any) => (
+                    <SelectItem key={claim._id || claim.id} value={claim._id || claim.id}>
+                      {claim._id || claim.id} - {claim.farmer?.firstName && claim.farmer?.lastName
+                        ? `${claim.farmer.firstName} ${claim.farmer.lastName}`
+                        : claim.farmer?.name || claim.farmerName || 'Unknown Farmer'}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 
-      {/* Alert for pending review */}
-      {currentClaim?.status === "pending_review" && (
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            This claim is pending review. Please review all information and make a decision.
-          </AlertDescription>
-        </Alert>
+      {/* Loading State */}
+      {loadingClaim ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <Clock className="h-12 w-12 animate-spin text-blue-500 mx-auto mb-4" />
+            <p className="text-white/60">Loading claim details...</p>
+          </div>
+        </div>
+      ) : !currentClaim ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <FileText className="h-12 w-12 mx-auto mb-4 text-white/40" />
+            <p className="text-white/60">Please select a claim to review</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Alert for pending review */}
+          {(currentClaim?.status === "pending_review" || currentClaim?.status === "pending") && (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                This claim is pending review. Please review all information and make a decision.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Main Content Grid */}
+          <div className="grid gap-6 lg:grid-cols-3">
+            {/* Left Column - Claim Details */}
+            <div className="lg:col-span-2 space-y-6">
+              {renderClaimSummary()}
+              {renderFarmerInfo()}
+              {renderPolicyInfo()}
+              {renderAssessmentInfo()}
+              {renderPhotos()}
+              {renderDocuments()}
+            </div>
+
+            {/* Right Column - Review Form */}
+            <div className="space-y-6">
+              {renderReviewForm()}
+              
+              {/* Quick Actions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Quick Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button variant="outline" className="w-full justify-start">
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Full Assessment Report
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start">
+                    <MapPin className="h-4 w-4 mr-2" />
+                    View Field Location
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Schedule Follow-up Visit
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start">
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Contact All Parties
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </>
       )}
-
-      {/* Main Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left Column - Claim Details */}
-        <div className="lg:col-span-2 space-y-6">
-          {renderClaimSummary()}
-          {renderFarmerInfo()}
-          {renderPolicyInfo()}
-          {renderAssessmentInfo()}
-          {renderPhotos()}
-          {renderDocuments()}
-        </div>
-
-        {/* Right Column - Review Form */}
-        <div className="space-y-6">
-          {renderReviewForm()}
-          
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button variant="outline" className="w-full justify-start">
-                <Eye className="h-4 w-4 mr-2" />
-                View Full Assessment Report
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <MapPin className="h-4 w-4 mr-2" />
-                View Field Location
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <Calendar className="h-4 w-4 mr-2" />
-                Schedule Follow-up Visit
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Contact All Parties
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
     </div>
   );
 }

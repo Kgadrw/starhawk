@@ -1,9 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../layout/DashboardLayout";
+import { isAdmin, logout as authLogout, getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
+import { getAllUsers, deactivateUser, updateUser, getUserById, createUser } from "@/services/usersAPI";
+import { getSystemStatistics, getPolicyOverview, getClaimStatistics } from "@/services/adminApi";
+import { createPolicy, getPolicies, getPolicyById, updatePolicy, deletePolicy } from "@/services/policiesApi";
+import { createClaim, getClaims, getClaimById, updateClaim, deleteClaim } from "@/services/claimsApi";
+import assessmentsApiService from "@/services/assessmentsApi";
+import { getFarms } from "@/services/farmsApi";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { dashboardTheme } from "@/utils/dashboardTheme";
 import { 
   BarChart as RechartsBarChart,
@@ -62,38 +76,360 @@ import {
   HardDrive,
   Cpu,
   WifiOff,
-  Bell
+  Bell,
+  Plus,
+  X,
+  Save,
+  Loader2,
+  FileCheck,
+  AlertCircle
 } from "lucide-react";
 
 export const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [activePage, setActivePage] = useState("dashboard");
-  const [adminId] = useState("ADMIN-001");
-  const [adminName] = useState("System Administrator");
+  const [adminId] = useState(getUserId() || "ADMIN-001");
+  const [adminName] = useState(getEmail() || getPhoneNumber() || "System Administrator");
 
-  // User Data
-  const systemUsers = [
-    { id: "U001", name: "John Uwase", email: "john.uwase@example.com", role: "Farmer", status: "active", lastLogin: "2024-03-15 10:30", region: "Northern Province", joinDate: "2024-01-15", policies: 3 },
-    { id: "U002", name: "Alice Mukamana", email: "alice.m@example.com", role: "Assessor", status: "active", lastLogin: "2024-03-15 09:15", region: "Kigali City", joinDate: "2024-02-01", assessments: 124 },
-    { id: "U003", name: "David Ndizeye", email: "david.n@insurance.rw", role: "Insurer", status: "active", lastLogin: "2024-03-15 11:00", region: "Eastern Province", joinDate: "2023-12-10", policies: 2450 },
-    { id: "U004", name: "Sarah Ingabire", email: "sarah.i@example.com", role: "Farmer", status: "inactive", lastLogin: "2024-02-28 14:20", region: "Western Province", joinDate: "2024-01-20", policies: 1 },
-    { id: "U005", name: "Emmanuel Hakizimana", email: "emmanuel.h@gov.rw", role: "Government", status: "active", lastLogin: "2024-03-15 08:45", region: "Southern Province", joinDate: "2023-11-05", access: "full" },
-    { id: "U006", name: "Marie Uwimana", email: "marie.u@example.com", role: "Assessor", status: "active", lastLogin: "2024-03-15 07:30", region: "Southern Province", joinDate: "2024-01-10", assessments: 156 },
-    { id: "U007", name: "Paul Kagame", email: "paul.k@example.com", role: "Farmer", status: "active", lastLogin: "2024-03-14 16:45", region: "Eastern Province", joinDate: "2023-12-15", policies: 5 },
-    { id: "U008", name: "Grace Mukamana", email: "grace.m@example.com", role: "Assessor", status: "active", lastLogin: "2024-03-15 09:00", region: "Western Province", joinDate: "2024-02-15", assessments: 98 }
-  ];
+  // Route protection - check if user is admin
+  useEffect(() => {
+    if (!isAdmin()) {
+      // Redirect to login if not admin
+      navigate("/admin-login");
+    }
+  }, [navigate]);
 
-  // User Statistics
-  const userStats = {
-    total: 8450,
-    active: 7680,
-    inactive: 770,
-    newThisMonth: 245,
-    farmers: 7950,
-    assessors: 24,
-    insurers: 4,
-    government: 2,
-    admins: 3
+  // Load admin statistics
+  const loadAdminStatistics = async () => {
+    setStatsLoading(true);
+    setStatsError(null);
+    try {
+      const [stats, policies, claims] = await Promise.all([
+        getSystemStatistics(),
+        getPolicyOverview(),
+        getClaimStatistics(),
+      ]);
+
+      // Handle different response structures
+      setSystemStats(stats.data || stats);
+      setPolicyOverview(policies.data || policies);
+      setClaimStats(claims.data || claims);
+    } catch (err: any) {
+      console.error('Failed to load admin statistics:', err);
+      setStatsError(err.message || 'Failed to load statistics');
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to load admin statistics',
+        variant: "destructive",
+      });
+    } finally {
+      setStatsLoading(false);
+    }
   };
+
+  // Load statistics when dashboard is active
+  useEffect(() => {
+    if (activePage === "dashboard") {
+      loadAdminStatistics();
+    }
+  }, [activePage]);
+
+  // Load assessments when assessments page is active
+  useEffect(() => {
+    if (activePage === "assessments") {
+      loadAssessments();
+      loadFarmsForAssessment();
+      loadAssessors();
+    }
+  }, [activePage]);
+
+  // Handle logout
+  const handleLogout = () => {
+    authLogout();
+    navigate("/admin-login");
+  };
+
+  // User Management State
+  const { toast } = useToast();
+  const [systemUsers, setSystemUsers] = useState<any[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+  const [showAddUserDialog, setShowAddUserDialog] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false);
+
+  // Admin API State
+  const [systemStats, setSystemStats] = useState<any | null>(null);
+  const [policyOverview, setPolicyOverview] = useState<any | null>(null);
+  const [claimStats, setClaimStats] = useState<any | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsError, setStatsError] = useState<string | null>(null);
+
+  // Policies Management State
+  const [policies, setPolicies] = useState<any[]>([]);
+  const [policiesLoading, setPoliciesLoading] = useState(false);
+  const [policiesError, setPoliciesError] = useState<string | null>(null);
+  const [policySearchQuery, setPolicySearchQuery] = useState("");
+  const [policyStatusFilter, setPolicyStatusFilter] = useState<string>("all");
+  const [showPolicyDialog, setShowPolicyDialog] = useState(false);
+  const [editingPolicy, setEditingPolicy] = useState<any | null>(null);
+  const [deletingPolicyId, setDeletingPolicyId] = useState<string | null>(null);
+  const [policyFormData, setPolicyFormData] = useState({
+    farmerId: "",
+    cropType: "",
+    coverageAmount: "",
+    premium: "",
+    startDate: "",
+    endDate: "",
+    status: "active",
+    notes: "",
+  });
+
+  // Claims Management State
+  const [claims, setClaims] = useState<any[]>([]);
+  const [claimsLoading, setClaimsLoading] = useState(false);
+  const [claimsError, setClaimsError] = useState<string | null>(null);
+  const [claimSearchQuery, setClaimSearchQuery] = useState("");
+  const [claimStatusFilter, setClaimStatusFilter] = useState<string>("all");
+  const [showClaimDialog, setShowClaimDialog] = useState(false);
+  const [editingClaim, setEditingClaim] = useState<any | null>(null);
+  const [deletingClaimId, setDeletingClaimId] = useState<string | null>(null);
+  const [claimFormData, setClaimFormData] = useState({
+    farmerId: "",
+    policyId: "",
+    cropType: "",
+    damageType: "",
+    amount: "",
+    description: "",
+    fieldId: "",
+    status: "pending",
+  });
+
+  // Assessments Management State
+  const [assessments, setAssessments] = useState<any[]>([]);
+  const [assessmentsLoading, setAssessmentsLoading] = useState(false);
+  const [assessmentsError, setAssessmentsError] = useState<string | null>(null);
+  const [assessmentSearchQuery, setAssessmentSearchQuery] = useState("");
+  const [assessmentStatusFilter, setAssessmentStatusFilter] = useState<string>("all");
+  const [showAssessmentDialog, setShowAssessmentDialog] = useState(false);
+  const [creatingAssessment, setCreatingAssessment] = useState(false);
+  const [farms, setFarms] = useState<any[]>([]);
+  const [farmsLoading, setFarmsLoading] = useState(false);
+  const [assessors, setAssessors] = useState<any[]>([]);
+  const [assessmentFormData, setAssessmentFormData] = useState({
+    farmId: "",
+    assessorId: "",
+  });
+  const [showEditUserDialog, setShowEditUserDialog] = useState(false);
+  const [editingUser, setEditingUser] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [editUserData, setEditUserData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phoneNumber: "",
+    province: "",
+    district: "",
+    sector: "",
+    cell: "",
+    village: "",
+    sex: "",
+    active: true,
+    farmerProfile: {
+      farmProvince: "",
+      farmDistrict: "",
+      farmSector: "",
+      farmCell: "",
+      farmVillage: ""
+    },
+    assessorProfile: {
+      specialization: "",
+      experienceYears: 0,
+      profilePhotoUrl: "",
+      bio: "",
+      address: ""
+    },
+    insurerProfile: {
+      companyName: "",
+      contactPerson: "",
+      website: "",
+      address: "",
+      companyDescription: "",
+      licenseNumber: "",
+      registrationDate: "",
+      companyLogoUrl: ""
+    }
+  });
+  const [newUserData, setNewUserData] = useState({
+    // Basic fields
+    nationalId: "",
+    email: "",
+    phoneNumber: "",
+    role: "FARMER",
+    firstName: "",
+    lastName: "",
+    province: "",
+    district: "",
+    sector: "",
+    cell: "",
+    village: "",
+    sex: "",
+    // Farmer Profile
+    farmerProfile: {
+      farmProvince: "",
+      farmDistrict: "",
+      farmSector: "",
+      farmCell: "",
+      farmVillage: ""
+    },
+    // Assessor Profile
+    assessorProfile: {
+      specialization: "",
+      experienceYears: 0,
+      profilePhotoUrl: "",
+      bio: "",
+      address: ""
+    },
+    // Insurer Profile
+    insurerProfile: {
+      companyName: "",
+      contactPerson: "",
+      website: "",
+      address: "",
+      companyDescription: "",
+      licenseNumber: "",
+      registrationDate: "",
+      companyLogoUrl: ""
+    }
+  });
+
+  // Computed User Statistics from real data
+  const userStats = {
+    total: systemUsers.length,
+    active: systemUsers.filter(u => u.active !== false).length,
+    inactive: systemUsers.filter(u => u.active === false).length,
+    newThisMonth: systemUsers.filter(u => {
+      if (!u.createdAt) return false;
+      const createdDate = new Date(u.createdAt);
+      const now = new Date();
+      return createdDate.getMonth() === now.getMonth() && createdDate.getFullYear() === now.getFullYear();
+    }).length,
+    farmers: systemUsers.filter(u => u.role === 'FARMER' || u.role === 'Farmer').length,
+    assessors: systemUsers.filter(u => u.role === 'ASSESSOR' || u.role === 'Assessor').length,
+    insurers: systemUsers.filter(u => u.role === 'INSURER' || u.role === 'Insurer').length,
+    government: systemUsers.filter(u => u.role === 'GOVERNMENT' || u.role === 'Government').length,
+    admins: systemUsers.filter(u => u.role === 'ADMIN' || u.role === 'Admin').length
+  };
+
+  // Load users from API
+  const loadUsers = async () => {
+    if (activePage !== "users") return; // Only load when on users page
+    
+    setUsersLoading(true);
+    setUsersError(null);
+    try {
+      const response: any = await getAllUsers();
+      console.log('Users API response:', response); // Debug log
+      console.log('Response type:', typeof response);
+      console.log('Is array:', Array.isArray(response));
+      if (response && typeof response === 'object') {
+        console.log('Response keys:', Object.keys(response));
+      }
+      
+      // Handle different response structures
+      let usersData: any[] = [];
+      
+      // Check if response is directly an array
+      if (Array.isArray(response)) {
+        usersData = response;
+      } else if (response && typeof response === 'object') {
+        // Try multiple possible response structures
+        // Common patterns: { data: [...] }, { users: [...] }, { data: { users: [...] } }, etc.
+        
+        // First check if it's a direct property
+        if (Array.isArray(response.users)) {
+          usersData = response.users;
+        } else if (Array.isArray(response.data)) {
+          usersData = response.data;
+        } else if (Array.isArray(response.results)) {
+          usersData = response.results;
+        } else if (Array.isArray(response.items)) {
+          usersData = response.items;
+        } else if (Array.isArray(response.list)) {
+          usersData = response.list;
+        }
+        // Then check nested structures
+        else if (response.data) {
+          if (Array.isArray(response.data)) {
+            usersData = response.data;
+          } else if (response.data.data && Array.isArray(response.data.data)) {
+            usersData = response.data.data;
+          } else if (response.data.users && Array.isArray(response.data.users)) {
+            usersData = response.data.users;
+          } else if (response.data.results && Array.isArray(response.data.results)) {
+            usersData = response.data.results;
+          } else if (response.data.items && Array.isArray(response.data.items)) {
+            usersData = response.data.items;
+          } else if (response.data.list && Array.isArray(response.data.list)) {
+            usersData = response.data.list;
+          }
+        }
+        // Try to find any array property
+        else {
+          const keys = Object.keys(response);
+          for (const key of keys) {
+            if (Array.isArray(response[key])) {
+              console.log(`Found array in property: ${key}`, response[key]);
+              usersData = response[key];
+              break;
+            }
+          }
+        }
+      }
+      
+      // Ensure usersData is an array before mapping
+      if (!Array.isArray(usersData)) {
+        console.warn('Users data is not an array. Response structure:', JSON.stringify(response, null, 2));
+        console.warn('Response keys:', response ? Object.keys(response) : 'No response');
+        usersData = [];
+      }
+      
+      console.log('Extracted usersData:', usersData.length, 'users');
+      
+      // Map API response to expected format
+      const mappedUsers = usersData.map((user: any) => ({
+        id: user._id || user.id || '',
+        userId: user._id || user.id || '',
+        name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name || 'Unknown',
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        phoneNumber: user.phoneNumber || '',
+        role: user.role || 'Farmer',
+        status: user.active !== false ? 'active' : 'inactive',
+        active: user.active !== false,
+        lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never',
+        region: user.region || user.location || 'Unknown',
+        joinDate: user.createdAt ? new Date(user.createdAt).toISOString().split('T')[0] : '',
+        createdAt: user.createdAt || ''
+      }));
+      
+      setSystemUsers(mappedUsers);
+    } catch (err: any) {
+      console.error('Failed to load users:', err);
+      setUsersError(err.message || 'Failed to load users. Please try again.');
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  // Load users when switching to users page
+  useEffect(() => {
+    if (activePage === "users") {
+      loadUsers();
+    }
+  }, [activePage]);
 
   // Financial Data
   const financialData = {
@@ -158,6 +494,39 @@ export const AdminDashboard = () => {
   // Dashboard Overview
   const renderDashboard = () => (
     <div className="space-y-6">
+      {/* Loading State */}
+      {statsLoading && (
+        <Card className={dashboardTheme.card}>
+          <CardContent className="p-8 text-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-white mx-auto mb-4" />
+            <p className="text-white/60">Loading statistics...</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Error State */}
+      {statsError && !statsLoading && (
+        <Card className={`${dashboardTheme.card} border-l-4 border-l-red-500`}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-400" />
+                <p className="text-red-400">{statsError}</p>
+              </div>
+              <Button
+                onClick={loadAdminStatistics}
+                variant="outline"
+                size="sm"
+                className="border-gray-700 text-white hover:bg-gray-800"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Header Stats */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
@@ -166,9 +535,11 @@ export const AdminDashboard = () => {
             <Users className="h-5 w-5 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-white">{userStats.total.toLocaleString()}</div>
+            <div className="text-3xl font-bold text-white">
+              {systemStats?.totalUsers || userStats.total.toLocaleString()}
+            </div>
             <p className="text-xs text-white/60 mt-1">
-              <span className="text-green-500">+{userStats.newThisMonth}</span> this month
+              <span className="text-green-500">+{systemStats?.newUsersThisMonth || userStats.newThisMonth}</span> this month
             </p>
           </CardContent>
         </Card>
@@ -180,10 +551,10 @@ export const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-white">
-              RWF {(financialData.monthlyRevenue / 1000000).toFixed(1)}M
+              RWF {systemStats?.monthlyRevenue ? (systemStats.monthlyRevenue / 1000000).toFixed(1) : (financialData.monthlyRevenue / 1000000).toFixed(1)}M
             </div>
             <p className="text-xs text-white/60 mt-1">
-              <span className="text-green-500">+{financialData.growthRate}%</span> from last month
+              <span className="text-green-500">+{systemStats?.revenueGrowth || financialData.growthRate}%</span> from last month
             </p>
           </CardContent>
         </Card>
@@ -194,7 +565,9 @@ export const AdminDashboard = () => {
             <Activity className="h-5 w-5 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-white">{systemMetrics.uptime}%</div>
+            <div className="text-3xl font-bold text-white">
+              {systemStats?.uptime || systemMetrics.uptime}%
+            </div>
             <p className="text-xs text-white/60 mt-1">
               <span className="text-green-500">Excellent</span> uptime
             </p>
@@ -207,7 +580,9 @@ export const AdminDashboard = () => {
             <Zap className="h-5 w-5 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-white">{systemMetrics.activeConnections}</div>
+            <div className="text-3xl font-bold text-white">
+              {systemStats?.activeSessions || systemMetrics.activeConnections}
+            </div>
             <p className="text-xs text-white/60 mt-1">Live connections</p>
           </CardContent>
         </Card>
@@ -439,6 +814,219 @@ export const AdminDashboard = () => {
     </div>
   );
 
+  // Handle deactivate user
+  const handleDeactivateUser = async (userId: string) => {
+    if (!window.confirm("Are you sure you want to deactivate this user?")) {
+      return;
+    }
+
+    setUpdatingUserId(userId);
+    try {
+      await deactivateUser(userId);
+      toast({
+        title: "Success",
+        description: "User deactivated successfully",
+      });
+      // Reload users
+      await loadUsers();
+    } catch (err: any) {
+      console.error('Failed to deactivate user:', err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to deactivate user",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingUserId(null);
+    }
+  };
+
+  // Handle view user details - navigate to user details page
+  const handleViewUser = (userId: string) => {
+    navigate(`/admin-dashboard/users/${userId}`);
+  };
+
+  // Handle edit user button click
+  const handleEditUser = async (userId: string) => {
+    await handleViewUser(userId);
+  };
+
+  // Handle update user
+  const handleUpdateUser = async () => {
+    if (!selectedUser) return;
+
+    const userId = selectedUser._id || selectedUser.id || selectedUser.userId;
+    if (!userId) {
+      toast({
+        title: "Error",
+        description: "User ID not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setEditingUser(true);
+    try {
+      const updateData: any = {};
+
+      // Add basic fields if they exist
+      if (editUserData.firstName) updateData.firstName = editUserData.firstName;
+      if (editUserData.lastName) updateData.lastName = editUserData.lastName;
+      if (editUserData.email) updateData.email = editUserData.email;
+      if (editUserData.phoneNumber) updateData.phoneNumber = editUserData.phoneNumber;
+      if (editUserData.province) updateData.province = editUserData.province;
+      if (editUserData.district) updateData.district = editUserData.district;
+      if (editUserData.sector) updateData.sector = editUserData.sector;
+      if (editUserData.cell) updateData.cell = editUserData.cell;
+      if (editUserData.village) updateData.village = editUserData.village;
+      if (editUserData.sex) updateData.sex = editUserData.sex;
+      updateData.active = editUserData.active;
+
+      // Add profile data based on role
+      const userRole = selectedUser.role;
+      if (userRole === 'FARMER' && editUserData.farmerProfile) {
+        updateData.farmerProfile = editUserData.farmerProfile;
+      } else if (userRole === 'ASSESSOR' && editUserData.assessorProfile) {
+        updateData.assessorProfile = editUserData.assessorProfile;
+      } else if (userRole === 'INSURER' && editUserData.insurerProfile) {
+        updateData.insurerProfile = editUserData.insurerProfile;
+      }
+
+      console.log('Updating user with data:', JSON.stringify(updateData, null, 2));
+      await updateUser(userId, updateData);
+
+      toast({
+        title: "Success",
+        description: "User updated successfully",
+      });
+
+      setShowEditUserDialog(false);
+      setSelectedUser(null);
+      await loadUsers();
+    } catch (err: any) {
+      console.error('Failed to update user:', err);
+      toast({
+        title: "Error Updating User",
+        description: err.message || "Failed to update user. Please check the console for details.",
+        variant: "destructive",
+      });
+    } finally {
+      setEditingUser(false);
+    }
+  };
+
+  // Handle create new user
+  const handleCreateUser = async () => {
+    // Validate required fields
+    if (!newUserData.nationalId || !newUserData.email || !newUserData.phoneNumber || !newUserData.role) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields (National ID, Email, Phone Number, Role)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCreatingUser(true);
+    let userDataToSend: any = null;
+    
+    try {
+      // API only accepts these 4 required fields for user creation
+      // Other fields (firstName, lastName, profiles, etc.) should be added via update endpoint after creation
+      userDataToSend = {
+        nationalId: newUserData.nationalId,
+        email: newUserData.email,
+        phoneNumber: newUserData.phoneNumber,
+        role: newUserData.role
+      };
+
+      console.log('Creating user with data:', JSON.stringify(userDataToSend, null, 2)); // Debug log
+      
+      const response = await createUser(userDataToSend);
+      
+      // Note: The API's update endpoint also rejects these fields, so we skip the update step
+      // Additional fields would need to be added through separate profile-specific endpoints if available
+      // For now, user is created with just the required fields
+      console.log('User created successfully. Additional fields should be added via profile update endpoints if available.');
+      
+      toast({
+        title: "Success",
+        description: "User created successfully",
+      });
+      // Reset form
+      setNewUserData({
+        nationalId: "",
+        email: "",
+        phoneNumber: "",
+        role: "FARMER",
+        firstName: "",
+        lastName: "",
+        province: "",
+        district: "",
+        sector: "",
+        cell: "",
+        village: "",
+        sex: "",
+        farmerProfile: {
+          farmProvince: "",
+          farmDistrict: "",
+          farmSector: "",
+          farmCell: "",
+          farmVillage: ""
+        },
+        assessorProfile: {
+          specialization: "",
+          experienceYears: 0,
+          profilePhotoUrl: "",
+          bio: "",
+          address: ""
+        },
+        insurerProfile: {
+          companyName: "",
+          contactPerson: "",
+          website: "",
+          address: "",
+          companyDescription: "",
+          licenseNumber: "",
+          registrationDate: "",
+          companyLogoUrl: ""
+        }
+      });
+      setShowAddUserDialog(false);
+      // Reload users
+      await loadUsers();
+    } catch (err: any) {
+      console.error('Failed to create user:', err);
+      console.error('Error details:', err.message);
+      if (userDataToSend) {
+        console.error('User data that failed:', JSON.stringify(userDataToSend, null, 2));
+      }
+      
+      // Show more detailed error message
+      const errorMessage = err.message || "Failed to create user. Please check the console for details.";
+      
+      toast({
+        title: "Error Creating User",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
+  // Filter users based on search query
+  const filteredUsers = systemUsers.filter(user => {
+    const query = searchQuery.toLowerCase();
+    return (
+      user.name.toLowerCase().includes(query) ||
+      user.email.toLowerCase().includes(query) ||
+      user.phoneNumber?.toLowerCase().includes(query) ||
+      user.role.toLowerCase().includes(query) ||
+      user.region.toLowerCase().includes(query)
+    );
+  });
+
   // User Management Page
   const renderUserManagement = () => (
     <div className="space-y-6">
@@ -448,16 +1036,984 @@ export const AdminDashboard = () => {
           <p className="text-white/60">Manage all platform users and permissions</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="border-gray-700 text-white hover:bg-gray-800">
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
+          <Button 
+            variant="outline" 
+            className="border-gray-700 text-white hover:bg-gray-800"
+            onClick={loadUsers}
+            disabled={usersLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${usersLoading ? 'animate-spin' : ''}`} />
+            Refresh
           </Button>
+          <Dialog open={showAddUserDialog} onOpenChange={setShowAddUserDialog}>
+            <DialogTrigger asChild>
           <Button className="bg-red-600 hover:bg-red-700">
             <UserPlus className="h-4 w-4 mr-2" />
             Add User
           </Button>
+            </DialogTrigger>
+            <DialogContent className={`${dashboardTheme.card} border-gray-800 max-w-2xl max-h-[90vh] overflow-y-auto`}>
+              <DialogHeader>
+                <DialogTitle className="text-white text-2xl">Add New User</DialogTitle>
+                <DialogDescription className="text-white/60 text-sm mt-2">
+                  Create a new user account. Required fields are marked with *
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 mt-4">
+                {/* Required Fields */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="nationalId" className="text-white">National ID *</Label>
+                    <Input
+                      id="nationalId"
+                      value={newUserData.nationalId}
+                      onChange={(e) => setNewUserData({ ...newUserData, nationalId: e.target.value })}
+                      className={`${dashboardTheme.input} border-gray-700`}
+                      placeholder="1199012345678901"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="email" className="text-white">Email *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={newUserData.email}
+                      onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+                      className={`${dashboardTheme.input} border-gray-700`}
+                      placeholder="user@example.com"
+                      required
+                    />
         </div>
       </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="phoneNumber" className="text-white">Phone Number *</Label>
+                    <Input
+                      id="phoneNumber"
+                      value={newUserData.phoneNumber}
+                      onChange={(e) => setNewUserData({ ...newUserData, phoneNumber: e.target.value })}
+                      className={`${dashboardTheme.input} border-gray-700`}
+                      placeholder="0721234567"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="role" className="text-white">Role *</Label>
+                    <Select
+                      value={newUserData.role}
+                      onValueChange={(value) => setNewUserData({ ...newUserData, role: value })}
+                    >
+                      <SelectTrigger className={`${dashboardTheme.select}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className={dashboardTheme.card}>
+                        <SelectItem value="FARMER">FARMER</SelectItem>
+                        <SelectItem value="ASSESSOR">ASSESSOR</SelectItem>
+                        <SelectItem value="INSURER">INSURER</SelectItem>
+                        <SelectItem value="GOVERNMENT">GOVERNMENT</SelectItem>
+                        <SelectItem value="ADMIN">ADMIN</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Optional Fields */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="firstName" className="text-white">First Name</Label>
+                    <Input
+                      id="firstName"
+                      value={newUserData.firstName}
+                      onChange={(e) => setNewUserData({ ...newUserData, firstName: e.target.value })}
+                      className={`${dashboardTheme.input} border-gray-700`}
+                      placeholder="First Name"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="lastName" className="text-white">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      value={newUserData.lastName}
+                      onChange={(e) => setNewUserData({ ...newUserData, lastName: e.target.value })}
+                      className={`${dashboardTheme.input} border-gray-700`}
+                      placeholder="Last Name"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="province" className="text-white">Province</Label>
+                    <Input
+                      id="province"
+                      value={newUserData.province}
+                      onChange={(e) => setNewUserData({ ...newUserData, province: e.target.value })}
+                      className={`${dashboardTheme.input} border-gray-700`}
+                      placeholder="Province"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="district" className="text-white">District</Label>
+                    <Input
+                      id="district"
+                      value={newUserData.district}
+                      onChange={(e) => setNewUserData({ ...newUserData, district: e.target.value })}
+                      className={`${dashboardTheme.input} border-gray-700`}
+                      placeholder="District"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="sector" className="text-white">Sector</Label>
+                    <Input
+                      id="sector"
+                      value={newUserData.sector}
+                      onChange={(e) => setNewUserData({ ...newUserData, sector: e.target.value })}
+                      className={`${dashboardTheme.input} border-gray-700`}
+                      placeholder="Sector"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="cell" className="text-white">Cell</Label>
+                    <Input
+                      id="cell"
+                      value={newUserData.cell}
+                      onChange={(e) => setNewUserData({ ...newUserData, cell: e.target.value })}
+                      className={`${dashboardTheme.input} border-gray-700`}
+                      placeholder="Cell"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="village" className="text-white">Village</Label>
+                    <Input
+                      id="village"
+                      value={newUserData.village}
+                      onChange={(e) => setNewUserData({ ...newUserData, village: e.target.value })}
+                      className={`${dashboardTheme.input} border-gray-700`}
+                      placeholder="Village"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="sex" className="text-white">Sex</Label>
+                    <Select
+                      value={newUserData.sex}
+                      onValueChange={(value) => setNewUserData({ ...newUserData, sex: value })}
+                    >
+                      <SelectTrigger className={`${dashboardTheme.select}`}>
+                        <SelectValue placeholder="Select sex" />
+                      </SelectTrigger>
+                      <SelectContent className={dashboardTheme.card}>
+                        <SelectItem value="MALE">Male</SelectItem>
+                        <SelectItem value="FEMALE">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Role-Specific Profile Fields */}
+                {newUserData.role === 'FARMER' && (
+                  <div className="border-t border-gray-800 pt-4 mt-4">
+                    <h3 className="text-white font-semibold mb-4">Farmer Profile</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="farmProvince" className="text-white">Farm Province</Label>
+                        <Input
+                          id="farmProvince"
+                          value={newUserData.farmerProfile.farmProvince}
+                          onChange={(e) => setNewUserData({
+                            ...newUserData,
+                            farmerProfile: { ...newUserData.farmerProfile, farmProvince: e.target.value }
+                          })}
+                          className={`${dashboardTheme.input} border-gray-700`}
+                          placeholder="Farm Province"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="farmDistrict" className="text-white">Farm District</Label>
+                        <Input
+                          id="farmDistrict"
+                          value={newUserData.farmerProfile.farmDistrict}
+                          onChange={(e) => setNewUserData({
+                            ...newUserData,
+                            farmerProfile: { ...newUserData.farmerProfile, farmDistrict: e.target.value }
+                          })}
+                          className={`${dashboardTheme.input} border-gray-700`}
+                          placeholder="Farm District"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <Label htmlFor="farmSector" className="text-white">Farm Sector</Label>
+                        <Input
+                          id="farmSector"
+                          value={newUserData.farmerProfile.farmSector}
+                          onChange={(e) => setNewUserData({
+                            ...newUserData,
+                            farmerProfile: { ...newUserData.farmerProfile, farmSector: e.target.value }
+                          })}
+                          className={`${dashboardTheme.input} border-gray-700`}
+                          placeholder="Farm Sector"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="farmCell" className="text-white">Farm Cell</Label>
+                        <Input
+                          id="farmCell"
+                          value={newUserData.farmerProfile.farmCell}
+                          onChange={(e) => setNewUserData({
+                            ...newUserData,
+                            farmerProfile: { ...newUserData.farmerProfile, farmCell: e.target.value }
+                          })}
+                          className={`${dashboardTheme.input} border-gray-700`}
+                          placeholder="Farm Cell"
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <Label htmlFor="farmVillage" className="text-white">Farm Village</Label>
+                      <Input
+                        id="farmVillage"
+                        value={newUserData.farmerProfile.farmVillage}
+                        onChange={(e) => setNewUserData({
+                          ...newUserData,
+                          farmerProfile: { ...newUserData.farmerProfile, farmVillage: e.target.value }
+                        })}
+                        className={`${dashboardTheme.input} border-gray-700`}
+                        placeholder="Farm Village"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {newUserData.role === 'ASSESSOR' && (
+                  <div className="border-t border-gray-800 pt-4 mt-4">
+                    <h3 className="text-white font-semibold mb-4">Assessor Profile</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="specialization" className="text-white">Specialization</Label>
+                        <Input
+                          id="specialization"
+                          value={newUserData.assessorProfile.specialization}
+                          onChange={(e) => setNewUserData({
+                            ...newUserData,
+                            assessorProfile: { ...newUserData.assessorProfile, specialization: e.target.value }
+                          })}
+                          className={`${dashboardTheme.input} border-gray-700`}
+                          placeholder="e.g. Crop Assessment, Risk Evaluation"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="experienceYears" className="text-white">Experience Years</Label>
+                        <Input
+                          id="experienceYears"
+                          type="number"
+                          min="0"
+                          value={newUserData.assessorProfile.experienceYears}
+                          onChange={(e) => setNewUserData({
+                            ...newUserData,
+                            assessorProfile: { ...newUserData.assessorProfile, experienceYears: parseInt(e.target.value) || 0 }
+                          })}
+                          className={`${dashboardTheme.input} border-gray-700`}
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <Label htmlFor="profilePhotoUrl" className="text-white">Profile Photo URL</Label>
+                        <Input
+                          id="profilePhotoUrl"
+                          value={newUserData.assessorProfile.profilePhotoUrl}
+                          onChange={(e) => setNewUserData({
+                            ...newUserData,
+                            assessorProfile: { ...newUserData.assessorProfile, profilePhotoUrl: e.target.value }
+                          })}
+                          className={`${dashboardTheme.input} border-gray-700`}
+                          placeholder="https://example.com/photo.jpg"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="assessorAddress" className="text-white">Address</Label>
+                        <Input
+                          id="assessorAddress"
+                          value={newUserData.assessorProfile.address}
+                          onChange={(e) => setNewUserData({
+                            ...newUserData,
+                            assessorProfile: { ...newUserData.assessorProfile, address: e.target.value }
+                          })}
+                          className={`${dashboardTheme.input} border-gray-700`}
+                          placeholder="Address"
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <Label htmlFor="assessorBio" className="text-white">Bio</Label>
+                      <Textarea
+                        id="assessorBio"
+                        value={newUserData.assessorProfile.bio}
+                        onChange={(e) => setNewUserData({
+                          ...newUserData,
+                          assessorProfile: { ...newUserData.assessorProfile, bio: e.target.value }
+                        })}
+                        className={`${dashboardTheme.input} border-gray-700 min-h-[100px]`}
+                        placeholder="Brief biography or description"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {newUserData.role === 'INSURER' && (
+                  <div className="border-t border-gray-800 pt-4 mt-4">
+                    <h3 className="text-white font-semibold mb-4">Insurer Profile</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="companyName" className="text-white">Company Name</Label>
+                        <Input
+                          id="companyName"
+                          value={newUserData.insurerProfile.companyName}
+                          onChange={(e) => setNewUserData({
+                            ...newUserData,
+                            insurerProfile: { ...newUserData.insurerProfile, companyName: e.target.value }
+                          })}
+                          className={`${dashboardTheme.input} border-gray-700`}
+                          placeholder="Company Name"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="contactPerson" className="text-white">Contact Person</Label>
+                        <Input
+                          id="contactPerson"
+                          value={newUserData.insurerProfile.contactPerson}
+                          onChange={(e) => setNewUserData({
+                            ...newUserData,
+                            insurerProfile: { ...newUserData.insurerProfile, contactPerson: e.target.value }
+                          })}
+                          className={`${dashboardTheme.input} border-gray-700`}
+                          placeholder="Contact Person Name"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <Label htmlFor="website" className="text-white">Website</Label>
+                        <Input
+                          id="website"
+                          type="url"
+                          value={newUserData.insurerProfile.website}
+                          onChange={(e) => setNewUserData({
+                            ...newUserData,
+                            insurerProfile: { ...newUserData.insurerProfile, website: e.target.value }
+                          })}
+                          className={`${dashboardTheme.input} border-gray-700`}
+                          placeholder="https://example.com"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="insurerAddress" className="text-white">Address</Label>
+                        <Input
+                          id="insurerAddress"
+                          value={newUserData.insurerProfile.address}
+                          onChange={(e) => setNewUserData({
+                            ...newUserData,
+                            insurerProfile: { ...newUserData.insurerProfile, address: e.target.value }
+                          })}
+                          className={`${dashboardTheme.input} border-gray-700`}
+                          placeholder="Company Address"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <Label htmlFor="licenseNumber" className="text-white">License Number</Label>
+                        <Input
+                          id="licenseNumber"
+                          value={newUserData.insurerProfile.licenseNumber}
+                          onChange={(e) => setNewUserData({
+                            ...newUserData,
+                            insurerProfile: { ...newUserData.insurerProfile, licenseNumber: e.target.value }
+                          })}
+                          className={`${dashboardTheme.input} border-gray-700`}
+                          placeholder="License Number"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="registrationDate" className="text-white">Registration Date</Label>
+                        <Input
+                          id="registrationDate"
+                          type="date"
+                          value={newUserData.insurerProfile.registrationDate}
+                          onChange={(e) => setNewUserData({
+                            ...newUserData,
+                            insurerProfile: { ...newUserData.insurerProfile, registrationDate: e.target.value }
+                          })}
+                          className={`${dashboardTheme.input} border-gray-700`}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <Label htmlFor="companyLogoUrl" className="text-white">Company Logo URL</Label>
+                        <Input
+                          id="companyLogoUrl"
+                          value={newUserData.insurerProfile.companyLogoUrl}
+                          onChange={(e) => setNewUserData({
+                            ...newUserData,
+                            insurerProfile: { ...newUserData.insurerProfile, companyLogoUrl: e.target.value }
+                          })}
+                          className={`${dashboardTheme.input} border-gray-700`}
+                          placeholder="https://example.com/logo.png"
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <Label htmlFor="companyDescription" className="text-white">Company Description</Label>
+                      <Textarea
+                        id="companyDescription"
+                        value={newUserData.insurerProfile.companyDescription}
+                        onChange={(e) => setNewUserData({
+                          ...newUserData,
+                          insurerProfile: { ...newUserData.insurerProfile, companyDescription: e.target.value }
+                        })}
+                        className={`${dashboardTheme.input} border-gray-700 min-h-[100px]`}
+                        placeholder="Company description and overview"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAddUserDialog(false)}
+                    className="border-gray-700 text-white hover:bg-gray-800"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleCreateUser}
+                    disabled={creatingUser}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    {creatingUser ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Create User
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit User Dialog */}
+          <Dialog open={showEditUserDialog} onOpenChange={setShowEditUserDialog}>
+            <DialogContent className={`${dashboardTheme.card} border-gray-800 max-w-2xl max-h-[90vh] overflow-y-auto`}>
+              <DialogHeader>
+                <DialogTitle className="text-white text-2xl">Edit User</DialogTitle>
+                <DialogDescription className="text-white/60 text-sm mt-2">
+                  Update user information. Fields marked with * are required.
+                </DialogDescription>
+              </DialogHeader>
+              {selectedUser && (
+                <div className="space-y-4 mt-4">
+                  {/* User Info (Read-only) */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-white/60">National ID</Label>
+                      <Input
+                        value={selectedUser.nationalId || ""}
+                        disabled
+                        className={`${dashboardTheme.input} border-gray-700 opacity-50`}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-white/60">Role</Label>
+                      <Input
+                        value={selectedUser.role || ""}
+                        disabled
+                        className={`${dashboardTheme.input} border-gray-700 opacity-50`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Basic Fields */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="editFirstName" className="text-white">First Name</Label>
+                      <Input
+                        id="editFirstName"
+                        value={editUserData.firstName}
+                        onChange={(e) => setEditUserData({ ...editUserData, firstName: e.target.value })}
+                        className={`${dashboardTheme.input} border-gray-700`}
+                        placeholder="First Name"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="editLastName" className="text-white">Last Name</Label>
+                      <Input
+                        id="editLastName"
+                        value={editUserData.lastName}
+                        onChange={(e) => setEditUserData({ ...editUserData, lastName: e.target.value })}
+                        className={`${dashboardTheme.input} border-gray-700`}
+                        placeholder="Last Name"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="editEmail" className="text-white">Email *</Label>
+                      <Input
+                        id="editEmail"
+                        type="email"
+                        value={editUserData.email}
+                        onChange={(e) => setEditUserData({ ...editUserData, email: e.target.value })}
+                        className={`${dashboardTheme.input} border-gray-700`}
+                        placeholder="user@example.com"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="editPhoneNumber" className="text-white">Phone Number *</Label>
+                      <Input
+                        id="editPhoneNumber"
+                        value={editUserData.phoneNumber}
+                        onChange={(e) => setEditUserData({ ...editUserData, phoneNumber: e.target.value })}
+                        className={`${dashboardTheme.input} border-gray-700`}
+                        placeholder="0721234567"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="editProvince" className="text-white">Province</Label>
+                      <Input
+                        id="editProvince"
+                        value={editUserData.province}
+                        onChange={(e) => setEditUserData({ ...editUserData, province: e.target.value })}
+                        className={`${dashboardTheme.input} border-gray-700`}
+                        placeholder="Province"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="editDistrict" className="text-white">District</Label>
+                      <Input
+                        id="editDistrict"
+                        value={editUserData.district}
+                        onChange={(e) => setEditUserData({ ...editUserData, district: e.target.value })}
+                        className={`${dashboardTheme.input} border-gray-700`}
+                        placeholder="District"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="editSector" className="text-white">Sector</Label>
+                      <Input
+                        id="editSector"
+                        value={editUserData.sector}
+                        onChange={(e) => setEditUserData({ ...editUserData, sector: e.target.value })}
+                        className={`${dashboardTheme.input} border-gray-700`}
+                        placeholder="Sector"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="editCell" className="text-white">Cell</Label>
+                      <Input
+                        id="editCell"
+                        value={editUserData.cell}
+                        onChange={(e) => setEditUserData({ ...editUserData, cell: e.target.value })}
+                        className={`${dashboardTheme.input} border-gray-700`}
+                        placeholder="Cell"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="editVillage" className="text-white">Village</Label>
+                      <Input
+                        id="editVillage"
+                        value={editUserData.village}
+                        onChange={(e) => setEditUserData({ ...editUserData, village: e.target.value })}
+                        className={`${dashboardTheme.input} border-gray-700`}
+                        placeholder="Village"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="editSex" className="text-white">Sex</Label>
+                      <Select
+                        value={editUserData.sex}
+                        onValueChange={(value) => setEditUserData({ ...editUserData, sex: value })}
+                      >
+                        <SelectTrigger className={`${dashboardTheme.select}`}>
+                          <SelectValue placeholder="Select sex" />
+                        </SelectTrigger>
+                        <SelectContent className={dashboardTheme.card}>
+                          <SelectItem value="MALE">Male</SelectItem>
+                          <SelectItem value="FEMALE">Female</SelectItem>
+                          <SelectItem value="OTHER">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="editActive" className="text-white flex items-center gap-2">
+                      <input
+                        id="editActive"
+                        type="checkbox"
+                        checked={editUserData.active}
+                        onChange={(e) => setEditUserData({ ...editUserData, active: e.target.checked })}
+                        className="w-4 h-4"
+                      />
+                      Active
+                    </Label>
+                  </div>
+
+                  {/* Role-specific Profile Fields */}
+                  {selectedUser.role === 'FARMER' && (
+                    <div className="space-y-4 mt-4 pt-4 border-t border-gray-700">
+                      <h3 className="text-white font-semibold">Farmer Profile</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="editFarmProvince" className="text-white">Farm Province</Label>
+                          <Input
+                            id="editFarmProvince"
+                            value={editUserData.farmerProfile.farmProvince}
+                            onChange={(e) => setEditUserData({
+                              ...editUserData,
+                              farmerProfile: { ...editUserData.farmerProfile, farmProvince: e.target.value }
+                            })}
+                            className={`${dashboardTheme.input} border-gray-700`}
+                            placeholder="Farm Province"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="editFarmDistrict" className="text-white">Farm District</Label>
+                          <Input
+                            id="editFarmDistrict"
+                            value={editUserData.farmerProfile.farmDistrict}
+                            onChange={(e) => setEditUserData({
+                              ...editUserData,
+                              farmerProfile: { ...editUserData.farmerProfile, farmDistrict: e.target.value }
+                            })}
+                            className={`${dashboardTheme.input} border-gray-700`}
+                            placeholder="Farm District"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="editFarmSector" className="text-white">Farm Sector</Label>
+                          <Input
+                            id="editFarmSector"
+                            value={editUserData.farmerProfile.farmSector}
+                            onChange={(e) => setEditUserData({
+                              ...editUserData,
+                              farmerProfile: { ...editUserData.farmerProfile, farmSector: e.target.value }
+                            })}
+                            className={`${dashboardTheme.input} border-gray-700`}
+                            placeholder="Farm Sector"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="editFarmCell" className="text-white">Farm Cell</Label>
+                          <Input
+                            id="editFarmCell"
+                            value={editUserData.farmerProfile.farmCell}
+                            onChange={(e) => setEditUserData({
+                              ...editUserData,
+                              farmerProfile: { ...editUserData.farmerProfile, farmCell: e.target.value }
+                            })}
+                            className={`${dashboardTheme.input} border-gray-700`}
+                            placeholder="Farm Cell"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="editFarmVillage" className="text-white">Farm Village</Label>
+                        <Input
+                          id="editFarmVillage"
+                          value={editUserData.farmerProfile.farmVillage}
+                          onChange={(e) => setEditUserData({
+                            ...editUserData,
+                            farmerProfile: { ...editUserData.farmerProfile, farmVillage: e.target.value }
+                          })}
+                          className={`${dashboardTheme.input} border-gray-700`}
+                          placeholder="Farm Village"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedUser.role === 'ASSESSOR' && (
+                    <div className="space-y-4 mt-4 pt-4 border-t border-gray-700">
+                      <h3 className="text-white font-semibold">Assessor Profile</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="editSpecialization" className="text-white">Specialization</Label>
+                          <Input
+                            id="editSpecialization"
+                            value={editUserData.assessorProfile.specialization}
+                            onChange={(e) => setEditUserData({
+                              ...editUserData,
+                              assessorProfile: { ...editUserData.assessorProfile, specialization: e.target.value }
+                            })}
+                            className={`${dashboardTheme.input} border-gray-700`}
+                            placeholder="Specialization"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="editExperienceYears" className="text-white">Experience Years</Label>
+                          <Input
+                            id="editExperienceYears"
+                            type="number"
+                            value={editUserData.assessorProfile.experienceYears}
+                            onChange={(e) => setEditUserData({
+                              ...editUserData,
+                              assessorProfile: { ...editUserData.assessorProfile, experienceYears: parseInt(e.target.value) || 0 }
+                            })}
+                            className={`${dashboardTheme.input} border-gray-700`}
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="editProfilePhotoUrl" className="text-white">Profile Photo URL</Label>
+                        <Input
+                          id="editProfilePhotoUrl"
+                          value={editUserData.assessorProfile.profilePhotoUrl}
+                          onChange={(e) => setEditUserData({
+                            ...editUserData,
+                            assessorProfile: { ...editUserData.assessorProfile, profilePhotoUrl: e.target.value }
+                          })}
+                          className={`${dashboardTheme.input} border-gray-700`}
+                          placeholder="https://example.com/photo.jpg"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="editAddress" className="text-white">Address</Label>
+                        <Input
+                          id="editAddress"
+                          value={editUserData.assessorProfile.address}
+                          onChange={(e) => setEditUserData({
+                            ...editUserData,
+                            assessorProfile: { ...editUserData.assessorProfile, address: e.target.value }
+                          })}
+                          className={`${dashboardTheme.input} border-gray-700`}
+                          placeholder="Address"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="editBio" className="text-white">Bio</Label>
+                        <Textarea
+                          id="editBio"
+                          value={editUserData.assessorProfile.bio}
+                          onChange={(e) => setEditUserData({
+                            ...editUserData,
+                            assessorProfile: { ...editUserData.assessorProfile, bio: e.target.value }
+                          })}
+                          className={`${dashboardTheme.input} border-gray-700 min-h-[100px]`}
+                          placeholder="Bio"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedUser.role === 'INSURER' && (
+                    <div className="space-y-4 mt-4 pt-4 border-t border-gray-700">
+                      <h3 className="text-white font-semibold">Insurer Profile</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="editCompanyName" className="text-white">Company Name</Label>
+                          <Input
+                            id="editCompanyName"
+                            value={editUserData.insurerProfile.companyName}
+                            onChange={(e) => setEditUserData({
+                              ...editUserData,
+                              insurerProfile: { ...editUserData.insurerProfile, companyName: e.target.value }
+                            })}
+                            className={`${dashboardTheme.input} border-gray-700`}
+                            placeholder="Company Name"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="editContactPerson" className="text-white">Contact Person</Label>
+                          <Input
+                            id="editContactPerson"
+                            value={editUserData.insurerProfile.contactPerson}
+                            onChange={(e) => setEditUserData({
+                              ...editUserData,
+                              insurerProfile: { ...editUserData.insurerProfile, contactPerson: e.target.value }
+                            })}
+                            className={`${dashboardTheme.input} border-gray-700`}
+                            placeholder="Contact Person"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="editWebsite" className="text-white">Website</Label>
+                          <Input
+                            id="editWebsite"
+                            value={editUserData.insurerProfile.website}
+                            onChange={(e) => setEditUserData({
+                              ...editUserData,
+                              insurerProfile: { ...editUserData.insurerProfile, website: e.target.value }
+                            })}
+                            className={`${dashboardTheme.input} border-gray-700`}
+                            placeholder="https://example.com"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="editInsurerAddress" className="text-white">Address</Label>
+                          <Input
+                            id="editInsurerAddress"
+                            value={editUserData.insurerProfile.address}
+                            onChange={(e) => setEditUserData({
+                              ...editUserData,
+                              insurerProfile: { ...editUserData.insurerProfile, address: e.target.value }
+                            })}
+                            className={`${dashboardTheme.input} border-gray-700`}
+                            placeholder="Company Address"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="editLicenseNumber" className="text-white">License Number</Label>
+                          <Input
+                            id="editLicenseNumber"
+                            value={editUserData.insurerProfile.licenseNumber}
+                            onChange={(e) => setEditUserData({
+                              ...editUserData,
+                              insurerProfile: { ...editUserData.insurerProfile, licenseNumber: e.target.value }
+                            })}
+                            className={`${dashboardTheme.input} border-gray-700`}
+                            placeholder="License Number"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="editRegistrationDate" className="text-white">Registration Date</Label>
+                          <Input
+                            id="editRegistrationDate"
+                            type="date"
+                            value={editUserData.insurerProfile.registrationDate}
+                            onChange={(e) => setEditUserData({
+                              ...editUserData,
+                              insurerProfile: { ...editUserData.insurerProfile, registrationDate: e.target.value }
+                            })}
+                            className={`${dashboardTheme.input} border-gray-700`}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="editCompanyLogoUrl" className="text-white">Company Logo URL</Label>
+                        <Input
+                          id="editCompanyLogoUrl"
+                          value={editUserData.insurerProfile.companyLogoUrl}
+                          onChange={(e) => setEditUserData({
+                            ...editUserData,
+                            insurerProfile: { ...editUserData.insurerProfile, companyLogoUrl: e.target.value }
+                          })}
+                          className={`${dashboardTheme.input} border-gray-700`}
+                          placeholder="https://example.com/logo.png"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="editCompanyDescription" className="text-white">Company Description</Label>
+                        <Textarea
+                          id="editCompanyDescription"
+                          value={editUserData.insurerProfile.companyDescription}
+                          onChange={(e) => setEditUserData({
+                            ...editUserData,
+                            insurerProfile: { ...editUserData.insurerProfile, companyDescription: e.target.value }
+                          })}
+                          className={`${dashboardTheme.input} border-gray-700 min-h-[100px]`}
+                          placeholder="Company description and overview"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowEditUserDialog(false);
+                        setSelectedUser(null);
+                      }}
+                      className="border-gray-700 text-white hover:bg-gray-800"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleUpdateUser}
+                      disabled={editingUser}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      {editingUser ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Updating...
+                        </>
+                      ) : (
+                        <>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Update User
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      {/* Error Message */}
+      {usersError && (
+        <Card className={`${dashboardTheme.card} border-l-4 border-l-red-500`}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-400" />
+                <p className="text-red-400">{usersError}</p>
+              </div>
+              <Button
+                onClick={loadUsers}
+                variant="outline"
+                size="sm"
+                className="border-gray-700 text-white hover:bg-gray-800"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 md:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
@@ -509,16 +2065,43 @@ export const AdminDashboard = () => {
               <input
                 type="text"
                 placeholder="Search users..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:border-red-500"
               />
             </div>
           </div>
+          {usersLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4"></div>
+                <p className="text-white/60">Loading users...</p>
+              </div>
+            </div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <Users className="h-12 w-12 mx-auto mb-4 text-white/40" />
+                <p className="text-white/60">No users found</p>
+                {searchQuery && (
+                  <Button
+                    onClick={() => setSearchQuery("")}
+                    variant="outline"
+                    className="mt-4 border-gray-700 text-white hover:bg-gray-800"
+                  >
+                    Clear Search
+                  </Button>
+                )}
+              </div>
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-700">
                   <th className="text-left py-3 px-4 text-white/80 font-medium text-sm">User</th>
                   <th className="text-left py-3 px-4 text-white/80 font-medium text-sm">Email</th>
+                    <th className="text-left py-3 px-4 text-white/80 font-medium text-sm">Phone</th>
                   <th className="text-left py-3 px-4 text-white/80 font-medium text-sm">Role</th>
                   <th className="text-left py-3 px-4 text-white/80 font-medium text-sm">Region</th>
                   <th className="text-left py-3 px-4 text-white/80 font-medium text-sm">Status</th>
@@ -527,49 +2110,72 @@ export const AdminDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {systemUsers.map((user) => (
+                  {filteredUsers.map((user) => (
                   <tr key={user.id} className="border-b border-gray-800 hover:bg-gray-800/50">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-orange-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                          {user.name.charAt(0)}
+                            {user.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
                           <div className="text-sm font-medium text-white">{user.name}</div>
-                          <div className="text-xs text-white/60">{user.id}</div>
+                            <div className="text-xs text-white/60">{user.userId}</div>
                         </div>
                       </div>
                     </td>
                     <td className="py-3 px-4 text-sm text-white/80">{user.email}</td>
+                      <td className="py-3 px-4 text-sm text-white/80">{user.phoneNumber || 'N/A'}</td>
                     <td className="py-3 px-4">
                       <Badge className={`${
-                        user.role === 'Farmer' ? 'bg-green-600' :
-                        user.role === 'Assessor' ? 'bg-orange-600' :
-                        user.role === 'Insurer' ? 'bg-blue-600' :
-                        user.role === 'Government' ? 'bg-purple-600' :
-                        'bg-red-600'
+                          user.role === 'FARMER' || user.role === 'Farmer' ? 'bg-green-600' :
+                          user.role === 'ASSESSOR' || user.role === 'Assessor' ? 'bg-orange-600' :
+                          user.role === 'INSURER' || user.role === 'Insurer' ? 'bg-blue-600' :
+                          user.role === 'GOVERNMENT' || user.role === 'Government' ? 'bg-purple-600' :
+                          user.role === 'ADMIN' || user.role === 'Admin' ? 'bg-red-600' :
+                          'bg-gray-600'
                       }`}>
                         {user.role}
                       </Badge>
                     </td>
                     <td className="py-3 px-4 text-sm text-white/80">{user.region}</td>
                     <td className="py-3 px-4">
-                      <Badge className={user.status === 'active' ? 'bg-green-600' : 'bg-gray-600'}>
-                        {user.status}
+                        <Badge className={user.active !== false ? 'bg-green-600' : 'bg-gray-600'}>
+                          {user.active !== false ? 'Active' : 'Inactive'}
                       </Badge>
                     </td>
                     <td className="py-3 px-4 text-sm text-white/60">{user.lastLogin}</td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" className="text-white/60 hover:text-white">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-white/60 hover:text-white"
+                            onClick={() => handleViewUser(user.userId)}
+                            title="View Details"
+                          >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-white/60 hover:text-white">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-white/60 hover:text-white"
+                            onClick={() => handleEditUser(user.userId)}
+                            title="Edit User"
+                          >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-300">
-                          <Trash2 className="h-4 w-4" />
+                          {user.active !== false && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-red-400 hover:text-red-300"
+                              onClick={() => handleDeactivateUser(user.userId)}
+                              disabled={updatingUserId === user.userId}
+                              title="Deactivate User"
+                            >
+                              <UserMinus className="h-4 w-4" />
                         </Button>
+                          )}
                       </div>
                     </td>
                   </tr>
@@ -577,6 +2183,7 @@ export const AdminDashboard = () => {
               </tbody>
             </table>
           </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -590,11 +2197,157 @@ export const AdminDashboard = () => {
           <h2 className="text-2xl font-bold text-white">Financial Management & Monetization</h2>
           <p className="text-white/60">Track platform revenue and commission earnings</p>
         </div>
-        <Button className="bg-red-600 hover:bg-red-700">
-          <Download className="h-4 w-4 mr-2" />
-          Export Report
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={loadAdminStatistics}
+            variant="outline"
+            className="border-gray-700 text-white hover:bg-gray-800"
+            disabled={statsLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${statsLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button className="bg-red-600 hover:bg-red-700">
+            <Download className="h-4 w-4 mr-2" />
+            Export Report
+          </Button>
+        </div>
       </div>
+
+      {/* Loading State */}
+      {statsLoading && (
+        <Card className={dashboardTheme.card}>
+          <CardContent className="p-8 text-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-white mx-auto mb-4" />
+            <p className="text-white/60">Loading financial data...</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Error State */}
+      {statsError && !statsLoading && (
+        <Card className={`${dashboardTheme.card} border-l-4 border-l-red-500`}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-400" />
+                <p className="text-red-400">{statsError}</p>
+              </div>
+              <Button
+                onClick={loadAdminStatistics}
+                variant="outline"
+                size="sm"
+                className="border-gray-700 text-white hover:bg-gray-800"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Policy Overview Section */}
+      {policyOverview && !statsLoading && (
+        <Card className={dashboardTheme.card}>
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Policy Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-white/60 mb-1">Total Policies</p>
+                <p className="text-2xl font-bold text-white">
+                  {policyOverview.totalPolicies || policyOverview.policies?.total || 0}
+                </p>
+              </div>
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-white/60 mb-1">Active Policies</p>
+                <p className="text-2xl font-bold text-green-400">
+                  {policyOverview.activePolicies || policyOverview.policies?.active || 0}
+                </p>
+              </div>
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-white/60 mb-1">Total Premium</p>
+                <p className="text-2xl font-bold text-white">
+                  RWF {policyOverview.totalPremium 
+                    ? (policyOverview.totalPremium / 1000000).toFixed(1) 
+                    : policyOverview.policies?.totalPremium 
+                    ? (policyOverview.policies.totalPremium / 1000000).toFixed(1)
+                    : 0}M
+                </p>
+              </div>
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-white/60 mb-1">Pending Claims</p>
+                <p className="text-2xl font-bold text-yellow-400">
+                  {policyOverview.pendingClaims || policyOverview.policies?.pendingClaims || 0}
+                </p>
+              </div>
+            </div>
+            {policyOverview.policies && (
+              <div className="mt-4 text-sm text-white/60">
+                <pre className="bg-gray-900/50 p-4 rounded-lg overflow-auto">
+                  {JSON.stringify(policyOverview.policies, null, 2)}
+                </pre>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Claim Statistics Section */}
+      {claimStats && !statsLoading && (
+        <Card className={dashboardTheme.card}>
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Claim Statistics
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-white/60 mb-1">Total Claims</p>
+                <p className="text-2xl font-bold text-white">
+                  {claimStats.totalClaims || claimStats.claims?.total || 0}
+                </p>
+              </div>
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-white/60 mb-1">Pending Claims</p>
+                <p className="text-2xl font-bold text-yellow-400">
+                  {claimStats.pendingClaims || claimStats.claims?.pending || 0}
+                </p>
+              </div>
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-white/60 mb-1">Approved Claims</p>
+                <p className="text-2xl font-bold text-green-400">
+                  {claimStats.approvedClaims || claimStats.claims?.approved || 0}
+                </p>
+              </div>
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-white/60 mb-1">Total Paid</p>
+                <p className="text-2xl font-bold text-white">
+                  RWF {claimStats.totalPaid 
+                    ? (claimStats.totalPaid / 1000000).toFixed(1) 
+                    : claimStats.claims?.totalPaid 
+                    ? (claimStats.claims.totalPaid / 1000000).toFixed(1)
+                    : 0}M
+                </p>
+              </div>
+            </div>
+            {claimStats.claims && (
+              <div className="mt-4 text-sm text-white/60">
+                <pre className="bg-gray-900/50 p-4 rounded-lg overflow-auto">
+                  {JSON.stringify(claimStats.claims, null, 2)}
+                </pre>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 md:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
@@ -603,7 +2356,9 @@ export const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white">
-              RWF {(financialData.totalRevenue / 1000000).toFixed(1)}M
+              RWF {systemStats?.totalRevenue 
+                ? (systemStats.totalRevenue / 1000000).toFixed(1) 
+                : (financialData.totalRevenue / 1000000).toFixed(1)}M
             </div>
             <p className="text-xs text-green-400 mt-1">All-time earnings</p>
           </CardContent>
@@ -614,9 +2369,13 @@ export const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white">
-              RWF {(financialData.monthlyRevenue / 1000000).toFixed(1)}M
+              RWF {systemStats?.monthlyRevenue 
+                ? (systemStats.monthlyRevenue / 1000000).toFixed(1) 
+                : (financialData.monthlyRevenue / 1000000).toFixed(1)}M
             </div>
-            <p className="text-xs text-green-400 mt-1">+{financialData.growthRate}% growth</p>
+            <p className="text-xs text-green-400 mt-1">
+              +{systemStats?.revenueGrowth || financialData.growthRate}% growth
+            </p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-purple-500`}>
@@ -625,7 +2384,9 @@ export const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white">
-              RWF {(financialData.commissionEarned / 1000).toFixed(0)}K
+              RWF {systemStats?.commissionEarned 
+                ? (systemStats.commissionEarned / 1000).toFixed(0) 
+                : (financialData.commissionEarned / 1000).toFixed(0)}K
             </div>
             <p className="text-xs text-white/60 mt-1">This month</p>
           </CardContent>
@@ -636,7 +2397,9 @@ export const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white">
-              RWF {(financialData.pendingPayments / 1000).toFixed(0)}K
+              RWF {systemStats?.pendingPayments 
+                ? (systemStats.pendingPayments / 1000).toFixed(0) 
+                : (financialData.pendingPayments / 1000).toFixed(0)}K
             </div>
             <p className="text-xs text-white/60 mt-1">To be collected</p>
           </CardContent>
@@ -953,6 +2716,15 @@ export const AdminDashboard = () => {
           <p className="text-white/60">Deep insights into platform performance and usage</p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            onClick={loadAdminStatistics}
+            variant="outline"
+            className="border-gray-700 text-white hover:bg-gray-800"
+            disabled={statsLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${statsLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <Button variant="outline" className="border-gray-700 text-white hover:bg-gray-800">
             <Calendar className="h-4 w-4 mr-2" />
             Last 30 Days
@@ -964,6 +2736,86 @@ export const AdminDashboard = () => {
         </div>
       </div>
 
+      {/* Loading State */}
+      {statsLoading && (
+        <Card className={dashboardTheme.card}>
+          <CardContent className="p-8 text-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-white mx-auto mb-4" />
+            <p className="text-white/60">Loading analytics...</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Error State */}
+      {statsError && !statsLoading && (
+        <Card className={`${dashboardTheme.card} border-l-4 border-l-red-500`}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-400" />
+                <p className="text-red-400">{statsError}</p>
+              </div>
+              <Button
+                onClick={loadAdminStatistics}
+                variant="outline"
+                size="sm"
+                className="border-gray-700 text-white hover:bg-gray-800"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* System Statistics Section */}
+      {systemStats && !statsLoading && (
+        <Card className={dashboardTheme.card}>
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              System Statistics
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-white/60 mb-1">Total Users</p>
+                <p className="text-2xl font-bold text-white">
+                  {systemStats.totalUsers || systemStats.users?.total || 0}
+                </p>
+              </div>
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-white/60 mb-1">Total Policies</p>
+                <p className="text-2xl font-bold text-blue-400">
+                  {systemStats.totalPolicies || systemStats.policies?.total || 0}
+                </p>
+              </div>
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-white/60 mb-1">Total Claims</p>
+                <p className="text-2xl font-bold text-yellow-400">
+                  {systemStats.totalClaims || systemStats.claims?.total || 0}
+                </p>
+              </div>
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-white/60 mb-1">System Uptime</p>
+                <p className="text-2xl font-bold text-green-400">
+                  {systemStats.uptime || systemMetrics.uptime}%
+                </p>
+              </div>
+            </div>
+            {systemStats && (
+              <div className="mt-4 text-sm text-white/60">
+                <pre className="bg-gray-900/50 p-4 rounded-lg overflow-auto max-h-96">
+                  {JSON.stringify(systemStats, null, 2)}
+                </pre>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Key Metrics */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
@@ -972,7 +2824,9 @@ export const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white">
-              {(systemMetrics.apiCalls / 1000000).toFixed(1)}M
+              {systemStats?.apiCalls 
+                ? (systemStats.apiCalls / 1000000).toFixed(1) + 'M'
+                : (systemMetrics.apiCalls / 1000000).toFixed(1) + 'M'}
             </div>
             <p className="text-xs text-green-400 mt-1">+12.5% this month</p>
           </CardContent>
@@ -982,7 +2836,9 @@ export const AdminDashboard = () => {
             <CardTitle className="text-sm text-white/80">Avg Response Time</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{systemMetrics.avgResponseTime}ms</div>
+            <div className="text-2xl font-bold text-white">
+              {systemStats?.avgResponseTime || systemMetrics.avgResponseTime}ms
+            </div>
             <p className="text-xs text-green-400 mt-1">-8ms from last week</p>
           </CardContent>
         </Card>
@@ -991,7 +2847,9 @@ export const AdminDashboard = () => {
             <CardTitle className="text-sm text-white/80">User Engagement</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">87.3%</div>
+            <div className="text-2xl font-bold text-white">
+              {systemStats?.userEngagement || '87.3'}%
+            </div>
             <p className="text-xs text-green-400 mt-1">+3.2% increase</p>
           </CardContent>
         </Card>
@@ -1000,7 +2858,9 @@ export const AdminDashboard = () => {
             <CardTitle className="text-sm text-white/80">Conversion Rate</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">23.7%</div>
+            <div className="text-2xl font-bold text-white">
+              {systemStats?.conversionRate || '23.7'}%
+            </div>
             <p className="text-xs text-white/60 mt-1">Farmer to policy</p>
           </CardContent>
         </Card>
@@ -1923,17 +3783,1594 @@ export const AdminDashboard = () => {
     </div>
   );
 
+  // Commission Management Page
+  const renderCommission = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-white">Commission Management</h2>
+          <p className="text-white/60">Track and manage commission rates and earnings</p>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            onClick={loadAdminStatistics}
+            variant="outline"
+            className="border-gray-700 text-white hover:bg-gray-800"
+            disabled={statsLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${statsLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button className="bg-red-600 hover:bg-red-700">
+            <Download className="h-4 w-4 mr-2" />
+            Export Report
+          </Button>
+        </div>
+      </div>
+
+      {/* Loading State */}
+      {statsLoading && (
+        <Card className={dashboardTheme.card}>
+          <CardContent className="p-8 text-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-white mx-auto mb-4" />
+            <p className="text-white/60">Loading commission data...</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Error State */}
+      {statsError && !statsLoading && (
+        <Card className={`${dashboardTheme.card} border-l-4 border-l-red-500`}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-400" />
+                <p className="text-red-400">{statsError}</p>
+              </div>
+              <Button
+                onClick={loadAdminStatistics}
+                variant="outline"
+                size="sm"
+                className="border-gray-700 text-white hover:bg-gray-800"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Policy Overview in Commission Page */}
+      {policyOverview && !statsLoading && (
+        <Card className={dashboardTheme.card}>
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Policy Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-white/60 mb-1">Total Policies</p>
+                <p className="text-2xl font-bold text-white">
+                  {policyOverview.totalPolicies || policyOverview.policies?.total || 0}
+                </p>
+              </div>
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-white/60 mb-1">Active Policies</p>
+                <p className="text-2xl font-bold text-green-400">
+                  {policyOverview.activePolicies || policyOverview.policies?.active || 0}
+                </p>
+              </div>
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-white/60 mb-1">Total Premium</p>
+                <p className="text-2xl font-bold text-white">
+                  RWF {policyOverview.totalPremium 
+                    ? (policyOverview.totalPremium / 1000000).toFixed(1) 
+                    : policyOverview.policies?.totalPremium 
+                    ? (policyOverview.policies.totalPremium / 1000000).toFixed(1)
+                    : 0}M
+                </p>
+              </div>
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-white/60 mb-1">Pending Claims</p>
+                <p className="text-2xl font-bold text-yellow-400">
+                  {policyOverview.pendingClaims || policyOverview.policies?.pendingClaims || 0}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Claim Statistics in Commission Page */}
+      {claimStats && !statsLoading && (
+        <Card className={dashboardTheme.card}>
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Claim Statistics
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-white/60 mb-1">Total Claims</p>
+                <p className="text-2xl font-bold text-white">
+                  {claimStats.totalClaims || claimStats.claims?.total || 0}
+                </p>
+              </div>
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-white/60 mb-1">Pending Claims</p>
+                <p className="text-2xl font-bold text-yellow-400">
+                  {claimStats.pendingClaims || claimStats.claims?.pending || 0}
+                </p>
+              </div>
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-white/60 mb-1">Approved Claims</p>
+                <p className="text-2xl font-bold text-green-400">
+                  {claimStats.approvedClaims || claimStats.claims?.approved || 0}
+                </p>
+              </div>
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-white/60 mb-1">Total Paid</p>
+                <p className="text-2xl font-bold text-white">
+                  RWF {claimStats.totalPaid 
+                    ? (claimStats.totalPaid / 1000000).toFixed(1) 
+                    : claimStats.claims?.totalPaid 
+                    ? (claimStats.claims.totalPaid / 1000000).toFixed(1)
+                    : 0}M
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Commission Rate Settings */}
+      <Card className={dashboardTheme.card}>
+        <CardHeader>
+          <CardTitle className="text-white">Commission Rate Settings</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-700">
+                  <th className="text-left py-3 px-4 text-white/80 font-medium">Type</th>
+                  <th className="text-left py-3 px-4 text-white/80 font-medium">Rate</th>
+                  <th className="text-left py-3 px-4 text-white/80 font-medium">Total Revenue</th>
+                  <th className="text-left py-3 px-4 text-white/80 font-medium">Commission Earned</th>
+                  <th className="text-left py-3 px-4 text-white/80 font-medium">Status</th>
+                  <th className="text-left py-3 px-4 text-white/80 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {commissionRates.map((item, idx) => (
+                  <tr key={idx} className="border-b border-gray-800 hover:bg-gray-800/50">
+                    <td className="py-3 px-4 text-white font-medium">{item.type}</td>
+                    <td className="py-3 px-4">
+                      <Badge className="bg-purple-600">{item.rate}%</Badge>
+                    </td>
+                    <td className="py-3 px-4 text-white">RWF {(item.revenue / 1000000).toFixed(1)}M</td>
+                    <td className="py-3 px-4 text-green-400 font-medium">
+                      RWF {(item.commission / 1000000).toFixed(1)}M
+                    </td>
+                    <td className="py-3 px-4">
+                      <Badge className="bg-green-600">{item.status}</Badge>
+                    </td>
+                    <td className="py-3 px-4">
+                      <Button variant="ghost" size="sm" className="text-white/60 hover:text-white">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  // Load Policies
+  const loadPolicies = async () => {
+    setPoliciesLoading(true);
+    setPoliciesError(null);
+    try {
+      const status = policyStatusFilter === "all" ? undefined : policyStatusFilter;
+      const response: any = await getPolicies(1, 100, status);
+      let policiesData: any[] = [];
+      
+      if (Array.isArray(response)) {
+        policiesData = response;
+      } else if (response && typeof response === 'object') {
+        policiesData = response.data || response.policies || response.items || [];
+      }
+      
+      setPolicies(policiesData);
+    } catch (err: any) {
+      console.error('Failed to load policies:', err);
+      setPoliciesError(err.message || 'Failed to load policies');
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to load policies',
+        variant: "destructive",
+      });
+    } finally {
+      setPoliciesLoading(false);
+    }
+  };
+
+  // Load Claims
+  const loadClaims = async () => {
+    setClaimsLoading(true);
+    setClaimsError(null);
+    try {
+      const status = claimStatusFilter === "all" ? undefined : claimStatusFilter;
+      const response: any = await getClaims(1, 100, status);
+      let claimsData: any[] = [];
+      
+      if (Array.isArray(response)) {
+        claimsData = response;
+      } else if (response && typeof response === 'object') {
+        claimsData = response.data || response.claims || response.items || [];
+      }
+      
+      setClaims(claimsData);
+    } catch (err: any) {
+      console.error('Failed to load claims:', err);
+      setClaimsError(err.message || 'Failed to load claims');
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to load claims',
+        variant: "destructive",
+      });
+    } finally {
+      setClaimsLoading(false);
+    }
+  };
+
+  // Load policies and claims when their pages are active
+  useEffect(() => {
+    if (activePage === "policies") {
+      loadPolicies();
+    } else if (activePage === "claims") {
+      loadClaims();
+    }
+  }, [activePage, policyStatusFilter, claimStatusFilter]);
+
+  // Policy CRUD Functions
+  const handleCreatePolicy = async () => {
+    try {
+      const policyData = {
+        farmerId: policyFormData.farmerId,
+        cropType: policyFormData.cropType,
+        coverageAmount: parseFloat(policyFormData.coverageAmount),
+        premium: parseFloat(policyFormData.premium),
+        startDate: policyFormData.startDate,
+        endDate: policyFormData.endDate,
+        status: policyFormData.status,
+        notes: policyFormData.notes,
+      };
+      
+      await createPolicy(policyData);
+      toast({
+        title: "Success",
+        description: "Policy created successfully",
+      });
+      setShowPolicyDialog(false);
+      resetPolicyForm();
+      loadPolicies();
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to create policy',
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdatePolicy = async (policyId: string) => {
+    try {
+      const updateData: any = {};
+      if (policyFormData.status) updateData.status = policyFormData.status;
+      if (policyFormData.notes) updateData.notes = policyFormData.notes;
+      if (policyFormData.coverageAmount) updateData.coverageAmount = parseFloat(policyFormData.coverageAmount);
+      if (policyFormData.premium) updateData.premium = parseFloat(policyFormData.premium);
+      if (policyFormData.endDate) updateData.endDate = policyFormData.endDate;
+      
+      await updatePolicy(policyId, updateData);
+      toast({
+        title: "Success",
+        description: "Policy updated successfully",
+      });
+      setShowPolicyDialog(false);
+      setEditingPolicy(null);
+      resetPolicyForm();
+      loadPolicies();
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to update policy',
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeletePolicy = async (policyId: string) => {
+    try {
+      await deletePolicy(policyId);
+      toast({
+        title: "Success",
+        description: "Policy deleted successfully",
+      });
+      setDeletingPolicyId(null);
+      loadPolicies();
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to delete policy',
+        variant: "destructive",
+      });
+    }
+  };
+
+  const resetPolicyForm = () => {
+    setPolicyFormData({
+      farmerId: "",
+      cropType: "",
+      coverageAmount: "",
+      premium: "",
+      startDate: "",
+      endDate: "",
+      status: "active",
+      notes: "",
+    });
+    setEditingPolicy(null);
+  };
+
+  const openEditPolicy = (policy: any) => {
+    setEditingPolicy(policy);
+    setPolicyFormData({
+      farmerId: policy.farmerId || "",
+      cropType: policy.cropType || "",
+      coverageAmount: policy.coverageAmount?.toString() || "",
+      premium: policy.premium?.toString() || "",
+      startDate: policy.startDate || "",
+      endDate: policy.endDate || "",
+      status: policy.status || "active",
+      notes: policy.notes || "",
+    });
+    setShowPolicyDialog(true);
+  };
+
+  // Claim CRUD Functions
+  const handleCreateClaim = async () => {
+    try {
+      const claimData = {
+        farmerId: claimFormData.farmerId,
+        policyId: claimFormData.policyId || undefined,
+        cropType: claimFormData.cropType,
+        damageType: claimFormData.damageType,
+        amount: parseFloat(claimFormData.amount),
+        description: claimFormData.description,
+        fieldId: claimFormData.fieldId || undefined,
+        status: claimFormData.status,
+      };
+      
+      await createClaim(claimData);
+      toast({
+        title: "Success",
+        description: "Claim created successfully",
+      });
+      setShowClaimDialog(false);
+      resetClaimForm();
+      loadClaims();
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to create claim',
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateClaim = async (claimId: string) => {
+    try {
+      const updateData: any = {};
+      if (claimFormData.status) updateData.status = claimFormData.status;
+      if (claimFormData.amount) updateData.amount = parseFloat(claimFormData.amount);
+      if (claimFormData.description) updateData.description = claimFormData.description;
+      
+      await updateClaim(claimId, updateData);
+      toast({
+        title: "Success",
+        description: "Claim updated successfully",
+      });
+      setShowClaimDialog(false);
+      setEditingClaim(null);
+      resetClaimForm();
+      loadClaims();
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to update claim',
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteClaim = async (claimId: string) => {
+    try {
+      await deleteClaim(claimId);
+      toast({
+        title: "Success",
+        description: "Claim deleted successfully",
+      });
+      setDeletingClaimId(null);
+      loadClaims();
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to delete claim',
+        variant: "destructive",
+      });
+    }
+  };
+
+  const resetClaimForm = () => {
+    setClaimFormData({
+      farmerId: "",
+      policyId: "",
+      cropType: "",
+      damageType: "",
+      amount: "",
+      description: "",
+      fieldId: "",
+      status: "pending",
+    });
+    setEditingClaim(null);
+  };
+
+  const openEditClaim = (claim: any) => {
+    setEditingClaim(claim);
+    setClaimFormData({
+      farmerId: claim.farmerId || "",
+      policyId: claim.policyId || "",
+      cropType: claim.cropType || "",
+      damageType: claim.damageType || "",
+      amount: claim.amount?.toString() || "",
+      description: claim.description || "",
+      fieldId: claim.fieldId || "",
+      status: claim.status || "pending",
+    });
+    setShowClaimDialog(true);
+  };
+
+  // Policies Management Page
+  const renderPoliciesManagement = () => {
+    const filteredPolicies = policies.filter((policy) => {
+      const matchesSearch = policySearchQuery === "" || 
+        policy.cropType?.toLowerCase().includes(policySearchQuery.toLowerCase()) ||
+        policy.farmerId?.toLowerCase().includes(policySearchQuery.toLowerCase()) ||
+        policy._id?.toLowerCase().includes(policySearchQuery.toLowerCase());
+      return matchesSearch;
+    });
+
+    const getStatusBadge = (status: string) => {
+      const statusMap: Record<string, { label: string; className: string }> = {
+        active: { label: "Active", className: "bg-green-600" },
+        inactive: { label: "Inactive", className: "bg-gray-600" },
+        expired: { label: "Expired", className: "bg-red-600" },
+        pending: { label: "Pending", className: "bg-yellow-600" },
+      };
+      const statusInfo = statusMap[status?.toLowerCase()] || { label: status, className: "bg-gray-600" };
+      return <Badge className={statusInfo.className}>{statusInfo.label}</Badge>;
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-white">Policies Management</h2>
+            <p className="text-white/60">Manage all insurance policies</p>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              onClick={loadPolicies}
+              variant="outline"
+              className="border-gray-700 text-white hover:bg-gray-800"
+              disabled={policiesLoading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${policiesLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button 
+              onClick={() => {
+                resetPolicyForm();
+                setShowPolicyDialog(true);
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Policy
+            </Button>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <Card className={dashboardTheme.card}>
+          <CardContent className="p-4">
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
+                  <Input
+                    placeholder="Search policies..."
+                    value={policySearchQuery}
+                    onChange={(e) => setPolicySearchQuery(e.target.value)}
+                    className="pl-10 bg-gray-800 border-gray-700 text-white"
+                  />
+                </div>
+              </div>
+              <Select value={policyStatusFilter} onValueChange={setPolicyStatusFilter}>
+                <SelectTrigger className="w-48 bg-gray-800 border-gray-700 text-white">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="expired">Expired</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Loading State */}
+        {policiesLoading && (
+          <Card className={dashboardTheme.card}>
+            <CardContent className="p-8 text-center">
+              <Loader2 className="h-8 w-8 animate-spin text-white mx-auto mb-4" />
+              <p className="text-white/60">Loading policies...</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Error State */}
+        {policiesError && !policiesLoading && (
+          <Card className={`${dashboardTheme.card} border-l-4 border-l-red-500`}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-red-400" />
+                  <p className="text-red-400">{policiesError}</p>
+                </div>
+                <Button
+                  onClick={loadPolicies}
+                  variant="outline"
+                  size="sm"
+                  className="border-gray-700 text-white hover:bg-gray-800"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Policies Table */}
+        {!policiesLoading && !policiesError && (
+          <Card className={dashboardTheme.card}>
+            <CardHeader>
+              <CardTitle className="text-white">
+                Policies ({filteredPolicies.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-700">
+                      <th className="text-left py-3 px-4 text-white/80 font-medium">Policy ID</th>
+                      <th className="text-left py-3 px-4 text-white/80 font-medium">Farmer</th>
+                      <th className="text-left py-3 px-4 text-white/80 font-medium">Crop Type</th>
+                      <th className="text-left py-3 px-4 text-white/80 font-medium">Coverage</th>
+                      <th className="text-left py-3 px-4 text-white/80 font-medium">Premium</th>
+                      <th className="text-left py-3 px-4 text-white/80 font-medium">Status</th>
+                      <th className="text-left py-3 px-4 text-white/80 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPolicies.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-white/60">
+                          No policies found
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredPolicies.map((policy) => (
+                        <tr key={policy._id || policy.id} className="border-b border-gray-800 hover:bg-gray-800/50">
+                          <td className="py-3 px-4 text-white font-medium">
+                            {policy._id?.toString().substring(0, 8) || policy.id || "N/A"}
+                          </td>
+                          <td className="py-3 px-4 text-white">
+                            {policy.farmerId?.toString().substring(0, 8) || "N/A"}
+                          </td>
+                          <td className="py-3 px-4 text-white">{policy.cropType || "N/A"}</td>
+                          <td className="py-3 px-4 text-white">
+                            RWF {policy.coverageAmount?.toLocaleString() || "0"}
+                          </td>
+                          <td className="py-3 px-4 text-white">
+                            RWF {policy.premium?.toLocaleString() || "0"}
+                          </td>
+                          <td className="py-3 px-4">{getStatusBadge(policy.status)}</td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-blue-400 hover:text-blue-300"
+                                onClick={() => openEditPolicy(policy)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-400 hover:text-red-300"
+                                onClick={() => setDeletingPolicyId(policy._id || policy.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Create/Edit Policy Dialog */}
+        <Dialog open={showPolicyDialog} onOpenChange={setShowPolicyDialog}>
+          <DialogContent className="max-w-2xl bg-gray-900 border-gray-700">
+            <DialogHeader>
+              <DialogTitle className="text-white">
+                {editingPolicy ? "Edit Policy" : "Create New Policy"}
+              </DialogTitle>
+              <DialogDescription className="text-white/60">
+                {editingPolicy ? "Update policy information" : "Fill in the details to create a new policy"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-white/80">Farmer ID</Label>
+                  <Input
+                    value={policyFormData.farmerId}
+                    onChange={(e) => setPolicyFormData({ ...policyFormData, farmerId: e.target.value })}
+                    className="bg-gray-800 border-gray-700 text-white"
+                    placeholder="Enter farmer ID"
+                  />
+                </div>
+                <div>
+                  <Label className="text-white/80">Crop Type</Label>
+                  <Select
+                    value={policyFormData.cropType}
+                    onValueChange={(value) => setPolicyFormData({ ...policyFormData, cropType: value })}
+                  >
+                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                      <SelectValue placeholder="Select crop type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="MAIZE">Maize</SelectItem>
+                      <SelectItem value="BEANS">Beans</SelectItem>
+                      <SelectItem value="RICE">Rice</SelectItem>
+                      <SelectItem value="WHEAT">Wheat</SelectItem>
+                      <SelectItem value="POTATOES">Potatoes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-white/80">Coverage Amount (RWF)</Label>
+                  <Input
+                    type="number"
+                    value={policyFormData.coverageAmount}
+                    onChange={(e) => setPolicyFormData({ ...policyFormData, coverageAmount: e.target.value })}
+                    className="bg-gray-800 border-gray-700 text-white"
+                    placeholder="Enter coverage amount"
+                  />
+                </div>
+                <div>
+                  <Label className="text-white/80">Premium (RWF)</Label>
+                  <Input
+                    type="number"
+                    value={policyFormData.premium}
+                    onChange={(e) => setPolicyFormData({ ...policyFormData, premium: e.target.value })}
+                    className="bg-gray-800 border-gray-700 text-white"
+                    placeholder="Enter premium"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-white/80">Start Date</Label>
+                  <Input
+                    type="date"
+                    value={policyFormData.startDate}
+                    onChange={(e) => setPolicyFormData({ ...policyFormData, startDate: e.target.value })}
+                    className="bg-gray-800 border-gray-700 text-white"
+                  />
+                </div>
+                <div>
+                  <Label className="text-white/80">End Date</Label>
+                  <Input
+                    type="date"
+                    value={policyFormData.endDate}
+                    onChange={(e) => setPolicyFormData({ ...policyFormData, endDate: e.target.value })}
+                    className="bg-gray-800 border-gray-700 text-white"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="text-white/80">Status</Label>
+                <Select
+                  value={policyFormData.status}
+                  onValueChange={(value) => setPolicyFormData({ ...policyFormData, status: value })}
+                >
+                  <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="expired">Expired</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-white/80">Notes</Label>
+                <Textarea
+                  value={policyFormData.notes}
+                  onChange={(e) => setPolicyFormData({ ...policyFormData, notes: e.target.value })}
+                  className="bg-gray-800 border-gray-700 text-white"
+                  placeholder="Additional notes..."
+                  rows={3}
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowPolicyDialog(false);
+                    resetPolicyForm();
+                  }}
+                  className="border-gray-700 text-white hover:bg-gray-800"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => editingPolicy ? handleUpdatePolicy(editingPolicy._id || editingPolicy.id) : handleCreatePolicy()}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {editingPolicy ? "Update" : "Create"} Policy
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={!!deletingPolicyId} onOpenChange={(open) => !open && setDeletingPolicyId(null)}>
+          <DialogContent className="bg-gray-900 border-gray-700">
+            <DialogHeader>
+              <DialogTitle className="text-white">Delete Policy</DialogTitle>
+              <DialogDescription className="text-white/60">
+                Are you sure you want to delete this policy? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setDeletingPolicyId(null)}
+                className="border-gray-700 text-white hover:bg-gray-800"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => deletingPolicyId && handleDeletePolicy(deletingPolicyId)}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Delete
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  };
+
+  // Claims Management Page
+  const renderClaimsManagement = () => {
+    const filteredClaims = claims.filter((claim) => {
+      const matchesSearch = claimSearchQuery === "" || 
+        claim.cropType?.toLowerCase().includes(claimSearchQuery.toLowerCase()) ||
+        claim.damageType?.toLowerCase().includes(claimSearchQuery.toLowerCase()) ||
+        claim.farmerId?.toLowerCase().includes(claimSearchQuery.toLowerCase()) ||
+        claim._id?.toLowerCase().includes(claimSearchQuery.toLowerCase());
+      return matchesSearch;
+    });
+
+    const getStatusBadge = (status: string) => {
+      const statusMap: Record<string, { label: string; className: string }> = {
+        pending: { label: "Pending", className: "bg-yellow-600" },
+        approved: { label: "Approved", className: "bg-green-600" },
+        rejected: { label: "Rejected", className: "bg-red-600" },
+        processing: { label: "Processing", className: "bg-blue-600" },
+      };
+      const statusInfo = statusMap[status?.toLowerCase()] || { label: status, className: "bg-gray-600" };
+      return <Badge className={statusInfo.className}>{statusInfo.label}</Badge>;
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-white">Claims Management</h2>
+            <p className="text-white/60">Manage all insurance claims</p>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              onClick={loadClaims}
+              variant="outline"
+              className="border-gray-700 text-white hover:bg-gray-800"
+              disabled={claimsLoading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${claimsLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button 
+              onClick={() => {
+                resetClaimForm();
+                setShowClaimDialog(true);
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Claim
+            </Button>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <Card className={dashboardTheme.card}>
+          <CardContent className="p-4">
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
+                  <Input
+                    placeholder="Search claims..."
+                    value={claimSearchQuery}
+                    onChange={(e) => setClaimSearchQuery(e.target.value)}
+                    className="pl-10 bg-gray-800 border-gray-700 text-white"
+                  />
+                </div>
+              </div>
+              <Select value={claimStatusFilter} onValueChange={setClaimStatusFilter}>
+                <SelectTrigger className="w-48 bg-gray-800 border-gray-700 text-white">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="processing">Processing</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Loading State */}
+        {claimsLoading && (
+          <Card className={dashboardTheme.card}>
+            <CardContent className="p-8 text-center">
+              <Loader2 className="h-8 w-8 animate-spin text-white mx-auto mb-4" />
+              <p className="text-white/60">Loading claims...</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Error State */}
+        {claimsError && !claimsLoading && (
+          <Card className={`${dashboardTheme.card} border-l-4 border-l-red-500`}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-red-400" />
+                  <p className="text-red-400">{claimsError}</p>
+                </div>
+                <Button
+                  onClick={loadClaims}
+                  variant="outline"
+                  size="sm"
+                  className="border-gray-700 text-white hover:bg-gray-800"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Claims Table */}
+        {!claimsLoading && !claimsError && (
+          <Card className={dashboardTheme.card}>
+            <CardHeader>
+              <CardTitle className="text-white">
+                Claims ({filteredClaims.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-700">
+                      <th className="text-left py-3 px-4 text-white/80 font-medium">Claim ID</th>
+                      <th className="text-left py-3 px-4 text-white/80 font-medium">Farmer</th>
+                      <th className="text-left py-3 px-4 text-white/80 font-medium">Crop Type</th>
+                      <th className="text-left py-3 px-4 text-white/80 font-medium">Damage Type</th>
+                      <th className="text-left py-3 px-4 text-white/80 font-medium">Amount</th>
+                      <th className="text-left py-3 px-4 text-white/80 font-medium">Status</th>
+                      <th className="text-left py-3 px-4 text-white/80 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredClaims.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-white/60">
+                          No claims found
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredClaims.map((claim) => (
+                        <tr key={claim._id || claim.id} className="border-b border-gray-800 hover:bg-gray-800/50">
+                          <td className="py-3 px-4 text-white font-medium">
+                            {claim._id?.toString().substring(0, 8) || claim.id || "N/A"}
+                          </td>
+                          <td className="py-3 px-4 text-white">
+                            {claim.farmerId?.toString().substring(0, 8) || "N/A"}
+                          </td>
+                          <td className="py-3 px-4 text-white">{claim.cropType || "N/A"}</td>
+                          <td className="py-3 px-4 text-white">{claim.damageType || "N/A"}</td>
+                          <td className="py-3 px-4 text-white">
+                            RWF {claim.amount?.toLocaleString() || "0"}
+                          </td>
+                          <td className="py-3 px-4">{getStatusBadge(claim.status)}</td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-blue-400 hover:text-blue-300"
+                                onClick={() => openEditClaim(claim)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-400 hover:text-red-300"
+                                onClick={() => setDeletingClaimId(claim._id || claim.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Create/Edit Claim Dialog */}
+        <Dialog open={showClaimDialog} onOpenChange={setShowClaimDialog}>
+          <DialogContent className="max-w-2xl bg-gray-900 border-gray-700">
+            <DialogHeader>
+              <DialogTitle className="text-white">
+                {editingClaim ? "Edit Claim" : "Create New Claim"}
+              </DialogTitle>
+              <DialogDescription className="text-white/60">
+                {editingClaim ? "Update claim information" : "Fill in the details to create a new claim"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-white/80">Farmer ID</Label>
+                  <Input
+                    value={claimFormData.farmerId}
+                    onChange={(e) => setClaimFormData({ ...claimFormData, farmerId: e.target.value })}
+                    className="bg-gray-800 border-gray-700 text-white"
+                    placeholder="Enter farmer ID"
+                  />
+                </div>
+                <div>
+                  <Label className="text-white/80">Policy ID (Optional)</Label>
+                  <Input
+                    value={claimFormData.policyId}
+                    onChange={(e) => setClaimFormData({ ...claimFormData, policyId: e.target.value })}
+                    className="bg-gray-800 border-gray-700 text-white"
+                    placeholder="Enter policy ID"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-white/80">Crop Type</Label>
+                  <Select
+                    value={claimFormData.cropType}
+                    onValueChange={(value) => setClaimFormData({ ...claimFormData, cropType: value })}
+                  >
+                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                      <SelectValue placeholder="Select crop type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="MAIZE">Maize</SelectItem>
+                      <SelectItem value="BEANS">Beans</SelectItem>
+                      <SelectItem value="RICE">Rice</SelectItem>
+                      <SelectItem value="WHEAT">Wheat</SelectItem>
+                      <SelectItem value="POTATOES">Potatoes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-white/80">Damage Type</Label>
+                  <Select
+                    value={claimFormData.damageType}
+                    onValueChange={(value) => setClaimFormData({ ...claimFormData, damageType: value })}
+                  >
+                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                      <SelectValue placeholder="Select damage type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="DROUGHT">Drought</SelectItem>
+                      <SelectItem value="FLOOD">Flood</SelectItem>
+                      <SelectItem value="PEST">Pest</SelectItem>
+                      <SelectItem value="DISEASE">Disease</SelectItem>
+                      <SelectItem value="HAIL">Hail</SelectItem>
+                      <SelectItem value="FIRE">Fire</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-white/80">Amount (RWF)</Label>
+                  <Input
+                    type="number"
+                    value={claimFormData.amount}
+                    onChange={(e) => setClaimFormData({ ...claimFormData, amount: e.target.value })}
+                    className="bg-gray-800 border-gray-700 text-white"
+                    placeholder="Enter claim amount"
+                  />
+                </div>
+                <div>
+                  <Label className="text-white/80">Status</Label>
+                  <Select
+                    value={claimFormData.status}
+                    onValueChange={(value) => setClaimFormData({ ...claimFormData, status: value })}
+                  >
+                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="approved">Approved</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                      <SelectItem value="processing">Processing</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label className="text-white/80">Description</Label>
+                <Textarea
+                  value={claimFormData.description}
+                  onChange={(e) => setClaimFormData({ ...claimFormData, description: e.target.value })}
+                  className="bg-gray-800 border-gray-700 text-white"
+                  placeholder="Describe the damage..."
+                  rows={3}
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowClaimDialog(false);
+                    resetClaimForm();
+                  }}
+                  className="border-gray-700 text-white hover:bg-gray-800"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => editingClaim ? handleUpdateClaim(editingClaim._id || editingClaim.id) : handleCreateClaim()}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {editingClaim ? "Update" : "Create"} Claim
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={!!deletingClaimId} onOpenChange={(open) => !open && setDeletingClaimId(null)}>
+          <DialogContent className="bg-gray-900 border-gray-700">
+            <DialogHeader>
+              <DialogTitle className="text-white">Delete Claim</DialogTitle>
+              <DialogDescription className="text-white/60">
+                Are you sure you want to delete this claim? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setDeletingClaimId(null)}
+                className="border-gray-700 text-white hover:bg-gray-800"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => deletingClaimId && handleDeleteClaim(deletingClaimId)}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Delete
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  };
+
+  // Load assessments
+  const loadAssessments = async () => {
+    setAssessmentsLoading(true);
+    setAssessmentsError(null);
+    try {
+      const response: any = await assessmentsApiService.getAllAssessments();
+      let assessmentsData: any[] = [];
+      
+      if (Array.isArray(response)) {
+        assessmentsData = response;
+      } else if (response && typeof response === 'object') {
+        assessmentsData = response.data || response.assessments || [];
+      }
+      
+      setAssessments(assessmentsData);
+    } catch (err: any) {
+      console.error('Failed to load assessments:', err);
+      setAssessmentsError(err.message || 'Failed to load assessments');
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to load assessments',
+        variant: "destructive",
+      });
+    } finally {
+      setAssessmentsLoading(false);
+    }
+  };
+
+  // Load farms for assessment creation
+  const loadFarmsForAssessment = async () => {
+    setFarmsLoading(true);
+    try {
+      const response: any = await getFarms(1, 100);
+      let farmsData: any[] = [];
+      
+      if (Array.isArray(response)) {
+        farmsData = response;
+      } else if (response && typeof response === 'object') {
+        farmsData = response.data || response.farms || response.items || [];
+      }
+      
+      // Ensure farmsData is always an array
+      if (!Array.isArray(farmsData)) {
+        farmsData = [];
+      }
+      
+      setFarms(farmsData);
+    } catch (err: any) {
+      console.error('Failed to load farms:', err);
+      setFarms([]); // Set to empty array on error
+      toast({
+        title: "Warning",
+        description: "Could not load farms. You may not be able to create assessments.",
+        variant: "default",
+      });
+    } finally {
+      setFarmsLoading(false);
+    }
+  };
+
+  // Load assessors for assessment creation
+  const loadAssessors = async () => {
+    try {
+      const allUsers = await getAllUsers();
+      let assessorUsers: any[] = [];
+      
+      if (Array.isArray(allUsers)) {
+        assessorUsers = allUsers.filter((user: any) => user.role === 'ASSESSOR' || user.role === 'Assessor');
+      } else if (allUsers && typeof allUsers === 'object') {
+        // Handle case where users might be in data property
+        const usersData = allUsers.data || allUsers.users || [];
+        if (Array.isArray(usersData)) {
+          assessorUsers = usersData.filter((user: any) => user.role === 'ASSESSOR' || user.role === 'Assessor');
+        }
+      }
+      
+      // Ensure assessorUsers is always an array
+      if (!Array.isArray(assessorUsers)) {
+        assessorUsers = [];
+      }
+      
+      setAssessors(assessorUsers);
+    } catch (err: any) {
+      console.error('Failed to load assessors:', err);
+      setAssessors([]); // Set to empty array on error
+      toast({
+        title: "Warning",
+        description: "Could not load assessors. You may not be able to create assessments.",
+        variant: "default",
+      });
+    }
+  };
+
+  // Handle create assessment
+  const handleCreateAssessment = async () => {
+    if (!assessmentFormData.farmId || !assessmentFormData.assessorId) {
+      toast({
+        title: "Validation Error",
+        description: "Please select both a farm and an assessor.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCreatingAssessment(true);
+    try {
+      await assessmentsApiService.createAssessment({
+        farmId: assessmentFormData.farmId,
+        assessorId: assessmentFormData.assessorId,
+      });
+      
+      toast({
+        title: "Success",
+        description: "Assessment created successfully!",
+        variant: "default",
+      });
+      
+      setShowAssessmentDialog(false);
+      setAssessmentFormData({ farmId: "", assessorId: "" });
+      loadAssessments();
+    } catch (err: any) {
+      console.error('Failed to create assessment:', err);
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to create assessment',
+        variant: "destructive",
+      });
+    } finally {
+      setCreatingAssessment(false);
+    }
+  };
+
+  // Render Assessments Management Page
+  const renderAssessmentsManagement = () => {
+    const filteredAssessments = assessments.filter(assessment => {
+      const matchesSearch = assessmentSearchQuery === "" ||
+        (assessment.farm?.name || '').toLowerCase().includes(assessmentSearchQuery.toLowerCase()) ||
+        (assessment.assessor?.name || '').toLowerCase().includes(assessmentSearchQuery.toLowerCase()) ||
+        (assessment.farmer?.name || '').toLowerCase().includes(assessmentSearchQuery.toLowerCase());
+      
+      const matchesStatus = assessmentStatusFilter === "all" || 
+        (assessment.status || '').toLowerCase() === assessmentStatusFilter.toLowerCase();
+      
+      return matchesSearch && matchesStatus;
+    });
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-white">Assessments Management</h1>
+            <p className="text-white/60 mt-1">Manage and create assessments for farms</p>
+          </div>
+          <Button
+            onClick={() => setShowAssessmentDialog(true)}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Assessment
+          </Button>
+        </div>
+
+        {/* Error Message */}
+        {assessmentsError && (
+          <Card className="bg-gray-900 border-gray-700">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-red-400" />
+                  <p className="text-red-400">{assessmentsError}</p>
+                </div>
+                <Button
+                  onClick={loadAssessments}
+                  variant="outline"
+                  size="sm"
+                  className="border-gray-700 text-white hover:bg-gray-800"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Search and Filter */}
+        <div className="flex items-center gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
+            <Input
+              placeholder="Search assessments..."
+              value={assessmentSearchQuery}
+              onChange={(e) => setAssessmentSearchQuery(e.target.value)}
+              className="pl-10 bg-gray-900 border-gray-700 text-white"
+            />
+          </div>
+          <Select value={assessmentStatusFilter} onValueChange={setAssessmentStatusFilter}>
+            <SelectTrigger className="w-48 bg-gray-900 border-gray-700 text-white">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-900 border-gray-700">
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="in-progress">In Progress</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="submitted">Submitted</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            onClick={loadAssessments}
+            disabled={assessmentsLoading}
+            variant="outline"
+            className="border-gray-700 text-white hover:bg-gray-800"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${assessmentsLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
+
+        {/* Assessments Table */}
+        <Card className="bg-gray-900 border-gray-700">
+          <CardContent className="p-0">
+            {assessmentsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <Loader2 className="h-12 w-12 animate-spin text-red-500 mx-auto mb-4" />
+                  <p className="text-white/60">Loading assessments...</p>
+                </div>
+              </div>
+            ) : filteredAssessments.length === 0 ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <FileText className="h-12 w-12 mx-auto mb-4 text-white/40" />
+                  <p className="text-white/60">No assessments found</p>
+                </div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-800">
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Farm</th>
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Farmer</th>
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Assessor</th>
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Status</th>
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Created</th>
+                      <th className="text-left py-4 px-6 font-medium text-white/80">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredAssessments.map((assessment, index) => (
+                      <tr
+                        key={assessment._id || assessment.id || index}
+                        className={`border-b border-gray-800/50 hover:bg-gray-800/50 transition-colors ${
+                          index % 2 === 0 ? "bg-gray-950/30" : ""
+                        }`}
+                      >
+                        <td className="py-4 px-6 text-white">{assessment.farm?.name || 'N/A'}</td>
+                        <td className="py-4 px-6 text-white">{assessment.farmer?.name || assessment.farm?.farmerName || 'N/A'}</td>
+                        <td className="py-4 px-6 text-white">{assessment.assessor?.name || assessment.assessorId || 'N/A'}</td>
+                        <td className="py-4 px-6">
+                          <Badge
+                            variant={
+                              assessment.status === 'completed' || assessment.status === 'submitted'
+                                ? 'default'
+                                : assessment.status === 'in-progress'
+                                ? 'secondary'
+                                : 'outline'
+                            }
+                            className={
+                              assessment.status === 'completed' || assessment.status === 'submitted'
+                                ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                                : assessment.status === 'in-progress'
+                                ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                                : 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+                            }
+                          >
+                            {assessment.status || 'Pending'}
+                          </Badge>
+                        </td>
+                        <td className="py-4 px-6 text-white/80">
+                          {assessment.createdAt
+                            ? new Date(assessment.createdAt).toLocaleDateString()
+                            : 'N/A'}
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                // View assessment details
+                                toast({
+                                  title: "Assessment Details",
+                                  description: `Assessment ID: ${assessment._id || assessment.id}`,
+                                  variant: "default",
+                                });
+                              }}
+                              className="text-white hover:bg-gray-800"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Create Assessment Dialog */}
+        <Dialog open={showAssessmentDialog} onOpenChange={setShowAssessmentDialog}>
+          <DialogContent className="bg-gray-900 border-gray-700">
+            <DialogHeader>
+              <DialogTitle className="text-white">Create Assessment</DialogTitle>
+              <DialogDescription className="text-white/60">
+                Create a new assessment by selecting a farm and an assessor.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div>
+                <Label htmlFor="farmId" className="text-white">Farm</Label>
+                <Select
+                  value={assessmentFormData.farmId}
+                  onValueChange={(value) => setAssessmentFormData({ ...assessmentFormData, farmId: value })}
+                >
+                  <SelectTrigger id="farmId" className="bg-gray-800 border-gray-700 text-white mt-1">
+                    <SelectValue placeholder="Select a farm" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-900 border-gray-700">
+                    {farmsLoading ? (
+                      <SelectItem value="loading" disabled>Loading farms...</SelectItem>
+                    ) : !Array.isArray(farms) || farms.length === 0 ? (
+                      <SelectItem value="none" disabled>No farms available</SelectItem>
+                    ) : (
+                      farms.map((farm) => (
+                        <SelectItem key={farm._id || farm.id} value={farm._id || farm.id}>
+                          {farm.name || 'Unnamed Farm'} - {farm.farmerName || farm.farmer?.name || 'Unknown Farmer'}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="assessorId" className="text-white">Assessor</Label>
+                <Select
+                  value={assessmentFormData.assessorId}
+                  onValueChange={(value) => setAssessmentFormData({ ...assessmentFormData, assessorId: value })}
+                >
+                  <SelectTrigger id="assessorId" className="bg-gray-800 border-gray-700 text-white mt-1">
+                    <SelectValue placeholder="Select an assessor" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-900 border-gray-700">
+                    {!Array.isArray(assessors) || assessors.length === 0 ? (
+                      <SelectItem value="none" disabled>No assessors available</SelectItem>
+                    ) : (
+                      assessors.map((assessor) => (
+                        <SelectItem key={assessor._id || assessor.id} value={assessor._id || assessor.id}>
+                          {assessor.firstName} {assessor.lastName} ({assessor.email || assessor.phoneNumber})
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowAssessmentDialog(false);
+                    setAssessmentFormData({ farmId: "", assessorId: "" });
+                  }}
+                  className="border-gray-700 text-white hover:bg-gray-800"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCreateAssessment}
+                  disabled={creatingAssessment || !assessmentFormData.farmId || !assessmentFormData.assessorId}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  {creatingAssessment ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Assessment
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  };
+
   // Render page based on active selection
   const renderPage = () => {
     switch (activePage) {
       case "dashboard": return renderDashboard();
       case "users": return renderUserManagement();
-      case "financial": return renderFinancialManagement();
-      case "analytics": return renderAnalytics();
-      case "database": return renderDatabase();
-      case "security": return renderSecurity();
-      case "system": return renderSystemConfig();
-      case "logs": return renderActivityLogs();
+      case "policies": return renderPoliciesManagement();
+      case "claims": return renderClaimsManagement();
+      case "assessments": return renderAssessmentsManagement();
       case "settings": return renderSettings();
       default: return renderDashboard();
     }
@@ -1942,13 +5379,9 @@ export const AdminDashboard = () => {
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: BarChart3 },
     { id: "users", label: "User Management", icon: Users },
-    { id: "financial", label: "Financial", icon: DollarSign },
-    { id: "commission", label: "Commission", icon: Percent },
-    { id: "system", label: "System Config", icon: Settings },
-    { id: "security", label: "Security", icon: Shield },
-    { id: "logs", label: "Activity Logs", icon: FileText },
-    { id: "database", label: "Database", icon: Database },
-    { id: "analytics", label: "Analytics", icon: TrendingUp },
+    { id: "policies", label: "Policies", icon: FileCheck },
+    { id: "claims", label: "Claims", icon: AlertCircle },
+    { id: "assessments", label: "Assessments", icon: FileText },
     { id: "settings", label: "Settings", icon: Settings }
   ];
 
@@ -1960,7 +5393,7 @@ export const AdminDashboard = () => {
       navigationItems={navigationItems}
       activePage={activePage}
       onPageChange={setActivePage}
-      onLogout={() => {}}
+      onLogout={handleLogout}
     >
       {renderPage()}
     </DashboardLayout>

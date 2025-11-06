@@ -11,6 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import meteosourceApiService from "@/services/meteosourceApi";
+import assessmentsApiService from "@/services/assessmentsApi";
+import { getFarms, getFarmById } from "@/services/farmsApi";
+import { getUserById } from "@/services/usersAPI";
+import { getUserId } from "@/services/authAPI";
+import { useToast } from "@/hooks/use-toast";
 import { 
   MapPin,
   Search,
@@ -33,7 +38,8 @@ import {
   Download,
   CheckCircle,
   Star,
-  Map
+  Map,
+  RefreshCw
 } from "lucide-react";
 
 interface AssessmentSummary {
@@ -109,6 +115,7 @@ interface WeatherData {
 }
 
 export default function RiskAssessmentSystem() {
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -117,129 +124,180 @@ export default function RiskAssessmentSystem() {
   const [viewMode, setViewMode] = useState<"list" | "fieldSelection" | "fieldDetail">("list");
   const [activeTab, setActiveTab] = useState("basic-info");
   
-  // Mock data for Risk Assessments only
-  const assessments: AssessmentSummary[] = [
-    {
-      id: "RISK-001",
-      farmerName: "Jean Baptiste",
-      location: "Nyagatare, Eastern Province",
-      type: "Risk Assessment",
-      status: "Submitted",
-      date: "2024-10-03"
-    },
-    {
-      id: "RISK-002",
-      farmerName: "Kamali Peace",
-      location: "Gatsibo, Eastern Province",
-      type: "Risk Assessment",
-      status: "Pending",
-      date: "2024-10-02"
-    },
-    {
-      id: "RISK-003",
-      farmerName: "Mugabo John",
-      location: "Gatsibo, Eastern Province",
-      type: "Risk Assessment",
-      status: "Submitted",
-      date: "2024-09-30"
-    },
-    {
-      id: "RISK-004",
-      farmerName: "Nkurunziza Richard",
-      location: "Nyagatare, Eastern Province",
-      type: "Risk Assessment",
-      status: "Under Review",
-      date: "2024-09-25"
-    }
-  ];
+  // State for API data
+  const [assessments, setAssessments] = useState<AssessmentSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [farms, setFarms] = useState<any[]>([]);
+  const [loadingFarms, setLoadingFarms] = useState(false);
+  const [farmers, setFarmers] = useState<Record<string, any>>({});
 
-  // Mock field data for farmers
-  const fieldsByFarmer: Record<string, Field[]> = {
-    "Jean Baptiste": [
-      {
-        id: "FLD-002",
-        farmerName: "Jean Baptiste",
-        crop: "Maize",
-        area: 2.8,
-        season: "A",
-        status: "Processed",
-        fieldName: "Main Maize Field",
-        sowingDate: "2025-03-05"
+  // Get logged-in assessor ID
+  const assessorId = getUserId() || "";
+
+  // Load assessments from API
+  useEffect(() => {
+    loadAssessments();
+  }, []);
+
+  // Load farms when an assessment is selected
+  useEffect(() => {
+    if (selectedAssessment && viewMode === "fieldSelection") {
+      loadFarmsForAssessment(selectedAssessment);
+    }
+  }, [selectedAssessment, viewMode]);
+
+  const loadAssessments = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response: any = await assessmentsApiService.getAllAssessments();
+      const assessmentsData = response.data || response || [];
+      const assessmentsArray = Array.isArray(assessmentsData) ? assessmentsData : (assessmentsData.items || assessmentsData.results || []);
+      
+      // Filter assessments assigned to this assessor
+      const filteredAssessments = assessmentsArray.filter((assessment: any) => {
+        if (!assessorId) return false;
+        const assessmentAssessorId = assessment.assessorId || assessment.assessor?._id || assessment.assessor?.id;
+        return assessmentAssessorId === assessorId || assessmentAssessorId === assessorId.toString();
+      });
+
+      // Map API response to AssessmentSummary interface
+      const mappedAssessments: AssessmentSummary[] = await Promise.all(
+        filteredAssessments.map(async (assessment: any) => {
+          const farmId = assessment.farmId || assessment.farm?._id || assessment.farm?.id;
+          let farmerName = "Unknown Farmer";
+          let location = "Unknown Location";
+
+          // Try to get farmer info from assessment data
+          if (assessment.farm) {
+            farmerName = assessment.farm.farmerId?.firstName && assessment.farm.farmerId?.lastName
+              ? `${assessment.farm.farmerId.firstName} ${assessment.farm.farmerId.lastName}`
+              : assessment.farm.farmerId?.email || assessment.farm.farmerId?.phoneNumber || "Unknown Farmer";
+            
+            if (assessment.farm.location) {
+              if (typeof assessment.farm.location === 'string') {
+                location = assessment.farm.location;
+              } else if (assessment.farm.location.coordinates && Array.isArray(assessment.farm.location.coordinates)) {
+                location = `${assessment.farm.location.coordinates[1]?.toFixed(4)}, ${assessment.farm.location.coordinates[0]?.toFixed(4)}`;
+              }
+            }
+          }
+
+          // Try to get farmer info from API if not in assessment
+          if (farmerName === "Unknown Farmer" && farmId) {
+            try {
+              const farmData = await getFarmById(farmId);
+              const farm = farmData.data || farmData;
+              if (farm?.farmerId) {
+                const farmerInfo = typeof farm.farmerId === 'string' 
+                  ? await getUserById(farm.farmerId).catch(() => null)
+                  : farm.farmerId;
+                if (farmerInfo) {
+                  const farmer = farmerInfo.data || farmerInfo;
+                  farmerName = farmer.firstName && farmer.lastName
+                    ? `${farmer.firstName} ${farmer.lastName}`
+                    : farmer.email || farmer.phoneNumber || "Unknown Farmer";
+                }
+              }
+              if (farm?.location && !location) {
+                if (typeof farm.location === 'string') {
+                  location = farm.location;
+                } else if (farm.location.coordinates && Array.isArray(farm.location.coordinates)) {
+                  location = `${farm.location.coordinates[1]?.toFixed(4)}, ${farm.location.coordinates[0]?.toFixed(4)}`;
+                }
+              }
+            } catch (err) {
+              console.error('Failed to load farm data:', err);
+            }
+          }
+
+          return {
+            id: assessment._id || assessment.id || `RISK-${assessment.assessmentId || 'UNKNOWN'}`,
+            farmerId: assessment.farm?.farmerId?._id || assessment.farm?.farmerId || assessment.farmId || "",
+            farmerName,
+            location,
+            type: assessment.type || "Risk Assessment",
+            status: assessment.status || "Pending",
+            date: assessment.createdAt || assessment.assessmentDate || assessment.date || new Date().toISOString().split('T')[0]
+          };
+        })
+      );
+
+      setAssessments(mappedAssessments);
+    } catch (err: any) {
+      console.error('Failed to load assessments:', err);
+      setError(err.message || 'Failed to load assessments');
+      toast({
+        title: 'Error loading assessments',
+        description: err.message || 'Failed to load assessments',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadFarmsForAssessment = async (assessment: AssessmentSummary) => {
+    setLoadingFarms(true);
+    try {
+      // Get all farms and filter by farmer
+      const response: any = await getFarms(1, 100);
+      const farmsData = response.data || response || [];
+      const farmsArray = Array.isArray(farmsData) ? farmsData : (farmsData.items || farmsData.results || []);
+
+      // Filter farms by the farmer ID from assessment
+      const relevantFarms = farmsArray.filter((farm: any) => {
+        const farmerId = farm.farmerId?._id || farm.farmerId || farm.farmer;
+        return farmerId === assessment.farmerId || farmerId === assessment.farmerId?.toString();
+      });
+
+      setFarms(relevantFarms);
+
+      // Load farmer info if needed
+      if (assessment.farmerId && !farmers[assessment.farmerId]) {
+        try {
+          const farmerData: any = await getUserById(assessment.farmerId);
+          const farmer = farmerData.data || farmerData;
+          setFarmers(prev => ({ ...prev, [assessment.farmerId]: farmer }));
+        } catch (err) {
+          console.error('Failed to load farmer info:', err);
+        }
       }
-    ],
-    "Kamali Peace": [
-      {
-        id: "FLD-003",
-        farmerName: "Kamali Peace",
-        crop: "Rice",
-        area: 1.5,
-        season: "B",
-        status: "Processed",
-        fieldName: "Central Rice Field",
-        sowingDate: "2025-09-20"
-      }
-    ],
-    "Mugabo John": [
-      {
-        id: "FLD-001",
-        farmerName: "Mugabo John",
-        crop: "Maize",
-        area: 3.4,
-        season: "B",
-        status: "Processed",
-        fieldName: "North Maize Plot",
-        sowingDate: "2025-09-15"
-      },
-      {
-        id: "FLD-004",
-        farmerName: "Mugabo John",
-        crop: "Rice",
-        area: 2.5,
-        season: "A",
-        status: "Processed",
-        fieldName: "South Rice Field",
-        sowingDate: "2025-03-01"
-      },
-      {
-        id: "FLD-007",
-        farmerName: "Mugabo John",
-        crop: "Beans",
-        area: 1.4,
-        season: "B",
-        status: "Processing Needed",
-        fieldName: "East Beans Plot",
-        sowingDate: "2025-09-10"
-      }
-    ],
-    "Nkurunziza Richard": [
-      {
-        id: "FLD-005",
-        farmerName: "Nkurunziza Richard",
-        crop: "Potatoes",
-        area: 2.0,
-        season: "A",
-        status: "Processed",
-        fieldName: "West Potato Field",
-        sowingDate: "2025-03-10"
-      }
-    ]
+    } catch (err: any) {
+      console.error('Failed to load farms:', err);
+      toast({
+        title: 'Error loading farms',
+        description: err.message || 'Failed to load farms',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoadingFarms(false);
+    }
   };
 
   const getFieldsForAssessment = (assessment: AssessmentSummary): Field[] => {
-    return fieldsByFarmer[assessment.farmerName] || [];
-  };
+    if (!farms || farms.length === 0) return [];
 
-  // Filter assessments
-  const filteredAssessments = assessments.filter(assessment => {
-    const matchesSearch = searchQuery === "" ||
-      assessment.farmerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      assessment.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      assessment.location.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === "all" || assessment.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+    // Map farms to Field interface
+    return farms.map((farm: any) => {
+      const farmer = farmers[assessment.farmerId] || {};
+      const farmerName = farmer.firstName && farmer.lastName
+        ? `${farmer.firstName} ${farmer.lastName}`
+        : assessment.farmerName;
+
+      return {
+        id: farm._id || farm.id || `FLD-${farm.name || 'UNKNOWN'}`,
+        farmerName,
+        crop: farm.cropType || farm.crop || "Unknown",
+        area: farm.area || farm.size || 0,
+        season: farm.season || "A",
+        status: farm.status || "Active",
+        fieldName: farm.name || "Unnamed Farm",
+        sowingDate: farm.sowingDate || farm.plantingDate || new Date().toISOString().split('T')[0]
+      };
+    });
+  };
 
   // Clear all filters
   const clearFilters = () => {
@@ -283,6 +341,34 @@ export default function RiskAssessmentSystem() {
 
   const renderFieldSelection = () => {
     if (!selectedAssessment) return null;
+    
+    if (loadingFarms) {
+      return (
+        <div className="space-y-6">
+          <div className="flex items-center gap-2 text-sm">
+            <button 
+              onClick={handleBackToList}
+              className="text-teal-400 hover:text-teal-300"
+            >
+              Risk Assessments
+            </button>
+            <span className="text-white/60">/</span>
+            <span className="text-white">{selectedAssessment.farmerName}</span>
+          </div>
+          <Card className={`${dashboardTheme.card}`}>
+            <CardContent className="p-12">
+              <div className="flex items-center justify-center">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
+                  <p className="text-white/60">Loading farms...</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
     const fields = getFieldsForAssessment(selectedAssessment);
     
     return (
@@ -302,46 +388,52 @@ export default function RiskAssessmentSystem() {
         {/* Table */}
         <Card className={`${dashboardTheme.card}`}>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-800">
-                    <th className="text-left py-4 px-6 font-medium text-cyan-400">Field ID</th>
-                    <th className="text-left py-4 px-6 font-medium text-teal-400">Farmer</th>
-                    <th className="text-left py-4 px-6 font-medium text-green-400">Crop</th>
-                    <th className="text-left py-4 px-6 font-medium text-blue-400">Area (ha)</th>
-                    <th className="text-left py-4 px-6 font-medium text-purple-400">Season</th>
-                    <th className="text-left py-4 px-6 font-medium text-yellow-400">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {fields.map((field, index) => (
-                    <tr
-                      key={field.id}
-                      onClick={() => handleFieldClick(field)}
-                      className={`border-b border-gray-800/50 hover:bg-gray-900/50 transition-colors cursor-pointer ${
-                        index % 2 === 0 ? "bg-gray-950/30" : ""
-                      }`}
-                    >
-                      <td className="py-4 px-6 text-cyan-300">{field.id}</td>
-                      <td className="py-4 px-6 text-teal-300">{field.farmerName}</td>
-                      <td className="py-4 px-6 text-green-300">{field.crop}</td>
-                      <td className="py-4 px-6 text-blue-300">{field.area} ha</td>
-                      <td className="py-4 px-6 text-purple-300">{field.season}</td>
-                      <td className="py-4 px-6">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          field.status === "Processed"
-                            ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                            : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
-                        }`}>
-                          {field.status}
-                        </span>
-                      </td>
+            {fields.length === 0 ? (
+              <div className="p-12 text-center">
+                <p className="text-white/60">No farms found for this assessment.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-800">
+                      <th className="text-left py-4 px-6 font-medium text-cyan-400">Field ID</th>
+                      <th className="text-left py-4 px-6 font-medium text-teal-400">Farmer</th>
+                      <th className="text-left py-4 px-6 font-medium text-green-400">Crop</th>
+                      <th className="text-left py-4 px-6 font-medium text-blue-400">Area (ha)</th>
+                      <th className="text-left py-4 px-6 font-medium text-purple-400">Season</th>
+                      <th className="text-left py-4 px-6 font-medium text-yellow-400">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {fields.map((field, index) => (
+                      <tr
+                        key={field.id}
+                        onClick={() => handleFieldClick(field)}
+                        className={`border-b border-gray-800/50 hover:bg-gray-900/50 transition-colors cursor-pointer ${
+                          index % 2 === 0 ? "bg-gray-950/30" : ""
+                        }`}
+                      >
+                        <td className="py-4 px-6 text-cyan-300">{field.id}</td>
+                        <td className="py-4 px-6 text-teal-300">{field.farmerName}</td>
+                        <td className="py-4 px-6 text-green-300">{field.crop}</td>
+                        <td className="py-4 px-6 text-blue-300">{field.area} ha</td>
+                        <td className="py-4 px-6 text-purple-300">{field.season}</td>
+                        <td className="py-4 px-6">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            field.status === "Processed" || field.status === "Active"
+                              ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                              : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                          }`}>
+                            {field.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -1226,121 +1318,188 @@ export default function RiskAssessmentSystem() {
     );
   };
 
-  const renderDashboard = () => (
-    <div className="space-y-6">
-      {/* Action Bar */}
-      <div className="flex items-center justify-end gap-4">
-        <div className="flex gap-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
-            <Input
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className={`${dashboardTheme.input} pl-10 w-64 border-gray-700`}
-            />
-          </div>
-          <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className={`${dashboardTheme.card} text-white hover:bg-gray-800 border border-gray-700`}>
-                <Filter className="h-4 w-4 mr-2" />
-                Filter
-              </Button>
-            </DialogTrigger>
-            <DialogContent className={`${dashboardTheme.card} border-gray-800`}>
-              <DialogHeader>
-                <DialogTitle className="text-white">Filter Risk Assessments</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 mt-4">
-                <div>
-                  <Label htmlFor="status-filter" className="text-white/80">Status</Label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger id="status-filter" className={`${dashboardTheme.select} mt-1`}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className={dashboardTheme.card}>
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="Pending">Pending</SelectItem>
-                      <SelectItem value="Submitted">Submitted</SelectItem>
-                      <SelectItem value="Under Review">Under Review</SelectItem>
-                      <SelectItem value="Approved">Approved</SelectItem>
-                      <SelectItem value="Rejected">Rejected</SelectItem>
-                    </SelectContent>
-                  </Select>
+  const renderDashboard = () => {
+    // Filter assessments
+    const filteredAssessments = assessments.filter(assessment => {
+      const matchesSearch = searchQuery === "" ||
+        assessment.farmerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        assessment.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        assessment.location.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesStatus = statusFilter === "all" || assessment.status.toLowerCase() === statusFilter.toLowerCase();
+      
+      return matchesSearch && matchesStatus;
+    });
+
+    return (
+      <div className="space-y-6">
+        {/* Action Bar */}
+        <div className="flex items-center justify-end gap-4">
+          <div className="flex gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
+              <Input
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={`${dashboardTheme.input} pl-10 w-64 border-gray-700`}
+              />
+            </div>
+            <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className={`${dashboardTheme.card} text-white hover:bg-gray-800 border border-gray-700`}>
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filter
+                </Button>
+              </DialogTrigger>
+              <DialogContent className={`${dashboardTheme.card} border-gray-800`}>
+                <DialogHeader>
+                  <DialogTitle className="text-white">Filter Risk Assessments</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 mt-4">
+                  <div>
+                    <Label htmlFor="status-filter" className="text-white/80">Status</Label>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger id="status-filter" className={`${dashboardTheme.select} mt-1`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className={dashboardTheme.card}>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="submitted">Submitted</SelectItem>
+                        <SelectItem value="under review">Under Review</SelectItem>
+                        <SelectItem value="approved">Approved</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex justify-between pt-4">
+                    <Button 
+                      variant="outline" 
+                      onClick={clearFilters}
+                      className="border-gray-700 text-white hover:bg-gray-800"
+                    >
+                      Clear Filters
+                    </Button>
+                    <Button 
+                      onClick={() => setFilterDialogOpen(false)}
+                      className="bg-teal-600 hover:bg-teal-700 text-white"
+                    >
+                      Apply Filters
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex justify-between pt-4">
-                  <Button 
-                    variant="outline" 
-                    onClick={clearFilters}
-                    className="border-gray-700 text-white hover:bg-gray-800"
-                  >
-                    Clear Filters
-                  </Button>
-                  <Button 
-                    onClick={() => setFilterDialogOpen(false)}
-                    className="bg-teal-600 hover:bg-teal-700 text-white"
-                  >
-                    Apply Filters
-                  </Button>
+              </DialogContent>
+            </Dialog>
+            <Button 
+              onClick={loadAssessments}
+              variant="outline"
+              className="border-gray-700 text-white hover:bg-gray-800"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
+        </div>
+
+        {/* Loading State */}
+        {loading && (
+          <Card className={`${dashboardTheme.card}`}>
+            <CardContent className="p-12">
+              <div className="flex items-center justify-center">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
+                  <p className="text-white/60">Loading assessments...</p>
                 </div>
               </div>
-            </DialogContent>
-          </Dialog>
-          <Button 
-            className="bg-teal-600 hover:bg-teal-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Risk Assessment
-          </Button>
-        </div>
-      </div>
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Data Table */}
-      <Card className={`${dashboardTheme.card}`}>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-800">
-                  <th className="text-left py-4 px-6 font-medium text-cyan-400">Assessment ID</th>
-                  <th className="text-left py-4 px-6 font-medium text-teal-400">Farmer Name</th>
-                  <th className="text-left py-4 px-6 font-medium text-blue-400">Location</th>
-                  <th className="text-left py-4 px-6 font-medium text-yellow-400">Status</th>
-                  <th className="text-left py-4 px-6 font-medium text-green-400">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAssessments.map((assessment, index) => (
-                    <tr
-                      key={assessment.id}
-                      onClick={() => handleAssessmentClick(assessment)}
-                      className={`border-b border-gray-800/50 hover:bg-gray-900/50 transition-colors cursor-pointer ${
-                        index % 2 === 0 ? "bg-gray-950/30" : ""
-                      }`}
-                    >
-                      <td className="py-4 px-6 text-cyan-300">{assessment.id}</td>
-                      <td className="py-4 px-6 text-teal-300">{assessment.farmerName}</td>
-                      <td className="py-4 px-6 text-blue-300">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-teal-500" />
-                          {assessment.location}
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                          {assessment.status}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-green-300">{assessment.date}</td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+        {/* Error State */}
+        {error && !loading && (
+          <Card className={`${dashboardTheme.card}`}>
+            <CardContent className="p-6">
+              <div className="text-center text-red-400">
+                <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
+                <p>{error}</p>
+                <Button 
+                  onClick={loadAssessments} 
+                  className="mt-4 bg-teal-600 hover:bg-teal-700 text-white"
+                >
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Data Table */}
+        {!loading && !error && (
+          <Card className={`${dashboardTheme.card}`}>
+            <CardContent className="p-0">
+              {filteredAssessments.length === 0 ? (
+                <div className="p-12 text-center">
+                  <p className="text-white/60">No assessments found.</p>
+                  {assessments.length === 0 && !assessorId && (
+                    <p className="text-white/40 text-sm mt-2">Please log in to view assessments.</p>
+                  )}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-800">
+                        <th className="text-left py-4 px-6 font-medium text-cyan-400">Assessment ID</th>
+                        <th className="text-left py-4 px-6 font-medium text-teal-400">Farmer Name</th>
+                        <th className="text-left py-4 px-6 font-medium text-blue-400">Location</th>
+                        <th className="text-left py-4 px-6 font-medium text-yellow-400">Status</th>
+                        <th className="text-left py-4 px-6 font-medium text-green-400">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredAssessments.map((assessment, index) => (
+                        <tr
+                          key={assessment.id}
+                          onClick={() => handleAssessmentClick(assessment)}
+                          className={`border-b border-gray-800/50 hover:bg-gray-900/50 transition-colors cursor-pointer ${
+                            index % 2 === 0 ? "bg-gray-950/30" : ""
+                          }`}
+                        >
+                          <td className="py-4 px-6 text-cyan-300">{assessment.id}</td>
+                          <td className="py-4 px-6 text-teal-300">{assessment.farmerName}</td>
+                          <td className="py-4 px-6 text-blue-300">
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-teal-500" />
+                              {assessment.location}
+                            </div>
+                          </td>
+                          <td className="py-4 px-6">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
+                              assessment.status.toLowerCase() === 'approved' || assessment.status.toLowerCase() === 'submitted'
+                                ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                                : assessment.status.toLowerCase() === 'rejected'
+                                ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                                : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                            }`}>
+                              {assessment.status}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6 text-green-300">
+                            {new Date(assessment.date).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  };
 
   // Render view based on mode
   if (viewMode === "fieldSelection") {

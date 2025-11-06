@@ -33,6 +33,7 @@ import { EmailNotificationSystem } from "./components/notifications/EmailNotific
 import Services from "./pages/Services";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
+import UserDetailsPage from "./pages/UserDetailsPage";
 
 const queryClient = new QueryClient();
 
@@ -65,6 +66,9 @@ const App = () => {
               <Route path="/insurer-dashboard" element={<InsurerDashboard />} />
               <Route path="/admin-dashboard" element={<AdminDashboard />} />
               <Route path="/government-dashboard" element={<GovernmentDashboard />} />
+              
+              {/* User Details Route */}
+              <Route path="/admin-dashboard/users/:userId" element={<UserDetailsPage />} />
               
               {/* Policy Details Route */}
               <Route path="/policy-details/:policyId" element={<PolicyDetailsPage />} />

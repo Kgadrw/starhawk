@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
+import { getUserById, updateUserProfile, getUserProfile } from "@/services/usersAPI";
+import { useToast } from "@/hooks/use-toast";
 import { 
   User, 
   MapPin, 
@@ -28,32 +31,115 @@ import {
 } from "lucide-react";
 
 export default function AssessorProfileSettings() {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("profile");
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Get logged-in assessor data from localStorage
+  const assessorId = getUserId() || "";
+  const assessorPhone = getPhoneNumber() || "";
+  const assessorEmail = getEmail() || "";
+
   const [profileData, setProfileData] = useState({
-    fullName: "Richard Nkurunziza",
-    assessorId: "ASS-001",
-    email: "richard.nkurunziza@assessor.rw",
-    phone: "+250 788 123 456",
-    address: "KG 456 St, Kigali, Rwanda",
-    specialization: "Agricultural Risk Assessment",
-    experience: "5 years",
-    licenseNumber: "ASS-LIC-2024-001",
-    certificationDate: "2024-01-15",
-    bio: "Experienced agricultural assessor specializing in crop risk evaluation and field assessment. Certified in advanced assessment techniques and drone technology."
+    fullName: assessorEmail || assessorPhone || "Assessor",
+    assessorId: assessorId || "",
+    email: assessorEmail || "",
+    phone: assessorPhone || "",
+    address: "",
+    specialization: "",
+    experience: "",
+    licenseNumber: "",
+    certificationDate: "",
+    bio: ""
   });
 
+  // Load user data from localStorage and API on component mount
+  useEffect(() => {
+    // Update profile data with real user information from localStorage
+    setProfileData(prev => ({
+      ...prev,
+      fullName: assessorEmail || assessorPhone || "Assessor",
+      assessorId: assessorId || "",
+      email: assessorEmail || "",
+      phone: assessorPhone || "",
+    }));
+
+    // Fetch full user profile from API if userId is available
+    const loadUserProfile = async () => {
+      if (!assessorId) {
+        setLoading(false);
+        return;
+      }
+      
+      setLoading(true);
+      try {
+        // Try to get user profile first (current user's own profile)
+        let userData: any;
+        try {
+          userData = await getUserProfile();
+        } catch (err) {
+          // If getUserProfile fails, try getUserById
+          userData = await getUserById(assessorId);
+        }
+        
+        const user = userData.data || userData;
+        
+        if (user) {
+          // Update profile with full user data
+          setProfileData(prev => ({
+            ...prev,
+            fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || user.phoneNumber || assessorEmail || assessorPhone || "Assessor",
+            assessorId: user._id || user.id || assessorId || "",
+            email: user.email || assessorEmail || "",
+            phone: user.phoneNumber || assessorPhone || "",
+            address: user.assessorProfile?.address || user.address || user.province || user.district || prev.address || "",
+            specialization: user.assessorProfile?.specialization || prev.specialization || "",
+            experience: user.assessorProfile?.experienceYears ? `${user.assessorProfile.experienceYears} years` : prev.experience || "",
+            licenseNumber: user.assessorProfile?.licenseNumber || prev.licenseNumber || "",
+            certificationDate: user.assessorProfile?.certificationDate || prev.certificationDate || "",
+            bio: user.assessorProfile?.bio || prev.bio || "",
+          }));
+
+          // Load work preferences from assessor profile
+          if (user.assessorProfile) {
+            setWorkData(prev => ({
+              ...prev,
+              assignedRegion: user.assessorProfile.assignedRegion || user.province || user.district || prev.assignedRegion || "",
+              maxAssessmentsPerDay: user.assessorProfile.maxAssessmentsPerDay?.toString() || prev.maxAssessmentsPerDay || "3",
+              preferredWorkingHours: user.assessorProfile.preferredWorkingHours || prev.preferredWorkingHours || "08:00-17:00",
+              vehicleType: user.assessorProfile.vehicleType || prev.vehicleType || "",
+              equipment: user.assessorProfile.equipment || prev.equipment || [],
+              languages: user.assessorProfile.languages || prev.languages || [],
+            }));
+          }
+        }
+      } catch (err: any) {
+        console.error('Failed to load user profile:', err);
+        toast({
+          title: 'Error loading profile',
+          description: err.message || 'Failed to load profile data',
+          variant: 'destructive'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserProfile();
+  }, [assessorId, assessorEmail, assessorPhone]);
+
   const [workData, setWorkData] = useState({
-    assignedRegion: "Eastern Province",
+    assignedRegion: "",
     maxAssessmentsPerDay: "3",
     preferredWorkingHours: "08:00-17:00",
-    vehicleType: "Motorcycle",
-    equipment: ["GPS Device", "Camera", "Soil Testing Kit", "Drone"],
-    languages: ["Kinyarwanda", "English", "French"]
+    vehicleType: "",
+    equipment: [] as string[],
+    languages: [] as string[]
   });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const [securityData, setSecurityData] = useState({
     currentPassword: "",
@@ -89,6 +175,102 @@ export default function AssessorProfileSettings() {
 
   const handleNotificationUpdate = (field: string, value: boolean) => {
     setNotificationSettings(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveChanges = async () => {
+    if (!assessorId) {
+      toast({
+        title: 'Error',
+        description: 'User ID not found. Please log in again.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Prepare update data
+      const updateData: any = {
+        firstName: profileData.fullName.split(' ')[0] || '',
+        lastName: profileData.fullName.split(' ').slice(1).join(' ') || '',
+        email: profileData.email,
+        phoneNumber: profileData.phone,
+        address: profileData.address,
+        assessorProfile: {
+          address: profileData.address,
+          specialization: profileData.specialization,
+          experienceYears: profileData.experience ? parseInt(profileData.experience.replace(' years', '')) : undefined,
+          licenseNumber: profileData.licenseNumber,
+          certificationDate: profileData.certificationDate,
+          bio: profileData.bio,
+          assignedRegion: workData.assignedRegion,
+          maxAssessmentsPerDay: parseInt(workData.maxAssessmentsPerDay) || 3,
+          preferredWorkingHours: workData.preferredWorkingHours,
+          vehicleType: workData.vehicleType,
+          equipment: workData.equipment,
+          languages: workData.languages,
+        }
+      };
+
+      // Remove undefined values
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined || updateData[key] === '') {
+          delete updateData[key];
+        }
+      });
+
+      Object.keys(updateData.assessorProfile).forEach(key => {
+        if (updateData.assessorProfile[key] === undefined || updateData.assessorProfile[key] === '') {
+          delete updateData.assessorProfile[key];
+        }
+      });
+
+      await updateUserProfile(updateData);
+
+      toast({
+        title: 'Success',
+        description: 'Profile updated successfully',
+      });
+
+      // Reload profile data
+      const userData: any = await getUserProfile().catch(() => getUserById(assessorId));
+      const user = userData.data || userData;
+      if (user) {
+        setProfileData(prev => ({
+          ...prev,
+          fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || user.phoneNumber || assessorEmail || assessorPhone || "Assessor",
+          email: user.email || assessorEmail || "",
+          phone: user.phoneNumber || assessorPhone || "",
+          address: user.assessorProfile?.address || user.address || prev.address || "",
+          specialization: user.assessorProfile?.specialization || prev.specialization || "",
+          experience: user.assessorProfile?.experienceYears ? `${user.assessorProfile.experienceYears} years` : prev.experience || "",
+          licenseNumber: user.assessorProfile?.licenseNumber || prev.licenseNumber || "",
+          certificationDate: user.assessorProfile?.certificationDate || prev.certificationDate || "",
+          bio: user.assessorProfile?.bio || prev.bio || "",
+        }));
+
+        if (user.assessorProfile) {
+          setWorkData(prev => ({
+            ...prev,
+            assignedRegion: user.assessorProfile.assignedRegion || user.province || user.district || prev.assignedRegion || "",
+            maxAssessmentsPerDay: user.assessorProfile.maxAssessmentsPerDay?.toString() || prev.maxAssessmentsPerDay || "3",
+            preferredWorkingHours: user.assessorProfile.preferredWorkingHours || prev.preferredWorkingHours || "08:00-17:00",
+            vehicleType: user.assessorProfile.vehicleType || prev.vehicleType || "",
+            equipment: user.assessorProfile.equipment || prev.equipment || [],
+            languages: user.assessorProfile.languages || prev.languages || [],
+          }));
+        }
+      }
+    } catch (err: any) {
+      console.error('Failed to update profile:', err);
+      toast({
+        title: 'Error updating profile',
+        description: err.message || 'Failed to update profile',
+        variant: 'destructive'
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const renderProfileTab = () => (
@@ -295,7 +477,20 @@ export default function AssessorProfileSettings() {
                 <label key={equipment} className="flex items-center cursor-pointer group">
                   <input 
                     type="checkbox" 
-                    defaultChecked={workData.equipment.includes(equipment)}
+                    checked={workData.equipment.includes(equipment)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setWorkData(prev => ({
+                          ...prev,
+                          equipment: [...prev.equipment, equipment]
+                        }));
+                      } else {
+                        setWorkData(prev => ({
+                          ...prev,
+                          equipment: prev.equipment.filter(eq => eq !== equipment)
+                        }));
+                      }
+                    }}
                     className="mr-2 w-4 h-4 text-orange-600 border-gray-600 rounded focus:ring-orange-500 bg-gray-800/50 cursor-pointer group-hover:border-orange-500/50 transition-colors" 
                   />
                   <span className="text-sm text-white/80 group-hover:text-white transition-colors">{equipment}</span>
@@ -311,7 +506,20 @@ export default function AssessorProfileSettings() {
                 <label key={language} className="flex items-center cursor-pointer group">
                   <input 
                     type="checkbox" 
-                    defaultChecked={workData.languages.includes(language)}
+                    checked={workData.languages.includes(language)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setWorkData(prev => ({
+                          ...prev,
+                          languages: [...prev.languages, language]
+                        }));
+                      } else {
+                        setWorkData(prev => ({
+                          ...prev,
+                          languages: prev.languages.filter(lang => lang !== language)
+                        }));
+                      }
+                    }}
                     className="mr-2 w-4 h-4 text-orange-600 border-gray-600 rounded focus:ring-orange-500 bg-gray-800/50 cursor-pointer group-hover:border-orange-500/50 transition-colors" 
                   />
                   <span className="text-sm text-white/80 group-hover:text-white transition-colors">{language}</span>
@@ -582,6 +790,23 @@ export default function AssessorProfileSettings() {
     </div>
   );
 
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="p-12">
+            <div className="flex items-center justify-center">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+                <p className="text-white/60">Loading profile...</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header with Profile Photo */}
@@ -598,20 +823,22 @@ export default function AssessorProfileSettings() {
             </div>
             <div className="flex-1">
               <h2 className="text-2xl font-bold text-white mb-1">{profileData.fullName}</h2>
-              <p className="text-white/80 mb-2">{profileData.specialization}</p>
+              <p className="text-white/80 mb-2">{profileData.specialization || "Assessor"}</p>
               <div className="flex items-center gap-4 text-sm text-white/70">
                 <div className="flex items-center gap-1">
                   <User className="h-4 w-4" />
-                  <span>{profileData.assessorId}</span>
+                  <span>{profileData.assessorId || "N/A"}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Award className="h-4 w-4" />
-                  <span>{profileData.experience}</span>
+                  <span>{profileData.experience || "N/A"}</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <MapPin className="h-4 w-4" />
-                  <span>{workData.assignedRegion}</span>
-                </div>
+                {workData.assignedRegion && (
+                  <div className="flex items-center gap-1">
+                    <MapPin className="h-4 w-4" />
+                    <span>{workData.assignedRegion}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -656,9 +883,13 @@ export default function AssessorProfileSettings() {
 
       {/* Save Button */}
       <div className="flex justify-end pt-6 border-t border-white/10">
-        <Button className="bg-orange-600 hover:bg-orange-700 min-w-[120px]">
-          <Save className="h-4 w-4 mr-2" />
-          Save Changes
+        <Button 
+          className="bg-orange-600 hover:bg-orange-700 min-w-[120px]"
+          onClick={handleSaveChanges}
+          disabled={saving || loading}
+        >
+          <Save className={`h-4 w-4 mr-2 ${saving ? 'animate-spin' : ''}`} />
+          {saving ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>
     </div>

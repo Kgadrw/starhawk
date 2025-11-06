@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { dashboardTheme } from "@/utils/dashboardTheme";
 import { Button } from "@/components/ui/button";
@@ -27,96 +27,250 @@ import {
   Phone,
   Mail,
   Calendar,
-  X
+  X,
+  RefreshCw
 } from "lucide-react";
+import assessmentsApiService from "@/services/assessmentsApi";
+import { getClaims } from "@/services/claimsApi";
+import { getUserId } from "@/services/authAPI";
+import { getUserById } from "@/services/usersAPI";
+import { getFarmById } from "@/services/farmsApi";
+import { useToast } from "@/hooks/use-toast";
+
+interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  priority: "high" | "medium" | "low";
+  status: "read" | "unread";
+  timestamp: string;
+  farmerId?: string;
+  farmerName?: string;
+  location?: string;
+  dueDate?: string;
+  assessmentType?: string;
+  claimId?: string;
+  assessmentId?: string;
+  trainingDate?: string;
+  trainingTopic?: string;
+  equipmentType?: string;
+}
 
 export default function AssessorNotifications() {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [selectedNotification, setSelectedNotification] = useState<any>(null);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock notifications data for assessors
-  const notifications = [
-    {
-      id: 1,
-      type: "new_assignment",
-      title: "New Assessment Assignment",
-      message: "You have been assigned a new risk assessment for farmer FMR-0247 (Jean Baptiste) in Nyagatare District.",
-      priority: "high",
-      status: "unread",
-      timestamp: "2024-10-05 14:30",
-      farmerId: "FMR-0247",
-      farmerName: "Jean Baptiste",
-      location: "Nyagatare District",
-      dueDate: "2024-10-08",
-      assessmentType: "risk_assessment"
-    },
-    {
-      id: 2,
-      type: "assessment_reminder",
-      title: "Assessment Due Soon",
-      message: "Risk assessment for farmer FMR-0248 (Marie Uwimana) is due in 2 days. Please complete your field visit.",
-      priority: "medium",
-      status: "unread",
-      timestamp: "2024-10-05 10:15",
-      farmerId: "FMR-0248",
-      farmerName: "Marie Uwimana",
-      location: "Gatsibo District",
-      dueDate: "2024-10-07",
-      assessmentType: "risk_assessment"
-    },
-    {
-      id: 3,
-      type: "claim_assignment",
-      title: "New Claim Assessment",
-      message: "You have been assigned to assess claim CLM-002 for farmer FMR-0249 (Paul Kagame) regarding drought damage.",
-      priority: "high",
-      status: "read",
-      timestamp: "2024-10-04 16:45",
-      farmerId: "FMR-0249",
-      farmerName: "Paul Kagame",
-      location: "Musanze District",
-      claimId: "CLM-002",
-      assessmentType: "loss_assessment"
-    },
-    {
-      id: 4,
-      type: "assessment_approved",
-      title: "Assessment Approved",
-      message: "Your risk assessment for farmer FMR-0250 (Grace Mukamana) has been approved by the insurer.",
-      priority: "low",
-      status: "read",
-      timestamp: "2024-10-04 12:20",
-      farmerId: "FMR-0250",
-      farmerName: "Grace Mukamana",
-      location: "Huye District",
-      assessmentId: "ASS-003",
-      assessmentType: "risk_assessment"
-    },
-    {
-      id: 5,
-      type: "training_reminder",
-      title: "Training Session Reminder",
-      message: "Don't forget about the monthly assessor training session tomorrow at 2:00 PM.",
-      priority: "medium",
-      status: "read",
-      timestamp: "2024-10-03 09:30",
-      trainingDate: "2024-10-06",
-      trainingTopic: "Advanced Field Assessment Techniques"
-    },
-    {
-      id: 6,
-      type: "equipment_update",
-      title: "Equipment Maintenance Due",
-      message: "Your GPS device and camera equipment are due for maintenance. Please schedule a service appointment.",
-      priority: "low",
-      status: "unread",
-      timestamp: "2024-10-02 14:00",
-      equipmentType: "GPS Device, Camera"
+  const assessorId = getUserId() || "";
+
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+
+  const loadNotifications = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [assessmentsResp, claimsResp] = await Promise.allSettled([
+        assessmentsApiService.getAllAssessments(),
+        getClaims()
+      ]);
+
+      const notificationsList: Notification[] = [];
+
+      // Process assessments
+      if (assessmentsResp.status === 'fulfilled') {
+        const assessmentsData = (assessmentsResp.value as any).data || assessmentsResp.value || [];
+        const assessmentsArray = Array.isArray(assessmentsData) ? assessmentsData : (assessmentsData.items || assessmentsData.results || []);
+        
+        // Filter assessments assigned to this assessor
+        const assignedAssessments = assessmentsArray.filter((assessment: any) => {
+          if (!assessorId) return false;
+          const assessmentAssessorId = assessment.assessorId || assessment.assessor?._id || assessment.assessor?.id;
+          return assessmentAssessorId === assessorId || assessmentAssessorId === assessorId.toString();
+        });
+
+        // Generate notifications from assessments
+        for (const assessment of assignedAssessments) {
+          const farmId = assessment.farmId || assessment.farm?._id || assessment.farm?.id;
+          let farmerName = "Unknown Farmer";
+          let location = "Unknown Location";
+          let farmerId = "";
+
+          // Try to get farmer info from assessment data
+          if (assessment.farm) {
+            if (assessment.farm.farmerId) {
+              farmerId = assessment.farm.farmerId._id || assessment.farm.farmerId.id || assessment.farm.farmerId || "";
+              farmerName = assessment.farm.farmerId.firstName && assessment.farm.farmerId.lastName
+                ? `${assessment.farm.farmerId.firstName} ${assessment.farm.farmerId.lastName}`
+                : assessment.farm.farmerId.email || assessment.farm.farmerId.phoneNumber || "Unknown Farmer";
+            }
+            
+            if (assessment.farm.location) {
+              if (typeof assessment.farm.location === 'string') {
+                location = assessment.farm.location;
+              } else if (assessment.farm.location.coordinates && Array.isArray(assessment.farm.location.coordinates)) {
+                location = `${assessment.farm.location.coordinates[1]?.toFixed(4)}, ${assessment.farm.location.coordinates[0]?.toFixed(4)}`;
+              }
+            }
+          }
+
+          // Try to get farmer info from API if not in assessment
+          if (farmerName === "Unknown Farmer" && farmId) {
+            try {
+              const farmData = await getFarmById(farmId);
+              const farm = farmData.data || farmData;
+              if (farm?.farmerId) {
+                const farmerInfo = typeof farm.farmerId === 'string' 
+                  ? await getUserById(farm.farmerId).catch(() => null)
+                  : farm.farmerId;
+                if (farmerInfo) {
+                  const farmer = farmerInfo.data || farmerInfo;
+                  farmerId = farmer._id || farmer.id || "";
+                  farmerName = farmer.firstName && farmer.lastName
+                    ? `${farmer.firstName} ${farmer.lastName}`
+                    : farmer.email || farmer.phoneNumber || "Unknown Farmer";
+                }
+              }
+              if (farm?.location && !location) {
+                if (typeof farm.location === 'string') {
+                  location = farm.location;
+                } else if (farm.location.coordinates && Array.isArray(farm.location.coordinates)) {
+                  location = `${farm.location.coordinates[1]?.toFixed(4)}, ${farm.location.coordinates[0]?.toFixed(4)}`;
+                }
+              }
+            } catch (err) {
+              console.error('Failed to load farm data:', err);
+            }
+          }
+
+          const assessmentId = assessment._id || assessment.id || "";
+          const assessmentDate = assessment.createdAt || assessment.assessmentDate || new Date().toISOString();
+          const status = assessment.status?.toLowerCase() || "pending";
+          
+          // Create notification based on assessment status
+          if (status === "pending" || status === "in_progress") {
+            const daysSinceCreation = Math.floor((new Date().getTime() - new Date(assessmentDate).getTime()) / (1000 * 60 * 60 * 24));
+            const isNew = daysSinceCreation <= 1;
+            
+            notificationsList.push({
+              id: `assessment-${assessmentId}`,
+              type: isNew ? "new_assignment" : "assessment_reminder",
+              title: isNew ? "New Assessment Assignment" : "Assessment Due Soon",
+              message: isNew 
+                ? `You have been assigned a new risk assessment for farmer ${farmerName}${location !== "Unknown Location" ? ` in ${location}` : ""}.`
+                : `Risk assessment for farmer ${farmerName}${location !== "Unknown Location" ? ` in ${location}` : ""} is pending. Please complete your field visit.`,
+              priority: isNew ? "high" : "medium",
+              status: "unread",
+              timestamp: assessmentDate,
+              farmerId,
+              farmerName,
+              location,
+              assessmentType: "risk_assessment",
+              assessmentId
+            });
+          } else if (status === "submitted" || status === "approved") {
+            notificationsList.push({
+              id: `assessment-approved-${assessmentId}`,
+              type: "assessment_approved",
+              title: "Assessment Approved",
+              message: `Your risk assessment for farmer ${farmerName}${location !== "Unknown Location" ? ` in ${location}` : ""} has been ${status === "approved" ? "approved" : "submitted"} ${status === "approved" ? "by the insurer" : ""}.`,
+              priority: "low",
+              status: "read",
+              timestamp: assessmentDate,
+              farmerId,
+              farmerName,
+              location,
+              assessmentId,
+              assessmentType: "risk_assessment"
+            });
+          }
+        }
+      }
+
+      // Process claims
+      if (claimsResp.status === 'fulfilled') {
+        const claimsData = (claimsResp.value as any).data || claimsResp.value || [];
+        const claimsArray = Array.isArray(claimsData) ? claimsData : (claimsData.items || claimsData.results || []);
+        
+        // Filter claims assigned to this assessor
+        const assignedClaims = claimsArray.filter((claim: any) => {
+          if (!assessorId) return false;
+          const claimAssessorId = claim.assessorId || claim.assessor?._id || claim.assessor?.id;
+          return claimAssessorId === assessorId || claimAssessorId === assessorId.toString();
+        });
+
+        // Generate notifications from claims
+        for (const claim of assignedClaims) {
+          const claimId = claim._id || claim.id || "";
+          const claimDate = claim.createdAt || claim.submittedAt || new Date().toISOString();
+          const farmerId = claim.farmerId?._id || claim.farmerId || claim.farmer?.id || "";
+          let farmerName = "Unknown Farmer";
+          let location = "Unknown Location";
+
+          // Get farmer info
+          if (claim.farmer || claim.farmerId) {
+            const farmer = claim.farmer || claim.farmerId;
+            if (typeof farmer === 'object') {
+              farmerName = farmer.firstName && farmer.lastName
+                ? `${farmer.firstName} ${farmer.lastName}`
+                : farmer.email || farmer.phoneNumber || "Unknown Farmer";
+            }
+          }
+
+          // Try to get farmer info from API if needed
+          if (farmerName === "Unknown Farmer" && farmerId) {
+            try {
+              const farmerData: any = await getUserById(farmerId);
+              const farmer = farmerData.data || farmerData;
+              farmerName = farmer.firstName && farmer.lastName
+                ? `${farmer.firstName} ${farmer.lastName}`
+                : farmer.email || farmer.phoneNumber || "Unknown Farmer";
+            } catch (err) {
+              console.error('Failed to load farmer data:', err);
+            }
+          }
+
+          notificationsList.push({
+            id: `claim-${claimId}`,
+            type: "claim_assignment",
+            title: "New Claim Assessment",
+            message: `You have been assigned to assess claim ${claim.claimNumber || claimId} for farmer ${farmerName}${location !== "Unknown Location" ? ` in ${location}` : ""} regarding ${claim.lossEventType || claim.damageType || "damage"}.`,
+            priority: "high",
+            status: claim.status === "pending" ? "unread" : "read",
+            timestamp: claimDate,
+            farmerId,
+            farmerName,
+            location,
+            claimId,
+            assessmentType: "loss_assessment"
+          });
+        }
+      }
+
+      // Sort notifications by timestamp (newest first)
+      notificationsList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      setNotifications(notificationsList);
+    } catch (err: any) {
+      console.error('Failed to load notifications:', err);
+      setError(err.message || 'Failed to load notifications');
+      toast({
+        title: 'Error loading notifications',
+        description: err.message || 'Failed to load notifications',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -164,14 +318,25 @@ export default function AssessorNotifications() {
 
   const unreadCount = notifications.filter(n => n.status === "unread").length;
 
-  const handleNotificationClick = (notification: any) => {
+  const handleNotificationClick = (notification: Notification) => {
     setSelectedNotification(notification);
     setIsDetailOpen(true);
+    // Mark as read when clicked
+    if (notification.status === "unread") {
+      setNotifications(prev => prev.map(n => 
+        n.id === notification.id ? { ...n, status: "read" as const } : n
+      ));
+    }
   };
 
-  const handleMarkAsRead = (e: React.MouseEvent, notificationId: number) => {
+  const handleMarkAsRead = (e: React.MouseEvent, notificationId: string) => {
     e.stopPropagation();
-    // Handle mark as read logic here
+    setNotifications(prev => prev.map(n => 
+      n.id === notificationId ? { ...n, status: "read" as const } : n
+    ));
+    if (selectedNotification?.id === notificationId) {
+      setSelectedNotification({ ...selectedNotification, status: "read" });
+    }
   };
 
   return (
@@ -186,6 +351,16 @@ export default function AssessorNotifications() {
           <Badge variant="outline" className="bg-orange-50 text-orange-700">
             {unreadCount} unread
           </Badge>
+          <Button 
+            onClick={loadNotifications}
+            variant="outline"
+            size="sm"
+            className="border-gray-700 text-white hover:bg-gray-800"
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </div>
       </div>
 
@@ -234,18 +409,55 @@ export default function AssessorNotifications() {
         </CardContent>
       </Card>
 
+      {/* Loading State */}
+      {loading && (
+        <Card>
+          <CardContent className="p-12">
+            <div className="flex items-center justify-center">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
+                <p className="text-white/60">Loading notifications...</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center text-red-400">
+              <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
+              <p>{error}</p>
+              <Button 
+                onClick={loadNotifications} 
+                className="mt-4 bg-teal-600 hover:bg-teal-700 text-white"
+              >
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Notifications List */}
-      <div className="space-y-4">
-        {filteredNotifications.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Bell className="h-12 w-12 text-white/60 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-white mb-2">No notifications found</h3>
-              <p className="text-white/70">Try adjusting your search or filter criteria.</p>
-            </CardContent>
-          </Card>
-        ) : (
-          filteredNotifications.map((notification) => (
+      {!loading && !error && (
+        <div className="space-y-4">
+          {filteredNotifications.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Bell className="h-12 w-12 text-white/60 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-white mb-2">No notifications found</h3>
+                <p className="text-white/70">
+                  {notifications.length === 0 
+                    ? "You have no notifications yet. Notifications will appear here when you receive new assignments."
+                    : "Try adjusting your search or filter criteria."}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredNotifications.map((notification) => (
             <Card 
               key={notification.id} 
               className={`${dashboardTheme.card} transition-all duration-200 cursor-pointer hover:bg-white/5 ${
@@ -278,7 +490,7 @@ export default function AssessorNotifications() {
                     <div className="flex items-center gap-4 text-xs text-white/60">
                       <div className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {notification.timestamp}
+                        {new Date(notification.timestamp).toLocaleString()}
                       </div>
                       {notification.farmerName && (
                         <div className="flex items-center gap-1">
@@ -298,8 +510,9 @@ export default function AssessorNotifications() {
               </CardContent>
             </Card>
           ))
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Notification Settings */}
       <Card>
@@ -400,7 +613,7 @@ export default function AssessorNotifications() {
                     <p className="text-xs text-gray-400 mb-1">Timestamp</p>
                     <div className="flex items-center gap-2 text-sm text-white">
                       <Clock className="h-4 w-4 text-gray-400" />
-                      {selectedNotification.timestamp}
+                      {new Date(selectedNotification.timestamp).toLocaleString()}
                     </div>
                   </div>
                   {selectedNotification.dueDate && (
@@ -506,7 +719,6 @@ export default function AssessorNotifications() {
                       onClick={(e) => {
                         e.stopPropagation();
                         handleMarkAsRead(e, selectedNotification.id);
-                        setIsDetailOpen(false);
                       }}
                     >
                       Mark as Read

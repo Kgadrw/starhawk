@@ -109,46 +109,9 @@ export default function PolicyDetailsView({ policy, onBack, onEdit, onDelete }: 
     setIsEditing(false);
   };
 
-  const mockClaims = [
-    {
-      id: "CLM-001",
-      date: "2024-09-15",
-      amount: 45000,
-      status: "approved",
-      description: "Drought damage to maize crop"
-    },
-    {
-      id: "CLM-002",
-      date: "2024-08-20",
-      amount: 32000,
-      status: "pending",
-      description: "Pest infestation affecting crop yield"
-    }
-  ];
-
-  const mockPayments = [
-    {
-      id: "PAY-001",
-      date: "2024-01-15",
-      amount: 15000,
-      type: "premium",
-      status: "completed"
-    },
-    {
-      id: "PAY-002",
-      date: "2024-02-15",
-      amount: 15000,
-      type: "premium",
-      status: "completed"
-    },
-    {
-      id: "PAY-003",
-      date: "2024-03-15",
-      amount: 15000,
-      type: "premium",
-      status: "pending"
-    }
-  ];
+  // Claims and payments will be loaded from API in the future
+  const mockClaims: any[] = [];
+  const mockPayments: any[] = [];
 
   return (
     <div className="space-y-6">
