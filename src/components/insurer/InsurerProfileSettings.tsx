@@ -7,13 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { getUserProfile, updateUserProfile } from "@/services/usersAPI";
+import { getUserProfile } from "@/services/usersAPI";
 import { getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
-import { 
-  User, 
-  Shield, 
-  Key, 
-  Bell,
+import {
+  User,
+  Shield,
+  Key,
   Save,
   Eye,
   EyeOff
@@ -45,12 +44,12 @@ export default function InsurerProfileSettings() {
         setLoading(false);
         return;
       }
-      
+
       setLoading(true);
       try {
         const response: any = await getUserProfile();
         const user = response.data || response;
-        
+
         if (user) {
           setProfileData({
             email: user.email || insurerEmail || "",
@@ -91,28 +90,12 @@ export default function InsurerProfileSettings() {
     sessionTimeout: "30"
   });
 
-  const [notificationSettings, setNotificationSettings] = useState({
-    emailNotifications: true,
-    smsNotifications: false,
-    pushNotifications: true,
-    riskAssessmentAlerts: true,
-    claimAlerts: true,
-    paymentAlerts: true,
-    systemAlerts: false,
-    weeklyReports: true,
-    monthlyReports: true
-  });
-
   const handleProfileUpdate = (field: string, value: string) => {
     setProfileData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSecurityUpdate = (field: string, value: string | boolean) => {
     setSecurityData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleNotificationUpdate = (field: string, value: boolean) => {
-    setNotificationSettings(prev => ({ ...prev, [field]: value }));
   };
 
   const renderProfileTab = () => (
@@ -311,132 +294,6 @@ export default function InsurerProfileSettings() {
     </div>
   );
 
-  const renderNotificationsTab = () => (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Bell className="h-5 w-5 mr-2" />
-            Notification Preferences
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div>
-            <h4 className="font-medium text-white mb-3">Communication Channels</h4>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-white">Email Notifications</p>
-                  <p className="text-sm text-white/70">Receive notifications via email</p>
-                </div>
-                <Switch
-                  checked={notificationSettings.emailNotifications}
-                  onCheckedChange={(checked) => handleNotificationUpdate('emailNotifications', checked)}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-white">SMS Notifications</p>
-                  <p className="text-sm text-white/70">Receive notifications via SMS</p>
-                </div>
-                <Switch
-                  checked={notificationSettings.smsNotifications}
-                  onCheckedChange={(checked) => handleNotificationUpdate('smsNotifications', checked)}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-white">Push Notifications</p>
-                  <p className="text-sm text-white/70">Receive browser push notifications</p>
-                </div>
-                <Switch
-                  checked={notificationSettings.pushNotifications}
-                  onCheckedChange={(checked) => handleNotificationUpdate('pushNotifications', checked)}
-                />
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          <div>
-            <h4 className="font-medium text-white mb-3">Alert Types</h4>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-white">Risk Assessment Alerts</p>
-                  <p className="text-sm text-white/70">New risk assessments requiring review</p>
-                </div>
-                <Switch
-                  checked={notificationSettings.riskAssessmentAlerts}
-                  onCheckedChange={(checked) => handleNotificationUpdate('riskAssessmentAlerts', checked)}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-white">Claim Alerts</p>
-                  <p className="text-sm text-white/70">New claims filed by farmers</p>
-                </div>
-                <Switch
-                  checked={notificationSettings.claimAlerts}
-                  onCheckedChange={(checked) => handleNotificationUpdate('claimAlerts', checked)}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-white">Payment Alerts</p>
-                  <p className="text-sm text-white/70">Premium payments and due dates</p>
-                </div>
-                <Switch
-                  checked={notificationSettings.paymentAlerts}
-                  onCheckedChange={(checked) => handleNotificationUpdate('paymentAlerts', checked)}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-white">System Alerts</p>
-                  <p className="text-sm text-white/70">System maintenance and updates</p>
-                </div>
-                <Switch
-                  checked={notificationSettings.systemAlerts}
-                  onCheckedChange={(checked) => handleNotificationUpdate('systemAlerts', checked)}
-                />
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          <div>
-            <h4 className="font-medium text-white mb-3">Reports</h4>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-white">Weekly Reports</p>
-                  <p className="text-sm text-white/70">Receive weekly summary reports</p>
-                </div>
-                <Switch
-                  checked={notificationSettings.weeklyReports}
-                  onCheckedChange={(checked) => handleNotificationUpdate('weeklyReports', checked)}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-white">Monthly Reports</p>
-                  <p className="text-sm text-white/70">Receive monthly summary reports</p>
-                </div>
-                <Switch
-                  checked={notificationSettings.monthlyReports}
-                  onCheckedChange={(checked) => handleNotificationUpdate('monthlyReports', checked)}
-                />
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -452,8 +309,7 @@ export default function InsurerProfileSettings() {
         <nav className="-mb-px flex space-x-8">
           {[
             { id: "profile", label: "Profile", icon: User },
-            { id: "security", label: "Security", icon: Shield },
-            { id: "notifications", label: "Notifications", icon: Bell }
+            { id: "security", label: "Security", icon: Shield }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -478,7 +334,6 @@ export default function InsurerProfileSettings() {
       <div className="pt-6">
         {activeTab === "profile" && renderProfileTab()}
         {activeTab === "security" && renderSecurityTab()}
-        {activeTab === "notifications" && renderNotificationsTab()}
       </div>
 
       {/* Save Button */}
