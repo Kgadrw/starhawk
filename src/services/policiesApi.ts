@@ -1,18 +1,21 @@
 // Policies API Service
-// Use proxy in development to avoid CORS issues, full URL in production
-const POLICIES_BASE_URL = import.meta.env.DEV
-  ? '/api/v1/policies'
-  : 'https://starhawk-backend-agriplatform.onrender.com/api/v1/policies';
+// Using centralized API configuration
+import { API_BASE_URL, API_ENDPOINTS, getAuthToken } from '@/config/api';
+
+const POLICIES_BASE_URL = `${API_BASE_URL}${API_ENDPOINTS.POLICIES.BASE}`;
 
 interface PolicyData {
-  farmerId: string;
-  cropType: string;
-  coverageAmount: number;
-  premium: number;
+  farmerId?: string;
+  cropType?: string;
+  coverageAmount?: number;
+  premium?: number;
   startDate: string;
   endDate: string;
   status?: string;
   notes?: string;
+  // Assessment-based policy creation (new format)
+  assessmentId?: string;
+  coverageLevel?: 'BASIC' | 'STANDARD' | 'PREMIUM';
   [key: string]: any;
 }
 
@@ -33,7 +36,7 @@ class PoliciesApiService {
   }
 
   private getToken(): string | null {
-    return localStorage.getItem('token');
+    return getAuthToken();
   }
 
   private async request<T>(
@@ -61,8 +64,19 @@ class PoliciesApiService {
       const response = await fetch(url, config);
 
       if (response.status === 401) {
+        // Clear all authentication data
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('role');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('phoneNumber');
+        localStorage.removeItem('email');
+        
+        // Redirect to login page
+        if (typeof window !== 'undefined') {
+          window.location.href = '/';
+        }
+        
         throw new Error('Authentication required. Please log in again.');
       }
 
@@ -87,10 +101,37 @@ class PoliciesApiService {
   }
 
   // Create Policy
+  // Supports both old format (farmerId, cropType, etc.) and new format (assessmentId, coverageLevel)
   async createPolicy(policyData: PolicyData) {
-    return this.request<any>('', {
-      method: 'POST',
-      body: JSON.stringify(policyData),
+    // If assessmentId is provided, use new format; otherwise use old format for backward compatibility
+    if (policyData.assessmentId) {
+      // New assessment-based format
+      const assessmentPolicyData = {
+        assessmentId: policyData.assessmentId,
+        coverageLevel: policyData.coverageLevel || 'STANDARD',
+        startDate: policyData.startDate,
+        endDate: policyData.endDate,
+      };
+      return this.request<any>('', {
+        method: 'POST',
+        body: JSON.stringify(assessmentPolicyData),
+      });
+    } else {
+      // Old format for backward compatibility
+      return this.request<any>('', {
+        method: 'POST',
+        body: JSON.stringify(policyData),
+      });
+    }
+  }
+
+  // Create Policy from Assessment (explicit method)
+  async createPolicyFromAssessment(assessmentId: string, coverageLevel: 'BASIC' | 'STANDARD' | 'PREMIUM', startDate: string, endDate: string) {
+    return this.createPolicy({
+      assessmentId,
+      coverageLevel,
+      startDate,
+      endDate,
     });
   }
 
@@ -130,6 +171,8 @@ export default policiesApiService;
 
 // Export convenience functions
 export const createPolicy = (policyData: PolicyData) => policiesApiService.createPolicy(policyData);
+export const createPolicyFromAssessment = (assessmentId: string, coverageLevel: 'BASIC' | 'STANDARD' | 'PREMIUM', startDate: string, endDate: string) => 
+  policiesApiService.createPolicyFromAssessment(assessmentId, coverageLevel, startDate, endDate);
 export const getPolicies = (page?: number, size?: number, status?: string) => policiesApiService.getPolicies(page, size, status);
 export const getPolicyById = (id: string) => policiesApiService.getPolicyById(id);
 export const updatePolicy = (id: string, updateData: UpdatePolicyData) => policiesApiService.updatePolicy(id, updateData);

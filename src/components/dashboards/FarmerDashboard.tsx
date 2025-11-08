@@ -7,47 +7,37 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import DashboardLayout from "../layout/DashboardLayout";
 import { getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
-import { getFarms } from "@/services/farmsApi";
-import { getClaims } from "@/services/claimsApi";
+import { getFarms, createFarm, createInsuranceRequest, getFarmById, getWeatherForecast, getHistoricalWeather, getVegetationStats } from "@/services/farmsApi";
+import { getClaims, createClaim } from "@/services/claimsApi";
+import { getPolicies } from "@/services/policiesApi";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  PieChart, 
-  Pie, 
-  Cell, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  LineChart,
-  Line
-} from "recharts";
 import { 
   User, 
   FileText, 
-  Plus, 
   AlertTriangle,
   CheckCircle,
   Clock,
-  DollarSign,
-  TrendingUp,
   MapPin,
   Phone,
   Mail,
-  Bell,
   Settings,
   Upload,
   Camera,
-  Info,
   Crop,
-  BarChart3
+  BarChart3,
+  Plus,
+  ArrowLeft,
+  Save,
+  Shield,
+  Eye,
+  TrendingUp,
+  CloudRain,
+  Droplets,
+  Thermometer,
+  Wind
 } from "lucide-react";
 
 export default function FarmerDashboard() {
@@ -70,6 +60,54 @@ export default function FarmerDashboard() {
   const [claimsLoading, setClaimsLoading] = useState(false);
   const [claimsError, setClaimsError] = useState<string | null>(null);
   
+  // State for Create Farm Page
+  const [isCreating, setIsCreating] = useState(false);
+  const [newFieldData, setNewFieldData] = useState({
+    name: "",
+    cropType: "",
+    latitude: "",
+    longitude: "",
+    area: "",
+    boundaryType: "auto" // "auto" or "manual"
+  });
+  
+  // State for File Claim Page
+  const [policies, setPolicies] = useState<any[]>([]);
+  const [policiesLoading, setPoliciesLoading] = useState(false);
+  const [isSubmittingClaim, setIsSubmittingClaim] = useState(false);
+  const [claimFormData, setClaimFormData] = useState({
+    policyId: "",
+    lossEventType: "",
+    lossDescription: "",
+    damagePhotos: [] as string[]
+  });
+
+  // State for Insurance Request
+  const [insuranceRequestDialog, setInsuranceRequestDialog] = useState<{
+    open: boolean;
+    farmId: string | null;
+    farmName: string;
+  }>({ open: false, farmId: null, farmName: "" });
+  const [insuranceRequestNotes, setInsuranceRequestNotes] = useState("");
+  const [isRequestingInsurance, setIsRequestingInsurance] = useState(false);
+
+  // State for Farm Details View
+  const [selectedFarm, setSelectedFarm] = useState<any | null>(null);
+  const [farmDetailsLoading, setFarmDetailsLoading] = useState(false);
+
+  // State for Farm Analytics
+  const [farmAnalytics, setFarmAnalytics] = useState<{
+    weatherForecast: any;
+    historicalWeather: any;
+    vegetationStats: any;
+    loading: boolean;
+  }>({
+    weatherForecast: null,
+    historicalWeather: null,
+    vegetationStats: null,
+    loading: false
+  });
+  
   // Load data for dashboard and pages
   useEffect(() => {
     if (farmerId) {
@@ -80,25 +118,74 @@ export default function FarmerDashboard() {
         loadFarms();
       } else if (activePage === "loss-reports") {
         loadClaims();
+      } else if (activePage === "file-claim") {
+        loadPolicies();
+      } else if (activePage === "farm-details" && selectedFarm) {
+        const farmId = selectedFarm._id || selectedFarm.id;
+        if (farmId) loadFarmDetails(farmId);
+      } else if (activePage === "farm-analytics" && selectedFarm) {
+        const farmId = selectedFarm._id || selectedFarm.id;
+        if (farmId) loadFarmAnalytics(farmId);
       }
     }
-  }, [activePage, farmerId]);
+  }, [activePage, farmerId, selectedFarm]);
   
   const loadFarms = async () => {
     setFarmsLoading(true);
     setFarmsError(null);
     try {
       const response: any = await getFarms(1, 100);
-      const farmsData = response.data || response || [];
-      const farmsArray = Array.isArray(farmsData) ? farmsData : (farmsData.items || farmsData.results || []);
+      console.log('Farms API Response:', response);
+      
+      // Handle different response structures
+      let farmsArray: any[] = [];
+      
+      if (Array.isArray(response)) {
+        farmsArray = response;
+      } else if (response?.data) {
+        farmsArray = Array.isArray(response.data) ? response.data : [];
+      } else if (response?.items) {
+        farmsArray = Array.isArray(response.items) ? response.items : [];
+      } else if (response?.results) {
+        farmsArray = Array.isArray(response.results) ? response.results : [];
+      } else if (response?.farms) {
+        farmsArray = Array.isArray(response.farms) ? response.farms : [];
+      }
+      
+      console.log('Extracted farms array:', farmsArray);
       
       // Filter farms by the logged-in farmer
+      // The API might associate farms with the farmer automatically, or we might need to check different fields
       const farmerFarms = farmsArray.filter((farm: any) => {
-        const farmFarmerId = farm.farmerId?._id || farm.farmerId || farm.farmer?._id || farm.farmer;
-        return farmFarmerId === farmerId || farmFarmerId === farmerId.toString();
+        // Check various possible farmer ID fields
+        const farmFarmerId = farm.farmerId?._id || 
+                            farm.farmerId || 
+                            farm.farmer?._id || 
+                            farm.farmer ||
+                            farm.userId?._id ||
+                            farm.userId;
+        
+        // If farmerId matches, or if no farmerId is set (API might auto-associate with logged-in user)
+        const matchesFarmer = farmFarmerId && (
+          farmFarmerId === farmerId || 
+          farmFarmerId === farmerId.toString() ||
+          farmFarmerId.toString() === farmerId.toString()
+        );
+        
+        // If no farmerId is set, include it (API might auto-associate with logged-in user)
+        const noFarmerId = !farmFarmerId;
+        
+        return matchesFarmer || noFarmerId;
       });
       
+      console.log('Filtered farmer farms:', farmerFarms);
       setFarms(farmerFarms);
+      
+      if (farmerFarms.length === 0 && farmsArray.length > 0) {
+        console.warn('No farms found for farmer, but farms exist. Showing all farms.');
+        // If filtering removed all farms but farms exist, show all (API might auto-filter)
+        setFarms(farmsArray);
+      }
     } catch (err: any) {
       console.error('Failed to load farms:', err);
       setFarmsError(err.message || 'Failed to load farms');
@@ -140,49 +227,322 @@ export default function FarmerDashboard() {
     }
   };
 
+  const loadPolicies = async () => {
+    setPoliciesLoading(true);
+    try {
+      const response: any = await getPolicies(1, 100);
+      const policiesData = response.data || response || [];
+      const policiesArray = Array.isArray(policiesData) ? policiesData : (policiesData.items || policiesData.results || []);
+      
+      // Filter policies for the logged-in farmer
+      const farmerPolicies = policiesArray.filter((policy: any) => {
+        const policyFarmerId = policy.farmerId?._id || policy.farmerId || policy.farmer?._id || policy.farmer;
+        return policyFarmerId === farmerId || policyFarmerId === farmerId.toString();
+      });
+      
+      setPolicies(farmerPolicies);
+    } catch (err: any) {
+      console.error('Failed to load policies:', err);
+      toast({
+        title: 'Error loading policies',
+        description: err.message || 'Failed to load policies',
+        variant: 'destructive'
+      });
+    } finally {
+      setPoliciesLoading(false);
+    }
+  };
 
-  // Chart data
-  const policyDistributionData = [
-    { name: "Maize", value: 250000, color: "#10B981" },
-    { name: "Rice", value: 180000, color: "#3B82F6" },
-    { name: "Beans", value: 120000, color: "#F59E0B" }
-  ];
+  // Handle Insurance Request
+  const handleRequestInsurance = async () => {
+    if (!insuranceRequestDialog.farmId) return;
 
-  const claimsOverTimeData = [
-    { month: "Jan", claims: 0, amount: 0 },
-    { month: "Feb", claims: 0, amount: 0 },
-    { month: "Mar", claims: 0, amount: 0 },
-    { month: "Apr", claims: 0, amount: 0 },
-    { month: "May", claims: 0, amount: 0 },
-    { month: "Jun", claims: 0, amount: 0 },
-    { month: "Jul", claims: 0, amount: 0 },
-    { month: "Aug", claims: 0, amount: 0 },
-    { month: "Sep", claims: 1, amount: 45000 },
-    { month: "Oct", claims: 1, amount: 35000 },
-    { month: "Nov", claims: 0, amount: 0 },
-    { month: "Dec", claims: 0, amount: 0 }
-  ];
+    setIsRequestingInsurance(true);
+    try {
+      await createInsuranceRequest(
+        insuranceRequestDialog.farmId,
+        insuranceRequestNotes || undefined
+      );
 
-  const coverageTrendData = [
-    { month: "Jan", coverage: 250000 },
-    { month: "Feb", coverage: 250000 },
-    { month: "Mar", coverage: 430000 },
-    { month: "Apr", coverage: 430000 },
-    { month: "May", coverage: 430000 },
-    { month: "Jun", coverage: 550000 },
-    { month: "Jul", coverage: 550000 },
-    { month: "Aug", coverage: 550000 },
-    { month: "Sep", coverage: 550000 },
-    { month: "Oct", coverage: 550000 },
-    { month: "Nov", coverage: 550000 },
-    { month: "Dec", coverage: 550000 }
-  ];
+      toast({
+        title: 'Success',
+        description: 'Insurance request submitted successfully! An insurer will review your request.',
+      });
 
-  const statusDistributionData = [
-    { name: "Active", value: 2, color: "#10B981" },
-    { name: "Pending", value: 1, color: "#F59E0B" },
-    { name: "Expired", value: 0, color: "#EF4444" }
-  ];
+      // Close dialog and reset
+      setInsuranceRequestDialog({ open: false, farmId: null, farmName: "" });
+      setInsuranceRequestNotes("");
+      
+      // Reload farms to update status
+      await loadFarms();
+    } catch (err: any) {
+      console.error('Failed to request insurance:', err);
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to submit insurance request',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsRequestingInsurance(false);
+    }
+  };
+
+  // Load Farm Details
+  const loadFarmDetails = async (farmId: string) => {
+    setFarmDetailsLoading(true);
+    try {
+      const farm = await getFarmById(farmId);
+      setSelectedFarm(farm.data || farm);
+      setActivePage("farm-details");
+    } catch (err: any) {
+      console.error('Failed to load farm details:', err);
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to load farm details',
+        variant: 'destructive'
+      });
+    } finally {
+      setFarmDetailsLoading(false);
+    }
+  };
+
+  // Load Farm Analytics
+  const loadFarmAnalytics = async (farmId: string) => {
+    setFarmAnalytics({ ...farmAnalytics, loading: true });
+    try {
+      const endDate = new Date().toISOString().split('T')[0];
+      const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const historicalStartDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      const [forecast, historical, stats] = await Promise.all([
+        getWeatherForecast(farmId, startDate, endDate).catch(() => null),
+        getHistoricalWeather(farmId, historicalStartDate, endDate).catch(() => null),
+        getVegetationStats(farmId, startDate, endDate).catch(() => null)
+      ]);
+
+      setFarmAnalytics({
+        weatherForecast: forecast,
+        historicalWeather: historical,
+        vegetationStats: stats,
+        loading: false
+      });
+    } catch (err: any) {
+      console.error('Failed to load farm analytics:', err);
+      setFarmAnalytics({ ...farmAnalytics, loading: false });
+    }
+  };
+
+  const handleSubmitClaim = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!claimFormData.policyId) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select a policy',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    if (!claimFormData.lossEventType) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select a loss event type',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    if (!claimFormData.lossDescription) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please provide a loss description',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsSubmittingClaim(true);
+    try {
+      const claimData = {
+        policyId: claimFormData.policyId,
+        lossEventType: claimFormData.lossEventType.toUpperCase(),
+        lossDescription: claimFormData.lossDescription,
+        damagePhotos: claimFormData.damagePhotos || []
+      };
+      
+      await createClaim(claimData);
+      
+      toast({
+        title: 'Success',
+        description: 'Claim filed successfully!',
+      });
+      
+      // Reset form
+      setClaimFormData({
+        policyId: "",
+        lossEventType: "",
+        lossDescription: "",
+        damagePhotos: []
+      });
+      
+      // Navigate to loss reports to see the new claim
+      setActivePage("loss-reports");
+      loadClaims();
+    } catch (err: any) {
+      console.error('Failed to file claim:', err);
+      toast({
+        title: 'Error filing claim',
+        description: err.message || 'Failed to file claim',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSubmittingClaim(false);
+    }
+  };
+
+  const handleCreateField = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newFieldData.name || !newFieldData.latitude || !newFieldData.longitude) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields (Name, Latitude, Longitude)',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const lat = parseFloat(newFieldData.latitude);
+    const lng = parseFloat(newFieldData.longitude);
+
+    if (isNaN(lat) || isNaN(lng)) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please enter valid numeric values for latitude and longitude',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (lat < -90 || lat > 90) {
+      toast({
+        title: 'Validation Error',
+        description: 'Latitude must be between -90 and 90',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (lng < -180 || lng > 180) {
+      toast({
+        title: 'Validation Error',
+        description: 'Longitude must be between -180 and 180',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      // Calculate boundary offset based on area if provided
+      let offset = 0.001; // Default offset (approximately 111 meters)
+      if (newFieldData.area && parseFloat(newFieldData.area) > 0) {
+        // Convert hectares to approximate degrees
+        // 1 hectare ≈ 0.0001 square degrees (rough approximation)
+        const areaInDegrees = Math.sqrt(parseFloat(newFieldData.area) * 0.0001);
+        offset = areaInDegrees / 2;
+      }
+
+      // Create a simple square boundary around the point location
+      const boundaryCoordinates = [
+        [
+          [lng - offset, lat - offset], // Southwest corner
+          [lng + offset, lat - offset], // Southeast corner
+          [lng + offset, lat + offset], // Northeast corner
+          [lng - offset, lat + offset], // Northwest corner
+          [lng - offset, lat - offset]  // Close the polygon
+        ]
+      ];
+
+      // Format data according to API specification
+      const farmData: any = {
+        name: newFieldData.name.trim(),
+        coordinates: [lng, lat], // [longitude, latitude] format
+        boundary: {
+          type: 'Polygon',
+          coordinates: boundaryCoordinates
+        }
+      };
+
+      // Add cropType in uppercase format as per API spec
+      if (newFieldData.cropType && newFieldData.cropType.trim()) {
+        farmData.cropType = newFieldData.cropType.trim().toUpperCase();
+      }
+
+      // Validate all required fields are present
+      if (!farmData.name) {
+        throw new Error('Field name is required');
+      }
+      if (!farmData.coordinates || farmData.coordinates.length !== 2) {
+        throw new Error('Valid coordinates are required');
+      }
+      if (!farmData.boundary || !farmData.boundary.coordinates) {
+        throw new Error('Boundary coordinates are required');
+      }
+
+      console.log('📤 Preparing to create farm with data:', JSON.stringify(farmData, null, 2));
+      console.log('📤 Farm data validation:', {
+        hasName: !!farmData.name,
+        hasCoordinates: !!farmData.coordinates,
+        coordinates: farmData.coordinates,
+        hasBoundary: !!farmData.boundary,
+        boundaryType: farmData.boundary?.type,
+        boundaryCoordinatesLength: farmData.boundary?.coordinates?.[0]?.length,
+        cropType: farmData.cropType || 'Not provided'
+      });
+
+      const response = await createFarm(farmData);
+      
+      console.log('✅ Farm creation API response:', response);
+      
+      if (response) {
+        console.log('✅ Farm created successfully with ID:', response.id || response._id || 'N/A');
+      }
+      
+      toast({
+        title: 'Success',
+        description: 'Field created successfully!',
+      });
+
+      // Reset form
+      setNewFieldData({
+        name: "",
+        cropType: "",
+        latitude: "",
+        longitude: "",
+        area: "",
+        boundaryType: "auto"
+      });
+      
+      // Reload farms first to ensure new farm is fetched
+      await loadFarms();
+      
+      // Navigate back to my fields page after a short delay to show success
+      setTimeout(() => {
+        setActivePage("my-fields");
+      }, 500);
+    } catch (err: any) {
+      console.error('Failed to create field:', err);
+      toast({
+        title: 'Error creating field',
+        description: err.message || 'Failed to create field',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -191,7 +551,7 @@ export default function FarmerDashboard() {
       case "in_review": return "bg-blue-100 text-blue-800";
       case "approved": return "bg-green-100 text-green-800";
       case "rejected": return "bg-red-100 text-red-800";
-      default: return "bg-gray-800/20 text-white";
+      default: return "bg-gray-100 text-gray-700";
     }
   };
 
@@ -209,437 +569,69 @@ export default function FarmerDashboard() {
   const renderDashboard = () => (
     <div className="space-y-6">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-green-50/80 to-emerald-50/80 dark:from-green-900/20 dark:to-emerald-900/20 backdrop-blur-sm border border-green-200/50 dark:border-green-700/30 rounded-2xl p-6 shadow-lg shadow-green-100/30 dark:shadow-green-900/20">
-        <h1 className="text-2xl font-bold mb-2 text-white">
+      <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6 shadow-sm">
+        <h1 className="text-2xl font-bold mb-2 text-gray-900">
           Welcome back, {farmerName}
         </h1>
-        <p className="text-green-600 dark:text-green-400">
-          Farmer ID: {farmerId} • Last login: Today at 2:30 PM
+        <p className="text-green-600">
+          Farmer ID: {farmerId}
         </p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid gap-6 md:grid-cols-4">
-        <Card className={`${dashboardTheme.card} hover:border-green-400/50 transition-all duration-300 rounded-2xl shadow-lg shadow-green-900/20`}>
+        <Card className={`${dashboardTheme.card} hover:border-green-300 transition-all duration-300 rounded-2xl shadow-sm`}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-white/70">My Fields</p>
-                <p className="text-2xl font-bold text-white">{farms.length}</p>
+                <p className="text-sm font-medium text-gray-600">My Fields</p>
+                <p className="text-2xl font-bold text-gray-900">{farms.length}</p>
               </div>
-              <div className="w-12 h-12 bg-green-400/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-md shadow-green-900/20">
-                <Crop className="h-6 w-6 text-green-400" />
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <Crop className="h-6 w-6 text-green-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:border-teal-400/80 dark:hover:border-teal-500/80 transition-all duration-300 bg-teal-50/90 dark:bg-teal-900/20 backdrop-blur-sm border border-teal-200/60 dark:border-teal-700/30 rounded-2xl shadow-lg shadow-teal-100/30 dark:shadow-teal-900/20">
+        <Card className="hover:border-teal-300 transition-all duration-300 bg-white border border-gray-200 rounded-2xl shadow-sm">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-white/70">Total Claims</p>
-                <p className="text-2xl font-bold text-white">{claims.length}</p>
+                <p className="text-sm font-medium text-gray-600">Total Claims</p>
+                <p className="text-2xl font-bold text-gray-900">{claims.length}</p>
               </div>
-              <div className="w-12 h-12 bg-yellow-100/80 dark:bg-yellow-900/40 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-md shadow-yellow-200/30 dark:shadow-yellow-900/20">
-                <FileText className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+              <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
+                <FileText className="h-6 w-6 text-yellow-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:border-lime-400/80 dark:hover:border-lime-500/80 transition-all duration-300 bg-lime-50/90 dark:bg-lime-900/20 backdrop-blur-sm border border-lime-200/60 dark:border-lime-700/30 rounded-2xl shadow-lg shadow-lime-100/30 dark:shadow-lime-900/20">
+        <Card className="hover:border-blue-300 transition-all duration-300 bg-white border border-gray-200 rounded-2xl shadow-sm">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-white/70">Pending Claims</p>
-                <p className="text-2xl font-bold text-white">{claims.filter(c => c.status?.toLowerCase() === 'pending').length}</p>
+                <p className="text-sm font-medium text-gray-600">Pending Claims</p>
+                <p className="text-2xl font-bold text-gray-900">{claims.filter(c => c.status?.toLowerCase() === 'pending').length}</p>
               </div>
-              <div className="w-12 h-12 bg-blue-100/80 dark:bg-blue-900/40 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-md shadow-blue-200/30 dark:shadow-blue-900/20">
-                <Clock className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <Clock className="h-6 w-6 text-blue-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:border-cyan-400/80 dark:hover:border-cyan-500/80 transition-all duration-300 bg-cyan-50/90 dark:bg-cyan-900/20 backdrop-blur-sm border border-cyan-200/60 dark:border-cyan-700/30 rounded-2xl shadow-lg shadow-cyan-100/30 dark:shadow-cyan-900/20">
+        <Card className="hover:border-green-300 transition-all duration-300 bg-white border border-gray-200 rounded-2xl shadow-sm">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-white/70">Approved Claims</p>
-                <p className="text-2xl font-bold text-white">{claims.filter(c => c.status?.toLowerCase() === 'approved').length}</p>
+                <p className="text-sm font-medium text-gray-600">Approved Claims</p>
+                <p className="text-2xl font-bold text-gray-900">{claims.filter(c => c.status?.toLowerCase() === 'approved').length}</p>
               </div>
-              <div className="w-12 h-12 bg-orange-100/80 dark:bg-orange-900/40 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-md shadow-orange-200/30 dark:shadow-orange-900/20">
-                <CheckCircle className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <CheckCircle className="h-6 w-6 text-green-600" />
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts Section */}
-            <div className="grid gap-6 lg:grid-cols-2">
-        {/* Policy Distribution Pie Chart */}
-        <Card className="bg-gradient-to-br from-white/90 to-green-50/50 dark:from-gray-800/90 dark:to-gray-900/50 backdrop-blur-xl border border-green-200/30 dark:border-gray-700/30 rounded-3xl shadow-2xl shadow-green-200/20 dark:shadow-gray-900/20 hover:shadow-green-300/30 dark:hover:shadow-gray-800/30 transition-all duration-500">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center text-white text-lg font-bold">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl flex items-center justify-center mr-3 shadow-lg shadow-green-200/50">
-                <TrendingUp className="h-5 w-5 text-white" />
-              </div>
-              Policy Coverage Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-72 relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={policyDistributionData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={70}
-                    outerRadius={120}
-                    paddingAngle={8}
-                    dataKey="value"
-                    stroke="rgba(255,255,255,0.8)"
-                    strokeWidth={3}
-                  >
-                    {policyDistributionData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={entry.color}
-                        style={{
-                          filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))',
-                          transition: 'all 0.3s ease'
-                        }}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value, name, props) => [
-                      `${value.toLocaleString()} RWF`, 
-                      'Coverage'
-                    ]}
-                    contentStyle={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                      border: 'none',
-                      borderRadius: '16px',
-                      backdropFilter: 'blur(20px)',
-                      boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-                      padding: '12px 16px',
-                      fontSize: '14px',
-                      fontWeight: '500'
-                    }}
-                    labelStyle={{
-                      color: '#374151',
-                      fontWeight: '600',
-                      fontSize: '13px'
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              {/* Center text */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-white">
-                    {policyDistributionData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
-                  </div>
-                  <div className="text-sm text-white/70 font-medium">Total RWF</div>
-                </div>
-              </div>
-            </div>
-            <div className="mt-6 space-y-3">
-              {policyDistributionData.map((item, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-green-50/60 backdrop-blur-sm rounded-xl border border-green-200/40 hover:bg-green-100/80 transition-all duration-300">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: item.color }}></div>
-                    <span className="text-white/80 font-medium">{item.name}</span>
-                  </div>
-                  <span className="font-bold text-white bg-gray-800/80 px-3 py-1 rounded-lg">{item.value.toLocaleString()} RWF</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Claims Over Time Bar Chart */}
-        <Card className="bg-gradient-to-br from-white/90 to-blue-50/50 dark:from-gray-800/90 dark:to-gray-900/50 backdrop-blur-xl border border-blue-200/30 dark:border-gray-700/30 rounded-3xl shadow-2xl shadow-blue-200/20 dark:shadow-gray-900/20 hover:shadow-blue-300/30 dark:hover:shadow-gray-800/30 transition-all duration-500">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center text-white text-lg font-bold">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center mr-3 shadow-lg shadow-blue-200/50">
-                <AlertTriangle className="h-5 w-5 text-white" />
-              </div>
-              Claims Filed This Year
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={claimsOverTimeData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <defs>
-                    <linearGradient id="claimsGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#1D4ED8" stopOpacity={0.6}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.3} />
-                  <XAxis 
-                    dataKey="month" 
-                    stroke="#6B7280"
-                    fontSize={12}
-                    fontWeight="500"
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis 
-                    stroke="#6B7280"
-                    fontSize={12}
-                    fontWeight="500"
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                      border: 'none',
-                      borderRadius: '16px',
-                      backdropFilter: 'blur(20px)',
-                      boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-                      padding: '12px 16px',
-                      fontSize: '14px',
-                      fontWeight: '500'
-                    }}
-                    labelStyle={{
-                      color: '#374151',
-                      fontWeight: '600',
-                      fontSize: '13px'
-                    }}
-                  />
-                  <Bar 
-                    dataKey="claims" 
-                    fill="url(#claimsGradient)" 
-                    radius={[8, 8, 0, 0]}
-                    name="Claims Count"
-                    style={{
-                      filter: 'drop-shadow(0 4px 8px rgba(59, 130, 246, 0.3))'
-                    }}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Additional Charts Row */}
-            <div className="grid gap-6 lg:grid-cols-2">
-        {/* Coverage Trend Area Chart */}
-        <Card className="bg-gradient-to-br from-white/90 to-emerald-50/50 backdrop-blur-xl border border-emerald-200/30 rounded-3xl shadow-2xl shadow-emerald-200/20 hover:shadow-emerald-300/30 transition-all duration-500">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center text-white text-lg font-bold">
-              <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-green-500 rounded-xl flex items-center justify-center mr-3 shadow-lg shadow-emerald-200/50">
-                <DollarSign className="h-5 w-5 text-white" />
-              </div>
-              Coverage Growth Trend
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={coverageTrendData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <defs>
-                    <linearGradient id="coverageGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10B981" stopOpacity={0.4}/>
-                      <stop offset="50%" stopColor="#059669" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="#047857" stopOpacity={0.1}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.3} />
-                  <XAxis 
-                    dataKey="month" 
-                    stroke="#6B7280"
-                    fontSize={12}
-                    fontWeight="500"
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis 
-                    stroke="#6B7280"
-                    fontSize={12}
-                    fontWeight="500"
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(value) => `${(value / 1000)}K`}
-                  />
-                  <Tooltip 
-                    formatter={(value) => [`${value.toLocaleString()} RWF`, 'Coverage']}
-                    contentStyle={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                      border: 'none',
-                      borderRadius: '16px',
-                      backdropFilter: 'blur(20px)',
-                      boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-                      padding: '12px 16px',
-                      fontSize: '14px',
-                      fontWeight: '500'
-                    }}
-                    labelStyle={{
-                      color: '#374151',
-                      fontWeight: '600',
-                      fontSize: '13px'
-                    }}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="coverage" 
-                    stroke="#10B981" 
-                    fill="url(#coverageGradient)"
-                    strokeWidth={3}
-                    style={{
-                      filter: 'drop-shadow(0 4px 8px rgba(16, 185, 129, 0.2))'
-                    }}
-                  />
-                </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-          </CardContent>
-        </Card>
-
-        {/* Policy Status Distribution */}
-        <Card className="bg-gradient-to-br from-white/90 to-yellow-50/50 backdrop-blur-xl border border-yellow-200/30 rounded-3xl shadow-2xl shadow-yellow-200/20 hover:shadow-yellow-300/30 transition-all duration-500">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center text-white text-lg font-bold">
-              <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-xl flex items-center justify-center mr-3 shadow-lg shadow-yellow-200/50">
-                <FileText className="h-5 w-5 text-white" />
-              </div>
-              Policy Status Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-72 relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={statusDistributionData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={100}
-                    paddingAngle={8}
-                    dataKey="value"
-                    stroke="rgba(255,255,255,0.8)"
-                    strokeWidth={3}
-                  >
-                    {statusDistributionData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={entry.color}
-                        style={{
-                          filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))',
-                          transition: 'all 0.3s ease'
-                        }}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value) => [`${value} policies`, 'Count']}
-                    contentStyle={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                      border: 'none',
-                      borderRadius: '16px',
-                      backdropFilter: 'blur(20px)',
-                      boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-                      padding: '12px 16px',
-                      fontSize: '14px',
-                      fontWeight: '500'
-                    }}
-                    labelStyle={{
-                      color: '#374151',
-                      fontWeight: '600',
-                      fontSize: '13px'
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              {/* Center text */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-white">
-                    {statusDistributionData.reduce((sum, item) => sum + item.value, 0)}
-                  </div>
-                  <div className="text-sm text-white/70 font-medium">Total Policies</div>
-                </div>
-              </div>
-            </div>
-            <div className="mt-6 space-y-3">
-              {statusDistributionData.map((item, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-green-50/60 backdrop-blur-sm rounded-xl border border-green-200/40 hover:bg-green-100/80 transition-all duration-300">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: item.color }}></div>
-                    <span className="text-white/80 font-medium">{item.name}</span>
-                  </div>
-                  <span className="font-bold text-white bg-gray-800/80 px-3 py-1 rounded-lg">{item.value}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-              </div>
-
-      {/* Quick Actions */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="hover:border-violet-400/80 dark:hover:border-violet-500/80 transition-all duration-300 bg-violet-50/90 dark:bg-violet-900/20 backdrop-blur-sm border border-violet-200/60 dark:border-violet-700/30 rounded-2xl shadow-lg shadow-violet-100/30 dark:shadow-violet-900/20">
-          <CardHeader>
-            <CardTitle className="flex items-center text-white">
-              <Plus className="h-5 w-5 mr-2 text-white/70" />
-              Quick Actions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button 
-              onClick={() => setActivePage("request-insurance")}
-              className="w-full justify-start bg-gradient-to-r from-green-500/80 to-emerald-600/80 hover:from-green-600/90 hover:to-emerald-700/90 text-white backdrop-blur-sm shadow-md shadow-green-200/30"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Request New Insurance
-            </Button>
-            <Button 
-              onClick={() => setActivePage("file-claim")}
-              className="w-full justify-start bg-gradient-to-r from-blue-500/80 to-indigo-600/80 hover:from-blue-600/90 hover:to-indigo-700/90 text-white backdrop-blur-sm shadow-md shadow-blue-200/30"
-            >
-              <AlertTriangle className="h-4 w-4 mr-2" />
-              File a Claim
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className={`${dashboardTheme.card}`}>
-          <CardHeader>
-            <CardTitle className="flex items-center text-white">
-              <Bell className="h-5 w-5 mr-2 text-white/70" />
-              Recent Notifications
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {notifications.map((notification) => (
-                <div key={notification.id} className={`flex items-start space-x-3 p-4 rounded-xl border ${
-                  notification.type === 'success' ? 'bg-green-600/30 border-green-600/40' : 'bg-blue-600/30 border-blue-600/40'
-                }`}>
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center mt-1 ${
-                    notification.type === 'success' ? 'bg-green-400/20 text-green-400' : 'bg-blue-400/20 text-blue-400'
-                  }`}>
-                    {notification.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <Info className="h-4 w-4" />}
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-sm font-medium text-white mb-1">
-                      {notification.type === 'success' ? 'Policy Update' : 'System Notification'}
-                    </h4>
-                    <p className="text-sm text-white/80 mb-1">{notification.message}</p>
-                    <p className="text-xs text-white/60">{notification.date}</p>
-                  </div>
-                </div>
-              ))}
             </div>
           </CardContent>
         </Card>
@@ -652,18 +644,27 @@ export default function FarmerDashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">My Fields</h2>
-          <p className="text-white/80">Manage and view your registered fields</p>
+          <h2 className="text-2xl font-bold text-gray-900">My Fields</h2>
+          <p className="text-gray-600">Manage and view your registered fields</p>
         </div>
-        <Button 
-          variant="outline" 
-          onClick={loadFarms}
-          disabled={farmsLoading}
-          className="border-gray-700 text-white hover:bg-gray-800"
-        >
-          <Crop className={`h-4 w-4 mr-2 ${farmsLoading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex gap-3">
+          <Button 
+            variant="outline" 
+            onClick={loadFarms}
+            disabled={farmsLoading}
+            className="border-gray-300 text-gray-700 hover:bg-gray-100"
+          >
+            <Crop className={`h-4 w-4 mr-2 ${farmsLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button 
+            onClick={() => setActivePage("create-farm")}
+            className="bg-green-600 hover:bg-green-700 text-gray-900"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Field
+          </Button>
+        </div>
       </div>
 
       {farmsLoading && (
@@ -672,7 +673,7 @@ export default function FarmerDashboard() {
             <div className="flex items-center justify-center">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
-                <p className="text-white/60">Loading fields...</p>
+                <p className="text-gray-600">Loading fields...</p>
               </div>
             </div>
           </CardContent>
@@ -682,12 +683,12 @@ export default function FarmerDashboard() {
       {farmsError && !farmsLoading && (
         <Card className={`${dashboardTheme.card}`}>
           <CardContent className="p-6">
-            <div className="text-center text-red-400">
+            <div className="text-center text-red-600">
               <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
               <p>{farmsError}</p>
               <Button 
                 onClick={loadFarms} 
-                className="mt-4 bg-green-600 hover:bg-green-700 text-white"
+                className="mt-4 bg-green-600 hover:bg-green-700 text-gray-900"
               >
                 Retry
               </Button>
@@ -699,50 +700,112 @@ export default function FarmerDashboard() {
       {!farmsLoading && !farmsError && (
         <Card className={`${dashboardTheme.card}`}>
           <CardHeader>
-            <CardTitle className="text-white">Registered Fields</CardTitle>
+            <CardTitle className="text-gray-900">Registered Fields</CardTitle>
           </CardHeader>
           <CardContent>
             {farms.length === 0 ? (
               <div className="text-center py-12">
-                <Crop className="h-16 w-16 mx-auto text-white/40 mb-4" />
-                <p className="text-white/60 text-lg mb-2">No fields registered</p>
-                <p className="text-white/40 text-sm">Register your fields to get started with crop insurance</p>
+                <Crop className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-600 text-lg mb-2">No fields registered</p>
+                <p className="text-gray-500 text-sm">Register your fields to get started with crop insurance</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-gray-800">
-                      <th className="text-left py-4 px-6 font-medium text-white/80">Field Name</th>
-                      <th className="text-left py-4 px-6 font-medium text-white/80">Crop Type</th>
-                      <th className="text-left py-4 px-6 font-medium text-white/80">Area (ha)</th>
-                      <th className="text-left py-4 px-6 font-medium text-white/80">Location</th>
-                      <th className="text-left py-4 px-6 font-medium text-white/80">Status</th>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-4 px-6 font-medium text-gray-700">Field Name</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-700">Crop Type</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-700">Area (ha)</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-700">Location</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-700">Status</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-700">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {farms.map((farm, index) => (
-                      <tr 
-                        key={farm._id || farm.id || index} 
-                        className={`border-b border-gray-800/50 hover:bg-gray-900/50 transition-colors ${
-                          index % 2 === 0 ? "bg-gray-950/30" : ""
-                        }`}
-                      >
-                        <td className="py-4 px-6 text-white font-medium">{farm.name || "Unnamed Field"}</td>
-                        <td className="py-4 px-6 text-white">{farm.cropType || farm.crop || "N/A"}</td>
-                        <td className="py-4 px-6 text-white">{farm.area || farm.size || 0} ha</td>
-                        <td className="py-4 px-6 text-white">
-                          {farm.location?.coordinates 
-                            ? `${farm.location.coordinates[1]?.toFixed(4)}, ${farm.location.coordinates[0]?.toFixed(4)}`
-                            : farm.location || "N/A"}
-                        </td>
-                        <td className="py-4 px-6">
-                          <Badge className="bg-green-500/20 text-green-400 border border-green-500/30">
-                            {farm.status || "Active"}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
+                    {farms.map((farm, index) => {
+                      const farmId = farm._id || farm.id;
+                      const isInsured = farm.status === 'INSURED' || farm.status === 'insured';
+                      const isRegistered = farm.status === 'REGISTERED' || farm.status === 'registered' || !farm.status;
+                      
+                      return (
+                        <tr 
+                          key={farmId || index} 
+                          className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${
+                            index % 2 === 0 ? "bg-gray-50" : ""
+                          }`}
+                        >
+                          <td className="py-4 px-6 text-gray-900 font-medium">{farm.name || "Unnamed Field"}</td>
+                          <td className="py-4 px-6 text-gray-700">
+                            {farm.cropType || farm.crop || "N/A"}
+                          </td>
+                          <td className="py-4 px-6 text-gray-700">
+                            {farm.area ? `${farm.area} ha` : farm.size ? `${farm.size} ha` : "N/A"}
+                          </td>
+                          <td className="py-4 px-6 text-gray-700 text-sm">
+                            {farm.location?.coordinates && Array.isArray(farm.location.coordinates) && farm.location.coordinates.length >= 2
+                              ? `${farm.location.coordinates[1]?.toFixed(4)}, ${farm.location.coordinates[0]?.toFixed(4)}`
+                              : farm.coordinates && Array.isArray(farm.coordinates) && farm.coordinates.length >= 2
+                              ? `${farm.coordinates[1]?.toFixed(4)}, ${farm.coordinates[0]?.toFixed(4)}`
+                              : farm.location || "N/A"}
+                          </td>
+                          <td className="py-4 px-6">
+                            <Badge className={`${
+                              farm.status === 'PENDING' || farm.status === 'pending' 
+                                ? "bg-yellow-100 text-yellow-700 border border-yellow-200"
+                                : farm.status === 'INSURED' || farm.status === 'insured'
+                                ? "bg-green-100 text-green-700 border border-green-200"
+                                : farm.status === 'REGISTERED' || farm.status === 'registered'
+                                ? "bg-blue-100 text-blue-700 border border-blue-200"
+                                : "bg-gray-100 text-gray-700 border border-gray-200"
+                            }`}>
+                              {farm.status || "REGISTERED"}
+                            </Badge>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="flex gap-2">
+                              {isRegistered && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setInsuranceRequestDialog({
+                                    open: true,
+                                    farmId: farmId,
+                                    farmName: farm.name || "Unnamed Field"
+                                  })}
+                                  className="border-green-600 text-green-600 hover:bg-green-50"
+                                >
+                                  <Shield className="h-3 w-3 mr-1" />
+                                  Request Insurance
+                                </Button>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => loadFarmDetails(farmId)}
+                                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                              >
+                                <Eye className="h-3 w-3 mr-1" />
+                                View
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedFarm(farm);
+                                  loadFarmAnalytics(farmId);
+                                  setActivePage("farm-analytics");
+                                }}
+                                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                              >
+                                <TrendingUp className="h-3 w-3 mr-1" />
+                                Analytics
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -750,6 +813,387 @@ export default function FarmerDashboard() {
           </CardContent>
         </Card>
       )}
+
+      {/* Insurance Request Dialog */}
+      <Dialog open={insuranceRequestDialog.open} onOpenChange={(open) => 
+        setInsuranceRequestDialog({ ...insuranceRequestDialog, open })
+      }>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-gray-900">Request Insurance</DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Request insurance coverage for: <strong>{insuranceRequestDialog.farmName}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label className="text-gray-700">Additional Notes (Optional)</Label>
+              <Textarea
+                value={insuranceRequestNotes}
+                onChange={(e) => setInsuranceRequestNotes(e.target.value)}
+                placeholder="Please provide any additional information about your farm..."
+                className="mt-2 border-gray-300"
+                rows={4}
+              />
+            </div>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setInsuranceRequestDialog({ open: false, farmId: null, farmName: "" });
+                  setInsuranceRequestNotes("");
+                }}
+                className="border-gray-300 text-gray-700 hover:bg-gray-100"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleRequestInsurance}
+                disabled={isRequestingInsurance}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {isRequestingInsurance ? (
+                  <>
+                    <Clock className="h-4 w-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Shield className="h-4 w-4 mr-2" />
+                    Submit Request
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+    </div>
+  );
+
+  const renderCreateFarm = () => {
+    // Calculate boundary offset based on area if provided
+    const calculateOffset = () => {
+      if (newFieldData.area && parseFloat(newFieldData.area) > 0) {
+        // Convert hectares to approximate degrees
+        // 1 hectare ≈ 0.0001 square degrees (rough approximation)
+        const areaInDegrees = Math.sqrt(parseFloat(newFieldData.area) * 0.0001);
+        return areaInDegrees / 2;
+      }
+      return 0.001; // Default offset
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <Button
+              variant="ghost"
+              onClick={() => setActivePage("my-fields")}
+              className="text-gray-900 hover:bg-gray-50 mb-4"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to My Fields
+            </Button>
+            <h2 className="text-2xl font-bold text-gray-900">Create New Field</h2>
+            <p className="text-gray-600">Fill in all the details to register a new field</p>
+          </div>
+        </div>
+
+        <Card className={`${dashboardTheme.card}`}>
+          <CardHeader>
+            <CardTitle className="text-gray-900">Field Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleCreateField} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="fieldName" className="text-gray-900">Field Name *</Label>
+                <Input
+                  id="fieldName"
+                  value={newFieldData.name}
+                  onChange={(e) => setNewFieldData({ ...newFieldData, name: e.target.value })}
+                  placeholder="Enter field name (e.g., North Field, Main Farm)"
+                  required
+                  className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 "
+                />
+                <p className="text-xs text-gray-500">Give your field a descriptive name</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cropType" className="text-gray-900">Crop Type *</Label>
+                <Select
+                  value={newFieldData.cropType}
+                  onValueChange={(value) => setNewFieldData({ ...newFieldData, cropType: value })}
+                  required
+                >
+                  <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-900 ">
+                    <SelectValue placeholder="Select crop type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MAIZE">Maize</SelectItem>
+                    <SelectItem value="RICE">Rice</SelectItem>
+                    <SelectItem value="BEANS">Beans</SelectItem>
+                    <SelectItem value="WHEAT">Wheat</SelectItem>
+                    <SelectItem value="POTATOES">Potatoes</SelectItem>
+                    <SelectItem value="COFFEE">Coffee</SelectItem>
+                    <SelectItem value="BANANAS">Bananas</SelectItem>
+                    <SelectItem value="SORGHUM">Sorghum</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500">Select the type of crop grown in this field</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="latitude" className="text-gray-900">Latitude *</Label>
+                  <Input
+                    id="latitude"
+                    type="number"
+                    step="any"
+                    value={newFieldData.latitude}
+                    onChange={(e) => setNewFieldData({ ...newFieldData, latitude: e.target.value })}
+                    placeholder="e.g., -1.9441"
+                    required
+                    className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 "
+                  />
+                  <p className="text-xs text-gray-500">Field center latitude (-90 to 90)</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="longitude" className="text-gray-900">Longitude *</Label>
+                  <Input
+                    id="longitude"
+                    type="number"
+                    step="any"
+                    value={newFieldData.longitude}
+                    onChange={(e) => setNewFieldData({ ...newFieldData, longitude: e.target.value })}
+                    placeholder="e.g., 30.0619"
+                    required
+                    className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 "
+                  />
+                  <p className="text-xs text-gray-500">Field center longitude (-180 to 180)</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="area" className="text-gray-900">Area (hectares)</Label>
+                <Input
+                  id="area"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={newFieldData.area}
+                  onChange={(e) => setNewFieldData({ ...newFieldData, area: e.target.value })}
+                  placeholder="e.g., 2.5"
+                  className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 "
+                />
+                <p className="text-xs text-gray-500">
+                  Optional: Enter the field area in hectares. This will be used to calculate the boundary size.
+                  {newFieldData.area && parseFloat(newFieldData.area) > 0 && (
+                    <span className="block mt-1 text-green-600">
+                      Boundary will be calculated automatically based on {newFieldData.area} hectares
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              <div className="pt-4 border-t border-gray-200">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-start gap-3">
+                    <MapPin className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 mb-1">Boundary Information</p>
+                      <p className="text-xs text-gray-600">
+                        The field boundary will be automatically calculated as a square polygon around the center point.
+                        {newFieldData.area && parseFloat(newFieldData.area) > 0 
+                          ? ` Size: ~${calculateOffset().toFixed(4)} degrees (based on ${newFieldData.area} hectares).`
+                          : " Default size: 0.001 degrees (~111 meters)."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setActivePage("my-fields");
+                    setNewFieldData({
+                      name: "",
+                      cropType: "",
+                      latitude: "",
+                      longitude: "",
+                      area: "",
+                      boundaryType: "auto"
+                    });
+                  }}
+                  className="flex-1 bg-gray-50 hover:bg-gray-100 border border-gray-300 text-gray-900 "
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isCreating}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {isCreating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Create Field
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
+  const renderFileClaim = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">File a Claim</h2>
+          <p className="text-gray-600">Report crop damage and request compensation</p>
+        </div>
+      </div>
+
+      <Card className={`${dashboardTheme.card}`}>
+        <CardHeader>
+          <CardTitle className="text-gray-900">Claim Information</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmitClaim} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="policyId" className="text-gray-900">Policy *</Label>
+              {policiesLoading ? (
+                <div className="text-gray-500">Loading policies...</div>
+              ) : policies.length === 0 ? (
+                <div className="text-gray-500">
+                  <p>No active policies found. You need an active policy to file a claim.</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setActivePage("dashboard")}
+                    className="mt-2 border-gray-300 text-gray-900 hover:bg-gray-50"
+                  >
+                    Go to Dashboard
+                  </Button>
+                </div>
+              ) : (
+                <Select
+                  value={claimFormData.policyId}
+                  onValueChange={(value) => setClaimFormData({ ...claimFormData, policyId: value })}
+                  required
+                >
+                  <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-900 ">
+                    <SelectValue placeholder="Select a policy" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {policies.map((policy) => (
+                      <SelectItem key={policy._id || policy.id} value={policy._id || policy.id}>
+                        {policy.cropType || 'Policy'} - {policy.coverageAmount ? `RWF ${policy.coverageAmount.toLocaleString()}` : 'Active'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <p className="text-xs text-gray-500">Select the policy for this claim</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lossEventType" className="text-gray-900">Loss Event Type *</Label>
+              <Select
+                value={claimFormData.lossEventType}
+                onValueChange={(value) => setClaimFormData({ ...claimFormData, lossEventType: value })}
+                required
+              >
+                <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-900 ">
+                  <SelectValue placeholder="Select loss event type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DROUGHT">Drought</SelectItem>
+                  <SelectItem value="FLOOD">Flood</SelectItem>
+                  <SelectItem value="PEST_ATTACK">Pest Attack</SelectItem>
+                  <SelectItem value="DISEASE_OUTBREAK">Disease Outbreak</SelectItem>
+                  <SelectItem value="HAIL">Hail Damage</SelectItem>
+                  <SelectItem value="FIRE">Fire</SelectItem>
+                  <SelectItem value="THEFT">Theft</SelectItem>
+                  <SelectItem value="STORM">Storm</SelectItem>
+                  <SelectItem value="FROST">Frost</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">Type of event that caused the loss</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lossDescription" className="text-gray-900">Loss Description *</Label>
+              <Textarea
+                id="lossDescription"
+                value={claimFormData.lossDescription}
+                onChange={(e) => setClaimFormData({ ...claimFormData, lossDescription: e.target.value })}
+                placeholder="Describe the loss event and damage to your crops in detail..."
+                rows={6}
+                required
+                className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 "
+              />
+              <p className="text-xs text-gray-500">Provide a detailed description of the loss event</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="damagePhotos" className="text-gray-900">Damage Photos (Optional)</Label>
+              <Input
+                id="damagePhotos"
+                value={claimFormData.damagePhotos.join(', ')}
+                onChange={(e) => {
+                  const urls = e.target.value.split(',').map(url => url.trim()).filter(url => url);
+                  setClaimFormData({ ...claimFormData, damagePhotos: urls });
+                }}
+                placeholder="Enter photo URLs separated by commas (e.g., https://example.com/photo1.jpg, https://example.com/photo2.jpg)"
+                className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 "
+              />
+              <p className="text-xs text-gray-500">URLs of photos showing the damage (comma-separated)</p>
+            </div>
+
+            <div className="flex justify-end gap-4 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setActivePage("loss-reports")}
+                className="border-gray-300 text-gray-900 hover:bg-gray-50"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmittingClaim || policies.length === 0}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {isSubmittingClaim ? (
+                  <>
+                    <Clock className="h-4 w-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Submit Claim
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 
@@ -757,14 +1201,14 @@ export default function FarmerDashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Loss Reports</h2>
-          <p className="text-white/80">View and track your claim reports</p>
+          <h2 className="text-2xl font-bold text-gray-900">Loss Reports</h2>
+          <p className="text-gray-600">View and track your claim reports</p>
         </div>
         <Button 
           variant="outline" 
           onClick={loadClaims}
           disabled={claimsLoading}
-          className="border-gray-700 text-white hover:bg-gray-800"
+          className="border-gray-300 text-gray-900 hover:bg-gray-100"
         >
           <BarChart3 className={`h-4 w-4 mr-2 ${claimsLoading ? 'animate-spin' : ''}`} />
           Refresh
@@ -777,7 +1221,7 @@ export default function FarmerDashboard() {
             <div className="flex items-center justify-center">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
-                <p className="text-white/60">Loading loss reports...</p>
+                <p className="text-gray-500">Loading loss reports...</p>
               </div>
             </div>
           </CardContent>
@@ -787,12 +1231,12 @@ export default function FarmerDashboard() {
       {claimsError && !claimsLoading && (
         <Card className={`${dashboardTheme.card}`}>
           <CardContent className="p-6">
-            <div className="text-center text-red-400">
+            <div className="text-center text-red-600">
               <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
               <p>{claimsError}</p>
               <Button 
                 onClick={loadClaims} 
-                className="mt-4 bg-green-600 hover:bg-green-700 text-white"
+                className="mt-4 bg-green-600 hover:bg-green-700 text-gray-900"
               >
                 Retry
               </Button>
@@ -804,45 +1248,45 @@ export default function FarmerDashboard() {
       {!claimsLoading && !claimsError && (
         <Card className={`${dashboardTheme.card}`}>
           <CardHeader>
-            <CardTitle className="text-white">Claim Reports</CardTitle>
+            <CardTitle className="text-gray-900">Claim Reports</CardTitle>
           </CardHeader>
           <CardContent>
             {claims.length === 0 ? (
               <div className="text-center py-12">
-                <FileText className="h-16 w-16 mx-auto text-white/40 mb-4" />
-                <p className="text-white/60 text-lg mb-2">No loss reports found</p>
-                <p className="text-white/40 text-sm">Your claim reports will appear here</p>
+                <FileText className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-500 text-lg mb-2">No loss reports found</p>
+                <p className="text-gray-400 text-sm">Your claim reports will appear here</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-gray-800">
-                      <th className="text-left py-4 px-6 font-medium text-white/80">Claim ID</th>
-                      <th className="text-left py-4 px-6 font-medium text-white/80">Crop</th>
-                      <th className="text-left py-4 px-6 font-medium text-white/80">Date</th>
-                      <th className="text-left py-4 px-6 font-medium text-white/80">Damage Type</th>
-                      <th className="text-left py-4 px-6 font-medium text-white/80">Amount</th>
-                      <th className="text-left py-4 px-6 font-medium text-white/80">Status</th>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-4 px-6 font-medium text-gray-600">Claim ID</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-600">Crop</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-600">Date</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-600">Damage Type</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-600">Amount</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-600">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {claims.map((claim, index) => (
                       <tr 
                         key={claim._id || claim.id || index} 
-                        className={`border-b border-gray-800/50 hover:bg-gray-900/50 transition-colors ${
-                          index % 2 === 0 ? "bg-gray-950/30" : ""
+                        className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${
+                          index % 2 === 0 ? "bg-gray-50" : ""
                         }`}
                       >
-                        <td className="py-4 px-6 text-white font-medium">{claim.claimNumber || claim._id || claim.id || "N/A"}</td>
-                        <td className="py-4 px-6 text-white">{claim.cropType || claim.crop || "N/A"}</td>
-                        <td className="py-4 px-6 text-white">
+                        <td className="py-4 px-6 text-gray-900 font-medium">{claim.claimNumber || claim._id || claim.id || "N/A"}</td>
+                        <td className="py-4 px-6 text-gray-900">{claim.cropType || claim.crop || "N/A"}</td>
+                        <td className="py-4 px-6 text-gray-900">
                           {claim.createdAt || claim.submittedAt || claim.date 
                             ? new Date(claim.createdAt || claim.submittedAt || claim.date).toLocaleDateString()
                             : "N/A"}
                         </td>
-                        <td className="py-4 px-6 text-white">{claim.lossEventType || claim.damageType || "N/A"}</td>
-                        <td className="py-4 px-6 text-white">
+                        <td className="py-4 px-6 text-gray-900">{claim.lossEventType || claim.damageType || "N/A"}</td>
+                        <td className="py-4 px-6 text-gray-900">
                           {claim.amount || claim.claimAmount 
                             ? `${(claim.amount || claim.claimAmount).toLocaleString()} RWF`
                             : "N/A"}
@@ -865,10 +1309,289 @@ export default function FarmerDashboard() {
     </div>
   );
 
+  const renderFarmDetails = () => {
+    if (!selectedFarm) {
+      return (
+        <div className="space-y-6">
+          <Button
+            variant="ghost"
+            onClick={() => setActivePage("my-fields")}
+            className="text-gray-900 hover:bg-gray-50"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to My Fields
+          </Button>
+          <Card className={dashboardTheme.card}>
+            <CardContent className="p-12 text-center">
+              <p className="text-gray-600">No farm selected</p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    const farm = selectedFarm;
+    const coordinates = farm.location?.coordinates || farm.coordinates || [];
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setActivePage("my-fields");
+              setSelectedFarm(null);
+            }}
+            className="text-gray-900 hover:bg-gray-50"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to My Fields
+          </Button>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{farm.name || "Unnamed Field"}</h2>
+          <p className="text-gray-600">Field Details</p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card className={dashboardTheme.card}>
+            <CardHeader>
+              <CardTitle className="text-gray-900">Basic Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Field Name:</span>
+                <span className="text-gray-900 font-medium">{farm.name || "N/A"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Crop Type:</span>
+                <span className="text-gray-900 font-medium">{farm.cropType || farm.crop || "N/A"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Area:</span>
+                <span className="text-gray-900 font-medium">
+                  {farm.area ? `${farm.area} ha` : farm.size ? `${farm.size} ha` : "N/A"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Status:</span>
+                <Badge className={`
+                  ${farm.status === 'INSURED' || farm.status === 'insured'
+                    ? "bg-green-100 text-green-700 border border-green-200"
+                    : farm.status === 'REGISTERED' || farm.status === 'registered'
+                    ? "bg-blue-100 text-blue-700 border border-blue-200"
+                    : "bg-gray-100 text-gray-700 border border-gray-200"
+                  }
+                `}>
+                  {farm.status || "REGISTERED"}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className={dashboardTheme.card}>
+            <CardHeader>
+              <CardTitle className="text-gray-900">Location</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {coordinates.length >= 2 && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Latitude:</span>
+                    <span className="text-gray-900 font-medium">{coordinates[1]?.toFixed(6)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Longitude:</span>
+                    <span className="text-gray-900 font-medium">{coordinates[0]?.toFixed(6)}</span>
+                  </div>
+                </>
+              )}
+              {farm.eosdaFieldId && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">EOSDA Field ID:</span>
+                  <span className="text-gray-900 font-medium">{farm.eosdaFieldId}</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className={dashboardTheme.card}>
+          <CardHeader>
+            <CardTitle className="text-gray-900">Actions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-3">
+              {farm.status === 'REGISTERED' || farm.status === 'registered' || !farm.status ? (
+                <Button
+                  onClick={() => setInsuranceRequestDialog({
+                    open: true,
+                    farmId: farm._id || farm.id,
+                    farmName: farm.name || "Unnamed Field"
+                  })}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Request Insurance
+                </Button>
+              ) : null}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSelectedFarm(farm);
+                  loadFarmAnalytics(farm._id || farm.id);
+                  setActivePage("farm-analytics");
+                }}
+                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+              >
+                <TrendingUp className="h-4 w-4 mr-2" />
+                View Analytics
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
+  const renderFarmAnalytics = () => {
+    if (!selectedFarm) {
+      return (
+        <div className="space-y-6">
+          <Button
+            variant="ghost"
+            onClick={() => setActivePage("my-fields")}
+            className="text-gray-900 hover:bg-gray-50"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to My Fields
+          </Button>
+          <Card className={dashboardTheme.card}>
+            <CardContent className="p-12 text-center">
+              <p className="text-gray-600">No farm selected</p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    const { weatherForecast, historicalWeather, vegetationStats, loading } = farmAnalytics;
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setActivePage("farm-details");
+              }}
+              className="text-gray-900 hover:bg-gray-50"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Farm Details
+            </Button>
+            <h2 className="text-2xl font-bold text-gray-900 mt-2">
+              Farm Analytics: {selectedFarm.name || "Unnamed Field"}
+            </h2>
+            <p className="text-gray-600">Weather forecasts, historical data, and vegetation indices</p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => {
+              const farmId = selectedFarm._id || selectedFarm.id;
+              if (farmId) loadFarmAnalytics(farmId);
+            }}
+            disabled={loading}
+            className="border-gray-300 text-gray-700 hover:bg-gray-100"
+          >
+            <Clock className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
+
+        {loading ? (
+          <Card className={dashboardTheme.card}>
+            <CardContent className="p-12 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading analytics data...</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            {/* Weather Forecast */}
+            <Card className={dashboardTheme.card}>
+              <CardHeader>
+                <CardTitle className="text-gray-900 flex items-center gap-2">
+                  <CloudRain className="h-5 w-5" />
+                  Weather Forecast
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {weatherForecast ? (
+                  <div className="text-gray-600">
+                    <pre className="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded border border-gray-200">
+                      {JSON.stringify(weatherForecast, null, 2)}
+                    </pre>
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No weather forecast data available</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Historical Weather */}
+            <Card className={dashboardTheme.card}>
+              <CardHeader>
+                <CardTitle className="text-gray-900 flex items-center gap-2">
+                  <Thermometer className="h-5 w-5" />
+                  Historical Weather
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {historicalWeather ? (
+                  <div className="text-gray-600">
+                    <pre className="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded border border-gray-200">
+                      {JSON.stringify(historicalWeather, null, 2)}
+                    </pre>
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No historical weather data available</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Vegetation Statistics */}
+            <Card className={dashboardTheme.card}>
+              <CardHeader>
+                <CardTitle className="text-gray-900 flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Vegetation Indices (NDVI)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {vegetationStats ? (
+                  <div className="text-gray-600">
+                    <pre className="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded border border-gray-200">
+                      {JSON.stringify(vegetationStats, null, 2)}
+                    </pre>
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No vegetation statistics available</p>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
+      </div>
+    );
+  };
+
   const renderProfileSettings = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">Profile Settings</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Profile Settings</h2>
         <Button variant="outline" onClick={() => setActivePage("dashboard")}>
           Back to Dashboard
         </Button>
@@ -882,7 +1605,7 @@ export default function FarmerDashboard() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="fullName">Full Name</Label>
-              <Input id="fullName" value={farmerName} />
+              <Input id="fullName" value={farmerName} readOnly />
                 </div>
             <div className="space-y-2">
               <Label htmlFor="farmerId">Farmer ID</Label>
@@ -893,11 +1616,11 @@ export default function FarmerDashboard() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
-              <Input id="phone" placeholder="+250 7XX XXX XXX" />
+              <Input id="phone" value={farmerPhone || ""} readOnly placeholder="+250 7XX XXX XXX" />
               </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="your.email@example.com" />
+              <Input id="email" type="email" value={farmerEmail || ""} readOnly placeholder="your.email@example.com" />
             </div>
           </div>
 
@@ -918,7 +1641,11 @@ export default function FarmerDashboard() {
     switch (activePage) {
       case "dashboard": return renderDashboard();
       case "my-fields": return renderMyFields();
+      case "create-farm": return renderCreateFarm();
+      case "file-claim": return renderFileClaim();
       case "loss-reports": return renderLossReports();
+      case "farm-details": return renderFarmDetails();
+      case "farm-analytics": return renderFarmAnalytics();
       case "profile": return renderProfileSettings();
       default: return renderDashboard();
     }
@@ -927,6 +1654,7 @@ export default function FarmerDashboard() {
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: BarChart3 },
     { id: "my-fields", label: "My Fields", icon: Crop },
+    { id: "file-claim", label: "File Claim", icon: AlertTriangle },
     { id: "loss-reports", label: "Loss Reports", icon: FileText },
     { id: "profile", label: "Profile", icon: User }
   ];

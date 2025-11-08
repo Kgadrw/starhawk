@@ -48,7 +48,7 @@ export default function AdminLogin() {
 
   return (
     <CustomScrollbar>
-      <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 min-h-screen">
+      <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50 min-h-screen">
         <HomeNavbar />
 
         {/* Background Pattern */}
@@ -62,50 +62,43 @@ export default function AdminLogin() {
 
         {/* Main Content */}
         <div className="relative z-10 max-w-md mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-500 to-orange-600 rounded-2xl mb-4 shadow-lg">
-              <Shield className="h-8 w-8 text-white" />
-            </div>
-            <h2 className="text-4xl font-bold text-white mb-2">Admin Portal</h2>
-            <p className="text-white/70">System Administration & Control</p>
-          </div>
 
-          <Card className="bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl">
+          <Card className="bg-white border border-gray-200 shadow-lg">
             <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl text-center text-white">Sign In</CardTitle>
-              <CardDescription className="text-center text-white/60">
+              <CardTitle className="text-2xl text-center text-gray-900">Sign In</CardTitle>
+              <CardDescription className="text-center text-gray-600">
                 Enter your admin credentials to access the system
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="phoneNumber" className="text-white">Phone Number</Label>
+                  <Label htmlFor="phoneNumber" className="text-gray-700">Phone Number</Label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/40" />
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id="phoneNumber"
                       type="text"
                       placeholder="e.g. 0721234567"
                       value={formData.phoneNumber}
                       onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-red-500"
+                      className="pl-10 bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-green-500"
                       required
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-white">Password</Label>
+                  <Label htmlFor="password" className="text-gray-700">Password</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/40" />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id="password"
                       type="password"
                       placeholder="Enter password"
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-red-500"
+                      className="pl-10 bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-green-500"
                       required
                     />
                   </div>
@@ -113,7 +106,7 @@ export default function AdminLogin() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white shadow-lg"
+                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md"
                   disabled={isLoading}
                 >
                   {isLoading ? "Signing in..." : "Sign In"}
@@ -123,7 +116,7 @@ export default function AdminLogin() {
                 <Button
                   type="button"
                   variant="ghost"
-                  className="w-full text-white/70 hover:text-white hover:bg-white/10"
+                  className="w-full text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                   onClick={() => navigate("/role-selection")}
                 >
                   Back to Role Selection

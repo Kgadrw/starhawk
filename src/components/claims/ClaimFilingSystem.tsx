@@ -63,13 +63,15 @@ export function ClaimFilingSystem({ farmerId, onClaimSubmit, onCancel }: ClaimFi
   ]);
 
   const disasterTypes = [
-    { value: 'drought', label: 'Drought', icon: CloudRain, description: 'Lack of rainfall affecting crop growth' },
-    { value: 'flood', label: 'Flood', icon: CloudRain, description: 'Excessive rainfall causing water damage' },
-    { value: 'pest_attack', label: 'Pest Attack', icon: Crop, description: 'Insect or pest damage to crops' },
-    { value: 'disease_outbreak', label: 'Disease Outbreak', icon: AlertTriangle, description: 'Plant disease affecting crop health' },
-    { value: 'hail', label: 'Hail Damage', icon: CloudRain, description: 'Hail storm damage to crops' },
-    { value: 'fire', label: 'Fire', icon: AlertTriangle, description: 'Fire damage to crops or fields' },
-    { value: 'theft', label: 'Theft', icon: Shield, description: 'Crop theft or vandalism' }
+    { value: 'DROUGHT', label: 'Drought', icon: CloudRain, description: 'Lack of rainfall affecting crop growth' },
+    { value: 'FLOOD', label: 'Flood', icon: CloudRain, description: 'Excessive rainfall causing water damage' },
+    { value: 'PEST_ATTACK', label: 'Pest Attack', icon: Crop, description: 'Insect or pest damage to crops' },
+    { value: 'DISEASE_OUTBREAK', label: 'Disease Outbreak', icon: AlertTriangle, description: 'Plant disease affecting crop health' },
+    { value: 'HAIL', label: 'Hail Damage', icon: CloudRain, description: 'Hail storm damage to crops' },
+    { value: 'FIRE', label: 'Fire', icon: AlertTriangle, description: 'Fire damage to crops or fields' },
+    { value: 'THEFT', label: 'Theft', icon: Shield, description: 'Crop theft or vandalism' },
+    { value: 'STORM', label: 'Storm', icon: CloudRain, description: 'Storm damage to crops' },
+    { value: 'FROST', label: 'Frost', icon: CloudRain, description: 'Frost damage to crops' }
   ];
 
   const totalSteps = 4;
@@ -127,6 +129,18 @@ export function ClaimFilingSystem({ farmerId, onClaimSubmit, onCancel }: ClaimFi
 
   const handleSubmit = () => {
     if (validateStep(currentStep)) {
+      // Extract photo URLs from evidence files
+      const damagePhotos = claim.evidence?.map((file: any) => file.url).filter((url: string) => url) || [];
+      
+      // Format according to API spec: { policyId, lossEventType, lossDescription, damagePhotos }
+      const apiClaimData = {
+        policyId: claim.policyId!,
+        lossEventType: claim.disasterType?.toUpperCase() || '', // Map disasterType to lossEventType
+        lossDescription: claim.description || '', // Map description to lossDescription
+        damagePhotos: damagePhotos, // Extract URLs from evidence
+      };
+      
+      // Also create full ClaimRequest for backward compatibility
       const finalClaim: ClaimRequest = {
         id: `claim_${Date.now()}`,
         farmerId,
@@ -146,7 +160,9 @@ export function ClaimFilingSystem({ farmerId, onClaimSubmit, onCancel }: ClaimFi
           satelliteAnalyst: ''
         },
         trackingId: `TRK${Date.now()}`,
-        submissionDate: new Date().toISOString()
+        submissionDate: new Date().toISOString(),
+        // Add API-formatted data
+        ...apiClaimData
       };
       
       onClaimSubmit(finalClaim);

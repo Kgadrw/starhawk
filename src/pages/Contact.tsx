@@ -115,7 +115,7 @@ export default function Contact() {
 
   return (
     <CustomScrollbar>
-      <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 relative">
+      <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50 relative">
         {/* Navigation */}
         <HomeNavbar />
       
@@ -138,16 +138,16 @@ export default function Contact() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="text-center mb-12"
           >
-            <div className="inline-flex items-center space-x-2 bg-gray-800/10 backdrop-blur-sm px-3 py-1.5 rounded-full mb-4">
-              <Sparkles className="h-3 w-3 text-green-400" />
-              <span className="text-white/90 text-xs font-medium">Get in Touch</span>
+            <div className="inline-flex items-center space-x-2 bg-green-50 border border-green-200 px-3 py-1.5 rounded-full mb-4">
+              <Sparkles className="h-3 w-3 text-green-600" />
+              <span className="text-gray-900/90 text-xs font-medium">Get in Touch</span>
             </div>
             
-            <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent">
               Contact Our Team
             </h1>
             
-            <p className="text-base text-white/80 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-base text-gray-900/80 max-w-2xl mx-auto leading-relaxed">
               Ready to transform your agricultural insurance? Send us a message and we'll get back to you within 24 hours.
             </p>
           </motion.div>
@@ -158,13 +158,13 @@ export default function Contact() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.5 }}
           >
-            <Card className="bg-transparent backdrop-blur-sm border border-green-400/20 max-w-2xl mx-auto">
+            <Card className="bg-white border border-gray-200 max-w-2xl mx-auto">
             <CardContent className="p-8">
               {submitSuccess && (
                 <div className="mb-6 p-4 bg-green-500/20 border border-green-500/30 rounded-lg">
                   <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-5 w-5 text-green-400" />
-                    <span className="text-green-400 font-medium">Message sent successfully!</span>
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <span className="text-green-600 font-medium">Message sent successfully!</span>
                   </div>
                 </div>
               )}
@@ -172,18 +172,18 @@ export default function Contact() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <Label htmlFor="name" className="text-white text-sm">Full Name *</Label>
+                    <Label htmlFor="name" className="text-gray-900 text-sm">Full Name *</Label>
                     <Input
                       id="name"
                       value={formData.name}
                       onChange={(e) => handleInputChange("name", e.target.value)}
                       placeholder="Enter your full name"
                       required
-                      className="bg-transparent border-white/20 text-white placeholder:text-white/60 backdrop-blur-sm mt-1"
+                      className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-900/60 backdrop-blur-sm mt-1"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="email" className="text-white text-sm">Email Address *</Label>
+                    <Label htmlFor="email" className="text-gray-900 text-sm">Email Address *</Label>
                     <Input
                       id="email"
                       type="email"
@@ -191,42 +191,42 @@ export default function Contact() {
                       onChange={(e) => handleInputChange("email", e.target.value)}
                       placeholder="Enter your email"
                       required
-                      className="bg-transparent border-white/20 text-white placeholder:text-white/60 backdrop-blur-sm mt-1"
+                      className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-900/60 backdrop-blur-sm mt-1"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="inquiryType" className="text-white text-sm">Type of Inquiry *</Label>
+                  <Label htmlFor="inquiryType" className="text-gray-900 text-sm">Type of Inquiry *</Label>
                         <Select value={formData.inquiryType} onValueChange={(value) => handleInputChange("inquiryType", value)}>
-                          <SelectTrigger className="bg-transparent border-white/20 text-white backdrop-blur-sm mt-1">
+                          <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-900 backdrop-blur-sm mt-1">
                             <SelectValue placeholder="Select inquiry type" />
                           </SelectTrigger>
-                          <SelectContent className="bg-transparent backdrop-blur-sm border border-white/20">
-                            <SelectItem value="general" className="text-white hover:bg-white/10">General Inquiry</SelectItem>
-                            <SelectItem value="sales" className="text-white hover:bg-white/10">Sales & Partnership</SelectItem>
-                            <SelectItem value="support" className="text-white hover:bg-white/10">Technical Support</SelectItem>
-                            <SelectItem value="demo" className="text-white hover:bg-white/10">Request Demo</SelectItem>
-                            <SelectItem value="pricing" className="text-white hover:bg-white/10">Pricing Information</SelectItem>
-                            <SelectItem value="media" className="text-white hover:bg-white/10">Media & Press</SelectItem>
+                          <SelectContent className="bg-transparent backdrop-blur-sm border border-gray-200">
+                            <SelectItem value="general" className="text-gray-900 hover:bg-white/10">General Inquiry</SelectItem>
+                            <SelectItem value="sales" className="text-gray-900 hover:bg-white/10">Sales & Partnership</SelectItem>
+                            <SelectItem value="support" className="text-gray-900 hover:bg-white/10">Technical Support</SelectItem>
+                            <SelectItem value="demo" className="text-gray-900 hover:bg-white/10">Request Demo</SelectItem>
+                            <SelectItem value="pricing" className="text-gray-900 hover:bg-white/10">Pricing Information</SelectItem>
+                            <SelectItem value="media" className="text-gray-900 hover:bg-white/10">Media & Press</SelectItem>
                           </SelectContent>
                         </Select>
                 </div>
 
                 <div>
-                  <Label htmlFor="subject" className="text-white text-sm">Subject *</Label>
+                  <Label htmlFor="subject" className="text-gray-900 text-sm">Subject *</Label>
                   <Input
                     id="subject"
                     value={formData.subject}
                     onChange={(e) => handleInputChange("subject", e.target.value)}
                     placeholder="Enter message subject"
                     required
-                    className="bg-transparent border-white/20 text-white placeholder:text-white/60 backdrop-blur-sm mt-1"
+                    className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-900/60 backdrop-blur-sm mt-1"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="message" className="text-white text-sm">Message *</Label>
+                  <Label htmlFor="message" className="text-gray-900 text-sm">Message *</Label>
                   <Textarea
                     id="message"
                     value={formData.message}
@@ -234,14 +234,14 @@ export default function Contact() {
                     placeholder="Enter your message"
                     rows={5}
                     required
-                    className="bg-transparent border-white/20 text-white placeholder:text-white/60 backdrop-blur-sm mt-1"
+                    className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-900/60 backdrop-blur-sm mt-1"
                   />
                 </div>
 
                 <Button 
                   type="submit" 
                   disabled={isSubmitting}
-                  className="w-full bg-green-500/20 hover:bg-green-500/30 border border-green-400/30 text-white backdrop-blur-sm rounded-3xl py-3 font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+                  className="w-full bg-green-500/20 hover:bg-green-500/30 border border-green-400/30 text-gray-900 backdrop-blur-sm rounded-3xl py-3 font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
                 >
                   {isSubmitting ? (
                     "Sending Message..."

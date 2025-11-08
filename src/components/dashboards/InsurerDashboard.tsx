@@ -5,56 +5,29 @@ import InsurerProfileSettings from "../insurer/InsurerProfileSettings";
 import ClaimReviewPage from "../insurer/ClaimReviewPage";
 import ClaimsTable from "../insurer/ClaimsTable";
 import PolicyManagement from "../insurer/PolicyManagement";
+import CreatePolicyPage from "../insurer/CreatePolicyPage";
 import RiskReviewManagement from "../insurer/RiskReviewManagement";
 import RiskAssessmentSystem from "../assessor/RiskAssessmentSystem";
-import CropMonitoringSystem from "../monitoring/CropMonitoringSystem";
-import SatelliteStatistics from "../insurer/SatelliteStatistics";
-import WeatherForecast from "../insurer/WeatherForecast";
-import { getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
+import { getUserId, getPhoneNumber, getEmail, isAuthenticated, getToken } from "@/services/authAPI";
 import { getPolicies } from "@/services/policiesApi";
 import { getClaims } from "@/services/claimsApi";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   BarChart3,
   Bell,
   Settings,
   Shield,
-  Activity,
   FileText,
   CheckCircle,
   AlertTriangle,
-  Satellite,
-  CloudRain,
   TrendingUp,
   TrendingDown,
-  DollarSign,
-  Users,
-  Clock,
   Eye,
-  ArrowRight,
-  Calendar,
-  MapPin,
-  Percent
+  ArrowRight
 } from "lucide-react";
-import { 
-  LineChart, 
-  Line, 
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  Legend
-} from "recharts";
 
 export default function InsurerDashboard() {
   const [activePage, setActivePage] = useState("dashboard");
@@ -75,6 +48,16 @@ export default function InsurerDashboard() {
 
   useEffect(() => {
     if (activePage !== 'dashboard') return;
+    
+    // Check authentication before making API calls
+    if (!isAuthenticated() || !getToken()) {
+      console.warn('⚠️ Not authenticated, redirecting to login...');
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      }
+      return;
+    }
+    
     const load = async () => {
       setLoadingSummary(true);
       try {
@@ -117,15 +100,15 @@ export default function InsurerDashboard() {
   }, [activePage]);
 
   const StatCard = ({ icon: Icon, title, value, delta, deltaPositive }: { icon: any, title: string, value: string | number, delta?: string, deltaPositive?: boolean }) => (
-    <Card className="bg-gray-900/50 border-gray-800">
+    <Card className="bg-white border-gray-200">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-gray-300">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-blue-400" />
+        <CardTitle className="text-sm font-medium text-gray-600">{title}</CardTitle>
+        <Icon className="h-4 w-4 text-gray-600" />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className="text-2xl font-bold text-gray-900">{value}</div>
         {delta && (
-          <p className={`text-xs mt-1 ${deltaPositive ? 'text-emerald-400' : 'text-red-400'}`}>{delta}</p>
+          <p className={`text-xs mt-1 ${deltaPositive ? 'text-green-600' : 'text-red-600'}`}>{delta}</p>
         )}
       </CardContent>
     </Card>
@@ -141,31 +124,31 @@ export default function InsurerDashboard() {
       </div>
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-        <Card className="md:col-span-2 bg-gray-900/50 border-gray-800">
+        <Card className="md:col-span-2 bg-white border-gray-200">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Recent Claims</CardTitle>
-            <Button variant="secondary" size="sm" onClick={() => setActivePage('claim-reviews')}>
+            <CardTitle className="text-gray-900">Recent Claims</CardTitle>
+            <Button variant="secondary" size="sm" onClick={() => setActivePage('claim-reviews')} className="text-gray-700">
               View All
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </CardHeader>
           <CardContent>
             {loadingSummary ? (
-              <div className="text-sm text-gray-400">Loading...</div>
+              <div className="text-sm text-gray-600">Loading...</div>
             ) : recentClaims.length === 0 ? (
-              <div className="text-sm text-gray-400">No claims available.</div>
+              <div className="text-sm text-gray-600">No claims available.</div>
             ) : (
               <div className="space-y-3">
                 {recentClaims.map((c: any) => (
-                  <div key={c.id || c._id} className="flex items-center justify-between border-b border-gray-800 pb-2">
+                  <div key={c.id || c._id} className="flex items-center justify-between border-b border-gray-200 pb-2">
                     <div className="flex items-center gap-3">
-                      <Badge variant="outline" className="capitalize">{(c.status || 'unknown').toLowerCase()}</Badge>
+                      <Badge variant="outline" className="capitalize text-gray-700 border-gray-300">{(c.status || 'unknown').toLowerCase()}</Badge>
                       <div className="text-sm">
-                        <div className="font-medium">{c.policyNumber || c.policyId || '—'}</div>
-                        <div className="text-xs text-gray-400">{c.lossEventType || 'Claim'}</div>
+                        <div className="font-medium text-gray-900">{c.policyNumber || c.policyId || '—'}</div>
+                        <div className="text-xs text-gray-600">{c.lossEventType || 'Claim'}</div>
                       </div>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => setActivePage('claim-reviews')}>
+                    <Button variant="ghost" size="sm" onClick={() => setActivePage('claim-reviews')} className="text-gray-700 hover:text-gray-900">
                       <Eye className="h-4 w-4" />
                     </Button>
                   </div>
@@ -175,53 +158,36 @@ export default function InsurerDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-900/50 border-gray-800">
+        <Card className="bg-white border-gray-200">
           <CardHeader>
-            <CardTitle>Policies</CardTitle>
+            <CardTitle className="text-gray-900">Policies</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-300">Total</div>
-              <div className="font-semibold">{policiesSummary.total}</div>
+              <div className="text-sm text-gray-600">Total</div>
+              <div className="font-semibold text-gray-900">{policiesSummary.total}</div>
             </div>
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-300">Active</div>
-              <div className="font-semibold text-emerald-400">{policiesSummary.active}</div>
+              <div className="text-sm text-gray-600">Active</div>
+              <div className="font-semibold text-green-600">{policiesSummary.active}</div>
             </div>
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-300">Expired</div>
-              <div className="font-semibold text-red-400">{policiesSummary.expired}</div>
+              <div className="text-sm text-gray-600">Expired</div>
+              <div className="font-semibold text-red-600">{policiesSummary.expired}</div>
             </div>
             <div className="pt-2">
-              <Button className="w-full" onClick={() => setActivePage('policy-management')}>Manage Policies</Button>
+              <Button className="w-full bg-green-600 hover:bg-green-700 text-white" onClick={() => setActivePage('policy-management')}>Manage Policies</Button>
             </div>
           </CardContent>
         </Card>
       </div>
-
-      <Tabs defaultValue="satellite" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2 mb-6 bg-gray-800/50">
-          <TabsTrigger value="satellite" className="data-[state=active]:bg-blue-600">
-            <Satellite className="h-4 w-4 mr-2" />
-            Satellite Analytics
-          </TabsTrigger>
-          <TabsTrigger value="weather" className="data-[state=active]:bg-blue-600">
-            <CloudRain className="h-4 w-4 mr-2" />
-            Weather Forecast
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="satellite" className="mt-0">
-          <SatelliteStatistics />
-        </TabsContent>
-        <TabsContent value="weather" className="mt-0">
-          <WeatherForecast />
-        </TabsContent>
-      </Tabs>
     </div>
   );
 
 
 
+
+  const [policyKey, setPolicyKey] = useState(0);
 
   const renderPage = () => {
     switch (activePage) {
@@ -229,9 +195,9 @@ export default function InsurerDashboard() {
       case "risk-reviews": return <RiskReviewManagement />;
       case "claim-reviews": return <ClaimsTable />;
       case "claim-review-detail": return <ClaimReviewPage />;
-      case "policy-management": return <PolicyManagement />;
+      case "policy-management": return <PolicyManagement key={policyKey} onNavigateToCreate={() => setActivePage('create-policy')} />;
+      case "create-policy": return <CreatePolicyPage onBack={() => { setActivePage('policy-management'); setPolicyKey(prev => prev + 1); }} onSuccess={() => { setActivePage('policy-management'); setPolicyKey(prev => prev + 1); }} />;
       case "risk-assessments": return <RiskAssessmentSystem />;
-      case "crop-monitoring": return <CropMonitoringSystem />;
       case "notifications": return <InsurerNotifications />;
       case "profile-settings": return <InsurerProfileSettings />;
       default: return renderDashboard();
@@ -244,7 +210,6 @@ export default function InsurerDashboard() {
     { id: "claim-reviews", label: "Claim Reviews", icon: FileText },
     { id: "policy-management", label: "Policy Management", icon: CheckCircle },
     { id: "risk-assessments", label: "Risk Assessments", icon: AlertTriangle },
-    { id: "crop-monitoring", label: "Crop Monitoring", icon: Activity },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "profile-settings", label: "Profile Settings", icon: Settings }
   ];

@@ -62,8 +62,19 @@ class UsersApiService {
       if (!response.ok) {
         // Provide better error messages for common status codes
         if (response.status === 401) {
+          // Clear all authentication data
           localStorage.removeItem('token');
           localStorage.removeItem('user');
+          localStorage.removeItem('role');
+          localStorage.removeItem('userId');
+          localStorage.removeItem('phoneNumber');
+          localStorage.removeItem('email');
+          
+          // Redirect to login page
+          if (typeof window !== 'undefined') {
+            window.location.href = '/';
+          }
+          
           throw new Error('Authentication required. Please log in again.');
         } else if (response.status === 403) {
           throw new Error('Forbidden. Admin access required.');

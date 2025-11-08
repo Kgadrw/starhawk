@@ -151,12 +151,12 @@ export const GovernmentDashboard = () => {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-white/80">Total Farmers</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-900/80">Total Farmers</CardTitle>
             <Users className="h-5 w-5 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-white">7,950</div>
-            <p className="text-xs text-white/60 mt-1">
+            <div className="text-3xl font-bold text-gray-900">7,950</div>
+            <p className="text-xs text-gray-900/60 mt-1">
               <span className="text-green-500">+245</span> this month
             </p>
           </CardContent>
@@ -164,12 +164,12 @@ export const GovernmentDashboard = () => {
 
         <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-white/80">Active Policies</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-900/80">Active Policies</CardTitle>
             <FileText className="h-5 w-5 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-white">5,900</div>
-            <p className="text-xs text-white/60 mt-1">
+            <div className="text-3xl font-bold text-gray-900">5,900</div>
+            <p className="text-xs text-gray-900/60 mt-1">
               74.2% coverage rate
             </p>
           </CardContent>
@@ -177,12 +177,12 @@ export const GovernmentDashboard = () => {
 
         <Card className={`${dashboardTheme.card} border-l-4 border-l-purple-500`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-white/80">Total Premiums</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-900/80">Total Premiums</CardTitle>
             <DollarSign className="h-5 w-5 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-white">RWF 4.84B</div>
-            <p className="text-xs text-white/60 mt-1">
+            <div className="text-3xl font-bold text-gray-900">RWF 4.84B</div>
+            <p className="text-xs text-gray-900/60 mt-1">
               <span className="text-green-500">+15.8%</span> YoY growth
             </p>
           </CardContent>
@@ -190,12 +190,12 @@ export const GovernmentDashboard = () => {
 
         <Card className={`${dashboardTheme.card} border-l-4 border-l-orange-500`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-white/80">Active Claims</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-900/80">Active Claims</CardTitle>
             <AlertTriangle className="h-5 w-5 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-white">75</div>
-            <p className="text-xs text-white/60 mt-1">
+            <div className="text-3xl font-bold text-gray-900">75</div>
+            <p className="text-xs text-gray-900/60 mt-1">
               305 total this year
             </p>
           </CardContent>
@@ -205,7 +205,7 @@ export const GovernmentDashboard = () => {
       {/* National Overview Tabs */}
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
+          <CardTitle className="text-gray-900 flex items-center gap-2">
             <Globe className="h-5 w-5" />
             National Agricultural Insurance Overview
           </CardTitle>
@@ -279,30 +279,30 @@ export const GovernmentDashboard = () => {
 
             <TabsContent value="financial" className="mt-6">
               <div className="grid gap-4 md:grid-cols-3">
-                <Card className="bg-gray-800/50 border-gray-700">
+                <Card className="bg-gray-800/50 border-gray-300">
                   <CardHeader>
-                    <CardTitle className="text-sm text-white/80">Loss Ratio</CardTitle>
+                    <CardTitle className="text-sm text-gray-900/80">Loss Ratio</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-white">{financialData.lossRatio}%</div>
-                    <div className="text-xs text-white/60 mt-1">Claims / Premiums</div>
+                    <div className="text-2xl font-bold text-gray-900">{financialData.lossRatio}%</div>
+                    <div className="text-xs text-gray-900/60 mt-1">Claims / Premiums</div>
                   </CardContent>
                 </Card>
-                <Card className="bg-gray-800/50 border-gray-700">
+                <Card className="bg-gray-800/50 border-gray-300">
                   <CardHeader>
-                    <CardTitle className="text-sm text-white/80">Gov't Subsidy</CardTitle>
+                    <CardTitle className="text-sm text-gray-900/80">Gov't Subsidy</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-white">RWF {(financialData.governmentSubsidy / 1000000).toFixed(0)}M</div>
-                    <div className="text-xs text-white/60 mt-1">15% of total premiums</div>
+                    <div className="text-2xl font-bold text-gray-900">RWF {(financialData.governmentSubsidy / 1000000).toFixed(0)}M</div>
+                    <div className="text-xs text-gray-900/60 mt-1">15% of total premiums</div>
                   </CardContent>
                 </Card>
-                <Card className="bg-gray-800/50 border-gray-700">
+                <Card className="bg-gray-800/50 border-gray-300">
                   <CardHeader>
-                    <CardTitle className="text-sm text-white/80">Combined Ratio</CardTitle>
+                    <CardTitle className="text-sm text-gray-900/80">Combined Ratio</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-white">{financialData.combinedRatio}%</div>
+                    <div className="text-2xl font-bold text-gray-900">{financialData.combinedRatio}%</div>
                     <div className="text-xs text-green-400 mt-1">Healthy market</div>
                   </CardContent>
                 </Card>
@@ -336,7 +336,7 @@ export const GovernmentDashboard = () => {
       <div className="grid gap-6 md:grid-cols-3">
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-sm text-white/80 flex items-center gap-2">
+            <CardTitle className="text-sm text-gray-900/80 flex items-center gap-2">
               <Shield className="h-4 w-4 text-blue-500" />
               Coverage Rate by Region
             </CardTitle>
@@ -344,7 +344,7 @@ export const GovernmentDashboard = () => {
           <CardContent className="space-y-3">
             {regionsData.map((region) => (
               <div key={region.id} className="flex items-center justify-between">
-                <span className="text-sm text-white/80">{region.name}</span>
+                <span className="text-sm text-gray-900/80">{region.name}</span>
                 <div className="flex items-center gap-2">
                   <div className="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
                     <div 
@@ -352,7 +352,7 @@ export const GovernmentDashboard = () => {
                       style={{ width: `${region.coverage}%` }}
                     />
                   </div>
-                  <span className="text-sm font-medium text-white w-12">{region.coverage}%</span>
+                  <span className="text-sm font-medium text-gray-900 w-12">{region.coverage}%</span>
                 </div>
               </div>
             ))}
@@ -361,7 +361,7 @@ export const GovernmentDashboard = () => {
 
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-sm text-white/80 flex items-center gap-2">
+            <CardTitle className="text-sm text-gray-900/80 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-orange-500" />
               Risk Zones
             </CardTitle>
@@ -377,7 +377,7 @@ export const GovernmentDashboard = () => {
                   }`}>{zone.zone}</span>
                   <Badge variant="secondary" className="text-xs">{zone.districts} districts</Badge>
                 </div>
-                <div className="text-xs text-white/60">{zone.farmers} farmers • {zone.claims} claims</div>
+                <div className="text-xs text-gray-900/60">{zone.farmers} farmers • {zone.claims} claims</div>
               </div>
             ))}
           </CardContent>
@@ -385,7 +385,7 @@ export const GovernmentDashboard = () => {
 
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-sm text-white/80 flex items-center gap-2">
+            <CardTitle className="text-sm text-gray-900/80 flex items-center gap-2">
               <Activity className="h-4 w-4 text-purple-500" />
               System Health
             </CardTitle>
@@ -393,7 +393,7 @@ export const GovernmentDashboard = () => {
           <CardContent className="space-y-4">
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-white/60">Policy Processing</span>
+                <span className="text-gray-900/60">Policy Processing</span>
                 <span className="text-green-400">98.5%</span>
               </div>
               <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
@@ -402,7 +402,7 @@ export const GovernmentDashboard = () => {
             </div>
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-white/60">Claims Processing</span>
+                <span className="text-gray-900/60">Claims Processing</span>
                 <span className="text-blue-400">94.2%</span>
               </div>
               <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
@@ -411,7 +411,7 @@ export const GovernmentDashboard = () => {
             </div>
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-white/60">Compliance Rate</span>
+                <span className="text-gray-900/60">Compliance Rate</span>
                 <span className="text-purple-400">97.8%</span>
               </div>
               <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
@@ -429,8 +429,8 @@ export const GovernmentDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Farmer Registry & Demographics</h2>
-          <p className="text-white/60">Complete registry of all farmers in the system</p>
+          <h2 className="text-2xl font-bold text-gray-900">Farmer Registry & Demographics</h2>
+          <p className="text-gray-900/60">Complete registry of all farmers in the system</p>
         </div>
         <Button className="bg-indigo-600 hover:bg-indigo-700">
           <Download className="h-4 w-4 mr-2" />
@@ -441,15 +441,15 @@ export const GovernmentDashboard = () => {
       <div className="grid gap-6 md:grid-cols-2">
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white">Farmer Distribution by Farm Size</CardTitle>
+            <CardTitle className="text-gray-900">Farmer Distribution by Farm Size</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {farmerDemographics[0].ranges.map((item, idx) => (
                 <div key={idx}>
                   <div className="flex justify-between text-sm mb-1">
-                    <span className="text-white/80">{item.range}</span>
-                    <span className="text-white font-medium">{item.count} ({item.percentage}%)</span>
+                    <span className="text-gray-900/80">{item.range}</span>
+                    <span className="text-gray-900 font-medium">{item.count} ({item.percentage}%)</span>
                   </div>
                   <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
                     <div className="h-full bg-indigo-500" style={{ width: `${item.percentage}%` }} />
@@ -462,26 +462,26 @@ export const GovernmentDashboard = () => {
 
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white">Demographics Overview</CardTitle>
+            <CardTitle className="text-gray-900">Demographics Overview</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div>
-              <h4 className="text-sm font-medium text-white/80 mb-3">Gender Distribution</h4>
+              <h4 className="text-sm font-medium text-gray-900/80 mb-3">Gender Distribution</h4>
               <div className="space-y-2">
                 {farmerDemographics[1].ranges.map((item, idx) => (
                   <div key={idx} className="flex justify-between items-center">
-                    <span className="text-white/80">{item.range}</span>
+                    <span className="text-gray-900/80">{item.range}</span>
                     <Badge variant="secondary">{item.count} ({item.percentage}%)</Badge>
                   </div>
                 ))}
               </div>
             </div>
             <div>
-              <h4 className="text-sm font-medium text-white/80 mb-3">Age Groups</h4>
+              <h4 className="text-sm font-medium text-gray-900/80 mb-3">Age Groups</h4>
               <div className="space-y-2">
                 {farmerDemographics[2].ranges.map((item, idx) => (
                   <div key={idx} className="flex justify-between items-center">
-                    <span className="text-white/80">{item.range}</span>
+                    <span className="text-gray-900/80">{item.range}</span>
                     <Badge variant="secondary">{item.count} ({item.percentage}%)</Badge>
                   </div>
                 ))}
@@ -493,26 +493,26 @@ export const GovernmentDashboard = () => {
 
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white">Regional Distribution</CardTitle>
+          <CardTitle className="text-gray-900">Regional Distribution</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-700">
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Region</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Registered</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">With Insurance</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Coverage %</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Total Hectares</th>
+                <tr className="border-b border-gray-300">
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Region</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Registered</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">With Insurance</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Coverage %</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Total Hectares</th>
                 </tr>
               </thead>
               <tbody>
                 {regionsData.map((region) => (
-                  <tr key={region.id} className="border-b border-gray-800 hover:bg-gray-800/50">
-                    <td className="py-3 px-4 text-white">{region.name}</td>
-                    <td className="py-3 px-4 text-white">{region.registeredFarmers.toLocaleString()}</td>
-                    <td className="py-3 px-4 text-white">{region.farmers.toLocaleString()}</td>
+                  <tr key={region.id} className="border-b border-gray-200 hover:bg-gray-800/50">
+                    <td className="py-3 px-4 text-gray-900">{region.name}</td>
+                    <td className="py-3 px-4 text-gray-900">{region.registeredFarmers.toLocaleString()}</td>
+                    <td className="py-3 px-4 text-gray-900">{region.farmers.toLocaleString()}</td>
                     <td className="py-3 px-4">
                       <Badge className={`${
                         region.coverage >= 75 ? 'bg-green-600' :
@@ -522,7 +522,7 @@ export const GovernmentDashboard = () => {
                         {region.coverage}%
                       </Badge>
                     </td>
-                    <td className="py-3 px-4 text-white">{(region.farmers * 2.3).toFixed(0)}</td>
+                    <td className="py-3 px-4 text-gray-900">{(region.farmers * 2.3).toFixed(0)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -538,8 +538,8 @@ export const GovernmentDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Policy Analytics</h2>
-          <p className="text-white/60">Comprehensive policy data across all insurers</p>
+          <h2 className="text-2xl font-bold text-gray-900">Policy Analytics</h2>
+          <p className="text-gray-900/60">Comprehensive policy data across all insurers</p>
         </div>
         <Button className="bg-indigo-600 hover:bg-indigo-700">
           <Download className="h-4 w-4 mr-2" />
@@ -550,37 +550,37 @@ export const GovernmentDashboard = () => {
       <div className="grid gap-6 md:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Total Policies</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Total Policies</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">5,900</div>
+            <div className="text-2xl font-bold text-gray-900">5,900</div>
             <p className="text-xs text-green-400 mt-1">+8.5% from last month</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Active</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Active</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">5,340</div>
-            <p className="text-xs text-white/60 mt-1">90.5% of total</p>
+            <div className="text-2xl font-bold text-gray-900">5,340</div>
+            <p className="text-xs text-gray-900/60 mt-1">90.5% of total</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-yellow-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Pending</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Pending</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">420</div>
-            <p className="text-xs text-white/60 mt-1">7.1% of total</p>
+            <div className="text-2xl font-bold text-gray-900">420</div>
+            <p className="text-xs text-gray-900/60 mt-1">7.1% of total</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-purple-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Avg Premium</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Avg Premium</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">RWF 820K</div>
+            <div className="text-2xl font-bold text-gray-900">RWF 820K</div>
             <p className="text-xs text-green-400 mt-1">+5.2% YoY</p>
           </CardContent>
         </Card>
@@ -588,7 +588,7 @@ export const GovernmentDashboard = () => {
 
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white">Policy Distribution by Crop Type</CardTitle>
+          <CardTitle className="text-gray-900">Policy Distribution by Crop Type</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-80">
@@ -612,33 +612,33 @@ export const GovernmentDashboard = () => {
 
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white">Detailed Crop Insurance Analytics</CardTitle>
+          <CardTitle className="text-gray-900">Detailed Crop Insurance Analytics</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-700">
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Crop</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Farmers</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Policies</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Coverage %</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Total Premium</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Claims Paid</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Loss Ratio</th>
+                <tr className="border-b border-gray-300">
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Crop</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Farmers</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Policies</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Coverage %</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Total Premium</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Claims Paid</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Loss Ratio</th>
                 </tr>
               </thead>
               <tbody>
                 {cropsData.map((crop, idx) => (
-                  <tr key={idx} className="border-b border-gray-800 hover:bg-gray-800/50">
-                    <td className="py-3 px-4 text-white font-medium">{crop.crop}</td>
-                    <td className="py-3 px-4 text-white">{crop.farmers.toLocaleString()}</td>
-                    <td className="py-3 px-4 text-white">{crop.policies.toLocaleString()}</td>
+                  <tr key={idx} className="border-b border-gray-200 hover:bg-gray-800/50">
+                    <td className="py-3 px-4 text-gray-900 font-medium">{crop.crop}</td>
+                    <td className="py-3 px-4 text-gray-900">{crop.farmers.toLocaleString()}</td>
+                    <td className="py-3 px-4 text-gray-900">{crop.policies.toLocaleString()}</td>
                     <td className="py-3 px-4">
                       <Badge className="bg-indigo-600">{crop.coverage}%</Badge>
                     </td>
-                    <td className="py-3 px-4 text-white">RWF {(crop.totalPremium / 1000000).toFixed(0)}M</td>
-                    <td className="py-3 px-4 text-white">RWF {(crop.claimsPaid / 1000000).toFixed(0)}M</td>
+                    <td className="py-3 px-4 text-gray-900">RWF {(crop.totalPremium / 1000000).toFixed(0)}M</td>
+                    <td className="py-3 px-4 text-gray-900">RWF {(crop.claimsPaid / 1000000).toFixed(0)}M</td>
                     <td className="py-3 px-4">
                       <Badge className={`${
                         ((crop.claimsPaid / crop.totalPremium) * 100) < 30 ? 'bg-green-600' :
@@ -663,11 +663,11 @@ export const GovernmentDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Claims Monitoring</h2>
-          <p className="text-white/60">Track all claims and detect fraud patterns</p>
+          <h2 className="text-2xl font-bold text-gray-900">Claims Monitoring</h2>
+          <p className="text-gray-900/60">Track all claims and detect fraud patterns</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="border-gray-700 text-white hover:bg-gray-800">
+          <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-800">
             <Filter className="h-4 w-4 mr-2" />
             Filter
           </Button>
@@ -681,37 +681,37 @@ export const GovernmentDashboard = () => {
       <div className="grid gap-6 md:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-orange-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Total Claims</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Total Claims</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">305</div>
-            <p className="text-xs text-white/60 mt-1">This year</p>
+            <div className="text-2xl font-bold text-gray-900">305</div>
+            <p className="text-xs text-gray-900/60 mt-1">This year</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-yellow-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Pending</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Pending</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">75</div>
-            <p className="text-xs text-white/60 mt-1">Under review</p>
+            <div className="text-2xl font-bold text-gray-900">75</div>
+            <p className="text-xs text-gray-900/60 mt-1">Under review</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Approved</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Approved</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">198</div>
-            <p className="text-xs text-white/60 mt-1">64.9% approval rate</p>
+            <div className="text-2xl font-bold text-gray-900">198</div>
+            <p className="text-xs text-gray-900/60 mt-1">64.9% approval rate</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-red-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Flagged</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Flagged</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">8</div>
+            <div className="text-2xl font-bold text-gray-900">8</div>
             <p className="text-xs text-red-400 mt-1">Potential fraud</p>
           </CardContent>
         </Card>
@@ -719,7 +719,7 @@ export const GovernmentDashboard = () => {
 
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white">Claims Trend Analysis</CardTitle>
+          <CardTitle className="text-gray-900">Claims Trend Analysis</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-80">
@@ -753,7 +753,7 @@ export const GovernmentDashboard = () => {
       <div className="grid gap-6 md:grid-cols-2">
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <MapIcon className="h-5 w-5" />
               Claims by Region
             </CardTitle>
@@ -763,8 +763,8 @@ export const GovernmentDashboard = () => {
               {regionsData.map((region) => (
                 <div key={region.id} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
                   <div>
-                    <div className="font-medium text-white">{region.name}</div>
-                    <div className="text-xs text-white/60">
+                    <div className="font-medium text-gray-900">{region.name}</div>
+                    <div className="text-xs text-gray-900/60">
                       {region.activeClaims} active • {region.totalClaims} total
                     </div>
                   </div>
@@ -783,7 +783,7 @@ export const GovernmentDashboard = () => {
 
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <Eye className="h-5 w-5" />
               Fraud Detection Alerts
             </CardTitle>
@@ -795,21 +795,21 @@ export const GovernmentDashboard = () => {
                   <span className="text-sm font-medium text-red-400">High Priority</span>
                   <Badge variant="destructive">3 Cases</Badge>
                 </div>
-                <p className="text-xs text-white/60">Multiple claims from same location</p>
+                <p className="text-xs text-gray-900/60">Multiple claims from same location</p>
               </div>
               <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-yellow-400">Medium Priority</span>
                   <Badge className="bg-yellow-600">5 Cases</Badge>
                 </div>
-                <p className="text-xs text-white/60">Unusual claim patterns detected</p>
+                <p className="text-xs text-gray-900/60">Unusual claim patterns detected</p>
               </div>
               <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-blue-400">Under Review</span>
                   <Badge className="bg-blue-600">12 Cases</Badge>
                 </div>
-                <p className="text-xs text-white/60">Pending assessor verification</p>
+                <p className="text-xs text-gray-900/60">Pending assessor verification</p>
               </div>
             </div>
           </CardContent>
@@ -823,8 +823,8 @@ export const GovernmentDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Insurer Performance & Compliance</h2>
-          <p className="text-white/60">Monitor all insurance companies' performance</p>
+          <h2 className="text-2xl font-bold text-gray-900">Insurer Performance & Compliance</h2>
+          <p className="text-gray-900/60">Monitor all insurance companies' performance</p>
         </div>
         <Button className="bg-indigo-600 hover:bg-indigo-700">
           <Download className="h-4 w-4 mr-2" />
@@ -835,67 +835,67 @@ export const GovernmentDashboard = () => {
       <div className="grid gap-6 md:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Active Insurers</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Active Insurers</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">4</div>
-            <p className="text-xs text-white/60 mt-1">All licensed</p>
+            <div className="text-2xl font-bold text-gray-900">4</div>
+            <p className="text-xs text-gray-900/60 mt-1">All licensed</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Avg Compliance</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Avg Compliance</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">98.0%</div>
+            <div className="text-2xl font-bold text-gray-900">98.0%</div>
             <p className="text-xs text-green-400 mt-1">Excellent</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-purple-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Avg Process Time</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Avg Process Time</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">8.2 days</div>
-            <p className="text-xs text-white/60 mt-1">Claims processing</p>
+            <div className="text-2xl font-bold text-gray-900">8.2 days</div>
+            <p className="text-xs text-gray-900/60 mt-1">Claims processing</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-orange-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Market Share</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Market Share</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">Balanced</div>
-            <p className="text-xs text-white/60 mt-1">Healthy competition</p>
+            <div className="text-2xl font-bold text-gray-900">Balanced</div>
+            <p className="text-xs text-gray-900/60 mt-1">Healthy competition</p>
           </CardContent>
         </Card>
       </div>
 
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white">Insurer Performance Comparison</CardTitle>
+          <CardTitle className="text-gray-900">Insurer Performance Comparison</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-700">
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Insurer</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Policies</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Total Premium</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Claims</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Claim Ratio</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Avg Process Time</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Compliance</th>
+                <tr className="border-b border-gray-300">
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Insurer</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Policies</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Total Premium</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Claims</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Claim Ratio</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Avg Process Time</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Compliance</th>
                 </tr>
               </thead>
               <tbody>
                 {insurersData.map((insurer) => (
-                  <tr key={insurer.id} className="border-b border-gray-800 hover:bg-gray-800/50">
-                    <td className="py-3 px-4 text-white font-medium">{insurer.name}</td>
-                    <td className="py-3 px-4 text-white">{insurer.policies.toLocaleString()}</td>
-                    <td className="py-3 px-4 text-white">RWF {(insurer.premium / 1000000).toFixed(0)}M</td>
-                    <td className="py-3 px-4 text-white">{insurer.claims}</td>
+                  <tr key={insurer.id} className="border-b border-gray-200 hover:bg-gray-800/50">
+                    <td className="py-3 px-4 text-gray-900 font-medium">{insurer.name}</td>
+                    <td className="py-3 px-4 text-gray-900">{insurer.policies.toLocaleString()}</td>
+                    <td className="py-3 px-4 text-gray-900">RWF {(insurer.premium / 1000000).toFixed(0)}M</td>
+                    <td className="py-3 px-4 text-gray-900">{insurer.claims}</td>
                     <td className="py-3 px-4">
                       <Badge className={`${
                         insurer.claimRatio < 15 ? 'bg-green-600' :
@@ -905,7 +905,7 @@ export const GovernmentDashboard = () => {
                         {insurer.claimRatio}%
                       </Badge>
                     </td>
-                    <td className="py-3 px-4 text-white">{insurer.avgProcessTime} days</td>
+                    <td className="py-3 px-4 text-gray-900">{insurer.avgProcessTime} days</td>
                     <td className="py-3 px-4">
                       <Badge className={`${
                         insurer.compliance >= 98 ? 'bg-green-600' :
@@ -926,7 +926,7 @@ export const GovernmentDashboard = () => {
       <div className="grid gap-6 md:grid-cols-2">
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white">Market Share by Policies</CardTitle>
+            <CardTitle className="text-gray-900">Market Share by Policies</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-64">
@@ -958,13 +958,13 @@ export const GovernmentDashboard = () => {
 
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white">Compliance Status</CardTitle>
+            <CardTitle className="text-gray-900">Compliance Status</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {insurersData.map((insurer) => (
               <div key={insurer.id}>
                 <div className="flex justify-between text-sm mb-1">
-                  <span className="text-white/80">{insurer.name}</span>
+                  <span className="text-gray-900/80">{insurer.name}</span>
                   <span className={`font-medium ${
                     insurer.compliance >= 98 ? 'text-green-400' :
                     insurer.compliance >= 95 ? 'text-yellow-400' :
@@ -996,76 +996,76 @@ export const GovernmentDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Assessor Performance Monitoring</h2>
-          <p className="text-white/60">Track field assessor productivity and quality</p>
+          <h2 className="text-2xl font-bold text-gray-900">Assessor Performance Monitoring</h2>
+          <p className="text-gray-900/60">Track field assessor productivity and quality</p>
         </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Active Assessors</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Active Assessors</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">24</div>
-            <p className="text-xs text-white/60 mt-1">Nationwide</p>
+            <div className="text-2xl font-bold text-gray-900">24</div>
+            <p className="text-xs text-gray-900/60 mt-1">Nationwide</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Avg Accuracy</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Avg Accuracy</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">96.9%</div>
+            <div className="text-2xl font-bold text-gray-900">96.9%</div>
             <p className="text-xs text-green-400 mt-1">High quality</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-purple-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Avg Time</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Avg Time</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">3.1 days</div>
-            <p className="text-xs text-white/60 mt-1">Per assessment</p>
+            <div className="text-2xl font-bold text-gray-900">3.1 days</div>
+            <p className="text-xs text-gray-900/60 mt-1">Per assessment</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-orange-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">This Month</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">This Month</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">423</div>
-            <p className="text-xs text-white/60 mt-1">Completed</p>
+            <div className="text-2xl font-bold text-gray-900">423</div>
+            <p className="text-xs text-gray-900/60 mt-1">Completed</p>
           </CardContent>
         </Card>
       </div>
 
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white">Assessor Performance Details</CardTitle>
+          <CardTitle className="text-gray-900">Assessor Performance Details</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-700">
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Assessor</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Region</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Completed</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Pending</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Avg Time (days)</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Accuracy</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Status</th>
+                <tr className="border-b border-gray-300">
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Assessor</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Region</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Completed</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Pending</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Avg Time (days)</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Accuracy</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {assessorMetrics.map((assessor) => (
-                  <tr key={assessor.id} className="border-b border-gray-800 hover:bg-gray-800/50">
-                    <td className="py-3 px-4 text-white font-medium">{assessor.name}</td>
-                    <td className="py-3 px-4 text-white">{assessor.region}</td>
-                    <td className="py-3 px-4 text-white">{assessor.completed}</td>
-                    <td className="py-3 px-4 text-white">{assessor.pending}</td>
-                    <td className="py-3 px-4 text-white">{assessor.avgTime}</td>
+                  <tr key={assessor.id} className="border-b border-gray-200 hover:bg-gray-800/50">
+                    <td className="py-3 px-4 text-gray-900 font-medium">{assessor.name}</td>
+                    <td className="py-3 px-4 text-gray-900">{assessor.region}</td>
+                    <td className="py-3 px-4 text-gray-900">{assessor.completed}</td>
+                    <td className="py-3 px-4 text-gray-900">{assessor.pending}</td>
+                    <td className="py-3 px-4 text-gray-900">{assessor.avgTime}</td>
                     <td className="py-3 px-4">
                       <Badge className={`${
                         assessor.accuracy >= 97 ? 'bg-green-600' :
@@ -1093,11 +1093,11 @@ export const GovernmentDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Risk Assessment & Weather Monitoring</h2>
-          <p className="text-white/60">Climate risk analysis and weather forecasting</p>
+          <h2 className="text-2xl font-bold text-gray-900">Risk Assessment & Weather Monitoring</h2>
+          <p className="text-gray-900/60">Climate risk analysis and weather forecasting</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="border-gray-700 text-white hover:bg-gray-800">
+          <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-800">
             <Satellite className="h-4 w-4 mr-2" />
             Satellite View
           </Button>
@@ -1111,38 +1111,38 @@ export const GovernmentDashboard = () => {
       <div className="grid gap-6 md:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Drought Risk</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Drought Risk</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-400">Medium</div>
-            <p className="text-xs text-white/60 mt-1">3 provinces affected</p>
+            <p className="text-xs text-gray-900/60 mt-1">3 provinces affected</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Flood Risk</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Flood Risk</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-400">Low</div>
-            <p className="text-xs text-white/60 mt-1">Rainy season prep</p>
+            <p className="text-xs text-gray-900/60 mt-1">Rainy season prep</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-orange-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Pest Alert</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Pest Alert</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-400">2 Active</div>
-            <p className="text-xs text-white/60 mt-1">Fall armyworm detected</p>
+            <p className="text-xs text-gray-900/60 mt-1">Fall armyworm detected</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-purple-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Weather Alerts</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Weather Alerts</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">5</div>
-            <p className="text-xs text-white/60 mt-1">Active warnings</p>
+            <div className="text-2xl font-bold text-gray-900">5</div>
+            <p className="text-xs text-gray-900/60 mt-1">Active warnings</p>
           </CardContent>
         </Card>
       </div>
@@ -1150,7 +1150,7 @@ export const GovernmentDashboard = () => {
       <div className="grid gap-6 md:grid-cols-2">
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <Cloud className="h-5 w-5" />
               7-Day Weather Forecast
             </CardTitle>
@@ -1169,7 +1169,7 @@ export const GovernmentDashboard = () => {
                 <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className="w-12">
-                      <div className="text-sm font-medium text-white">{forecast.day}</div>
+                      <div className="text-sm font-medium text-gray-900">{forecast.day}</div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Cloud className={`h-5 w-5 ${
@@ -1177,11 +1177,11 @@ export const GovernmentDashboard = () => {
                         forecast.condition === 'Rainy' ? 'text-blue-400' :
                         'text-gray-400'
                       }`} />
-                      <span className="text-sm text-white/80">{forecast.condition}</span>
+                      <span className="text-sm text-gray-900/80">{forecast.condition}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="text-sm font-medium text-white">{forecast.temp}</span>
+                    <span className="text-sm font-medium text-gray-900">{forecast.temp}</span>
                     <span className="text-sm text-blue-400">{forecast.rainfall}</span>
                     <Badge className={`${
                       forecast.risk === 'low' ? 'bg-green-600' :
@@ -1199,7 +1199,7 @@ export const GovernmentDashboard = () => {
 
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <AlertTriangle className="h-5 w-5" />
               Climate Risk Zones
             </CardTitle>
@@ -1219,10 +1219,10 @@ export const GovernmentDashboard = () => {
                     }`}>{zone.zone}</span>
                     <Badge variant="secondary">{zone.districts} districts</Badge>
                   </div>
-                  <div className="text-xs text-white/60 mb-2">
+                  <div className="text-xs text-gray-900/60 mb-2">
                     {zone.farmers} farmers • {zone.policies} policies
                   </div>
-                  <div className="text-xs text-white/80">
+                  <div className="text-xs text-gray-900/80">
                     <span className="font-medium">Mitigation:</span> {zone.mitigation}
                   </div>
                 </div>
@@ -1234,7 +1234,7 @@ export const GovernmentDashboard = () => {
 
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
+          <CardTitle className="text-gray-900 flex items-center gap-2">
             <Satellite className="h-5 w-5" />
             Satellite-Based Risk Assessment
           </CardTitle>
@@ -1242,12 +1242,12 @@ export const GovernmentDashboard = () => {
         <CardContent>
           <div className="grid gap-6 md:grid-cols-3">
             <div className="space-y-3">
-              <h4 className="text-sm font-medium text-white/80">Vegetation Health (NDVI)</h4>
+              <h4 className="text-sm font-medium text-gray-900/80">Vegetation Health (NDVI)</h4>
               <div className="space-y-2">
                 {regionsData.map((region) => (
                   <div key={region.id}>
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-white/70">{region.name}</span>
+                      <span className="text-gray-900/70">{region.name}</span>
                       <span className={`font-medium ${
                         region.coverage >= 75 ? 'text-green-400' :
                         region.coverage >= 50 ? 'text-yellow-400' :
@@ -1271,12 +1271,12 @@ export const GovernmentDashboard = () => {
               </div>
             </div>
             <div className="space-y-3">
-              <h4 className="text-sm font-medium text-white/80">Soil Moisture Index</h4>
+              <h4 className="text-sm font-medium text-gray-900/80">Soil Moisture Index</h4>
               <div className="space-y-2">
                 {regionsData.map((region) => (
                   <div key={region.id}>
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-white/70">{region.name}</span>
+                      <span className="text-gray-900/70">{region.name}</span>
                       <span className="font-medium text-blue-400">
                         {Math.floor(Math.random() * 40 + 40)}%
                       </span>
@@ -1292,12 +1292,12 @@ export const GovernmentDashboard = () => {
               </div>
             </div>
             <div className="space-y-3">
-              <h4 className="text-sm font-medium text-white/80">Temperature Stress</h4>
+              <h4 className="text-sm font-medium text-gray-900/80">Temperature Stress</h4>
               <div className="space-y-2">
                 {regionsData.map((region) => (
                   <div key={region.id}>
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-white/70">{region.name}</span>
+                      <span className="text-gray-900/70">{region.name}</span>
                       <span className={`font-medium ${
                         region.riskLevel === 'high' ? 'text-red-400' :
                         region.riskLevel === 'medium' ? 'text-yellow-400' :
@@ -1334,8 +1334,8 @@ export const GovernmentDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Financial Flows & Subsidy Management</h2>
-          <p className="text-white/60">Track all financial transactions and government subsidies</p>
+          <h2 className="text-2xl font-bold text-gray-900">Financial Flows & Subsidy Management</h2>
+          <p className="text-gray-900/60">Track all financial transactions and government subsidies</p>
         </div>
         <Button className="bg-indigo-600 hover:bg-indigo-700">
           <Download className="h-4 w-4 mr-2" />
@@ -1346,45 +1346,45 @@ export const GovernmentDashboard = () => {
       <div className="grid gap-6 md:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Total Premiums</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Total Premiums</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">RWF 4.84B</div>
+            <div className="text-2xl font-bold text-gray-900">RWF 4.84B</div>
             <p className="text-xs text-green-400 mt-1">+15.8% YoY</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Gov't Subsidy</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Gov't Subsidy</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">RWF 726M</div>
-            <p className="text-xs text-white/60 mt-1">15% of premiums</p>
+            <div className="text-2xl font-bold text-gray-900">RWF 726M</div>
+            <p className="text-xs text-gray-900/60 mt-1">15% of premiums</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-purple-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Claims Paid</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Claims Paid</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">RWF 1.28B</div>
-            <p className="text-xs text-white/60 mt-1">26.4% loss ratio</p>
+            <div className="text-2xl font-bold text-gray-900">RWF 1.28B</div>
+            <p className="text-xs text-gray-900/60 mt-1">26.4% loss ratio</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-orange-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Farmer Share</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Farmer Share</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">RWF 4.11B</div>
-            <p className="text-xs text-white/60 mt-1">85% of premiums</p>
+            <div className="text-2xl font-bold text-gray-900">RWF 4.11B</div>
+            <p className="text-xs text-gray-900/60 mt-1">85% of premiums</p>
           </CardContent>
         </Card>
       </div>
 
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
+          <CardTitle className="text-gray-900 flex items-center gap-2">
             <DollarSign className="h-5 w-5" />
             Financial Flow Breakdown
           </CardTitle>
@@ -1392,7 +1392,7 @@ export const GovernmentDashboard = () => {
         <CardContent>
           <div className="space-y-6">
             <div>
-              <h4 className="text-sm font-medium text-white/80 mb-4">Premium Collection Flow</h4>
+              <h4 className="text-sm font-medium text-gray-900/80 mb-4">Premium Collection Flow</h4>
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
                   <div className="flex items-center gap-3">
@@ -1400,12 +1400,12 @@ export const GovernmentDashboard = () => {
                       <DollarSign className="h-5 w-5 text-green-400" />
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-white">Total Premium Collection</div>
-                      <div className="text-xs text-white/60">From all farmers nationwide</div>
+                      <div className="text-sm font-medium text-gray-900">Total Premium Collection</div>
+                      <div className="text-xs text-gray-900/60">From all farmers nationwide</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-bold text-white">RWF 4.84B</div>
+                    <div className="text-lg font-bold text-gray-900">RWF 4.84B</div>
                     <div className="text-xs text-green-400">100%</div>
                   </div>
                 </div>
@@ -1415,12 +1415,12 @@ export const GovernmentDashboard = () => {
                       <Building2 className="h-5 w-5 text-blue-400" />
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-white">Government Subsidy</div>
-                      <div className="text-xs text-white/60">Public support for farmers</div>
+                      <div className="text-sm font-medium text-gray-900">Government Subsidy</div>
+                      <div className="text-xs text-gray-900/60">Public support for farmers</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-bold text-white">RWF 726M</div>
+                    <div className="text-lg font-bold text-gray-900">RWF 726M</div>
                     <div className="text-xs text-blue-400">15%</div>
                   </div>
                 </div>
@@ -1430,12 +1430,12 @@ export const GovernmentDashboard = () => {
                       <Users className="h-5 w-5 text-purple-400" />
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-white">Farmer Contribution</div>
-                      <div className="text-xs text-white/60">Direct farmer payments</div>
+                      <div className="text-sm font-medium text-gray-900">Farmer Contribution</div>
+                      <div className="text-xs text-gray-900/60">Direct farmer payments</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-bold text-white">RWF 4.11B</div>
+                    <div className="text-lg font-bold text-gray-900">RWF 4.11B</div>
                     <div className="text-xs text-purple-400">85%</div>
                   </div>
                 </div>
@@ -1443,7 +1443,7 @@ export const GovernmentDashboard = () => {
             </div>
 
             <div>
-              <h4 className="text-sm font-medium text-white/80 mb-4">Claims Payment Flow</h4>
+              <h4 className="text-sm font-medium text-gray-900/80 mb-4">Claims Payment Flow</h4>
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
                   <div className="flex items-center gap-3">
@@ -1451,12 +1451,12 @@ export const GovernmentDashboard = () => {
                       <AlertTriangle className="h-5 w-5 text-orange-400" />
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-white">Total Claims Paid</div>
-                      <div className="text-xs text-white/60">To affected farmers</div>
+                      <div className="text-sm font-medium text-gray-900">Total Claims Paid</div>
+                      <div className="text-xs text-gray-900/60">To affected farmers</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-bold text-white">RWF 1.28B</div>
+                    <div className="text-lg font-bold text-gray-900">RWF 1.28B</div>
                     <div className="text-xs text-orange-400">26.4% of premiums</div>
                   </div>
                 </div>
@@ -1466,12 +1466,12 @@ export const GovernmentDashboard = () => {
                       <FileText className="h-5 w-5 text-yellow-400" />
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-white">Operating Expenses</div>
-                      <div className="text-xs text-white/60">Administration & assessments</div>
+                      <div className="text-sm font-medium text-gray-900">Operating Expenses</div>
+                      <div className="text-xs text-gray-900/60">Administration & assessments</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-bold text-white">RWF 895M</div>
+                    <div className="text-lg font-bold text-gray-900">RWF 895M</div>
                     <div className="text-xs text-yellow-400">18.5% expense ratio</div>
                   </div>
                 </div>
@@ -1484,7 +1484,7 @@ export const GovernmentDashboard = () => {
       <div className="grid gap-6 md:grid-cols-2">
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white">Subsidy Distribution by Region</CardTitle>
+            <CardTitle className="text-gray-900">Subsidy Distribution by Region</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -1493,11 +1493,11 @@ export const GovernmentDashboard = () => {
                 return (
                   <div key={region.id} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
                     <div>
-                      <div className="text-sm font-medium text-white">{region.name}</div>
-                      <div className="text-xs text-white/60">{region.policies} policies</div>
+                      <div className="text-sm font-medium text-gray-900">{region.name}</div>
+                      <div className="text-xs text-gray-900/60">{region.policies} policies</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm font-bold text-white">
+                      <div className="text-sm font-bold text-gray-900">
                         RWF {(subsidy / 1000000).toFixed(1)}M
                       </div>
                       <div className="text-xs text-blue-400">15% subsidy</div>
@@ -1511,45 +1511,45 @@ export const GovernmentDashboard = () => {
 
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white">Financial Health Indicators</CardTitle>
+            <CardTitle className="text-gray-900">Financial Health Indicators</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-white/80">Loss Ratio</span>
+                <span className="text-gray-900/80">Loss Ratio</span>
                 <span className="font-medium text-green-400">26.4%</span>
               </div>
               <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
                 <div className="h-full bg-green-500" style={{ width: '26.4%' }} />
               </div>
-              <p className="text-xs text-white/60 mt-1">Healthy - Below 40% threshold</p>
+              <p className="text-xs text-gray-900/60 mt-1">Healthy - Below 40% threshold</p>
             </div>
             <div>
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-white/80">Expense Ratio</span>
+                <span className="text-gray-900/80">Expense Ratio</span>
                 <span className="font-medium text-blue-400">18.5%</span>
               </div>
               <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
                 <div className="h-full bg-blue-500" style={{ width: '18.5%' }} />
               </div>
-              <p className="text-xs text-white/60 mt-1">Efficient - Below 25% threshold</p>
+              <p className="text-xs text-gray-900/60 mt-1">Efficient - Below 25% threshold</p>
             </div>
             <div>
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-white/80">Combined Ratio</span>
+                <span className="text-gray-900/80">Combined Ratio</span>
                 <span className="font-medium text-purple-400">44.9%</span>
               </div>
               <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
                 <div className="h-full bg-purple-500" style={{ width: '44.9%' }} />
               </div>
-              <p className="text-xs text-white/60 mt-1">Excellent - Well below 100%</p>
+              <p className="text-xs text-gray-900/60 mt-1">Excellent - Well below 100%</p>
             </div>
-            <div className="pt-4 border-t border-gray-700">
+            <div className="pt-4 border-t border-gray-300">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-white/80">Market Sustainability</span>
+                <span className="text-sm text-gray-900/80">Market Sustainability</span>
                 <Badge className="bg-green-600">Excellent</Badge>
               </div>
-              <p className="text-xs text-white/60 mt-1">
+              <p className="text-xs text-gray-900/60 mt-1">
                 Combined ratio under 50% indicates strong financial health
               </p>
             </div>
@@ -1564,10 +1564,10 @@ export const GovernmentDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">System Notifications & Alerts</h2>
-          <p className="text-white/60">Important updates and system alerts</p>
+          <h2 className="text-2xl font-bold text-gray-900">System Notifications & Alerts</h2>
+          <p className="text-gray-900/60">Important updates and system alerts</p>
         </div>
-        <Button variant="outline" className="border-gray-700 text-white hover:bg-gray-800">
+        <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-800">
           <CheckCircle className="h-4 w-4 mr-2" />
           Mark All Read
         </Button>
@@ -1576,38 +1576,38 @@ export const GovernmentDashboard = () => {
       <div className="grid gap-6 md:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-red-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Critical</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Critical</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-400">3</div>
-            <p className="text-xs text-white/60 mt-1">Urgent attention</p>
+            <p className="text-xs text-gray-900/60 mt-1">Urgent attention</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-yellow-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Warning</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Warning</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-400">8</div>
-            <p className="text-xs text-white/60 mt-1">Review soon</p>
+            <p className="text-xs text-gray-900/60 mt-1">Review soon</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Information</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Information</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-400">15</div>
-            <p className="text-xs text-white/60 mt-1">General updates</p>
+            <p className="text-xs text-gray-900/60 mt-1">General updates</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Success</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Success</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-400">22</div>
-            <p className="text-xs text-white/60 mt-1">Completed actions</p>
+            <p className="text-xs text-gray-900/60 mt-1">Completed actions</p>
           </CardContent>
         </Card>
       </div>
@@ -1642,15 +1642,15 @@ export const GovernmentDashboard = () => {
                     }`}>
                       {notification.type.toUpperCase()}
                     </Badge>
-                    <span className="text-xs text-white/60">{notification.time}</span>
+                    <span className="text-xs text-gray-900/60">{notification.time}</span>
                     <Badge variant="outline" className="text-xs border-gray-600">
                       {notification.region}
                     </Badge>
                   </div>
-                  <h4 className="text-sm font-semibold text-white mb-1">{notification.title}</h4>
-                  <p className="text-xs text-white/70">{notification.message}</p>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-1">{notification.title}</h4>
+                  <p className="text-xs text-gray-900/70">{notification.message}</p>
                 </div>
-                <Button variant="ghost" size="sm" className="text-white/60 hover:text-white">
+                <Button variant="ghost" size="sm" className="text-gray-900/60 hover:text-gray-900">
                   <Eye className="h-4 w-4" />
                 </Button>
               </div>
@@ -1666,39 +1666,39 @@ export const GovernmentDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Government Dashboard Settings</h2>
-          <p className="text-white/60">Configure your preferences and system settings</p>
+          <h2 className="text-2xl font-bold text-gray-900">Government Dashboard Settings</h2>
+          <p className="text-gray-900/60">Configure your preferences and system settings</p>
         </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <User className="h-5 w-5" />
               Account Information
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="text-sm text-white/80 block mb-2">Organization</label>
-              <div className="p-3 bg-gray-800/50 rounded-lg text-white">
+              <label className="text-sm text-gray-900/80 block mb-2">Organization</label>
+              <div className="p-3 bg-gray-800/50 rounded-lg text-gray-900">
                 {governmentName}
               </div>
             </div>
             <div>
-              <label className="text-sm text-white/80 block mb-2">User ID</label>
-              <div className="p-3 bg-gray-800/50 rounded-lg text-white">
+              <label className="text-sm text-gray-900/80 block mb-2">User ID</label>
+              <div className="p-3 bg-gray-800/50 rounded-lg text-gray-900">
                 {governmentId}
               </div>
             </div>
             <div>
-              <label className="text-sm text-white/80 block mb-2">Access Level</label>
+              <label className="text-sm text-gray-900/80 block mb-2">Access Level</label>
               <Badge className="bg-indigo-600">Full Government Access</Badge>
             </div>
             <div>
-              <label className="text-sm text-white/80 block mb-2">Last Login</label>
-              <div className="p-3 bg-gray-800/50 rounded-lg text-white/70 text-sm">
+              <label className="text-sm text-gray-900/80 block mb-2">Last Login</label>
+              <div className="p-3 bg-gray-800/50 rounded-lg text-gray-900/70 text-sm">
                 March 15, 2024 at 09:23 AM
               </div>
             </div>
@@ -1707,7 +1707,7 @@ export const GovernmentDashboard = () => {
 
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <Bell className="h-5 w-5" />
               Notification Preferences
             </CardTitle>
@@ -1721,8 +1721,8 @@ export const GovernmentDashboard = () => {
             ].map((pref, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
                 <div>
-                  <div className="text-sm font-medium text-white">{pref.label}</div>
-                  <div className="text-xs text-white/60">{pref.description}</div>
+                  <div className="text-sm font-medium text-gray-900">{pref.label}</div>
+                  <div className="text-xs text-gray-900/60">{pref.description}</div>
                 </div>
                 <div className={`w-12 h-6 rounded-full ${pref.enabled ? 'bg-indigo-600' : 'bg-gray-600'} relative cursor-pointer`}>
                   <div className={`absolute w-5 h-5 bg-white rounded-full top-0.5 transition-all ${pref.enabled ? 'right-0.5' : 'left-0.5'}`} />
@@ -1734,7 +1734,7 @@ export const GovernmentDashboard = () => {
 
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <Download className="h-5 w-5" />
               Export Settings
             </CardTitle>
@@ -1747,8 +1747,8 @@ export const GovernmentDashboard = () => {
               { label: 'Include Raw Data', value: 'Yes' }
             ].map((setting, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
-                <span className="text-sm text-white/80">{setting.label}</span>
-                <span className="text-sm font-medium text-white">{setting.value}</span>
+                <span className="text-sm text-gray-900/80">{setting.label}</span>
+                <span className="text-sm font-medium text-gray-900">{setting.value}</span>
               </div>
             ))}
             <Button className="w-full bg-indigo-600 hover:bg-indigo-700 mt-4">
@@ -1759,7 +1759,7 @@ export const GovernmentDashboard = () => {
 
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <Lock className="h-5 w-5" />
               Security Settings
             </CardTitle>
@@ -1767,26 +1767,26 @@ export const GovernmentDashboard = () => {
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
               <div>
-                <div className="text-sm font-medium text-white">Two-Factor Authentication</div>
-                <div className="text-xs text-white/60">Enhanced security</div>
+                <div className="text-sm font-medium text-gray-900">Two-Factor Authentication</div>
+                <div className="text-xs text-gray-900/60">Enhanced security</div>
               </div>
               <Badge className="bg-green-600">Enabled</Badge>
             </div>
             <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
               <div>
-                <div className="text-sm font-medium text-white">Session Timeout</div>
-                <div className="text-xs text-white/60">Auto-logout after inactivity</div>
+                <div className="text-sm font-medium text-gray-900">Session Timeout</div>
+                <div className="text-xs text-gray-900/60">Auto-logout after inactivity</div>
               </div>
-              <span className="text-sm font-medium text-white">30 minutes</span>
+              <span className="text-sm font-medium text-gray-900">30 minutes</span>
             </div>
             <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
               <div>
-                <div className="text-sm font-medium text-white">IP Whitelisting</div>
-                <div className="text-xs text-white/60">Restricted access</div>
+                <div className="text-sm font-medium text-gray-900">IP Whitelisting</div>
+                <div className="text-xs text-gray-900/60">Restricted access</div>
               </div>
               <Badge className="bg-blue-600">Active</Badge>
             </div>
-            <Button variant="outline" className="w-full border-gray-700 text-white hover:bg-gray-800 mt-4">
+            <Button variant="outline" className="w-full border-gray-300 text-gray-900 hover:bg-gray-800 mt-4">
               Change Password
             </Button>
           </CardContent>
@@ -1795,7 +1795,7 @@ export const GovernmentDashboard = () => {
 
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
+          <CardTitle className="text-gray-900 flex items-center gap-2">
             <Database className="h-5 w-5" />
             Data Access & Permissions
           </CardTitle>
@@ -1812,7 +1812,7 @@ export const GovernmentDashboard = () => {
             ].map((item, idx) => (
               <div key={idx} className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
                 <div>
-                  <div className="text-sm font-medium text-white">{item.module}</div>
+                  <div className="text-sm font-medium text-gray-900">{item.module}</div>
                   <div className="flex gap-2 mt-1">
                     {item.permissions.map((perm, pIdx) => (
                       <Badge key={pIdx} variant="outline" className="text-xs border-gray-600">

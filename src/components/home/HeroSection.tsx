@@ -65,12 +65,12 @@ export function HeroSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-full mb-6 sm:mb-8"
+          className="inline-flex items-center space-x-2 bg-green-50 border border-green-200 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full mb-6 sm:mb-8"
         >
-          <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400" />
+          <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
           <VariableProximity
             label="Revolutionary Agricultural Technology"
-            className="text-white/90 text-xs sm:text-sm font-medium cursor-pointer"
+            className="text-gray-700 text-xs sm:text-sm font-medium cursor-pointer"
             fromFontVariationSettings="'wght' 400, 'opsz' 8"
             toFontVariationSettings="'wght' 700, 'opsz' 16"
             containerRef={containerRef}
@@ -83,7 +83,7 @@ export function HeroSection() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-6 sm:mb-8 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent leading-tight px-2"
+          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-gray-900 mb-6 sm:mb-8 bg-gradient-to-r from-gray-900 to-green-700 bg-clip-text text-transparent leading-tight px-2"
         >
           <VariableProximity
             label="Revolutionizing Agricultural"
@@ -96,7 +96,7 @@ export function HeroSection() {
           />
           <VariableProximity
             label="Insurance with AI"
-            className="block bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent cursor-pointer"
+            className="block bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent cursor-pointer"
             fromFontVariationSettings="'wght' 400, 'opsz' 9"
             toFontVariationSettings="'wght' 1000, 'opsz' 40"
             containerRef={containerRef}
@@ -109,7 +109,7 @@ export function HeroSection() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
-          className="text-base sm:text-lg lg:text-xl text-white/80 mb-8 sm:mb-12 max-w-4xl mx-auto leading-relaxed px-4"
+          className="text-base sm:text-lg lg:text-xl text-gray-600 mb-8 sm:mb-12 max-w-4xl mx-auto leading-relaxed px-4"
         >
           <VariableProximity
             label="STARHAWK combines drone surveillance, satellite analytics, and AI to provide comprehensive agricultural insurance solutions for farmers, insurers, and governments."
@@ -131,7 +131,7 @@ export function HeroSection() {
           <Link to="/role-selection" className="w-full sm:w-auto">
             <Button 
               size="lg" 
-              className="w-full sm:w-auto bg-gradient-to-r from-green-500/90 to-emerald-600/90 hover:from-green-500 hover:to-emerald-600 text-white px-6 sm:px-10 py-3 sm:py-4 rounded-3xl font-medium text-base sm:text-lg shadow-lg hover:shadow-xl transition-all duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+              className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 sm:px-10 py-3 sm:py-4 rounded-3xl font-medium text-base sm:text-lg shadow-md hover:shadow-lg transition-all duration-500 ease-out hover:scale-105 hover:-translate-y-1"
             >
               Get Started
               <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 ml-2 transition-transform duration-300 ease-out group-hover:translate-x-1" />
@@ -140,7 +140,7 @@ export function HeroSection() {
           <Button 
             size="lg" 
             variant="outline" 
-            className="w-full sm:w-auto bg-white/5 border-white/10 text-white/90 hover:bg-white/10 hover:border-white/20 hover:text-white px-6 sm:px-10 py-3 sm:py-4 rounded-3xl font-medium text-base sm:text-lg backdrop-blur-md transition-all duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+            className="w-full sm:w-auto bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 hover:text-gray-900 px-6 sm:px-10 py-3 sm:py-4 rounded-3xl font-medium text-base sm:text-lg shadow-sm transition-all duration-500 ease-out hover:scale-105 hover:-translate-y-1"
           >
             Learn More
           </Button>

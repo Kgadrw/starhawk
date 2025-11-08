@@ -7,10 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import PolicyDetailsView from "./PolicyDetailsView";
-import { getPolicies, createPolicy as createPolicyApi, getPolicyById, updatePolicy as updatePolicyApi, deletePolicy as deletePolicyApi } from "@/services/policiesApi";
-import { getAllUsers } from "@/services/usersAPI";
+import { getPolicies, getPolicyById, updatePolicy as updatePolicyApi, deletePolicy as deletePolicyApi } from "@/services/policiesApi";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Plus,
@@ -49,18 +48,19 @@ interface Policy {
   createdAt: string;
 }
 
-export default function PolicyManagement() {
+interface PolicyManagementProps {
+  onNavigateToCreate?: () => void;
+}
+
+export default function PolicyManagement({ onNavigateToCreate }: PolicyManagementProps = {}) {
   const { toast } = useToast();
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [farmers, setFarmers] = useState<any[]>([]);
-  const [loadingFarmers, setLoadingFarmers] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [cropFilter, setCropFilter] = useState("all");
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null);
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
@@ -69,7 +69,6 @@ export default function PolicyManagement() {
   // Load policies from API
   useEffect(() => {
     loadPolicies();
-    loadFarmers();
   }, []);
 
   const loadPolicies = async () => {
@@ -119,38 +118,8 @@ export default function PolicyManagement() {
     }
   };
 
-  const loadFarmers = async () => {
-    setLoadingFarmers(true);
-    try {
-      const response: any = await getAllUsers();
-      let usersData: any[] = [];
-      
-      if (Array.isArray(response)) {
-        usersData = response;
-      } else if (response && typeof response === 'object') {
-        usersData = response.data || response.users || [];
-      }
-      
-      // Filter for farmers only
-      const farmersData = usersData.filter((user: any) => 
-        (user.role || '').toUpperCase() === 'FARMER' || 
-        (user.role || '').toLowerCase() === 'farmer'
-      );
-      
-      setFarmers(farmersData);
-    } catch (err: any) {
-      console.error('Failed to load farmers:', err);
-      toast({
-        title: "Warning",
-        description: "Could not load farmers list. You may need to enter farmer ID manually.",
-        variant: "default",
-      });
-    } finally {
-      setLoadingFarmers(false);
-    }
-  };
 
-  // Form state for create/edit
+  // Form state for edit
   const [formData, setFormData] = useState({
     farmerId: "",
     farmerName: "",
@@ -204,50 +173,6 @@ export default function PolicyManagement() {
     return matchesSearch && matchesStatus && matchesCrop;
   });
 
-  const handleCreatePolicy = async () => {
-    if (!formData.farmerId || !formData.cropType || !formData.coverageAmount || !formData.premiumAmount) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const policyData = {
-        farmerId: formData.farmerId,
-        cropType: formData.cropType,
-        coverageAmount: parseFloat(formData.coverageAmount),
-        premium: parseFloat(formData.premiumAmount),
-        startDate: formData.startDate || new Date().toISOString().split('T')[0],
-        endDate: formData.endDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        status: "pending",
-        notes: formData.location ? `Location: ${formData.location}` : undefined,
-      };
-
-      const response: any = await createPolicyApi(policyData);
-      const newPolicy = response.data || response;
-      
-      toast({
-        title: "Success",
-        description: "Policy created successfully",
-        variant: "default",
-      });
-      
-      // Reload policies
-      loadPolicies();
-      setIsCreateDialogOpen(false);
-      resetForm();
-    } catch (err: any) {
-      console.error('Failed to create policy:', err);
-      toast({
-        title: "Error",
-        description: err.message || 'Failed to create policy',
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleEditPolicy = async () => {
     if (!selectedPolicy) return;
@@ -364,76 +289,17 @@ export default function PolicyManagement() {
     ));
   };
 
-  const resetForm = () => {
-    setFormData({
-      farmerId: "",
-      farmerName: "",
-      cropType: "",
-      coverageAmount: "",
-      premiumAmount: "",
-      startDate: "",
-      endDate: "",
-      location: "",
-      farmSize: "",
-      riskLevel: "low",
-      deductible: ""
-    });
+  const handleCreateClick = () => {
+    if (onNavigateToCreate) {
+      onNavigateToCreate();
+    }
   };
 
-  const renderPolicyForm = () => (
+  const renderEditPolicyForm = () => (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="farmerId">Farmer</Label>
-          <Select 
-            value={formData.farmerId} 
-            onValueChange={(value) => {
-              const selectedFarmer = farmers.find((f: any) => (f._id || f.id) === value);
-              setFormData({
-                ...formData, 
-                farmerId: value,
-                farmerName: selectedFarmer 
-                  ? `${selectedFarmer.firstName || ''} ${selectedFarmer.lastName || ''}`.trim() || selectedFarmer.name || selectedFarmer.email || ''
-                  : ''
-              });
-            }}
-          >
-            <SelectTrigger id="farmerId" className="bg-gray-800 border-gray-700 text-white">
-              <SelectValue placeholder={loadingFarmers ? "Loading farmers..." : "Select a farmer"} />
-            </SelectTrigger>
-            <SelectContent className="bg-gray-900 border-gray-700">
-              {loadingFarmers ? (
-                <SelectItem value="loading" disabled>Loading farmers...</SelectItem>
-              ) : !Array.isArray(farmers) || farmers.length === 0 ? (
-                <SelectItem value="none" disabled>No farmers available</SelectItem>
-              ) : (
-                farmers.map((farmer: any) => (
-                  <SelectItem key={farmer._id || farmer.id} value={farmer._id || farmer.id}>
-                    {farmer.firstName && farmer.lastName 
-                      ? `${farmer.firstName} ${farmer.lastName}` 
-                      : farmer.name || farmer.email || farmer.phoneNumber || 'Unknown Farmer'}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="farmerName">Farmer Name (auto-filled)</Label>
-          <Input
-            id="farmerName"
-            value={formData.farmerName}
-            onChange={(e) => setFormData({...formData, farmerName: e.target.value})}
-            placeholder="Auto-filled from selection"
-            disabled
-            className="bg-gray-700/50"
-          />
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="cropType">Crop Type</Label>
+          <Label htmlFor="edit-cropType">Crop Type</Label>
           <Select value={formData.cropType} onValueChange={(value) => setFormData({...formData, cropType: value})}>
             <SelectTrigger>
               <SelectValue placeholder="Select crop type" />
@@ -448,9 +314,9 @@ export default function PolicyManagement() {
           </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="farmSize">Farm Size (hectares)</Label>
+          <Label htmlFor="edit-farmSize">Farm Size (hectares)</Label>
           <Input
-            id="farmSize"
+            id="edit-farmSize"
             type="number"
             value={formData.farmSize}
             onChange={(e) => setFormData({...formData, farmSize: e.target.value})}
@@ -461,9 +327,9 @@ export default function PolicyManagement() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="coverageAmount">Coverage Amount (RWF)</Label>
+          <Label htmlFor="edit-coverageAmount">Coverage Amount (RWF)</Label>
           <Input
-            id="coverageAmount"
+            id="edit-coverageAmount"
             type="number"
             value={formData.coverageAmount}
             onChange={(e) => setFormData({...formData, coverageAmount: e.target.value})}
@@ -471,9 +337,9 @@ export default function PolicyManagement() {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="premiumAmount">Premium Amount (RWF)</Label>
+          <Label htmlFor="edit-premiumAmount">Premium Amount (RWF)</Label>
           <Input
-            id="premiumAmount"
+            id="edit-premiumAmount"
             type="number"
             value={formData.premiumAmount}
             onChange={(e) => setFormData({...formData, premiumAmount: e.target.value})}
@@ -484,18 +350,18 @@ export default function PolicyManagement() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="startDate">Start Date</Label>
+          <Label htmlFor="edit-startDate">Start Date</Label>
           <Input
-            id="startDate"
+            id="edit-startDate"
             type="date"
             value={formData.startDate}
             onChange={(e) => setFormData({...formData, startDate: e.target.value})}
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="endDate">End Date</Label>
+          <Label htmlFor="edit-endDate">End Date</Label>
           <Input
-            id="endDate"
+            id="edit-endDate"
             type="date"
             value={formData.endDate}
             onChange={(e) => setFormData({...formData, endDate: e.target.value})}
@@ -505,16 +371,16 @@ export default function PolicyManagement() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="location">Location</Label>
+          <Label htmlFor="edit-location">Location</Label>
           <Input
-            id="location"
+            id="edit-location"
             value={formData.location}
             onChange={(e) => setFormData({...formData, location: e.target.value})}
             placeholder="Enter location"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="riskLevel">Risk Level</Label>
+          <Label htmlFor="edit-riskLevel">Risk Level</Label>
           <Select value={formData.riskLevel} onValueChange={(value) => setFormData({...formData, riskLevel: value})}>
             <SelectTrigger>
               <SelectValue placeholder="Select risk level" />
@@ -529,9 +395,9 @@ export default function PolicyManagement() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="deductible">Deductible (RWF)</Label>
+        <Label htmlFor="edit-deductible">Deductible (RWF)</Label>
         <Input
-          id="deductible"
+          id="edit-deductible"
           type="number"
           value={formData.deductible}
           onChange={(e) => setFormData({...formData, deductible: e.target.value})}
@@ -558,8 +424,8 @@ export default function PolicyManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Policy Management</h1>
-          <p className="text-white/60 mt-1">Manage insurance policies for farmers</p>
+          <h1 className="text-3xl font-bold text-gray-700">Policy Management</h1>
+          <p className="text-gray-600 mt-1">Manage insurance policies for farmers</p>
         </div>
         <div className="flex items-center space-x-3">
           <Button
@@ -568,28 +434,10 @@ export default function PolicyManagement() {
           >
             {viewMode === "table" ? "Grid View" : "Table View"}
           </Button>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700">
+          <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleCreateClick}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Policy
               </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Create New Policy</DialogTitle>
-              </DialogHeader>
-              {renderPolicyForm()}
-              <div className="flex justify-end space-x-3 pt-4">
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleCreatePolicy}>
-                  Create Policy
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
         </div>
       </div>
 
@@ -847,7 +695,7 @@ export default function PolicyManagement() {
           <DialogHeader>
             <DialogTitle>Edit Policy - {selectedPolicy?.id}</DialogTitle>
           </DialogHeader>
-          {renderPolicyForm()}
+          {renderEditPolicyForm()}
           <div className="flex justify-end space-x-3 pt-4">
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Cancel

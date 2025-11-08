@@ -100,7 +100,7 @@ export default function Services() {
 
   return (
     <CustomScrollbar>
-      <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 relative">
+      <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50 relative">
         {/* Navigation */}
         <HomeNavbar />
       
@@ -138,9 +138,9 @@ export default function Services() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-full mb-4 sm:mb-6">
-              <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-green-400" />
-              <span className="text-white/90 text-xs sm:text-sm font-medium">Our Services</span>
+            <div className="inline-flex items-center space-x-2 bg-green-50 border border-green-200 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full mb-4 sm:mb-6">
+              <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
+              <span className="text-gray-900/90 text-xs sm:text-sm font-medium">Our Services</span>
             </div>
           </motion.div>
           
@@ -150,7 +150,7 @@ export default function Services() {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 leading-tight px-2"
           >
-            <span className="text-white">Comprehensive </span>
+            <span className="text-gray-900">Comprehensive </span>
             <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Solutions</span>
           </motion.h1>
           
@@ -160,7 +160,7 @@ export default function Services() {
             transition={{ duration: 0.8, delay: 0.6 }}
             className="text-base sm:text-lg lg:text-xl max-w-3xl mx-auto leading-relaxed mb-8 sm:mb-12 px-4"
           >
-            <span className="text-green-300/80">AI-powered agricultural insurance solutions</span> <span className="text-white/80">that revolutionize risk assessment, 
+            <span className="text-green-700">AI-powered agricultural insurance solutions</span> <span className="text-gray-900/80">that revolutionize risk assessment, 
             claims processing, and policy management for the modern farming industry.</span>
           </motion.p>
 
@@ -172,14 +172,14 @@ export default function Services() {
           >
             <Button 
               size="lg" 
-              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-white shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-gray-900 shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
             >
                 Get Started Today
               <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 ml-2" />
               </Button>
             <Button 
               size="lg" 
-              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-white shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-gray-900 shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
             >
                 Schedule Demo
               </Button>
@@ -226,33 +226,33 @@ export default function Services() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
               >
-                <Card className="group bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 transition-all duration-500 rounded-2xl h-full">
+                <Card className="group bg-white border border-gray-200 hover:bg-white/10 transition-all duration-500 rounded-2xl h-full">
                   <CardHeader className="pb-4 sm:pb-6 p-4 sm:p-6">
                     <div className="flex items-center justify-center mb-4 sm:mb-6">
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-500">
-                        <Icon className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-50 border border-green-200 border border-white/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-500">
+                        <Icon className="h-6 w-6 sm:h-8 sm:w-8 text-gray-900" />
                       </div>
                   </div>
-                    <CardTitle className={`text-lg sm:text-xl font-bold text-center ${index % 2 === 0 ? 'text-green-400' : 'text-white'} group-hover:text-green-200 transition-colors leading-tight`}>
+                    <CardTitle className={`text-lg sm:text-xl font-bold text-center ${index % 2 === 0 ? 'text-green-600' : 'text-gray-900'} group-hover:text-green-600 transition-colors leading-tight`}>
                       {service.title}
                     </CardTitle>
                 </CardHeader>
                   <CardContent className="pt-0 p-4 sm:p-6">
-                    <p className={`${index % 2 === 0 ? 'text-green-300/80' : 'text-white/70'} text-center mb-4 sm:mb-6 leading-relaxed text-sm sm:text-base`}>
+                    <p className={`${index % 2 === 0 ? 'text-green-700' : 'text-gray-900/70'} text-center mb-4 sm:mb-6 leading-relaxed text-sm sm:text-base`}>
                       {service.description}
                     </p>
                     
                     <div className="space-y-2 sm:space-y-3 mb-6 sm:mb-8">
                     {service.features.map((feature, idx) => (
                         <div key={idx} className="flex items-start space-x-2 sm:space-x-3">
-                          <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-400 flex-shrink-0 mt-0.5" />
-                          <span className="text-white/80 text-xs sm:text-sm leading-relaxed">{feature}</span>
+                          <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <span className="text-gray-900/80 text-xs sm:text-sm leading-relaxed">{feature}</span>
                         </div>
                       ))}
                     </div>
 
                     <Button 
-                      className="w-full bg-green-600 hover:bg-green-700 border-0 text-white shadow-lg shadow-green-500/30 rounded-3xl py-2.5 sm:py-3 font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1 text-sm sm:text-base"
+                      className="w-full bg-green-600 hover:bg-green-700 border-0 text-gray-900 shadow-lg shadow-green-500/30 rounded-3xl py-2.5 sm:py-3 font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1 text-sm sm:text-base"
                     >
                     Learn More
                       <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2" />
@@ -276,7 +276,7 @@ export default function Services() {
             transition={{ duration: 0.6 }}
             className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6 leading-tight px-2"
           >
-            <span className="text-white">Ready to Transform Your </span>
+            <span className="text-gray-900">Ready to Transform Your </span>
             <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Agricultural Insurance?</span>
           </motion.h2>
           <motion.p 
@@ -286,7 +286,7 @@ export default function Services() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-base sm:text-lg lg:text-xl mb-8 sm:mb-12 max-w-3xl mx-auto leading-relaxed px-4"
           >
-            <span className="text-green-300/80">Join leading insurers and government agencies</span> <span className="text-white/80">who trust STARHAWK for
+            <span className="text-green-700">Join leading insurers and government agencies</span> <span className="text-gray-900/80">who trust STARHAWK for
             their agricultural insurance needs. Get started today with a free consultation.</span>
           </motion.p>
           <motion.div 
@@ -298,21 +298,21 @@ export default function Services() {
           >
             <Button 
               size="lg" 
-              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-white shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-gray-900 shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
             >
               <Phone className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               Schedule Consultation
             </Button>
             <Button 
               size="lg" 
-              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-white shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-gray-900 shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
             >
               <Mail className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               Contact Sales
             </Button>
             <Button 
               size="lg" 
-              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-white shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-gray-900 shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
             >
               <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               Live Chat

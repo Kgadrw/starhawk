@@ -1,8 +1,8 @@
 // Admin API Service
-// Use proxy in development to avoid CORS issues, full URL in production
-const ADMIN_BASE_URL = import.meta.env.DEV
-  ? '/api/v1/admin'
-  : 'https://starhawk-backend-agriplatform.onrender.com/api/v1/admin';
+// Using centralized API configuration
+import { API_BASE_URL, API_ENDPOINTS, getAuthToken } from '@/config/api';
+
+const ADMIN_BASE_URL = `${API_BASE_URL}/admin`;
 
 class AdminApiService {
   private baseURL: string;
@@ -12,7 +12,7 @@ class AdminApiService {
   }
 
   private getToken(): string | null {
-    return localStorage.getItem('token');
+    return getAuthToken();
   }
 
   private async request<T>(
@@ -40,8 +40,19 @@ class AdminApiService {
       const response = await fetch(url, config);
 
       if (response.status === 401) {
+        // Clear all authentication data
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('role');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('phoneNumber');
+        localStorage.removeItem('email');
+        
+        // Redirect to login page
+        if (typeof window !== 'undefined') {
+          window.location.href = '/';
+        }
+        
         throw new Error('Authentication required. Please log in again.');
       }
 

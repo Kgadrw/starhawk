@@ -92,8 +92,8 @@ const PartnersSection = () => {
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.6 }}
         >
-          <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-full mb-4 sm:mb-6">
-            <span className="text-white/90 text-xs sm:text-sm font-medium">Trusted Partners</span>
+          <div className="inline-flex items-center space-x-2 bg-green-50 border border-green-200 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full mb-4 sm:mb-6">
+            <span className="text-gray-700 text-xs sm:text-sm font-medium">Trusted Partners</span>
           </div>
         </motion.div>        
 
@@ -135,7 +135,7 @@ const PartnersSection = () => {
             containerRef={containerRef}
             radius={50}
             falloff="linear"
-            className="text-sm sm:text-base text-white/70 mt-8 sm:mt-12 cursor-pointer"
+            className="text-sm sm:text-base text-gray-600 mt-8 sm:mt-12 cursor-pointer"
           />
         </motion.div>
       </div>

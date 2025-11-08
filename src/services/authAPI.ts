@@ -316,6 +316,56 @@ class AuthApiService {
     }
   }
 
+  // Insurer Login
+  async insurerLogin(phoneNumber: string, password: string): Promise<LoginResponse> {
+    try {
+      const requestBody = { phoneNumber, password };
+      console.log('📤 Insurer login request:', JSON.stringify(requestBody, null, 2));
+      
+      const response = await this.request<any>('/login', {
+        method: 'POST',
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('📥 Insurer login response:', response);
+
+      // Handle both response structures: { data: {...} } or direct {...}
+      const data = response.data || response;
+
+      if (!data || !data.token) {
+        console.error('❌ Invalid response structure:', data);
+        throw new Error('Invalid response from server');
+      }
+
+      if (data.role !== 'INSURER') {
+        console.error('❌ Invalid role:', data.role, 'Expected: INSURER');
+        throw new Error('Access denied. Only insurers can log in here.');
+      }
+
+      // Save token & user info in localStorage
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('role', data.role);
+      localStorage.setItem('userId', data.userId || data._id || '');
+      localStorage.setItem('phoneNumber', data.phoneNumber || '');
+      localStorage.setItem('email', data.email || '');
+
+      console.log('✅ Insurer login successful:', data);
+      return data;
+    } catch (error: any) {
+      console.error('❌ Insurer login failed:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      // Re-throw with a more user-friendly message if possible
+      if (error.message) {
+        throw error;
+      }
+      throw new Error('Login failed. Please check your credentials and try again.');
+    }
+  }
+
   // Logout (clear storage)
   logout(): void {
     localStorage.removeItem('token');
@@ -377,6 +427,9 @@ export const assessorLogin = (phoneNumber: string, password: string) =>
 
 export const farmerLogin = (phoneNumber: string, password: string) =>
   authApiService.farmerLogin(phoneNumber, password);
+
+export const insurerLogin = (phoneNumber: string, password: string) =>
+  authApiService.insurerLogin(phoneNumber, password);
 
 export const logout = () => authApiService.logout();
 

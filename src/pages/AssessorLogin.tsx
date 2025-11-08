@@ -61,7 +61,7 @@ export default function AssessorLogin() {
   };
 
   return (
-    <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 min-h-screen">
+    <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50 min-h-screen">
       {/* Navigation */}
       <HomeNavbar />
 
@@ -93,19 +93,10 @@ export default function AssessorLogin() {
       {/* Login Form */}
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4 pt-32">
         <div className="w-full max-w-md">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <MapPin className="h-8 w-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Assessor Login</h1>
-            <p className="text-white/70">Access your assessment dashboard</p>
-          </div>
-
-          <Card className="bg-white/5 backdrop-blur-xl border border-white/10 shadow-xl">
+          <Card className="bg-white border border-gray-200 shadow-lg">
           <CardHeader>
-            <CardTitle className="text-center text-xl text-white">Welcome Back</CardTitle>
-            <p className="text-center text-white/70 text-sm">
+            <CardTitle className="text-center text-xl text-gray-900">Welcome Back</CardTitle>
+            <p className="text-center text-gray-600 text-sm">
               Enter your credentials to access your assessment tasks
             </p>
           </CardHeader>
@@ -118,7 +109,7 @@ export default function AssessorLogin() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="phoneNumber" className="text-white flex items-center gap-2">
+                <Label htmlFor="phoneNumber" className="text-gray-700 flex items-center gap-2">
                   <Phone className="h-4 w-4" />
                   Phone Number
                 </Label>
@@ -129,12 +120,12 @@ export default function AssessorLogin() {
                   onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
                   placeholder="Enter your phone number (e.g., 0721234567)"
                   required
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/50 backdrop-blur-sm"
+                  className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-white">Password</Label>
+                <Label htmlFor="password" className="text-gray-700">Password</Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -143,7 +134,7 @@ export default function AssessorLogin() {
                     onChange={(e) => handleInputChange('password', e.target.value)}
                     placeholder="Enter your password"
                     required
-                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50 backdrop-blur-sm"
+                    className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
                   />
                   <Button
                     type="button"
@@ -153,9 +144,9 @@ export default function AssessorLogin() {
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
-                      <EyeOff className="h-4 w-4 text-white/50" />
+                      <EyeOff className="h-4 w-4 text-gray-500" />
                     ) : (
-                      <Eye className="h-4 w-4 text-white/50" />
+                      <Eye className="h-4 w-4 text-gray-500" />
                     )}
                   </Button>
                 </div>
@@ -163,7 +154,7 @@ export default function AssessorLogin() {
 
               <Button
                 type="submit"
-                className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white backdrop-blur-sm"
+                className="w-full bg-green-600 hover:bg-green-700 text-white"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -178,7 +169,7 @@ export default function AssessorLogin() {
             </form>
 
             <div className="mt-6 text-center">
-              <Link to="/role-selection" className="flex items-center justify-center text-white/70 hover:text-white">
+              <Link to="/role-selection" className="flex items-center justify-center text-gray-600 hover:text-gray-900">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Role Selection
               </Link>
@@ -188,11 +179,11 @@ export default function AssessorLogin() {
 
         {/* Info Section */}
         <div className="mt-6 text-center">
-          <p className="text-sm text-white/50">
+          <p className="text-sm text-gray-600">
             Assessor accounts are created by system administrators.
             <br />
             Contact admin at{" "}
-            <a href="mailto:admin@cropinsurance.rw" className="text-green-400 hover:text-green-300">
+            <a href="mailto:admin@cropinsurance.rw" className="text-green-600 hover:text-green-700">
               admin@cropinsurance.rw
             </a>
           </p>

@@ -1,51 +1,51 @@
-// Dark theme utilities for dashboard components to match Chainex-style UI
+// Light theme utilities for dashboard components
 
 export const dashboardTheme = {
-  // Card styling - transparent or gray-950
-  card: "bg-gray-950/80 backdrop-blur-sm border-gray-800/50",
-  cardHeader: "border-gray-800/30",
-  cardTitle: "text-white",
-  cardDescription: "text-white/80",
+  // Card styling - white background
+  card: "bg-white border border-gray-200 shadow-sm",
+  cardHeader: "border-gray-200",
+  cardTitle: "text-gray-900",
+  cardDescription: "text-gray-600",
   
   // Button styling
-  buttonPrimary: "bg-gray-900/80 hover:bg-gray-800/80 border border-gray-700/50 text-white backdrop-blur-sm",
-  buttonSecondary: "bg-gray-800/60 hover:bg-gray-700/60 text-white border border-gray-700/50",
+  buttonPrimary: "bg-green-600 hover:bg-green-700 text-white border border-green-600",
+  buttonSecondary: "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300",
   
   // Input styling
-  input: "bg-gray-900/80 border-gray-800/50 text-white placeholder:text-white/60",
-  select: "bg-gray-900/80 border-gray-800/50 text-white",
-  textarea: "bg-gray-900/80 border-gray-800/50 text-white placeholder:text-white/60",
+  input: "bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500",
+  select: "bg-gray-50 border-gray-300 text-gray-900",
+  textarea: "bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500",
   
   // Text colors
-  textPrimary: "text-white",
-  textSecondary: "text-white/80",
-  textMuted: "text-white/60",
+  textPrimary: "text-gray-900",
+  textSecondary: "text-gray-600",
+  textMuted: "text-gray-500",
   
   // Background colors
-  backgroundPrimary: "bg-gray-950/50",
-  backgroundSecondary: "bg-gray-900/50",
+  backgroundPrimary: "bg-gray-50",
+  backgroundSecondary: "bg-white",
   
   // Border colors
-  borderPrimary: "border-gray-800/50",
-  borderSecondary: "border-gray-700/50",
+  borderPrimary: "border-gray-200",
+  borderSecondary: "border-gray-300",
   
   // Accent colors
-  accentGreen: "text-green-400",
-  accentBlue: "text-blue-400",
-  accentOrange: "text-orange-400",
-  accentPurple: "text-purple-400",
+  accentGreen: "text-green-600",
+  accentBlue: "text-blue-600",
+  accentOrange: "text-orange-600",
+  accentPurple: "text-purple-600",
   
-  // Status colors - catchy solid colors
-  success: "text-emerald-400 bg-emerald-500/20 border-emerald-500/30",
-  warning: "text-amber-400 bg-amber-500/20 border-amber-500/30",
-  error: "text-rose-400 bg-rose-500/20 border-rose-500/30",
-  info: "text-cyan-400 bg-cyan-500/20 border-cyan-500/30",
+  // Status colors - light theme
+  success: "text-emerald-700 bg-emerald-50 border-emerald-200",
+  warning: "text-amber-700 bg-amber-50 border-amber-200",
+  error: "text-rose-700 bg-rose-50 border-rose-200",
+  info: "text-cyan-700 bg-cyan-50 border-cyan-200",
   
-  // Notification colors - catchy and vibrant
-  notificationSuccess: "text-emerald-300 bg-emerald-600/30 border-emerald-600/40",
-  notificationWarning: "text-amber-300 bg-amber-600/30 border-amber-600/40",
-  notificationError: "text-rose-300 bg-rose-600/30 border-rose-600/40",
-  notificationInfo: "text-cyan-300 bg-cyan-600/30 border-cyan-600/40"
+  // Notification colors - light theme
+  notificationSuccess: "text-emerald-700 bg-emerald-100 border-emerald-300",
+  notificationWarning: "text-amber-700 bg-amber-100 border-amber-300",
+  notificationError: "text-rose-700 bg-rose-100 border-rose-300",
+  notificationInfo: "text-cyan-700 bg-cyan-100 border-cyan-300"
 };
 
 export const applyDarkTheme = (className: string = "") => {

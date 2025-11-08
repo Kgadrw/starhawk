@@ -1,47 +1,87 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import { getUserProfile, updateUserProfile } from "@/services/usersAPI";
+import { getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
 import { 
   User, 
-  Building2, 
-  Mail, 
-  Phone, 
-  MapPin, 
   Shield, 
   Key, 
-  Bell, 
-  Globe,
+  Bell,
   Save,
   Eye,
-  EyeOff,
-  Upload,
-  Camera
+  EyeOff
 } from "lucide-react";
 
 export default function InsurerProfileSettings() {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("profile");
+  const [loading, setLoading] = useState(true);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const insurerId = getUserId() || "";
+  const insurerPhone = getPhoneNumber() || "";
+  const insurerEmail = getEmail() || "";
+
   const [profileData, setProfileData] = useState({
-    companyName: "Rwanda Insurance Company",
-    insurerId: "INS-001",
-    contactPerson: "John Doe",
-    email: "john.doe@rwandainsurance.rw",
-    phone: "+250 788 123 456",
-    address: "KG 123 St, Kigali, Rwanda",
-    website: "www.rwandainsurance.rw",
-    licenseNumber: "LIC-2024-001",
-    registrationDate: "2024-01-15",
-    description: "Leading insurance provider specializing in agricultural risk management and crop insurance solutions."
+    email: "",
+    phone: "",
+    companyName: "",
+    contactPerson: "",
+    insurerId: ""
   });
+
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (!insurerId) {
+        setLoading(false);
+        return;
+      }
+      
+      setLoading(true);
+      try {
+        const response: any = await getUserProfile();
+        const user = response.data || response;
+        
+        if (user) {
+          setProfileData({
+            email: user.email || insurerEmail || "",
+            phone: user.phoneNumber || insurerPhone || "",
+            companyName: user.insurerProfile?.companyName || "",
+            contactPerson: user.insurerProfile?.contactPerson || "",
+            insurerId: user._id || user.id || insurerId || ""
+          });
+        }
+      } catch (err: any) {
+        console.error('Failed to load user profile:', err);
+        // Set basic data from localStorage
+        setProfileData(prev => ({
+          ...prev,
+          email: insurerEmail || "",
+          phone: insurerPhone || "",
+          insurerId: insurerId || ""
+        }));
+        toast({
+          title: "Warning",
+          description: "Could not load full profile. Using basic information.",
+          variant: "default",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [insurerId]);
 
   const [securityData, setSecurityData] = useState({
     currentPassword: "",
@@ -125,101 +165,17 @@ export default function InsurerProfileSettings() {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                value={profileData.phone}
-                onChange={(e) => handleProfileUpdate('phone', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="website">Website</Label>
-              <Input
-                id="website"
-                value={profileData.website}
-                onChange={(e) => handleProfileUpdate('website', e.target.value)}
-              />
-            </div>
-          </div>
-
           <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
+            <Label htmlFor="phone">Phone Number</Label>
             <Input
-              id="address"
-              value={profileData.address}
-              onChange={(e) => handleProfileUpdate('address', e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Company Description</Label>
-            <Textarea
-              id="description"
-              value={profileData.description}
-              onChange={(e) => handleProfileUpdate('description', e.target.value)}
-              rows={3}
+              id="phone"
+              value={profileData.phone}
+              onChange={(e) => handleProfileUpdate('phone', e.target.value)}
             />
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Building2 className="h-5 w-5 mr-2" />
-            Business Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="licenseNumber">License Number</Label>
-              <Input
-                id="licenseNumber"
-                value={profileData.licenseNumber}
-                disabled
-                className="bg-gray-50"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="registrationDate">Registration Date</Label>
-              <Input
-                id="registrationDate"
-                value={profileData.registrationDate}
-                disabled
-                className="bg-gray-50"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Camera className="h-5 w-5 mr-2" />
-            Company Logo
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center space-x-6">
-            <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
-              <Building2 className="h-8 w-8 text-gray-400" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm text-white/70 mb-2">
-                Upload a company logo (PNG, JPG up to 2MB)
-              </p>
-              <Button variant="outline" size="sm">
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Logo
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 
@@ -486,8 +442,8 @@ export default function InsurerProfileSettings() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Profile Settings</h2>
-          <p className="text-white/70">Manage your account settings and preferences</p>
+          <h2 className="text-2xl font-bold text-gray-700">Profile Settings</h2>
+          <p className="text-gray-600">Manage your account settings and preferences</p>
         </div>
       </div>
 
@@ -506,8 +462,8 @@ export default function InsurerProfileSettings() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === tab.id
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-white/60 hover:text-white/80 hover:border-gray-300"
+                    ? "border-blue-500 text-gray-700"
+                    : "border-transparent text-gray-600 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
                 <Icon className="h-4 w-4 mr-2" />

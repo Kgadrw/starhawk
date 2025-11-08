@@ -1,19 +1,15 @@
 // Claims API Service
-// Use proxy in development to avoid CORS issues, full URL in production
-const CLAIMS_BASE_URL = import.meta.env.DEV
-  ? '/api/v1/claims'
-  : 'https://starhawk-backend-agriplatform.onrender.com/api/v1/claims';
+// Using centralized API configuration
+import { API_BASE_URL, API_ENDPOINTS, getAuthToken } from '@/config/api';
+
+const CLAIMS_BASE_URL = `${API_BASE_URL}${API_ENDPOINTS.CLAIMS.BASE}`;
 
 interface ClaimData {
-  farmerId: string;
-  policyId?: string;
-  cropType: string;
-  damageType: string;
-  amount: number;
-  description: string;
-  fieldId?: string;
-  evidence?: string[];
-  [key: string]: any;
+  policyId: string;
+  lossEventType: string; // e.g., "DROUGHT", "FLOOD", "PEST_ATTACK", etc.
+  lossDescription: string;
+  damagePhotos?: string[]; // Array of photo URLs
+  [key: string]: any; // Allow additional fields for backward compatibility
 }
 
 interface UpdateClaimData {
@@ -33,7 +29,7 @@ class ClaimsApiService {
   }
 
   private getToken(): string | null {
-    return localStorage.getItem('token');
+    return getAuthToken();
   }
 
   private async request<T>(
@@ -58,12 +54,55 @@ class ClaimsApiService {
     };
 
     try {
+      // Log request details for debugging
+      console.log('🌐 Claims API Request:', {
+        method: options.method || 'GET',
+        url: url,
+        hasToken: !!token,
+        tokenPreview: token ? `${token.substring(0, 20)}...` : 'No token',
+        body: options.body ? JSON.parse(options.body as string) : null
+      });
+
       const response = await fetch(url, config);
 
+      // Log response details
+      console.log('📥 Claims API Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        url: response.url
+      });
+
       if (response.status === 401) {
+        // Clear all authentication data
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('role');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('phoneNumber');
+        localStorage.removeItem('email');
+        
+        // Redirect to login page
+        if (typeof window !== 'undefined') {
+          window.location.href = '/';
+        }
+        
         throw new Error('Authentication required. Please log in again.');
+      }
+
+      if (response.status === 403) {
+        // Get error details from response
+        let errorMessage = 'Forbidden: You do not have permission to perform this action.';
+        try {
+          const errorData = await response.clone().json();
+          errorMessage = errorData.message || errorData.error || errorData.detail || errorMessage;
+          console.error('🚫 403 Forbidden Error Details:', errorData);
+        } catch (e) {
+          const errorText = await response.clone().text();
+          console.error('🚫 403 Forbidden Error Text:', errorText);
+        }
+        
+        throw new Error(errorMessage);
       }
 
       let data: any;
@@ -87,10 +126,36 @@ class ClaimsApiService {
   }
 
   // Create Claim
+  // POST /claims
+  // Request: { policyId, lossEventType, lossDescription, damagePhotos }
   async createClaim(claimData: ClaimData) {
+    // Validate required fields
+    if (!claimData.policyId) {
+      throw new Error('Policy ID is required');
+    }
+    if (!claimData.lossEventType) {
+      throw new Error('Loss event type is required');
+    }
+    if (!claimData.lossDescription) {
+      throw new Error('Loss description is required');
+    }
+
+    // Format according to API spec
+    const requestBody: any = {
+      policyId: claimData.policyId,
+      lossEventType: claimData.lossEventType.toUpperCase(), // Ensure uppercase
+      lossDescription: claimData.lossDescription,
+    };
+    
+    if (claimData.damagePhotos && claimData.damagePhotos.length > 0) {
+      requestBody.damagePhotos = claimData.damagePhotos;
+    }
+    
+    console.log('📤 Creating claim with data:', JSON.stringify(requestBody, null, 2));
+    
     return this.request<any>('', {
       method: 'POST',
-      body: JSON.stringify(claimData),
+      body: JSON.stringify(requestBody),
     });
   }
 
@@ -154,11 +219,23 @@ class ClaimsApiService {
     });
   }
 
+  // Update Claim Assessment (Assessor Only)
+  async updateClaimAssessment(id: string, assessmentData: any) {
+    return this.request<any>(`/${id}/assessment`, {
+      method: 'PUT',
+      body: JSON.stringify(assessmentData),
+    });
+  }
+
   // Submit Assessment for Claim (Assessor Only)
-  async submitAssessment(id: string, assessmentData: any) {
+  async submitAssessment(id: string, assessmentData?: any) {
+    // If assessmentData is provided, update first then submit
+    if (assessmentData && Object.keys(assessmentData).length > 0) {
+      await this.updateClaimAssessment(id, assessmentData);
+    }
     return this.request<any>(`/${id}/submit-assessment`, {
       method: 'POST',
-      body: JSON.stringify(assessmentData),
+      body: JSON.stringify({}),
     });
   }
 }
@@ -176,5 +253,6 @@ export const deleteClaim = (id: string) => claimsApiService.deleteClaim(id);
 export const approveClaim = (id: string, approvedAmount?: number, notes?: string) => claimsApiService.approveClaim(id, approvedAmount, notes);
 export const rejectClaim = (id: string, reason: string) => claimsApiService.rejectClaim(id, reason);
 export const assignAssessor = (id: string, assessorId: string) => claimsApiService.assignAssessor(id, assessorId);
-export const submitAssessment = (id: string, assessmentData: any) => claimsApiService.submitAssessment(id, assessmentData);
+export const updateClaimAssessment = (id: string, assessmentData: any) => claimsApiService.updateClaimAssessment(id, assessmentData);
+export const submitAssessment = (id: string, assessmentData?: any) => claimsApiService.submitAssessment(id, assessmentData);
 

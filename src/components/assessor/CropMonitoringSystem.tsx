@@ -911,12 +911,12 @@ export default function CropMonitoringSystem() {
       <div className="flex items-center justify-end gap-4">
         <div className="flex gap-2">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
             <Input
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={`${dashboardTheme.input} pl-10 w-64 border-gray-700`}
+              className={`${dashboardTheme.input} pl-10 w-64 border-gray-300`}
             />
           </div>
           <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>

@@ -45,11 +45,11 @@ export function TestimonialsSection() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
-            <Quote className="h-4 w-4 text-yellow-400" />
+          <div className="inline-flex items-center space-x-2 bg-green-50 border border-green-200 px-4 py-2 rounded-full mb-6">
+            <Quote className="h-4 w-4 text-green-600" />
             <VariableProximity
               label="What Our Users Say"
-              className="text-white/90 text-sm font-medium cursor-pointer"
+              className="text-gray-700 text-sm font-medium cursor-pointer"
               fromFontVariationSettings="'wght' 400, 'opsz' 8"
               toFontVariationSettings="'wght' 700, 'opsz' 16"
               containerRef={containerRef}
@@ -57,7 +57,7 @@ export function TestimonialsSection() {
               falloff="linear"
             />
           </div>
-          <div className="text-4xl md:text-5xl font-bold text-white mb-6 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent">
+          <div className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 bg-gradient-to-r from-gray-900 to-green-700 bg-clip-text text-transparent">
             <VariableProximity
               label="Trusted by Industry Leaders"
               className="block cursor-pointer"
@@ -68,7 +68,7 @@ export function TestimonialsSection() {
               falloff="linear"
             />
           </div>
-          <div className="text-lg text-white/80 max-w-3xl mx-auto leading-relaxed">
+          <div className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
             <VariableProximity
               label="See how farmers, insurers, and government officials are transforming agriculture with STARHAWK."
               className="text-center cursor-pointer"
@@ -90,25 +90,25 @@ export function TestimonialsSection() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.15 }}
             >
-              <Card className="bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-500 rounded-2xl group h-full">
+              <Card className="bg-white border border-gray-200 hover:border-green-300 hover:shadow-lg transition-all duration-500 rounded-2xl group h-full">
               <CardContent className="p-8">
                 <div className="flex items-center mb-4">
                   {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
+                    <Star key={i} className="h-4 w-4 text-yellow-500 fill-current" />
                   ))}
                 </div>
                 
-                <blockquote className="text-white/80 leading-relaxed mb-6 text-sm">
+                <blockquote className="text-gray-600 leading-relaxed mb-6 text-sm">
                   "{testimonial.content}"
                 </blockquote>
                 
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                  <div className="w-10 h-10 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                     {testimonial.avatar}
                   </div>
                   <div>
-                    <h4 className="text-white font-semibold">{testimonial.name}</h4>
-                    <p className="text-white/60 text-sm">{testimonial.role}</p>
+                    <h4 className="text-gray-900 font-semibold">{testimonial.name}</h4>
+                    <p className="text-gray-600 text-sm">{testimonial.role}</p>
                   </div>
                 </div>
               </CardContent>

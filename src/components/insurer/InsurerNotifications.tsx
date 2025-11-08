@@ -76,8 +76,8 @@ export default function InsurerNotifications() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Notifications</h2>
-          <p className="text-white/80">Stay updated with system activities and alerts</p>
+          <h2 className="text-2xl font-bold text-gray-700">Notifications</h2>
+          <p className="text-gray-600">Stay updated with system activities and alerts</p>
         </div>
         <div className="flex items-center space-x-2">
           <Badge variant="outline" className="bg-blue-50 text-blue-700">
@@ -92,7 +92,7 @@ export default function InsurerNotifications() {
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Search notifications..."
                   value={searchTerm}
@@ -135,9 +135,9 @@ export default function InsurerNotifications() {
         {filteredNotifications.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
-              <Bell className="h-12 w-12 text-white/60 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-white mb-2">No notifications found</h3>
-              <p className="text-white/70">Try adjusting your search or filter criteria.</p>
+              <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-700 mb-2">No notifications found</h3>
+              <p className="text-gray-600">Try adjusting your search or filter criteria.</p>
             </CardContent>
           </Card>
         ) : (
@@ -204,65 +204,6 @@ export default function InsurerNotifications() {
           ))
         )}
       </div>
-
-      {/* Notification Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Settings className="h-5 w-5 mr-2" />
-            Notification Settings
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-3">
-              <h4 className="font-medium text-white">Email Notifications</h4>
-              <div className="space-y-2">
-                <label className="flex items-center">
-                  <input type="checkbox" defaultChecked className="mr-2" />
-                  <span className="text-sm text-white/70">Risk assessment submissions</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" defaultChecked className="mr-2" />
-                  <span className="text-sm text-white/70">New claim filings</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" defaultChecked className="mr-2" />
-                  <span className="text-sm text-white/70">Payment due reminders</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" className="mr-2" />
-                  <span className="text-sm text-white/70">System maintenance alerts</span>
-                </label>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              <h4 className="font-medium text-white">Push Notifications</h4>
-              <div className="space-y-2">
-                <label className="flex items-center">
-                  <input type="checkbox" defaultChecked className="mr-2" />
-                  <span className="text-sm text-white/70">High priority alerts</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" className="mr-2" />
-                  <span className="text-sm text-white/70">Medium priority alerts</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" className="mr-2" />
-                  <span className="text-sm text-white/70">Low priority alerts</span>
-                </label>
-              </div>
-            </div>
-          </div>
-          
-          <div className="pt-4 border-t">
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              Save Settings
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

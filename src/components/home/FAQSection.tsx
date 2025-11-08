@@ -50,7 +50,7 @@ export function FAQSection() {
   ];
 
   return (
-    <section className="relative z-10 py-24 px-4 bg-gradient-to-b from-transparent to-gray-900/20">
+    <section className="relative z-10 py-24 px-4 bg-gradient-to-b from-transparent to-gray-50">
       {/* Grid Pattern Background */}
       <div className="absolute inset-0 opacity-70 flex items-center justify-center">
         <img
@@ -68,15 +68,15 @@ export function FAQSection() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
-            <HelpCircle className="h-4 w-4 text-green-400" />
-            <span className="text-white/90 text-sm font-medium">Frequently Asked Questions</span>
+          <div className="inline-flex items-center space-x-2 bg-green-50 border border-green-200 px-4 py-2 rounded-full mb-6">
+            <HelpCircle className="h-4 w-4 text-green-600" />
+            <span className="text-gray-700 text-sm font-medium">Frequently Asked Questions</span>
           </div>
           <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            <span className="text-white">Got </span>
-            <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Questions?</span>
+            <span className="text-gray-900">Got </span>
+            <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">Questions?</span>
           </h2>
-          <p className="text-lg text-white/80 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
             Find answers to common questions about our agricultural insurance platform
           </p>
         </motion.div>
@@ -91,20 +91,20 @@ export function FAQSection() {
               transition={{ duration: 0.4, delay: index * 0.05 }}
             >
               <Card 
-                className="bg-white/5 backdrop-blur-xl border border-white/10 hover:border-green-400/30 transition-all duration-300 rounded-2xl overflow-hidden"
+                className="bg-white border border-gray-200 hover:border-green-300 transition-all duration-300 rounded-2xl overflow-hidden"
               >
               <button
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
                 className="w-full text-left p-6 flex items-center justify-between group"
               >
-                <span className="text-lg font-semibold text-white group-hover:text-green-400 transition-colors pr-4">
+                <span className="text-lg font-semibold text-gray-900 group-hover:text-green-600 transition-colors pr-4">
                   {faq.question}
                 </span>
-                <div className="w-8 h-8 rounded-full bg-green-500/20 border border-green-400/30 flex items-center justify-center flex-shrink-0 group-hover:bg-green-500/30 transition-all duration-300">
+                <div className="w-8 h-8 rounded-full bg-green-100 border border-green-300 flex items-center justify-center flex-shrink-0 group-hover:bg-green-200 transition-all duration-300">
                   {openIndex === index ? (
-                    <Minus className="h-4 w-4 text-green-400" />
+                    <Minus className="h-4 w-4 text-green-600" />
                   ) : (
-                    <Plus className="h-4 w-4 text-green-400" />
+                    <Plus className="h-4 w-4 text-green-600" />
                   )}
                 </div>
               </button>
@@ -117,7 +117,7 @@ export function FAQSection() {
                     transition={{ duration: 0.3 }}
                   >
                     <CardContent className="px-6 pb-6 pt-0">
-                      <p className="text-white/70 leading-relaxed">
+                      <p className="text-gray-600 leading-relaxed">
                         {faq.answer}
                       </p>
                     </CardContent>
@@ -130,10 +130,10 @@ export function FAQSection() {
         </div>
 
         <div className="text-center mt-12">
-          <p className="text-white/60 mb-4">Still have questions?</p>
+          <p className="text-gray-600 mb-4">Still have questions?</p>
           <a 
             href="/contact" 
-            className="inline-flex items-center text-green-400 hover:text-green-300 font-medium transition-colors"
+            className="inline-flex items-center text-green-600 hover:text-green-700 font-medium transition-colors"
           >
             Contact our support team
             <ChevronDown className="h-4 w-4 ml-1 rotate-[-90deg]" />

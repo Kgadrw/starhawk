@@ -286,10 +286,10 @@ export default function AssessorNotifications() {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case "high": return "bg-red-400/20 text-red-400";
-      case "medium": return "bg-yellow-400/20 text-yellow-400";
-      case "low": return "bg-green-400/20 text-green-400";
-      default: return "bg-gray-400/20 text-gray-400";
+      case "high": return "bg-red-100 text-red-700 border border-red-200";
+      case "medium": return "bg-yellow-100 text-yellow-700 border border-yellow-200";
+      case "low": return "bg-green-100 text-green-700 border border-green-200";
+      default: return "bg-gray-100 text-gray-700 border border-gray-200";
     }
   };
 
@@ -342,81 +342,75 @@ export default function AssessorNotifications() {
   return (
     <div className="space-y-6">
       {/* Header */}
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900">Notifications</h2>
+        <p className="text-gray-600 mt-1">Stay updated with your assessment assignments and tasks</p>
+      </div>
+
+      {/* Unread Count and Refresh */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white">Notifications</h2>
-          <p className="text-white/80">Stay updated with your assessment assignments and tasks</p>
+        <Badge className="bg-gray-100 text-gray-700 border border-gray-300">
+          {unreadCount} unread
+        </Badge>
+        <Button 
+          onClick={loadNotifications}
+          variant="outline"
+          size="sm"
+          className="border-gray-300 text-gray-700 hover:bg-gray-100"
+          disabled={loading}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="space-y-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+          <Input
+            placeholder="Search notifications..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
+          />
         </div>
-        <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="bg-orange-50 text-orange-700">
-            {unreadCount} unread
-          </Badge>
-          <Button 
-            onClick={loadNotifications}
-            variant="outline"
-            size="sm"
-            className="border-gray-700 text-white hover:bg-gray-800"
-            disabled={loading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+        <div className="flex gap-3">
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger className="w-40 bg-gray-50 border-gray-300 text-gray-900">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent className="bg-white border-gray-300">
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="new_assignment">New Assignment</SelectItem>
+              <SelectItem value="assessment_reminder">Assessment Reminder</SelectItem>
+              <SelectItem value="claim_assignment">Claim Assignment</SelectItem>
+              <SelectItem value="assessment_approved">Assessment Approved</SelectItem>
+              <SelectItem value="training_reminder">Training Reminder</SelectItem>
+              <SelectItem value="equipment_update">Equipment Update</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-40 bg-gray-50 border-gray-300 text-gray-900">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent className="bg-white border-gray-300">
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="unread">Unread</SelectItem>
+              <SelectItem value="read">Read</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
-                <Input
-                  placeholder="Search notifications..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="new_assignment">New Assignment</SelectItem>
-                  <SelectItem value="assessment_reminder">Assessment Reminder</SelectItem>
-                  <SelectItem value="claim_assignment">Claim Assignment</SelectItem>
-                  <SelectItem value="assessment_approved">Assessment Approved</SelectItem>
-                  <SelectItem value="training_reminder">Training Reminder</SelectItem>
-                  <SelectItem value="equipment_update">Equipment Update</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="unread">Unread</SelectItem>
-                  <SelectItem value="read">Read</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Loading State */}
       {loading && (
-        <Card>
+        <Card className={dashboardTheme.card}>
           <CardContent className="p-12">
             <div className="flex items-center justify-center">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
-                <p className="text-white/60">Loading notifications...</p>
+                <p className="text-gray-600">Loading notifications...</p>
               </div>
             </div>
           </CardContent>
@@ -425,14 +419,14 @@ export default function AssessorNotifications() {
 
       {/* Error State */}
       {error && !loading && (
-        <Card>
+        <Card className={dashboardTheme.card}>
           <CardContent className="p-6">
-            <div className="text-center text-red-400">
+            <div className="text-center text-red-600">
               <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
               <p>{error}</p>
               <Button 
                 onClick={loadNotifications} 
-                className="mt-4 bg-teal-600 hover:bg-teal-700 text-white"
+                className="mt-4 bg-teal-500 hover:bg-teal-600 text-white"
               >
                 Retry
               </Button>
@@ -445,11 +439,11 @@ export default function AssessorNotifications() {
       {!loading && !error && (
         <div className="space-y-4">
           {filteredNotifications.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <Bell className="h-12 w-12 text-white/60 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-white mb-2">No notifications found</h3>
-                <p className="text-white/70">
+            <Card className={dashboardTheme.card}>
+              <CardContent className="p-12 text-center">
+                <Bell className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications found</h3>
+                <p className="text-gray-600">
                   {notifications.length === 0 
                     ? "You have no notifications yet. Notifications will appear here when you receive new assignments."
                     : "Try adjusting your search or filter criteria."}
@@ -460,22 +454,22 @@ export default function AssessorNotifications() {
             filteredNotifications.map((notification) => (
             <Card 
               key={notification.id} 
-              className={`${dashboardTheme.card} transition-all duration-200 cursor-pointer hover:bg-white/5 ${
-                notification.status === "unread" ? "border-l-4 border-l-green-500 bg-green-600/30" : ""
+              className={`${dashboardTheme.card} transition-all duration-200 cursor-pointer hover:bg-gray-50 ${
+                notification.status === "unread" ? "border-l-4 border-l-green-500 bg-green-50/50" : ""
               }`}
               onClick={() => handleNotificationClick(notification)}
             >
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
                   <div className={`flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center ${
-                    notification.status === "unread" ? "bg-green-400/20 text-green-400" : "bg-gray-800/20 text-gray-400"
+                    notification.status === "unread" ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-600"
                   }`}>
                     {getNotificationIcon(notification.type)}
                   </div>
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <h3 className="text-base font-semibold text-white leading-tight">
+                      <h3 className="text-base font-semibold text-gray-900 leading-tight">
                         {notification.title}
                       </h3>
                       <Badge className={`${getPriorityColor(notification.priority)} text-xs`}>
@@ -483,11 +477,11 @@ export default function AssessorNotifications() {
                       </Badge>
                     </div>
                     
-                    <p className="text-sm text-white/70 mb-3 line-clamp-2">
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
                       {notification.message}
                     </p>
                     
-                    <div className="flex items-center gap-4 text-xs text-white/60">
+                    <div className="flex items-center gap-4 text-xs text-gray-500">
                       <div className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         {new Date(notification.timestamp).toLocaleString()}
@@ -514,85 +508,22 @@ export default function AssessorNotifications() {
         </div>
       )}
 
-      {/* Notification Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Settings className="h-5 w-5 mr-2" />
-            Notification Settings
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-3">
-              <h4 className="font-medium text-white">Assignment Notifications</h4>
-              <div className="space-y-2">
-                <label className="flex items-center">
-                  <input type="checkbox" defaultChecked className="mr-2" />
-                  <span className="text-sm text-white/80">New assessment assignments</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" defaultChecked className="mr-2" />
-                  <span className="text-sm text-white/80">Assessment due reminders</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" defaultChecked className="mr-2" />
-                  <span className="text-sm text-white/70">Claim assessment assignments</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" className="mr-2" />
-                  <span className="text-sm text-white/70">Assessment approval notifications</span>
-                </label>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              <h4 className="font-medium text-white">System Notifications</h4>
-              <div className="space-y-2">
-                <label className="flex items-center">
-                  <input type="checkbox" defaultChecked className="mr-2" />
-                  <span className="text-sm text-white/70">Training reminders</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" className="mr-2" />
-                  <span className="text-sm text-white/70">Equipment maintenance alerts</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" className="mr-2" />
-                  <span className="text-sm text-white/70">System updates</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" defaultChecked className="mr-2" />
-                  <span className="text-sm text-white/70">Performance reports</span>
-                </label>
-              </div>
-            </div>
-          </div>
-          
-          <div className="pt-4 border-t">
-            <Button className="bg-orange-600 hover:bg-orange-700">
-              Save Settings
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Notification Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white/5 backdrop-blur-xl border border-white/10">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white border-gray-200">
           {selectedNotification && (
             <>
               <DialogHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                      selectedNotification.status === "unread" ? "bg-green-400/20 text-green-400" : "bg-blue-400/20 text-blue-400"
+                      selectedNotification.status === "unread" ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-600"
                     }`}>
                       {getNotificationIcon(selectedNotification.type)}
                     </div>
                     <div>
-                      <DialogTitle className="text-xl">{selectedNotification.title}</DialogTitle>
-                      <DialogDescription className="text-sm text-gray-400 mt-1">
+                      <DialogTitle className="text-xl text-gray-900">{selectedNotification.title}</DialogTitle>
+                      <DialogDescription className="text-sm text-gray-600 mt-1">
                         {selectedNotification.type.replace(/_/g, ' ')}
                       </DialogDescription>
                     </div>
@@ -605,22 +536,22 @@ export default function AssessorNotifications() {
               
               <div className="space-y-6 mt-4">
                 <div>
-                  <p className="text-gray-300 leading-relaxed">{selectedNotification.message}</p>
+                  <p className="text-gray-700 leading-relaxed">{selectedNotification.message}</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-900/50 rounded-lg">
+                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">Timestamp</p>
-                    <div className="flex items-center gap-2 text-sm text-white">
-                      <Clock className="h-4 w-4 text-gray-400" />
+                    <p className="text-xs text-gray-600 mb-1">Timestamp</p>
+                    <div className="flex items-center gap-2 text-sm text-gray-900">
+                      <Clock className="h-4 w-4 text-gray-600" />
                       {new Date(selectedNotification.timestamp).toLocaleString()}
                     </div>
                   </div>
                   {selectedNotification.dueDate && (
                     <div>
-                      <p className="text-xs text-gray-400 mb-1">Due Date</p>
-                      <div className="flex items-center gap-2 text-sm text-white">
-                        <Calendar className="h-4 w-4 text-gray-400" />
+                      <p className="text-xs text-gray-600 mb-1">Due Date</p>
+                      <div className="flex items-center gap-2 text-sm text-gray-900">
+                        <Calendar className="h-4 w-4 text-gray-600" />
                         {selectedNotification.dueDate}
                       </div>
                     </div>
@@ -628,25 +559,25 @@ export default function AssessorNotifications() {
                 </div>
 
                 {selectedNotification.farmerName && (
-                  <div className="p-4 bg-blue-900/20 border border-blue-700/30 rounded-lg">
-                    <h4 className="text-sm font-semibold text-blue-300 mb-3 flex items-center gap-2">
-                      <User className="h-4 w-4" />
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <User className="h-4 w-4 text-gray-600" />
                       Farmer Information
                     </h4>
                     <div className="space-y-2">
                       <div>
-                        <p className="text-xs text-gray-400">Name</p>
-                        <p className="text-sm text-white font-medium">{selectedNotification.farmerName}</p>
+                        <p className="text-xs text-gray-600">Name</p>
+                        <p className="text-sm text-gray-900 font-medium">{selectedNotification.farmerName}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-400">Farmer ID</p>
-                        <p className="text-sm text-white font-medium">{selectedNotification.farmerId}</p>
+                        <p className="text-xs text-gray-600">Farmer ID</p>
+                        <p className="text-sm text-gray-900 font-medium">{selectedNotification.farmerId}</p>
                       </div>
                       {selectedNotification.location && (
                         <div>
-                          <p className="text-xs text-gray-400">Location</p>
-                          <div className="flex items-center gap-2 text-sm text-white">
-                            <MapPin className="h-3 w-3 text-gray-400" />
+                          <p className="text-xs text-gray-600">Location</p>
+                          <div className="flex items-center gap-2 text-sm text-gray-900">
+                            <MapPin className="h-3 w-3 text-gray-600" />
                             {selectedNotification.location}
                           </div>
                         </div>
@@ -656,37 +587,37 @@ export default function AssessorNotifications() {
                 )}
 
                 {selectedNotification.claimId && (
-                  <div className="p-4 bg-orange-900/20 border border-orange-700/30 rounded-lg">
-                    <h4 className="text-sm font-semibold text-orange-300 mb-2">Claim Details</h4>
+                  <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Claim Details</h4>
                     <div>
-                      <p className="text-xs text-gray-400">Claim ID</p>
-                      <p className="text-sm text-white font-medium">{selectedNotification.claimId}</p>
+                      <p className="text-xs text-gray-600">Claim ID</p>
+                      <p className="text-sm text-gray-900 font-medium">{selectedNotification.claimId}</p>
                     </div>
                   </div>
                 )}
 
                 {selectedNotification.assessmentId && (
-                  <div className="p-4 bg-green-900/20 border border-green-700/30 rounded-lg">
-                    <h4 className="text-sm font-semibold text-green-300 mb-2">Assessment Details</h4>
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Assessment Details</h4>
                     <div>
-                      <p className="text-xs text-gray-400">Assessment ID</p>
-                      <p className="text-sm text-white font-medium">{selectedNotification.assessmentId}</p>
+                      <p className="text-xs text-gray-600">Assessment ID</p>
+                      <p className="text-sm text-gray-900 font-medium">{selectedNotification.assessmentId}</p>
                     </div>
                   </div>
                 )}
 
                 {selectedNotification.trainingDate && (
-                  <div className="p-4 bg-purple-900/20 border border-purple-700/30 rounded-lg">
-                    <h4 className="text-sm font-semibold text-purple-300 mb-2">Training Information</h4>
+                  <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Training Information</h4>
                     <div className="space-y-2">
                       <div>
-                        <p className="text-xs text-gray-400">Date</p>
-                        <p className="text-sm text-white font-medium">{selectedNotification.trainingDate}</p>
+                        <p className="text-xs text-gray-600">Date</p>
+                        <p className="text-sm text-gray-900 font-medium">{selectedNotification.trainingDate}</p>
                       </div>
                       {selectedNotification.trainingTopic && (
                         <div>
-                          <p className="text-xs text-gray-400">Topic</p>
-                          <p className="text-sm text-white font-medium">{selectedNotification.trainingTopic}</p>
+                          <p className="text-xs text-gray-600">Topic</p>
+                          <p className="text-sm text-gray-900 font-medium">{selectedNotification.trainingTopic}</p>
                         </div>
                       )}
                     </div>
@@ -694,18 +625,18 @@ export default function AssessorNotifications() {
                 )}
 
                 {selectedNotification.equipmentType && (
-                  <div className="p-4 bg-gray-900/50 border border-gray-700/30 rounded-lg">
-                    <h4 className="text-sm font-semibold text-gray-300 mb-2">Equipment Details</h4>
+                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Equipment Details</h4>
                     <div>
-                      <p className="text-xs text-gray-400">Equipment</p>
-                      <p className="text-sm text-white font-medium">{selectedNotification.equipmentType}</p>
+                      <p className="text-xs text-gray-600">Equipment</p>
+                      <p className="text-sm text-gray-900 font-medium">{selectedNotification.equipmentType}</p>
                     </div>
                   </div>
                 )}
 
-                <div className="flex gap-2 pt-4 border-t border-gray-700">
+                <div className="flex gap-2 pt-4 border-t border-gray-200">
                   <Button 
-                    className="flex-1 bg-orange-600 hover:bg-orange-700"
+                    className="flex-1 bg-teal-500 hover:bg-teal-600 text-white"
                     onClick={() => {
                       // Handle action based on notification type
                       setIsDetailOpen(false);
@@ -715,7 +646,8 @@ export default function AssessorNotifications() {
                   </Button>
                   {selectedNotification.status === "unread" && (
                     <Button 
-                      variant="outline" 
+                      variant="outline"
+                      className="border-gray-300 text-gray-700 hover:bg-gray-100"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleMarkAsRead(e, selectedNotification.id);
@@ -725,7 +657,7 @@ export default function AssessorNotifications() {
                     </Button>
                   )}
                   {selectedNotification.farmerName && (
-                    <Button variant="outline">
+                    <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-100">
                       <Phone className="h-4 w-4" />
                     </Button>
                   )}

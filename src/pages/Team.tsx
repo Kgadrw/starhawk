@@ -38,7 +38,7 @@ const Team = () => {
 
   return (
     <CustomScrollbar>
-      <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 min-h-screen">
+      <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50 min-h-screen">
         {/* Navigation */}
         <HomeNavbar />
 
@@ -75,16 +75,16 @@ const Team = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
+            <div className="inline-flex items-center space-x-2 bg-green-50 border border-green-200 px-4 py-2 rounded-full mb-6">
               <Users className="h-4 w-4 text-yellow-400" />
-              <span className="text-white/90 text-sm font-medium">Meet Our Team</span>
+              <span className="text-gray-900/90 text-sm font-medium">Meet Our Team</span>
             </div>
 
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent">
+            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent">
               Our Expert Team
             </h1>
             
-            <p className="text-lg md:text-xl text-white/80 max-w-3xl mx-auto leading-relaxed mb-8">
+            <p className="text-lg md:text-xl text-gray-900/80 max-w-3xl mx-auto leading-relaxed mb-8">
               The talented individuals behind STARHAWK's revolutionary agricultural insurance platform.
               Our team combines expertise in technology, agriculture, and insurance to deliver 
               innovative solutions for farmers worldwide.
@@ -105,7 +105,7 @@ const Team = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: index * 0.2 }}
-                className="relative bg-white/5 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden w-full max-w-80 h-80 mx-auto"
+                className="relative bg-white border border-gray-200 rounded-xl overflow-hidden w-full max-w-80 h-80 mx-auto"
               >
                 <img 
                   src={member.image} 
@@ -119,17 +119,17 @@ const Team = () => {
                     href={member.url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full backdrop-blur-sm transition-colors"
+                    className="inline-flex items-center justify-center w-8 h-8 bg-green-100 hover:bg-green-200 rounded-full backdrop-blur-sm transition-colors"
                   >
-                    <Linkedin className="h-4 w-4 text-white" />
+                    <Linkedin className="h-4 w-4 text-gray-900" />
                   </a>
                   </div>
 
                 {/* Text Overlay - Bottom */}
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent p-4">
-                  <h3 className="text-lg font-bold text-white mb-1">{member.title}</h3>
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">{member.title}</h3>
                   <p className="text-green-400 text-sm font-medium mb-1">{member.subtitle}</p>
-                  <p className="text-white/70 text-xs">{member.handle}</p>      
+                  <p className="text-gray-900/70 text-xs">{member.handle}</p>      
                 </div>
               </motion.div>
             ))}

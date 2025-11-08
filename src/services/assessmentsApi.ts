@@ -1,8 +1,8 @@
 // Assessments API Service
-// Use proxy in development to avoid CORS issues, full URL in production
-const ASSESSMENTS_BASE_URL = import.meta.env.DEV
-  ? '/api/v1/assessments'
-  : 'https://starhawk-backend-agriplatform.onrender.com/api/v1/assessments';
+// Using centralized API configuration
+import { API_BASE_URL, API_ENDPOINTS, getAuthToken } from '@/config/api';
+
+const ASSESSMENTS_BASE_URL = `${API_BASE_URL}${API_ENDPOINTS.ASSESSMENTS.BASE}`;
 
 interface CreateAssessmentRequest {
   farmId: string;
@@ -21,7 +21,7 @@ class AssessmentsApiService {
   }
 
   private getToken(): string | null {
-    return localStorage.getItem('token');
+    return getAuthToken();
   }
 
   private async request<T>(

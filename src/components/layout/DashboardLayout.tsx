@@ -49,9 +49,9 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
 
-  // Set dark mode by default
+  // Remove dark mode - use light theme
   useEffect(() => {
-    document.documentElement.classList.add('dark');
+    document.documentElement.classList.remove('dark');
   }, []);
 
   const handleLogout = () => {
@@ -93,8 +93,8 @@ export default function DashboardLayout({
   };
 
   const getSidebarTheme = () => {
-    // Always use gray-950 theme to match main background
-    return "from-gray-950/90 to-gray-900/90 border-gray-800/30";
+    // Use light theme for sidebar
+    return "from-white to-gray-50 border-gray-200";
   };
 
   const getMainContentTheme = () => {
@@ -105,28 +105,28 @@ export default function DashboardLayout({
   const getNavigationColors = () => {
     switch (userType) {
       case "farmer": return {
-        active: "from-green-500/80 to-emerald-600/80 shadow-green-500/20",
-        hover: "hover:text-green-400"
+        active: "bg-green-50 text-green-700",
+        hover: "hover:text-green-600"
       };
       case "assessor": return {
-        active: "from-orange-500/80 to-red-600/80 shadow-orange-500/20",
-        hover: "hover:text-orange-400"
+        active: "bg-orange-50 text-orange-700",
+        hover: "hover:text-orange-600"
       };
       case "insurer": return {
-        active: "from-blue-500/80 to-indigo-600/80 shadow-blue-500/20",
-        hover: "hover:text-blue-400"
+        active: "bg-blue-50 text-blue-700",
+        hover: "hover:text-blue-600"
       };
       case "admin": return {
-        active: "from-purple-500/80 to-violet-600/80 shadow-purple-500/20",
-        hover: "hover:text-purple-400"
+        active: "bg-purple-50 text-purple-700",
+        hover: "hover:text-purple-600"
       };
       case "government": return {
-        active: "from-indigo-500/80 to-blue-600/80 shadow-indigo-500/20",
-        hover: "hover:text-indigo-400"
+        active: "bg-indigo-50 text-indigo-700",
+        hover: "hover:text-indigo-600"
       };
       default: return {
-        active: "from-gray-500/80 to-slate-600/80 shadow-gray-500/20",
-        hover: "hover:text-gray-400"
+        active: "bg-gray-50 text-gray-700",
+        hover: "hover:text-gray-600"
       };
     }
   };
@@ -143,12 +143,12 @@ export default function DashboardLayout({
   };
 
   return (
-     <div className="min-h-screen bg-gray-950 flex relative">
+     <div className="min-h-screen bg-gray-50 flex relative">
       
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-black/10 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -163,7 +163,7 @@ export default function DashboardLayout({
             <Button
               variant="ghost"
               size="sm"
-              className="hover:bg-gray-800/10 text-white"
+              className="hover:bg-gray-100 text-gray-700"
               onClick={() => setSidebarOpen(false)}
             >
               <X className="h-4 w-4" />
@@ -171,14 +171,16 @@ export default function DashboardLayout({
           </div>
 
           {/* User Info */}
-          <div className="p-4 border-b border-white/30 dark:border-gray-700/30">
+          <div className="p-4 border-b border-gray-200">
             <div className="flex items-center space-x-3 p-3 rounded-xl">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-400/80 to-emerald-500/80 backdrop-blur-sm rounded-full flex items-center justify-center">
-                <User className="h-5 w-5 text-white" />
+              <div className={`w-10 h-10 ${getUserColor()} rounded-full flex items-center justify-center`}>
+                <div className="text-white">
+                  {getUserIcon()}
+                </div>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{userName}</p>
-                <p className="text-xs text-white/70 truncate">{getUserLabel()}</p>
+                <p className="text-sm font-semibold text-gray-900 truncate">{userName}</p>
+                <p className="text-xs text-gray-600 truncate">{getUserLabel()}</p>
               </div>
             </div>
           </div>
@@ -201,18 +203,18 @@ export default function DashboardLayout({
                               }}
                               className={`w-full flex items-center justify-between px-4 py-4 text-sm font-medium rounded-xl transition-all duration-300 ease-in-out ${
                                 isActive
-                                  ? `bg-white/10 backdrop-blur-md text-white shadow-lg shadow-white/5 border border-white/10`
-                                  : `text-white/80 hover:bg-gray-800/20 hover:text-white ${colors.hover} hover:backdrop-blur-sm`
+                                  ? `bg-green-50 text-green-700 shadow-sm border border-green-200`
+                                  : `text-gray-700 hover:bg-gray-100 hover:text-gray-900 ${colors.hover}`
                               }`}
                             >
                   <div className="flex items-center space-x-3">
-                    <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-white/70'}`} />
+                    <Icon className={`h-5 w-5 ${isActive ? 'text-green-600' : 'text-gray-600'}`} />
                     <span>{item.label}</span>
                   </div>
                               {item.badge && item.badge > 0 && (
                                 <Badge variant="secondary" className={`text-xs ${
                                   isActive 
-                                    ? 'bg-gray-800 text-white' 
+                                    ? 'bg-green-600 text-white' 
                                     : userType === 'farmer' ? 'bg-green-100 text-green-700' :
                                       userType === 'assessor' ? 'bg-orange-100 text-orange-700' :
                                       userType === 'insurer' ? 'bg-blue-100 text-blue-700' :
@@ -230,14 +232,14 @@ export default function DashboardLayout({
           </nav>
 
           {/* Sidebar Footer */}
-          <div className="p-4 border-t border-white/30 dark:border-gray-700/30">
+          <div className="p-4 border-t border-gray-200">
             <div className="flex items-center justify-center">
               {/* Logout Button */}
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="w-full justify-center hover:text-red-600 dark:hover:text-red-400 transition-all duration-300 text-gray-300"
+                    className="w-full justify-center hover:text-red-600 transition-all duration-300 text-gray-700"
                   >
                     <LogOut className="h-4 w-4 mr-2" />
                     <span>Logout</span>
@@ -267,21 +269,21 @@ export default function DashboardLayout({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-72 bg-gray-950">
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-72 bg-gray-50">
         {/* Mobile Menu Button */}
         <div className="lg:hidden fixed top-4 left-4 z-40">
           <Button
             variant="ghost"
             size="sm"
-            className="bg-gray-900/80 backdrop-blur-sm hover:bg-gray-800/90 shadow-lg rounded-2xl border border-gray-700/50"
+            className="bg-white backdrop-blur-sm hover:bg-gray-100 shadow-lg rounded-2xl border border-gray-200"
             onClick={() => setSidebarOpen(true)}
           >
-            <Menu className="h-5 w-5 text-white" />
+            <Menu className="h-5 w-5 text-gray-700" />
           </Button>
         </div>
 
          {/* Page Content */}
-         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto bg-gray-950">
+         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto bg-gray-50">
           <CustomScrollbar className="h-full">
             <div className="max-w-7xl mx-auto">
               {children}

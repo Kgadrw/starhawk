@@ -4,7 +4,7 @@ import DashboardLayout from "../layout/DashboardLayout";
 import { isAdmin, logout as authLogout, getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
 import { getAllUsers, deactivateUser, updateUser, getUserById, createUser } from "@/services/usersAPI";
 import { getSystemStatistics, getPolicyOverview, getClaimStatistics } from "@/services/adminApi";
-import { createPolicy, getPolicies, getPolicyById, updatePolicy, deletePolicy } from "@/services/policiesApi";
+import { createPolicy, createPolicyFromAssessment, getPolicies, getPolicyById, updatePolicy, deletePolicy } from "@/services/policiesApi";
 import { createClaim, getClaims, getClaimById, updateClaim, deleteClaim } from "@/services/claimsApi";
 import assessmentsApiService from "@/services/assessmentsApi";
 import { getFarms } from "@/services/farmsApi";
@@ -127,12 +127,58 @@ export const AdminDashboard = () => {
     }
   };
 
-  // Load statistics when dashboard is active
+  // Load statistics when dashboard or analytics is active
   useEffect(() => {
-    if (activePage === "dashboard") {
+    if (activePage === "dashboard" || activePage === "analytics") {
       loadAdminStatistics();
     }
+    if (activePage === "analytics") {
+      loadAnalyticsData();
+    }
   }, [activePage]);
+
+  // Helper function to calculate time ago
+  const getTimeAgo = (date: Date): string => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString();
+  };
+
+  // Load analytics data (users, policies, claims, farms)
+  const loadAnalyticsData = async () => {
+    setAnalyticsLoading(true);
+    try {
+      const [usersRes, policiesRes, claimsRes, farmsRes] = await Promise.all([
+        getAllUsers().catch(() => []),
+        getPolicies(1, 1000).catch(() => []),
+        getClaims(1, 1000).catch(() => []),
+        getFarms(1, 1000).catch(() => [])
+      ]);
+
+      // Extract arrays from responses
+      const users = Array.isArray(usersRes) ? usersRes : (usersRes?.data || usersRes?.users || usersRes?.results || usersRes?.items || []);
+      const policies = Array.isArray(policiesRes) ? policiesRes : (policiesRes?.data || policiesRes?.policies || policiesRes?.results || policiesRes?.items || []);
+      const claims = Array.isArray(claimsRes) ? claimsRes : (claimsRes?.data || claimsRes?.claims || claimsRes?.results || claimsRes?.items || []);
+      const farms = Array.isArray(farmsRes) ? farmsRes : (farmsRes?.data || farmsRes?.farms || farmsRes?.results || farmsRes?.items || []);
+
+      setAnalyticsUsers(Array.isArray(users) ? users : []);
+      setAnalyticsPolicies(Array.isArray(policies) ? policies : []);
+      setAnalyticsClaims(Array.isArray(claims) ? claims : []);
+      setAnalyticsFarms(Array.isArray(farms) ? farms : []);
+    } catch (err: any) {
+      console.error('Failed to load analytics data:', err);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  };
 
   // Load assessments when assessments page is active
   useEffect(() => {
@@ -165,6 +211,13 @@ export const AdminDashboard = () => {
   const [claimStats, setClaimStats] = useState<any | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsError, setStatsError] = useState<string | null>(null);
+  
+  // Analytics data state
+  const [analyticsUsers, setAnalyticsUsers] = useState<any[]>([]);
+  const [analyticsPolicies, setAnalyticsPolicies] = useState<any[]>([]);
+  const [analyticsClaims, setAnalyticsClaims] = useState<any[]>([]);
+  const [analyticsFarms, setAnalyticsFarms] = useState<any[]>([]);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   // Policies Management State
   const [policies, setPolicies] = useState<any[]>([]);
@@ -196,8 +249,12 @@ export const AdminDashboard = () => {
   const [editingClaim, setEditingClaim] = useState<any | null>(null);
   const [deletingClaimId, setDeletingClaimId] = useState<string | null>(null);
   const [claimFormData, setClaimFormData] = useState({
+    policyId: "", // Required - API field
+    lossEventType: "", // Required - API field (e.g., "DROUGHT", "FLOOD", "PEST_ATTACK")
+    lossDescription: "", // Required - API field
+    damagePhotos: [] as string[], // Optional - API field (array of photo URLs)
+    // Legacy fields for backward compatibility (not sent to API)
     farmerId: "",
-    policyId: "",
     cropType: "",
     damageType: "",
     amount: "",
@@ -221,6 +278,19 @@ export const AdminDashboard = () => {
     farmId: "",
     assessorId: "",
   });
+  
+  // Policy Issuance from Assessment
+  const [policyIssuanceDialog, setPolicyIssuanceDialog] = useState<{
+    open: boolean;
+    assessmentId: string | null;
+    assessment: any | null;
+  }>({ open: false, assessmentId: null, assessment: null });
+  const [policyIssuanceData, setPolicyIssuanceData] = useState({
+    coverageLevel: 'STANDARD' as 'BASIC' | 'STANDARD' | 'PREMIUM',
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  });
+  const [issuingPolicy, setIssuingPolicy] = useState(false);
   const [showEditUserDialog, setShowEditUserDialog] = useState(false);
   const [editingUser, setEditingUser] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
@@ -471,25 +541,102 @@ export const AdminDashboard = () => {
     { id: 6, user: "System", action: "Payment processed", details: "Premium payment of RWF 850,000", timestamp: "4 hours ago", type: "payment", severity: "success" }
   ];
 
-  // User Growth Data
-  const userGrowthData = [
-    { month: "Jan", farmers: 7200, assessors: 20, insurers: 4, total: 7226 },
-    { month: "Feb", farmers: 7450, assessors: 22, insurers: 4, total: 7478 },
-    { month: "Mar", farmers: 7680, assessors: 23, insurers: 4, total: 7709 },
-    { month: "Apr", farmers: 7850, assessors: 24, insurers: 4, total: 7880 },
-    { month: "May", farmers: 7920, assessors: 24, insurers: 4, total: 7950 },
-    { month: "Jun", farmers: 7950, assessors: 24, insurers: 4, total: 7980 }
-  ];
+  // Calculate real user growth data from API
+  const calculateUserGrowthData = () => {
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const last6Months: { month: string; farmers: number; assessors: number; insurers: number; total: number }[] = [];
+    
+    // Get last 6 months
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthName = monthNames[date.getMonth()];
+      
+      // Count users created up to this month
+      const usersUpToMonth = analyticsUsers.filter((user: any) => {
+        if (!user.createdAt && !user.created_at && !user.dateCreated) return false;
+        const userDate = new Date(user.createdAt || user.created_at || user.dateCreated);
+        const userMonthKey = `${userDate.getFullYear()}-${String(userDate.getMonth() + 1).padStart(2, '0')}`;
+        return userMonthKey <= monthKey;
+      });
+      
+      const farmers = usersUpToMonth.filter((u: any) => (u.role || '').toUpperCase() === 'FARMER').length;
+      const assessors = usersUpToMonth.filter((u: any) => (u.role || '').toUpperCase() === 'ASSESSOR').length;
+      const insurers = usersUpToMonth.filter((u: any) => (u.role || '').toUpperCase() === 'INSURER').length;
+      
+      last6Months.push({
+        month: monthName,
+        farmers,
+        assessors,
+        insurers,
+        total: farmers + assessors + insurers
+      });
+    }
+    
+    return last6Months.length > 0 ? last6Months : [
+      { month: "Jan", farmers: 0, assessors: 0, insurers: 0, total: 0 },
+      { month: "Feb", farmers: 0, assessors: 0, insurers: 0, total: 0 },
+      { month: "Mar", farmers: 0, assessors: 0, insurers: 0, total: 0 },
+      { month: "Apr", farmers: 0, assessors: 0, insurers: 0, total: 0 },
+      { month: "May", farmers: 0, assessors: 0, insurers: 0, total: 0 },
+      { month: "Jun", farmers: 0, assessors: 0, insurers: 0, total: 0 }
+    ];
+  };
 
-  // Revenue Trends
-  const revenueTrends = [
-    { month: "Jan", revenue: 12500000, commission: 437500, expenses: 2100000 },
-    { month: "Feb", revenue: 13200000, commission: 462000, expenses: 2250000 },
-    { month: "Mar", revenue: 14100000, commission: 493500, expenses: 2400000 },
-    { month: "Apr", revenue: 14800000, commission: 518000, expenses: 2500000 },
-    { month: "May", revenue: 15200000, commission: 532000, expenses: 2600000 },
-    { month: "Jun", revenue: 15650000, commission: 547750, expenses: 2700000 }
-  ];
+  // Calculate real revenue trends from policies
+  const calculateRevenueTrends = () => {
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const last6Months: { month: string; revenue: number; commission: number; expenses: number }[] = [];
+    
+    // Get last 6 months
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthName = monthNames[date.getMonth()];
+      
+      // Calculate revenue and commission from policies created in this month
+      const policiesInMonth = analyticsPolicies.filter((policy: any) => {
+        if (!policy.createdAt && !policy.created_at && !policy.startDate && !policy.issueDate) return false;
+        const policyDate = new Date(policy.createdAt || policy.created_at || policy.startDate || policy.issueDate);
+        const policyMonthKey = `${policyDate.getFullYear()}-${String(policyDate.getMonth() + 1).padStart(2, '0')}`;
+        return policyMonthKey === monthKey;
+      });
+      
+      const revenue = policiesInMonth.reduce((sum: number, p: any) => {
+        const premium = p.premium || p.monthlyPremium || p.annualPremium || 0;
+        return sum + (typeof premium === 'number' ? premium : 0);
+      }, 0);
+      
+      // Commission is typically 3.5% of revenue
+      const commission = revenue * 0.035;
+      // Expenses estimate (can be calculated from claims if available)
+      const expenses = revenue * 0.15; // 15% estimate
+      
+      last6Months.push({
+        month: monthName,
+        revenue: Math.round(revenue),
+        commission: Math.round(commission),
+        expenses: Math.round(expenses)
+      });
+    }
+    
+    return last6Months.length > 0 ? last6Months : [
+      { month: "Jan", revenue: 0, commission: 0, expenses: 0 },
+      { month: "Feb", revenue: 0, commission: 0, expenses: 0 },
+      { month: "Mar", revenue: 0, commission: 0, expenses: 0 },
+      { month: "Apr", revenue: 0, commission: 0, expenses: 0 },
+      { month: "May", revenue: 0, commission: 0, expenses: 0 },
+      { month: "Jun", revenue: 0, commission: 0, expenses: 0 }
+    ];
+  };
+
+  // Get real user growth data
+  const userGrowthData = calculateUserGrowthData();
+  
+  // Get real revenue trends
+  const revenueTrends = calculateRevenueTrends();
 
   // Dashboard Overview
   const renderDashboard = () => (
@@ -498,8 +645,8 @@ export const AdminDashboard = () => {
       {statsLoading && (
         <Card className={dashboardTheme.card}>
           <CardContent className="p-8 text-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-white mx-auto mb-4" />
-            <p className="text-white/60">Loading statistics...</p>
+            <RefreshCw className="h-8 w-8 animate-spin text-gray-900 mx-auto mb-4" />
+            <p className="text-gray-900/60">Loading statistics...</p>
           </CardContent>
         </Card>
       )}
@@ -517,7 +664,7 @@ export const AdminDashboard = () => {
                 onClick={loadAdminStatistics}
                 variant="outline"
                 size="sm"
-                className="border-gray-700 text-white hover:bg-gray-800"
+                className="border-gray-300 text-gray-900 hover:bg-gray-100"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Retry
@@ -531,59 +678,59 @@ export const AdminDashboard = () => {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-white/80">Total Users</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-900/80">Total Users</CardTitle>
             <Users className="h-5 w-5 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-white">
+            <div className="text-3xl font-bold text-gray-900">
               {systemStats?.totalUsers || userStats.total.toLocaleString()}
             </div>
-            <p className="text-xs text-white/60 mt-1">
-              <span className="text-green-500">+{systemStats?.newUsersThisMonth || userStats.newThisMonth}</span> this month
+            <p className="text-xs text-gray-900/60 mt-1">
+              <span className="text-gray-600">+{systemStats?.newUsersThisMonth || userStats.newThisMonth}</span> this month
             </p>
           </CardContent>
         </Card>
 
         <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-white/80">Monthly Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-900/80">Monthly Revenue</CardTitle>
             <DollarSign className="h-5 w-5 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-white">
+            <div className="text-3xl font-bold text-gray-900">
               RWF {systemStats?.monthlyRevenue ? (systemStats.monthlyRevenue / 1000000).toFixed(1) : (financialData.monthlyRevenue / 1000000).toFixed(1)}M
             </div>
-            <p className="text-xs text-white/60 mt-1">
-              <span className="text-green-500">+{systemStats?.revenueGrowth || financialData.growthRate}%</span> from last month
+            <p className="text-xs text-gray-900/60 mt-1">
+              <span className="text-gray-600">+{systemStats?.revenueGrowth || financialData.growthRate}%</span> from last month
             </p>
           </CardContent>
         </Card>
 
         <Card className={`${dashboardTheme.card} border-l-4 border-l-purple-500`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-white/80">System Health</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-900/80">System Health</CardTitle>
             <Activity className="h-5 w-5 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-white">
+            <div className="text-3xl font-bold text-gray-900">
               {systemStats?.uptime || systemMetrics.uptime}%
             </div>
-            <p className="text-xs text-white/60 mt-1">
-              <span className="text-green-500">Excellent</span> uptime
+            <p className="text-xs text-gray-900/60 mt-1">
+              <span className="text-gray-600">Excellent</span> uptime
             </p>
           </CardContent>
         </Card>
 
         <Card className={`${dashboardTheme.card} border-l-4 border-l-orange-500`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-white/80">Active Sessions</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-900/80">Active Sessions</CardTitle>
             <Zap className="h-5 w-5 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-white">
+            <div className="text-3xl font-bold text-gray-900">
               {systemStats?.activeSessions || systemMetrics.activeConnections}
             </div>
-            <p className="text-xs text-white/60 mt-1">Live connections</p>
+            <p className="text-xs text-gray-900/60 mt-1">Live connections</p>
           </CardContent>
         </Card>
       </div>
@@ -591,14 +738,14 @@ export const AdminDashboard = () => {
       {/* Analytics Tabs */}
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
+          <CardTitle className="text-gray-900 flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
             Platform Analytics
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="users" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 bg-gray-800/50">
+            <TabsList className="grid w-full grid-cols-4 bg-gray-100">
               <TabsTrigger value="users" className="data-[state=active]:bg-red-600">
                 <Users className="h-4 w-4 mr-2" />
                 Users
@@ -619,80 +766,104 @@ export const AdminDashboard = () => {
 
             <TabsContent value="users" className="mt-6">
               <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={userGrowthData}>
-                    <defs>
-                      <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis dataKey="month" stroke="#9CA3AF" />
-                    <YAxis stroke="#9CA3AF" />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }}
-                      labelStyle={{ color: '#F9FAFB' }}
-                    />
-                    <Area type="monotone" dataKey="total" stroke="#3B82F6" fillOpacity={1} fill="url(#colorTotal)" name="Total Users" />
-                  </AreaChart>
-                </ResponsiveContainer>
+                {analyticsLoading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <RefreshCw className="h-8 w-8 animate-spin text-gray-600" />
+                    <p className="ml-3 text-gray-600">Loading user data...</p>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={userGrowthData}>
+                      <defs>
+                        <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorFarmers" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                      <XAxis dataKey="month" stroke="#6B7280" />
+                      <YAxis stroke="#6B7280" />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '8px', color: '#111827' }}
+                        labelStyle={{ color: '#111827' }}
+                      />
+                      <Legend />
+                      <Area type="monotone" dataKey="farmers" stroke="#10B981" fillOpacity={0.6} fill="url(#colorFarmers)" name="Farmers" />
+                      <Area type="monotone" dataKey="assessors" stroke="#F59E0B" fillOpacity={0.6} fill="#F59E0B" name="Assessors" />
+                      <Area type="monotone" dataKey="total" stroke="#3B82F6" fillOpacity={1} fill="url(#colorTotal)" name="Total Users" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </TabsContent>
 
             <TabsContent value="revenue" className="mt-6">
               <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={revenueTrends}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis dataKey="month" stroke="#9CA3AF" />
-                    <YAxis stroke="#9CA3AF" />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }}
-                      labelStyle={{ color: '#F9FAFB' }}
-                      formatter={(value: number) => `RWF ${(value / 1000000).toFixed(1)}M`}
-                    />
-                    <Legend />
-                    <Bar dataKey="revenue" fill="#10B981" name="Revenue" />
-                    <Line type="monotone" dataKey="commission" stroke="#8B5CF6" strokeWidth={3} name="Commission" />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                {analyticsLoading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <RefreshCw className="h-8 w-8 animate-spin text-gray-600" />
+                    <p className="ml-3 text-gray-600">Loading revenue data...</p>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={revenueTrends}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                      <XAxis dataKey="month" stroke="#6B7280" />
+                      <YAxis stroke="#6B7280" />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '8px', color: '#111827' }}
+                        labelStyle={{ color: '#111827' }}
+                        formatter={(value: number) => `RWF ${(value / 1000000).toFixed(1)}M`}
+                      />
+                      <Legend />
+                      <Bar dataKey="revenue" fill="#10B981" name="Revenue" />
+                      <Line type="monotone" dataKey="commission" stroke="#8B5CF6" strokeWidth={3} name="Commission" />
+                      <Line type="monotone" dataKey="expenses" stroke="#EF4444" strokeWidth={2} strokeDasharray="5 5" name="Expenses" />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </TabsContent>
 
             <TabsContent value="system" className="mt-6">
               <div className="grid gap-4 md:grid-cols-3">
-                <Card className="bg-gray-800/50 border-gray-700">
+                <Card className="bg-gray-50 border border-gray-200">
                   <CardHeader>
-                    <CardTitle className="text-sm text-white/80">CPU Usage</CardTitle>
+                    <CardTitle className="text-sm text-gray-900/80">System Uptime</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-white">{systemMetrics.cpuUsage}%</div>
-                    <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden mt-2">
-                      <div className="h-full bg-blue-500" style={{ width: `${systemMetrics.cpuUsage}%` }} />
+                    <div className="text-2xl font-bold text-gray-900">
+                      {systemStats?.uptime || systemMetrics.uptime || 99.9}%
+                    </div>
+                    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden mt-2">
+                      <div className="h-full bg-green-500" style={{ width: `${systemStats?.uptime || systemMetrics.uptime || 99.9}%` }} />
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="bg-gray-800/50 border-gray-700">
+                <Card className="bg-gray-50 border border-gray-200">
                   <CardHeader>
-                    <CardTitle className="text-sm text-white/80">Memory Usage</CardTitle>
+                    <CardTitle className="text-sm text-gray-900/80">Avg Response Time</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-white">{systemMetrics.memoryUsage}%</div>
-                    <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden mt-2">
-                      <div className="h-full bg-purple-500" style={{ width: `${systemMetrics.memoryUsage}%` }} />
+                    <div className="text-2xl font-bold text-gray-900">
+                      {systemStats?.avgResponseTime || systemMetrics.avgResponseTime || 127}ms
                     </div>
+                    <p className="text-xs text-gray-600 mt-1">API response time</p>
                   </CardContent>
                 </Card>
-                <Card className="bg-gray-800/50 border-gray-700">
+                <Card className="bg-gray-50 border border-gray-200">
                   <CardHeader>
-                    <CardTitle className="text-sm text-white/80">Disk Usage</CardTitle>
+                    <CardTitle className="text-sm text-gray-900/80">Active Sessions</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-white">{systemMetrics.diskUsage}%</div>
-                    <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden mt-2">
-                      <div className="h-full bg-green-500" style={{ width: `${systemMetrics.diskUsage}%` }} />
+                    <div className="text-2xl font-bold text-gray-900">
+                      {systemStats?.activeSessions || systemMetrics.activeConnections || analyticsUsers.filter((u: any) => u.active !== false).length}
                     </div>
+                    <p className="text-xs text-gray-600 mt-1">Current connections</p>
                   </CardContent>
                 </Card>
               </div>
@@ -700,8 +871,58 @@ export const AdminDashboard = () => {
 
             <TabsContent value="activity" className="mt-6">
               <div className="space-y-3">
-                {recentActivities.slice(0, 5).map((activity) => (
-                  <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+                {(() => {
+                  // Create activity from real data: recent policies, claims, and assessments
+                  const activities: any[] = [];
+                  
+                  // Add recent policies
+                  analyticsPolicies.slice(0, 5).forEach((policy: any) => {
+                    const createdAt = policy.createdAt || policy.created_at || policy.startDate;
+                    if (createdAt) {
+                      const date = new Date(createdAt);
+                      const timeAgo = getTimeAgo(date);
+                      activities.push({
+                        id: `policy-${policy._id || policy.id}`,
+                        action: 'Policy Created',
+                        user: policy.farmerId?.name || policy.farmer?.name || 'System',
+                        details: `Policy for ${policy.cropType || 'crop'} - ${policy.status || 'active'}`,
+                        timestamp: timeAgo,
+                        date: date,
+                        severity: policy.status === 'active' ? 'success' : 'info'
+                      });
+                    }
+                  });
+                  
+                  // Add recent claims
+                  analyticsClaims.slice(0, 5).forEach((claim: any) => {
+                    const createdAt = claim.createdAt || claim.created_at || claim.filedDate;
+                    if (createdAt) {
+                      const date = new Date(createdAt);
+                      const timeAgo = getTimeAgo(date);
+                      activities.push({
+                        id: `claim-${claim._id || claim.id}`,
+                        action: 'Claim Filed',
+                        user: claim.policyId?.farmerId?.name || claim.farmer?.name || 'System',
+                        details: `${claim.lossEventType || claim.damageType || 'Loss'} claim - ${claim.status || 'pending'}`,
+                        timestamp: timeAgo,
+                        date: date,
+                        severity: claim.status === 'approved' ? 'success' : claim.status === 'rejected' ? 'error' : 'warning'
+                      });
+                    }
+                  });
+                  
+                  // Sort by date (most recent first) and take top 5
+                  activities.sort((a, b) => {
+                    const dateA = a.date || new Date(0);
+                    const dateB = b.date || new Date(0);
+                    return dateB.getTime() - dateA.getTime();
+                  });
+                  
+                  return activities.slice(0, 5).length > 0 ? activities.slice(0, 5) : [
+                    { id: 1, action: "No recent activity", user: "System", details: "Activity will appear here", timestamp: "N/A", severity: "info" }
+                  ];
+                })().map((activity: any) => (
+                  <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className={`w-2 h-2 rounded-full ${
                         activity.severity === 'success' ? 'bg-green-500' :
@@ -710,11 +931,11 @@ export const AdminDashboard = () => {
                         'bg-blue-500'
                       }`}></div>
                       <div>
-                        <p className="text-sm font-medium text-white">{activity.action}</p>
-                        <p className="text-xs text-white/60">{activity.user} • {activity.details}</p>
+                        <p className="text-sm font-medium text-gray-900">{activity.action}</p>
+                        <p className="text-xs text-gray-900/60">{activity.user} • {activity.details}</p>
                       </div>
                     </div>
-                    <span className="text-xs text-white/50">{activity.timestamp}</span>
+                    <span className="text-xs text-gray-900/50">{activity.timestamp}</span>
                   </div>
                 ))}
               </div>
@@ -727,7 +948,7 @@ export const AdminDashboard = () => {
       <div className="grid gap-6 md:grid-cols-3">
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-sm text-white/80 flex items-center gap-2">
+            <CardTitle className="text-sm text-gray-900/80 flex items-center gap-2">
               <Users className="h-4 w-4 text-blue-500" />
               User Distribution
             </CardTitle>
@@ -743,9 +964,9 @@ export const AdminDashboard = () => {
               <div key={idx} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className={`w-3 h-3 rounded-full ${item.color}`}></div>
-                  <span className="text-sm text-white/80">{item.role}</span>
+                  <span className="text-sm text-gray-900/80">{item.role}</span>
                 </div>
-                <span className="text-sm font-medium text-white">{item.count.toLocaleString()}</span>
+                <span className="text-sm font-medium text-gray-900">{item.count.toLocaleString()}</span>
               </div>
             ))}
           </CardContent>
@@ -753,7 +974,7 @@ export const AdminDashboard = () => {
 
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-sm text-white/80 flex items-center gap-2">
+            <CardTitle className="text-sm text-gray-900/80 flex items-center gap-2">
               <DollarSign className="h-4 w-4 text-green-500" />
               Commission Breakdown
             </CardTitle>
@@ -761,9 +982,9 @@ export const AdminDashboard = () => {
           <CardContent className="space-y-3">
             {commissionRates.map((item, idx) => (
               <div key={idx} className="flex items-center justify-between">
-                <span className="text-xs text-white/80">{item.type}</span>
+                <span className="text-xs text-gray-900/80">{item.type}</span>
                 <div className="text-right">
-                  <div className="text-sm font-medium text-white">{item.rate}%</div>
+                  <div className="text-sm font-medium text-gray-900">{item.rate}%</div>
                   <div className="text-xs text-green-400">
                     RWF {(item.commission / 1000000).toFixed(1)}M
                   </div>
@@ -775,7 +996,7 @@ export const AdminDashboard = () => {
 
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-sm text-white/80 flex items-center gap-2">
+            <CardTitle className="text-sm text-gray-900/80 flex items-center gap-2">
               <Activity className="h-4 w-4 text-purple-500" />
               System Performance
             </CardTitle>
@@ -783,7 +1004,7 @@ export const AdminDashboard = () => {
           <CardContent className="space-y-4">
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-white/60">Uptime</span>
+                <span className="text-gray-900/60">Uptime</span>
                 <span className="text-green-400">{systemMetrics.uptime}%</span>
               </div>
               <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
@@ -792,7 +1013,7 @@ export const AdminDashboard = () => {
             </div>
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-white/60">API Response</span>
+                <span className="text-gray-900/60">API Response</span>
                 <span className="text-blue-400">{systemMetrics.avgResponseTime}ms</span>
               </div>
               <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
@@ -801,7 +1022,7 @@ export const AdminDashboard = () => {
             </div>
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-white/60">Error Rate</span>
+                <span className="text-gray-900/60">Error Rate</span>
                 <span className="text-green-400">{systemMetrics.errorRate}%</span>
               </div>
               <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
@@ -1032,13 +1253,13 @@ export const AdminDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">User Management</h2>
-          <p className="text-white/60">Manage all platform users and permissions</p>
+          <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
+          <p className="text-gray-900/60">Manage all platform users and permissions</p>
         </div>
         <div className="flex gap-2">
           <Button 
             variant="outline" 
-            className="border-gray-700 text-white hover:bg-gray-800"
+            className="border-gray-300 text-gray-900 hover:bg-gray-100"
             onClick={loadUsers}
             disabled={usersLoading}
           >
@@ -1054,8 +1275,8 @@ export const AdminDashboard = () => {
             </DialogTrigger>
             <DialogContent className={`${dashboardTheme.card} border-gray-800 max-w-2xl max-h-[90vh] overflow-y-auto`}>
               <DialogHeader>
-                <DialogTitle className="text-white text-2xl">Add New User</DialogTitle>
-                <DialogDescription className="text-white/60 text-sm mt-2">
+                <DialogTitle className="text-gray-900 text-2xl">Add New User</DialogTitle>
+                <DialogDescription className="text-gray-900/60 text-sm mt-2">
                   Create a new user account. Required fields are marked with *
                 </DialogDescription>
               </DialogHeader>
@@ -1063,24 +1284,24 @@ export const AdminDashboard = () => {
                 {/* Required Fields */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="nationalId" className="text-white">National ID *</Label>
+                    <Label htmlFor="nationalId" className="text-gray-900">National ID *</Label>
                     <Input
                       id="nationalId"
                       value={newUserData.nationalId}
                       onChange={(e) => setNewUserData({ ...newUserData, nationalId: e.target.value })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                       placeholder="1199012345678901"
                       required
                     />
                   </div>
                   <div>
-                    <Label htmlFor="email" className="text-white">Email *</Label>
+                    <Label htmlFor="email" className="text-gray-900">Email *</Label>
                     <Input
                       id="email"
                       type="email"
                       value={newUserData.email}
                       onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                       placeholder="user@example.com"
                       required
                     />
@@ -1089,18 +1310,18 @@ export const AdminDashboard = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="phoneNumber" className="text-white">Phone Number *</Label>
+                    <Label htmlFor="phoneNumber" className="text-gray-900">Phone Number *</Label>
                     <Input
                       id="phoneNumber"
                       value={newUserData.phoneNumber}
                       onChange={(e) => setNewUserData({ ...newUserData, phoneNumber: e.target.value })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                       placeholder="0721234567"
                       required
                     />
                   </div>
                   <div>
-                    <Label htmlFor="role" className="text-white">Role *</Label>
+                    <Label htmlFor="role" className="text-gray-900">Role *</Label>
                     <Select
                       value={newUserData.role}
                       onValueChange={(value) => setNewUserData({ ...newUserData, role: value })}
@@ -1122,22 +1343,22 @@ export const AdminDashboard = () => {
                 {/* Optional Fields */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="firstName" className="text-white">First Name</Label>
+                    <Label htmlFor="firstName" className="text-gray-900">First Name</Label>
                     <Input
                       id="firstName"
                       value={newUserData.firstName}
                       onChange={(e) => setNewUserData({ ...newUserData, firstName: e.target.value })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                       placeholder="First Name"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="lastName" className="text-white">Last Name</Label>
+                    <Label htmlFor="lastName" className="text-gray-900">Last Name</Label>
                     <Input
                       id="lastName"
                       value={newUserData.lastName}
                       onChange={(e) => setNewUserData({ ...newUserData, lastName: e.target.value })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                       placeholder="Last Name"
                     />
                   </div>
@@ -1145,22 +1366,22 @@ export const AdminDashboard = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="province" className="text-white">Province</Label>
+                    <Label htmlFor="province" className="text-gray-900">Province</Label>
                     <Input
                       id="province"
                       value={newUserData.province}
                       onChange={(e) => setNewUserData({ ...newUserData, province: e.target.value })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                       placeholder="Province"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="district" className="text-white">District</Label>
+                    <Label htmlFor="district" className="text-gray-900">District</Label>
                     <Input
                       id="district"
                       value={newUserData.district}
                       onChange={(e) => setNewUserData({ ...newUserData, district: e.target.value })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                       placeholder="District"
                     />
                   </div>
@@ -1168,22 +1389,22 @@ export const AdminDashboard = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="sector" className="text-white">Sector</Label>
+                    <Label htmlFor="sector" className="text-gray-900">Sector</Label>
                     <Input
                       id="sector"
                       value={newUserData.sector}
                       onChange={(e) => setNewUserData({ ...newUserData, sector: e.target.value })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                       placeholder="Sector"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="cell" className="text-white">Cell</Label>
+                    <Label htmlFor="cell" className="text-gray-900">Cell</Label>
                     <Input
                       id="cell"
                       value={newUserData.cell}
                       onChange={(e) => setNewUserData({ ...newUserData, cell: e.target.value })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                       placeholder="Cell"
                     />
                   </div>
@@ -1191,17 +1412,17 @@ export const AdminDashboard = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="village" className="text-white">Village</Label>
+                    <Label htmlFor="village" className="text-gray-900">Village</Label>
                     <Input
                       id="village"
                       value={newUserData.village}
                       onChange={(e) => setNewUserData({ ...newUserData, village: e.target.value })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                       placeholder="Village"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="sex" className="text-white">Sex</Label>
+                    <Label htmlFor="sex" className="text-gray-900">Sex</Label>
                     <Select
                       value={newUserData.sex}
                       onValueChange={(value) => setNewUserData({ ...newUserData, sex: value })}
@@ -1220,10 +1441,10 @@ export const AdminDashboard = () => {
                 {/* Role-Specific Profile Fields */}
                 {newUserData.role === 'FARMER' && (
                   <div className="border-t border-gray-800 pt-4 mt-4">
-                    <h3 className="text-white font-semibold mb-4">Farmer Profile</h3>
+                    <h3 className="text-gray-900 font-semibold mb-4">Farmer Profile</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="farmProvince" className="text-white">Farm Province</Label>
+                        <Label htmlFor="farmProvince" className="text-gray-900">Farm Province</Label>
                         <Input
                           id="farmProvince"
                           value={newUserData.farmerProfile.farmProvince}
@@ -1231,12 +1452,12 @@ export const AdminDashboard = () => {
                             ...newUserData,
                             farmerProfile: { ...newUserData.farmerProfile, farmProvince: e.target.value }
                           })}
-                          className={`${dashboardTheme.input} border-gray-700`}
+                          className={`${dashboardTheme.input} border-gray-300`}
                           placeholder="Farm Province"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="farmDistrict" className="text-white">Farm District</Label>
+                        <Label htmlFor="farmDistrict" className="text-gray-900">Farm District</Label>
                         <Input
                           id="farmDistrict"
                           value={newUserData.farmerProfile.farmDistrict}
@@ -1244,14 +1465,14 @@ export const AdminDashboard = () => {
                             ...newUserData,
                             farmerProfile: { ...newUserData.farmerProfile, farmDistrict: e.target.value }
                           })}
-                          className={`${dashboardTheme.input} border-gray-700`}
+                          className={`${dashboardTheme.input} border-gray-300`}
                           placeholder="Farm District"
                         />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4 mt-4">
                       <div>
-                        <Label htmlFor="farmSector" className="text-white">Farm Sector</Label>
+                        <Label htmlFor="farmSector" className="text-gray-900">Farm Sector</Label>
                         <Input
                           id="farmSector"
                           value={newUserData.farmerProfile.farmSector}
@@ -1259,12 +1480,12 @@ export const AdminDashboard = () => {
                             ...newUserData,
                             farmerProfile: { ...newUserData.farmerProfile, farmSector: e.target.value }
                           })}
-                          className={`${dashboardTheme.input} border-gray-700`}
+                          className={`${dashboardTheme.input} border-gray-300`}
                           placeholder="Farm Sector"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="farmCell" className="text-white">Farm Cell</Label>
+                        <Label htmlFor="farmCell" className="text-gray-900">Farm Cell</Label>
                         <Input
                           id="farmCell"
                           value={newUserData.farmerProfile.farmCell}
@@ -1272,13 +1493,13 @@ export const AdminDashboard = () => {
                             ...newUserData,
                             farmerProfile: { ...newUserData.farmerProfile, farmCell: e.target.value }
                           })}
-                          className={`${dashboardTheme.input} border-gray-700`}
+                          className={`${dashboardTheme.input} border-gray-300`}
                           placeholder="Farm Cell"
                         />
                       </div>
                     </div>
                     <div className="mt-4">
-                      <Label htmlFor="farmVillage" className="text-white">Farm Village</Label>
+                      <Label htmlFor="farmVillage" className="text-gray-900">Farm Village</Label>
                       <Input
                         id="farmVillage"
                         value={newUserData.farmerProfile.farmVillage}
@@ -1286,7 +1507,7 @@ export const AdminDashboard = () => {
                           ...newUserData,
                           farmerProfile: { ...newUserData.farmerProfile, farmVillage: e.target.value }
                         })}
-                        className={`${dashboardTheme.input} border-gray-700`}
+                        className={`${dashboardTheme.input} border-gray-300`}
                         placeholder="Farm Village"
                       />
                     </div>
@@ -1295,10 +1516,10 @@ export const AdminDashboard = () => {
 
                 {newUserData.role === 'ASSESSOR' && (
                   <div className="border-t border-gray-800 pt-4 mt-4">
-                    <h3 className="text-white font-semibold mb-4">Assessor Profile</h3>
+                    <h3 className="text-gray-900 font-semibold mb-4">Assessor Profile</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="specialization" className="text-white">Specialization</Label>
+                        <Label htmlFor="specialization" className="text-gray-900">Specialization</Label>
                         <Input
                           id="specialization"
                           value={newUserData.assessorProfile.specialization}
@@ -1306,12 +1527,12 @@ export const AdminDashboard = () => {
                             ...newUserData,
                             assessorProfile: { ...newUserData.assessorProfile, specialization: e.target.value }
                           })}
-                          className={`${dashboardTheme.input} border-gray-700`}
+                          className={`${dashboardTheme.input} border-gray-300`}
                           placeholder="e.g. Crop Assessment, Risk Evaluation"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="experienceYears" className="text-white">Experience Years</Label>
+                        <Label htmlFor="experienceYears" className="text-gray-900">Experience Years</Label>
                         <Input
                           id="experienceYears"
                           type="number"
@@ -1321,14 +1542,14 @@ export const AdminDashboard = () => {
                             ...newUserData,
                             assessorProfile: { ...newUserData.assessorProfile, experienceYears: parseInt(e.target.value) || 0 }
                           })}
-                          className={`${dashboardTheme.input} border-gray-700`}
+                          className={`${dashboardTheme.input} border-gray-300`}
                           placeholder="0"
                         />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4 mt-4">
                       <div>
-                        <Label htmlFor="profilePhotoUrl" className="text-white">Profile Photo URL</Label>
+                        <Label htmlFor="profilePhotoUrl" className="text-gray-900">Profile Photo URL</Label>
                         <Input
                           id="profilePhotoUrl"
                           value={newUserData.assessorProfile.profilePhotoUrl}
@@ -1336,12 +1557,12 @@ export const AdminDashboard = () => {
                             ...newUserData,
                             assessorProfile: { ...newUserData.assessorProfile, profilePhotoUrl: e.target.value }
                           })}
-                          className={`${dashboardTheme.input} border-gray-700`}
+                          className={`${dashboardTheme.input} border-gray-300`}
                           placeholder="https://example.com/photo.jpg"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="assessorAddress" className="text-white">Address</Label>
+                        <Label htmlFor="assessorAddress" className="text-gray-900">Address</Label>
                         <Input
                           id="assessorAddress"
                           value={newUserData.assessorProfile.address}
@@ -1349,13 +1570,13 @@ export const AdminDashboard = () => {
                             ...newUserData,
                             assessorProfile: { ...newUserData.assessorProfile, address: e.target.value }
                           })}
-                          className={`${dashboardTheme.input} border-gray-700`}
+                          className={`${dashboardTheme.input} border-gray-300`}
                           placeholder="Address"
                         />
                       </div>
                     </div>
                     <div className="mt-4">
-                      <Label htmlFor="assessorBio" className="text-white">Bio</Label>
+                      <Label htmlFor="assessorBio" className="text-gray-900">Bio</Label>
                       <Textarea
                         id="assessorBio"
                         value={newUserData.assessorProfile.bio}
@@ -1363,7 +1584,7 @@ export const AdminDashboard = () => {
                           ...newUserData,
                           assessorProfile: { ...newUserData.assessorProfile, bio: e.target.value }
                         })}
-                        className={`${dashboardTheme.input} border-gray-700 min-h-[100px]`}
+                        className={`${dashboardTheme.input} border-gray-300 min-h-[100px]`}
                         placeholder="Brief biography or description"
                       />
                     </div>
@@ -1372,10 +1593,10 @@ export const AdminDashboard = () => {
 
                 {newUserData.role === 'INSURER' && (
                   <div className="border-t border-gray-800 pt-4 mt-4">
-                    <h3 className="text-white font-semibold mb-4">Insurer Profile</h3>
+                    <h3 className="text-gray-900 font-semibold mb-4">Insurer Profile</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="companyName" className="text-white">Company Name</Label>
+                        <Label htmlFor="companyName" className="text-gray-900">Company Name</Label>
                         <Input
                           id="companyName"
                           value={newUserData.insurerProfile.companyName}
@@ -1383,12 +1604,12 @@ export const AdminDashboard = () => {
                             ...newUserData,
                             insurerProfile: { ...newUserData.insurerProfile, companyName: e.target.value }
                           })}
-                          className={`${dashboardTheme.input} border-gray-700`}
+                          className={`${dashboardTheme.input} border-gray-300`}
                           placeholder="Company Name"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="contactPerson" className="text-white">Contact Person</Label>
+                        <Label htmlFor="contactPerson" className="text-gray-900">Contact Person</Label>
                         <Input
                           id="contactPerson"
                           value={newUserData.insurerProfile.contactPerson}
@@ -1396,14 +1617,14 @@ export const AdminDashboard = () => {
                             ...newUserData,
                             insurerProfile: { ...newUserData.insurerProfile, contactPerson: e.target.value }
                           })}
-                          className={`${dashboardTheme.input} border-gray-700`}
+                          className={`${dashboardTheme.input} border-gray-300`}
                           placeholder="Contact Person Name"
                         />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4 mt-4">
                       <div>
-                        <Label htmlFor="website" className="text-white">Website</Label>
+                        <Label htmlFor="website" className="text-gray-900">Website</Label>
                         <Input
                           id="website"
                           type="url"
@@ -1412,12 +1633,12 @@ export const AdminDashboard = () => {
                             ...newUserData,
                             insurerProfile: { ...newUserData.insurerProfile, website: e.target.value }
                           })}
-                          className={`${dashboardTheme.input} border-gray-700`}
+                          className={`${dashboardTheme.input} border-gray-300`}
                           placeholder="https://example.com"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="insurerAddress" className="text-white">Address</Label>
+                        <Label htmlFor="insurerAddress" className="text-gray-900">Address</Label>
                         <Input
                           id="insurerAddress"
                           value={newUserData.insurerProfile.address}
@@ -1425,14 +1646,14 @@ export const AdminDashboard = () => {
                             ...newUserData,
                             insurerProfile: { ...newUserData.insurerProfile, address: e.target.value }
                           })}
-                          className={`${dashboardTheme.input} border-gray-700`}
+                          className={`${dashboardTheme.input} border-gray-300`}
                           placeholder="Company Address"
                         />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4 mt-4">
                       <div>
-                        <Label htmlFor="licenseNumber" className="text-white">License Number</Label>
+                        <Label htmlFor="licenseNumber" className="text-gray-900">License Number</Label>
                         <Input
                           id="licenseNumber"
                           value={newUserData.insurerProfile.licenseNumber}
@@ -1440,12 +1661,12 @@ export const AdminDashboard = () => {
                             ...newUserData,
                             insurerProfile: { ...newUserData.insurerProfile, licenseNumber: e.target.value }
                           })}
-                          className={`${dashboardTheme.input} border-gray-700`}
+                          className={`${dashboardTheme.input} border-gray-300`}
                           placeholder="License Number"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="registrationDate" className="text-white">Registration Date</Label>
+                        <Label htmlFor="registrationDate" className="text-gray-900">Registration Date</Label>
                         <Input
                           id="registrationDate"
                           type="date"
@@ -1454,13 +1675,13 @@ export const AdminDashboard = () => {
                             ...newUserData,
                             insurerProfile: { ...newUserData.insurerProfile, registrationDate: e.target.value }
                           })}
-                          className={`${dashboardTheme.input} border-gray-700`}
+                          className={`${dashboardTheme.input} border-gray-300`}
                         />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4 mt-4">
                       <div>
-                        <Label htmlFor="companyLogoUrl" className="text-white">Company Logo URL</Label>
+                        <Label htmlFor="companyLogoUrl" className="text-gray-900">Company Logo URL</Label>
                         <Input
                           id="companyLogoUrl"
                           value={newUserData.insurerProfile.companyLogoUrl}
@@ -1468,13 +1689,13 @@ export const AdminDashboard = () => {
                             ...newUserData,
                             insurerProfile: { ...newUserData.insurerProfile, companyLogoUrl: e.target.value }
                           })}
-                          className={`${dashboardTheme.input} border-gray-700`}
+                          className={`${dashboardTheme.input} border-gray-300`}
                           placeholder="https://example.com/logo.png"
                         />
                       </div>
                     </div>
                     <div className="mt-4">
-                      <Label htmlFor="companyDescription" className="text-white">Company Description</Label>
+                      <Label htmlFor="companyDescription" className="text-gray-900">Company Description</Label>
                       <Textarea
                         id="companyDescription"
                         value={newUserData.insurerProfile.companyDescription}
@@ -1482,7 +1703,7 @@ export const AdminDashboard = () => {
                           ...newUserData,
                           insurerProfile: { ...newUserData.insurerProfile, companyDescription: e.target.value }
                         })}
-                        className={`${dashboardTheme.input} border-gray-700 min-h-[100px]`}
+                        className={`${dashboardTheme.input} border-gray-300 min-h-[100px]`}
                         placeholder="Company description and overview"
                       />
                     </div>
@@ -1494,14 +1715,14 @@ export const AdminDashboard = () => {
                   <Button
                     variant="outline"
                     onClick={() => setShowAddUserDialog(false)}
-                    className="border-gray-700 text-white hover:bg-gray-800"
+                    className="border-gray-300 text-gray-900 hover:bg-gray-100"
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={handleCreateUser}
                     disabled={creatingUser}
-                    className="bg-red-600 hover:bg-red-700 text-white"
+                    className="bg-red-600 hover:bg-red-700 text-gray-900"
                   >
                     {creatingUser ? (
                       <>
@@ -1524,8 +1745,8 @@ export const AdminDashboard = () => {
           <Dialog open={showEditUserDialog} onOpenChange={setShowEditUserDialog}>
             <DialogContent className={`${dashboardTheme.card} border-gray-800 max-w-2xl max-h-[90vh] overflow-y-auto`}>
               <DialogHeader>
-                <DialogTitle className="text-white text-2xl">Edit User</DialogTitle>
-                <DialogDescription className="text-white/60 text-sm mt-2">
+                <DialogTitle className="text-gray-900 text-2xl">Edit User</DialogTitle>
+                <DialogDescription className="text-gray-900/60 text-sm mt-2">
                   Update user information. Fields marked with * are required.
                 </DialogDescription>
               </DialogHeader>
@@ -1534,19 +1755,19 @@ export const AdminDashboard = () => {
                   {/* User Info (Read-only) */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-white/60">National ID</Label>
+                      <Label className="text-gray-900/60">National ID</Label>
                       <Input
                         value={selectedUser.nationalId || ""}
                         disabled
-                        className={`${dashboardTheme.input} border-gray-700 opacity-50`}
+                        className={`${dashboardTheme.input} border-gray-300 opacity-50`}
                       />
                     </div>
                     <div>
-                      <Label className="text-white/60">Role</Label>
+                      <Label className="text-gray-900/60">Role</Label>
                       <Input
                         value={selectedUser.role || ""}
                         disabled
-                        className={`${dashboardTheme.input} border-gray-700 opacity-50`}
+                        className={`${dashboardTheme.input} border-gray-300 opacity-50`}
                       />
                     </div>
                   </div>
@@ -1554,22 +1775,22 @@ export const AdminDashboard = () => {
                   {/* Basic Fields */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="editFirstName" className="text-white">First Name</Label>
+                      <Label htmlFor="editFirstName" className="text-gray-900">First Name</Label>
                       <Input
                         id="editFirstName"
                         value={editUserData.firstName}
                         onChange={(e) => setEditUserData({ ...editUserData, firstName: e.target.value })}
-                        className={`${dashboardTheme.input} border-gray-700`}
+                        className={`${dashboardTheme.input} border-gray-300`}
                         placeholder="First Name"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="editLastName" className="text-white">Last Name</Label>
+                      <Label htmlFor="editLastName" className="text-gray-900">Last Name</Label>
                       <Input
                         id="editLastName"
                         value={editUserData.lastName}
                         onChange={(e) => setEditUserData({ ...editUserData, lastName: e.target.value })}
-                        className={`${dashboardTheme.input} border-gray-700`}
+                        className={`${dashboardTheme.input} border-gray-300`}
                         placeholder="Last Name"
                       />
                     </div>
@@ -1577,24 +1798,24 @@ export const AdminDashboard = () => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="editEmail" className="text-white">Email *</Label>
+                      <Label htmlFor="editEmail" className="text-gray-900">Email *</Label>
                       <Input
                         id="editEmail"
                         type="email"
                         value={editUserData.email}
                         onChange={(e) => setEditUserData({ ...editUserData, email: e.target.value })}
-                        className={`${dashboardTheme.input} border-gray-700`}
+                        className={`${dashboardTheme.input} border-gray-300`}
                         placeholder="user@example.com"
                         required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="editPhoneNumber" className="text-white">Phone Number *</Label>
+                      <Label htmlFor="editPhoneNumber" className="text-gray-900">Phone Number *</Label>
                       <Input
                         id="editPhoneNumber"
                         value={editUserData.phoneNumber}
                         onChange={(e) => setEditUserData({ ...editUserData, phoneNumber: e.target.value })}
-                        className={`${dashboardTheme.input} border-gray-700`}
+                        className={`${dashboardTheme.input} border-gray-300`}
                         placeholder="0721234567"
                         required
                       />
@@ -1603,22 +1824,22 @@ export const AdminDashboard = () => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="editProvince" className="text-white">Province</Label>
+                      <Label htmlFor="editProvince" className="text-gray-900">Province</Label>
                       <Input
                         id="editProvince"
                         value={editUserData.province}
                         onChange={(e) => setEditUserData({ ...editUserData, province: e.target.value })}
-                        className={`${dashboardTheme.input} border-gray-700`}
+                        className={`${dashboardTheme.input} border-gray-300`}
                         placeholder="Province"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="editDistrict" className="text-white">District</Label>
+                      <Label htmlFor="editDistrict" className="text-gray-900">District</Label>
                       <Input
                         id="editDistrict"
                         value={editUserData.district}
                         onChange={(e) => setEditUserData({ ...editUserData, district: e.target.value })}
-                        className={`${dashboardTheme.input} border-gray-700`}
+                        className={`${dashboardTheme.input} border-gray-300`}
                         placeholder="District"
                       />
                     </div>
@@ -1626,22 +1847,22 @@ export const AdminDashboard = () => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="editSector" className="text-white">Sector</Label>
+                      <Label htmlFor="editSector" className="text-gray-900">Sector</Label>
                       <Input
                         id="editSector"
                         value={editUserData.sector}
                         onChange={(e) => setEditUserData({ ...editUserData, sector: e.target.value })}
-                        className={`${dashboardTheme.input} border-gray-700`}
+                        className={`${dashboardTheme.input} border-gray-300`}
                         placeholder="Sector"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="editCell" className="text-white">Cell</Label>
+                      <Label htmlFor="editCell" className="text-gray-900">Cell</Label>
                       <Input
                         id="editCell"
                         value={editUserData.cell}
                         onChange={(e) => setEditUserData({ ...editUserData, cell: e.target.value })}
-                        className={`${dashboardTheme.input} border-gray-700`}
+                        className={`${dashboardTheme.input} border-gray-300`}
                         placeholder="Cell"
                       />
                     </div>
@@ -1649,17 +1870,17 @@ export const AdminDashboard = () => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="editVillage" className="text-white">Village</Label>
+                      <Label htmlFor="editVillage" className="text-gray-900">Village</Label>
                       <Input
                         id="editVillage"
                         value={editUserData.village}
                         onChange={(e) => setEditUserData({ ...editUserData, village: e.target.value })}
-                        className={`${dashboardTheme.input} border-gray-700`}
+                        className={`${dashboardTheme.input} border-gray-300`}
                         placeholder="Village"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="editSex" className="text-white">Sex</Label>
+                      <Label htmlFor="editSex" className="text-gray-900">Sex</Label>
                       <Select
                         value={editUserData.sex}
                         onValueChange={(value) => setEditUserData({ ...editUserData, sex: value })}
@@ -1677,7 +1898,7 @@ export const AdminDashboard = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="editActive" className="text-white flex items-center gap-2">
+                    <Label htmlFor="editActive" className="text-gray-900 flex items-center gap-2">
                       <input
                         id="editActive"
                         type="checkbox"
@@ -1691,11 +1912,11 @@ export const AdminDashboard = () => {
 
                   {/* Role-specific Profile Fields */}
                   {selectedUser.role === 'FARMER' && (
-                    <div className="space-y-4 mt-4 pt-4 border-t border-gray-700">
-                      <h3 className="text-white font-semibold">Farmer Profile</h3>
+                    <div className="space-y-4 mt-4 pt-4 border-t border-gray-300">
+                      <h3 className="text-gray-900 font-semibold">Farmer Profile</h3>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="editFarmProvince" className="text-white">Farm Province</Label>
+                          <Label htmlFor="editFarmProvince" className="text-gray-900">Farm Province</Label>
                           <Input
                             id="editFarmProvince"
                             value={editUserData.farmerProfile.farmProvince}
@@ -1703,12 +1924,12 @@ export const AdminDashboard = () => {
                               ...editUserData,
                               farmerProfile: { ...editUserData.farmerProfile, farmProvince: e.target.value }
                             })}
-                            className={`${dashboardTheme.input} border-gray-700`}
+                            className={`${dashboardTheme.input} border-gray-300`}
                             placeholder="Farm Province"
                           />
                         </div>
                         <div>
-                          <Label htmlFor="editFarmDistrict" className="text-white">Farm District</Label>
+                          <Label htmlFor="editFarmDistrict" className="text-gray-900">Farm District</Label>
                           <Input
                             id="editFarmDistrict"
                             value={editUserData.farmerProfile.farmDistrict}
@@ -1716,14 +1937,14 @@ export const AdminDashboard = () => {
                               ...editUserData,
                               farmerProfile: { ...editUserData.farmerProfile, farmDistrict: e.target.value }
                             })}
-                            className={`${dashboardTheme.input} border-gray-700`}
+                            className={`${dashboardTheme.input} border-gray-300`}
                             placeholder="Farm District"
                           />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="editFarmSector" className="text-white">Farm Sector</Label>
+                          <Label htmlFor="editFarmSector" className="text-gray-900">Farm Sector</Label>
                           <Input
                             id="editFarmSector"
                             value={editUserData.farmerProfile.farmSector}
@@ -1731,12 +1952,12 @@ export const AdminDashboard = () => {
                               ...editUserData,
                               farmerProfile: { ...editUserData.farmerProfile, farmSector: e.target.value }
                             })}
-                            className={`${dashboardTheme.input} border-gray-700`}
+                            className={`${dashboardTheme.input} border-gray-300`}
                             placeholder="Farm Sector"
                           />
                         </div>
                         <div>
-                          <Label htmlFor="editFarmCell" className="text-white">Farm Cell</Label>
+                          <Label htmlFor="editFarmCell" className="text-gray-900">Farm Cell</Label>
                           <Input
                             id="editFarmCell"
                             value={editUserData.farmerProfile.farmCell}
@@ -1744,13 +1965,13 @@ export const AdminDashboard = () => {
                               ...editUserData,
                               farmerProfile: { ...editUserData.farmerProfile, farmCell: e.target.value }
                             })}
-                            className={`${dashboardTheme.input} border-gray-700`}
+                            className={`${dashboardTheme.input} border-gray-300`}
                             placeholder="Farm Cell"
                           />
                         </div>
                       </div>
                       <div>
-                        <Label htmlFor="editFarmVillage" className="text-white">Farm Village</Label>
+                        <Label htmlFor="editFarmVillage" className="text-gray-900">Farm Village</Label>
                         <Input
                           id="editFarmVillage"
                           value={editUserData.farmerProfile.farmVillage}
@@ -1758,7 +1979,7 @@ export const AdminDashboard = () => {
                             ...editUserData,
                             farmerProfile: { ...editUserData.farmerProfile, farmVillage: e.target.value }
                           })}
-                          className={`${dashboardTheme.input} border-gray-700`}
+                          className={`${dashboardTheme.input} border-gray-300`}
                           placeholder="Farm Village"
                         />
                       </div>
@@ -1766,11 +1987,11 @@ export const AdminDashboard = () => {
                   )}
 
                   {selectedUser.role === 'ASSESSOR' && (
-                    <div className="space-y-4 mt-4 pt-4 border-t border-gray-700">
-                      <h3 className="text-white font-semibold">Assessor Profile</h3>
+                    <div className="space-y-4 mt-4 pt-4 border-t border-gray-300">
+                      <h3 className="text-gray-900 font-semibold">Assessor Profile</h3>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="editSpecialization" className="text-white">Specialization</Label>
+                          <Label htmlFor="editSpecialization" className="text-gray-900">Specialization</Label>
                           <Input
                             id="editSpecialization"
                             value={editUserData.assessorProfile.specialization}
@@ -1778,12 +1999,12 @@ export const AdminDashboard = () => {
                               ...editUserData,
                               assessorProfile: { ...editUserData.assessorProfile, specialization: e.target.value }
                             })}
-                            className={`${dashboardTheme.input} border-gray-700`}
+                            className={`${dashboardTheme.input} border-gray-300`}
                             placeholder="Specialization"
                           />
                         </div>
                         <div>
-                          <Label htmlFor="editExperienceYears" className="text-white">Experience Years</Label>
+                          <Label htmlFor="editExperienceYears" className="text-gray-900">Experience Years</Label>
                           <Input
                             id="editExperienceYears"
                             type="number"
@@ -1792,13 +2013,13 @@ export const AdminDashboard = () => {
                               ...editUserData,
                               assessorProfile: { ...editUserData.assessorProfile, experienceYears: parseInt(e.target.value) || 0 }
                             })}
-                            className={`${dashboardTheme.input} border-gray-700`}
+                            className={`${dashboardTheme.input} border-gray-300`}
                             placeholder="0"
                           />
                         </div>
                       </div>
                       <div>
-                        <Label htmlFor="editProfilePhotoUrl" className="text-white">Profile Photo URL</Label>
+                        <Label htmlFor="editProfilePhotoUrl" className="text-gray-900">Profile Photo URL</Label>
                         <Input
                           id="editProfilePhotoUrl"
                           value={editUserData.assessorProfile.profilePhotoUrl}
@@ -1806,12 +2027,12 @@ export const AdminDashboard = () => {
                             ...editUserData,
                             assessorProfile: { ...editUserData.assessorProfile, profilePhotoUrl: e.target.value }
                           })}
-                          className={`${dashboardTheme.input} border-gray-700`}
+                          className={`${dashboardTheme.input} border-gray-300`}
                           placeholder="https://example.com/photo.jpg"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="editAddress" className="text-white">Address</Label>
+                        <Label htmlFor="editAddress" className="text-gray-900">Address</Label>
                         <Input
                           id="editAddress"
                           value={editUserData.assessorProfile.address}
@@ -1819,12 +2040,12 @@ export const AdminDashboard = () => {
                             ...editUserData,
                             assessorProfile: { ...editUserData.assessorProfile, address: e.target.value }
                           })}
-                          className={`${dashboardTheme.input} border-gray-700`}
+                          className={`${dashboardTheme.input} border-gray-300`}
                           placeholder="Address"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="editBio" className="text-white">Bio</Label>
+                        <Label htmlFor="editBio" className="text-gray-900">Bio</Label>
                         <Textarea
                           id="editBio"
                           value={editUserData.assessorProfile.bio}
@@ -1832,7 +2053,7 @@ export const AdminDashboard = () => {
                             ...editUserData,
                             assessorProfile: { ...editUserData.assessorProfile, bio: e.target.value }
                           })}
-                          className={`${dashboardTheme.input} border-gray-700 min-h-[100px]`}
+                          className={`${dashboardTheme.input} border-gray-300 min-h-[100px]`}
                           placeholder="Bio"
                         />
                       </div>
@@ -1840,11 +2061,11 @@ export const AdminDashboard = () => {
                   )}
 
                   {selectedUser.role === 'INSURER' && (
-                    <div className="space-y-4 mt-4 pt-4 border-t border-gray-700">
-                      <h3 className="text-white font-semibold">Insurer Profile</h3>
+                    <div className="space-y-4 mt-4 pt-4 border-t border-gray-300">
+                      <h3 className="text-gray-900 font-semibold">Insurer Profile</h3>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="editCompanyName" className="text-white">Company Name</Label>
+                          <Label htmlFor="editCompanyName" className="text-gray-900">Company Name</Label>
                           <Input
                             id="editCompanyName"
                             value={editUserData.insurerProfile.companyName}
@@ -1852,12 +2073,12 @@ export const AdminDashboard = () => {
                               ...editUserData,
                               insurerProfile: { ...editUserData.insurerProfile, companyName: e.target.value }
                             })}
-                            className={`${dashboardTheme.input} border-gray-700`}
+                            className={`${dashboardTheme.input} border-gray-300`}
                             placeholder="Company Name"
                           />
                         </div>
                         <div>
-                          <Label htmlFor="editContactPerson" className="text-white">Contact Person</Label>
+                          <Label htmlFor="editContactPerson" className="text-gray-900">Contact Person</Label>
                           <Input
                             id="editContactPerson"
                             value={editUserData.insurerProfile.contactPerson}
@@ -1865,14 +2086,14 @@ export const AdminDashboard = () => {
                               ...editUserData,
                               insurerProfile: { ...editUserData.insurerProfile, contactPerson: e.target.value }
                             })}
-                            className={`${dashboardTheme.input} border-gray-700`}
+                            className={`${dashboardTheme.input} border-gray-300`}
                             placeholder="Contact Person"
                           />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="editWebsite" className="text-white">Website</Label>
+                          <Label htmlFor="editWebsite" className="text-gray-900">Website</Label>
                           <Input
                             id="editWebsite"
                             value={editUserData.insurerProfile.website}
@@ -1880,12 +2101,12 @@ export const AdminDashboard = () => {
                               ...editUserData,
                               insurerProfile: { ...editUserData.insurerProfile, website: e.target.value }
                             })}
-                            className={`${dashboardTheme.input} border-gray-700`}
+                            className={`${dashboardTheme.input} border-gray-300`}
                             placeholder="https://example.com"
                           />
                         </div>
                         <div>
-                          <Label htmlFor="editInsurerAddress" className="text-white">Address</Label>
+                          <Label htmlFor="editInsurerAddress" className="text-gray-900">Address</Label>
                           <Input
                             id="editInsurerAddress"
                             value={editUserData.insurerProfile.address}
@@ -1893,14 +2114,14 @@ export const AdminDashboard = () => {
                               ...editUserData,
                               insurerProfile: { ...editUserData.insurerProfile, address: e.target.value }
                             })}
-                            className={`${dashboardTheme.input} border-gray-700`}
+                            className={`${dashboardTheme.input} border-gray-300`}
                             placeholder="Company Address"
                           />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="editLicenseNumber" className="text-white">License Number</Label>
+                          <Label htmlFor="editLicenseNumber" className="text-gray-900">License Number</Label>
                           <Input
                             id="editLicenseNumber"
                             value={editUserData.insurerProfile.licenseNumber}
@@ -1908,12 +2129,12 @@ export const AdminDashboard = () => {
                               ...editUserData,
                               insurerProfile: { ...editUserData.insurerProfile, licenseNumber: e.target.value }
                             })}
-                            className={`${dashboardTheme.input} border-gray-700`}
+                            className={`${dashboardTheme.input} border-gray-300`}
                             placeholder="License Number"
                           />
                         </div>
                         <div>
-                          <Label htmlFor="editRegistrationDate" className="text-white">Registration Date</Label>
+                          <Label htmlFor="editRegistrationDate" className="text-gray-900">Registration Date</Label>
                           <Input
                             id="editRegistrationDate"
                             type="date"
@@ -1922,12 +2143,12 @@ export const AdminDashboard = () => {
                               ...editUserData,
                               insurerProfile: { ...editUserData.insurerProfile, registrationDate: e.target.value }
                             })}
-                            className={`${dashboardTheme.input} border-gray-700`}
+                            className={`${dashboardTheme.input} border-gray-300`}
                           />
                         </div>
                       </div>
                       <div>
-                        <Label htmlFor="editCompanyLogoUrl" className="text-white">Company Logo URL</Label>
+                        <Label htmlFor="editCompanyLogoUrl" className="text-gray-900">Company Logo URL</Label>
                         <Input
                           id="editCompanyLogoUrl"
                           value={editUserData.insurerProfile.companyLogoUrl}
@@ -1935,12 +2156,12 @@ export const AdminDashboard = () => {
                             ...editUserData,
                             insurerProfile: { ...editUserData.insurerProfile, companyLogoUrl: e.target.value }
                           })}
-                          className={`${dashboardTheme.input} border-gray-700`}
+                          className={`${dashboardTheme.input} border-gray-300`}
                           placeholder="https://example.com/logo.png"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="editCompanyDescription" className="text-white">Company Description</Label>
+                        <Label htmlFor="editCompanyDescription" className="text-gray-900">Company Description</Label>
                         <Textarea
                           id="editCompanyDescription"
                           value={editUserData.insurerProfile.companyDescription}
@@ -1948,7 +2169,7 @@ export const AdminDashboard = () => {
                             ...editUserData,
                             insurerProfile: { ...editUserData.insurerProfile, companyDescription: e.target.value }
                           })}
-                          className={`${dashboardTheme.input} border-gray-700 min-h-[100px]`}
+                          className={`${dashboardTheme.input} border-gray-300 min-h-[100px]`}
                           placeholder="Company description and overview"
                         />
                       </div>
@@ -1963,14 +2184,14 @@ export const AdminDashboard = () => {
                         setShowEditUserDialog(false);
                         setSelectedUser(null);
                       }}
-                      className="border-gray-700 text-white hover:bg-gray-800"
+                      className="border-gray-300 text-gray-900 hover:bg-gray-100"
                     >
                       Cancel
                     </Button>
                     <Button
                       onClick={handleUpdateUser}
                       disabled={editingUser}
-                      className="bg-red-600 hover:bg-red-700 text-white"
+                      className="bg-red-600 hover:bg-red-700 text-gray-900"
                     >
                       {editingUser ? (
                         <>
@@ -2005,7 +2226,7 @@ export const AdminDashboard = () => {
                 onClick={loadUsers}
                 variant="outline"
                 size="sm"
-                className="border-gray-700 text-white hover:bg-gray-800"
+                className="border-gray-300 text-gray-900 hover:bg-gray-100"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Retry
@@ -2018,37 +2239,37 @@ export const AdminDashboard = () => {
       <div className="grid gap-6 md:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Total Users</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Total Users</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{userStats.total.toLocaleString()}</div>
-            <p className="text-xs text-white/60 mt-1">All roles</p>
+            <div className="text-2xl font-bold text-gray-900">{userStats.total.toLocaleString()}</div>
+            <p className="text-xs text-gray-900/60 mt-1">All roles</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Active</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Active</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{userStats.active.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-gray-900">{userStats.active.toLocaleString()}</div>
             <p className="text-xs text-green-400 mt-1">90.9% active rate</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-yellow-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Inactive</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Inactive</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{userStats.inactive.toLocaleString()}</div>
-            <p className="text-xs text-white/60 mt-1">Need attention</p>
+            <div className="text-2xl font-bold text-gray-900">{userStats.inactive.toLocaleString()}</div>
+            <p className="text-xs text-gray-900/60 mt-1">Need attention</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-purple-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">New This Month</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">New This Month</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{userStats.newThisMonth}</div>
+            <div className="text-2xl font-bold text-gray-900">{userStats.newThisMonth}</div>
             <p className="text-xs text-purple-400 mt-1">+3.1% growth</p>
           </CardContent>
         </Card>
@@ -2056,18 +2277,18 @@ export const AdminDashboard = () => {
 
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white">All Users</CardTitle>
+          <CardTitle className="text-gray-900">All Users</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="mb-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/40" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-900/40" />
               <input
                 type="text"
                 placeholder="Search users..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:border-red-500"
+                className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-500 focus:outline-none focus:border-green-500"
               />
             </div>
           </div>
@@ -2075,19 +2296,19 @@ export const AdminDashboard = () => {
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4"></div>
-                <p className="text-white/60">Loading users...</p>
+                <p className="text-gray-900/60">Loading users...</p>
               </div>
             </div>
           ) : filteredUsers.length === 0 ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
-                <Users className="h-12 w-12 mx-auto mb-4 text-white/40" />
-                <p className="text-white/60">No users found</p>
+                <Users className="h-12 w-12 mx-auto mb-4 text-gray-900/40" />
+                <p className="text-gray-900/60">No users found</p>
                 {searchQuery && (
                   <Button
                     onClick={() => setSearchQuery("")}
                     variant="outline"
-                    className="mt-4 border-gray-700 text-white hover:bg-gray-800"
+                    className="mt-4 border-gray-300 text-gray-900 hover:bg-gray-100"
                   >
                     Clear Search
                   </Button>
@@ -2098,33 +2319,33 @@ export const AdminDashboard = () => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-700">
-                  <th className="text-left py-3 px-4 text-white/80 font-medium text-sm">User</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium text-sm">Email</th>
-                    <th className="text-left py-3 px-4 text-white/80 font-medium text-sm">Phone</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium text-sm">Role</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium text-sm">Region</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium text-sm">Status</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium text-sm">Last Login</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium text-sm">Actions</th>
+                <tr className="border-b border-gray-300">
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium text-sm">User</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium text-sm">Email</th>
+                    <th className="text-left py-3 px-4 text-gray-900/80 font-medium text-sm">Phone</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium text-sm">Role</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium text-sm">Region</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium text-sm">Status</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium text-sm">Last Login</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium text-sm">Actions</th>
                 </tr>
               </thead>
               <tbody>
                   {filteredUsers.map((user) => (
-                  <tr key={user.id} className="border-b border-gray-800 hover:bg-gray-800/50">
+                  <tr key={user.id} className="border-b border-gray-800 hover:bg-gray-100/50">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-orange-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                        <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-orange-600 rounded-full flex items-center justify-center text-gray-900 text-sm font-medium">
                             {user.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-white">{user.name}</div>
-                            <div className="text-xs text-white/60">{user.userId}</div>
+                          <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                            <div className="text-xs text-gray-900/60">{user.userId}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-sm text-white/80">{user.email}</td>
-                      <td className="py-3 px-4 text-sm text-white/80">{user.phoneNumber || 'N/A'}</td>
+                    <td className="py-3 px-4 text-sm text-gray-900/80">{user.email}</td>
+                      <td className="py-3 px-4 text-sm text-gray-900/80">{user.phoneNumber || 'N/A'}</td>
                     <td className="py-3 px-4">
                       <Badge className={`${
                           user.role === 'FARMER' || user.role === 'Farmer' ? 'bg-green-600' :
@@ -2137,19 +2358,19 @@ export const AdminDashboard = () => {
                         {user.role}
                       </Badge>
                     </td>
-                    <td className="py-3 px-4 text-sm text-white/80">{user.region}</td>
+                    <td className="py-3 px-4 text-sm text-gray-900/80">{user.region}</td>
                     <td className="py-3 px-4">
                         <Badge className={user.active !== false ? 'bg-green-600' : 'bg-gray-600'}>
                           {user.active !== false ? 'Active' : 'Inactive'}
                       </Badge>
                     </td>
-                    <td className="py-3 px-4 text-sm text-white/60">{user.lastLogin}</td>
+                    <td className="py-3 px-4 text-sm text-gray-900/60">{user.lastLogin}</td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
                           <Button 
                             variant="ghost" 
                             size="sm" 
-                            className="text-white/60 hover:text-white"
+                            className="text-gray-900/60 hover:text-gray-900"
                             onClick={() => handleViewUser(user.userId)}
                             title="View Details"
                           >
@@ -2158,7 +2379,7 @@ export const AdminDashboard = () => {
                           <Button 
                             variant="ghost" 
                             size="sm" 
-                            className="text-white/60 hover:text-white"
+                            className="text-gray-900/60 hover:text-gray-900"
                             onClick={() => handleEditUser(user.userId)}
                             title="Edit User"
                           >
@@ -2194,14 +2415,14 @@ export const AdminDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Financial Management & Monetization</h2>
-          <p className="text-white/60">Track platform revenue and commission earnings</p>
+          <h2 className="text-2xl font-bold text-gray-900">Financial Management & Monetization</h2>
+          <p className="text-gray-900/60">Track platform revenue and commission earnings</p>
         </div>
         <div className="flex gap-2">
           <Button 
             onClick={loadAdminStatistics}
             variant="outline"
-            className="border-gray-700 text-white hover:bg-gray-800"
+            className="border-gray-300 text-gray-900 hover:bg-gray-100"
             disabled={statsLoading}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${statsLoading ? 'animate-spin' : ''}`} />
@@ -2218,8 +2439,8 @@ export const AdminDashboard = () => {
       {statsLoading && (
         <Card className={dashboardTheme.card}>
           <CardContent className="p-8 text-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-white mx-auto mb-4" />
-            <p className="text-white/60">Loading financial data...</p>
+            <RefreshCw className="h-8 w-8 animate-spin text-gray-900 mx-auto mb-4" />
+            <p className="text-gray-900/60">Loading financial data...</p>
           </CardContent>
         </Card>
       )}
@@ -2237,7 +2458,7 @@ export const AdminDashboard = () => {
                 onClick={loadAdminStatistics}
                 variant="outline"
                 size="sm"
-                className="border-gray-700 text-white hover:bg-gray-800"
+                className="border-gray-300 text-gray-900 hover:bg-gray-100"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Retry
@@ -2251,28 +2472,28 @@ export const AdminDashboard = () => {
       {policyOverview && !statsLoading && (
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <FileText className="h-5 w-5" />
               Policy Overview
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-white/60 mb-1">Total Policies</p>
-                <p className="text-2xl font-bold text-white">
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-900/60 mb-1">Total Policies</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {policyOverview.totalPolicies || policyOverview.policies?.total || 0}
                 </p>
               </div>
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-white/60 mb-1">Active Policies</p>
-                <p className="text-2xl font-bold text-green-400">
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-900/60 mb-1">Active Policies</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {policyOverview.activePolicies || policyOverview.policies?.active || 0}
                 </p>
               </div>
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-white/60 mb-1">Total Premium</p>
-                <p className="text-2xl font-bold text-white">
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-900/60 mb-1">Total Premium</p>
+                <p className="text-2xl font-bold text-gray-900">
                   RWF {policyOverview.totalPremium 
                     ? (policyOverview.totalPremium / 1000000).toFixed(1) 
                     : policyOverview.policies?.totalPremium 
@@ -2280,16 +2501,16 @@ export const AdminDashboard = () => {
                     : 0}M
                 </p>
               </div>
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-white/60 mb-1">Pending Claims</p>
-                <p className="text-2xl font-bold text-yellow-400">
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-900/60 mb-1">Pending Claims</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {policyOverview.pendingClaims || policyOverview.policies?.pendingClaims || 0}
                 </p>
               </div>
             </div>
             {policyOverview.policies && (
-              <div className="mt-4 text-sm text-white/60">
-                <pre className="bg-gray-900/50 p-4 rounded-lg overflow-auto">
+              <div className="mt-4 text-sm text-gray-900/60">
+                <pre className="bg-gray-50 border border-gray-200 p-4 rounded-lg overflow-auto text-gray-700">
                   {JSON.stringify(policyOverview.policies, null, 2)}
                 </pre>
               </div>
@@ -2302,34 +2523,34 @@ export const AdminDashboard = () => {
       {claimStats && !statsLoading && (
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <AlertTriangle className="h-5 w-5" />
               Claim Statistics
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-white/60 mb-1">Total Claims</p>
-                <p className="text-2xl font-bold text-white">
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-900/60 mb-1">Total Claims</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {claimStats.totalClaims || claimStats.claims?.total || 0}
                 </p>
               </div>
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-white/60 mb-1">Pending Claims</p>
-                <p className="text-2xl font-bold text-yellow-400">
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-900/60 mb-1">Pending Claims</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {claimStats.pendingClaims || claimStats.claims?.pending || 0}
                 </p>
               </div>
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-white/60 mb-1">Approved Claims</p>
-                <p className="text-2xl font-bold text-green-400">
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-900/60 mb-1">Approved Claims</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {claimStats.approvedClaims || claimStats.claims?.approved || 0}
                 </p>
               </div>
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-white/60 mb-1">Total Paid</p>
-                <p className="text-2xl font-bold text-white">
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-900/60 mb-1">Total Paid</p>
+                <p className="text-2xl font-bold text-gray-900">
                   RWF {claimStats.totalPaid 
                     ? (claimStats.totalPaid / 1000000).toFixed(1) 
                     : claimStats.claims?.totalPaid 
@@ -2339,8 +2560,8 @@ export const AdminDashboard = () => {
               </div>
             </div>
             {claimStats.claims && (
-              <div className="mt-4 text-sm text-white/60">
-                <pre className="bg-gray-900/50 p-4 rounded-lg overflow-auto">
+              <div className="mt-4 text-sm text-gray-900/60">
+                <pre className="bg-gray-50 border border-gray-200 p-4 rounded-lg overflow-auto text-gray-700">
                   {JSON.stringify(claimStats.claims, null, 2)}
                 </pre>
               </div>
@@ -2352,10 +2573,10 @@ export const AdminDashboard = () => {
       <div className="grid gap-6 md:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Total Revenue</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Total Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl font-bold text-gray-900">
               RWF {systemStats?.totalRevenue 
                 ? (systemStats.totalRevenue / 1000000).toFixed(1) 
                 : (financialData.totalRevenue / 1000000).toFixed(1)}M
@@ -2365,10 +2586,10 @@ export const AdminDashboard = () => {
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">This Month</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">This Month</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl font-bold text-gray-900">
               RWF {systemStats?.monthlyRevenue 
                 ? (systemStats.monthlyRevenue / 1000000).toFixed(1) 
                 : (financialData.monthlyRevenue / 1000000).toFixed(1)}M
@@ -2380,35 +2601,35 @@ export const AdminDashboard = () => {
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-purple-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Commission</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Commission</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl font-bold text-gray-900">
               RWF {systemStats?.commissionEarned 
                 ? (systemStats.commissionEarned / 1000).toFixed(0) 
                 : (financialData.commissionEarned / 1000).toFixed(0)}K
             </div>
-            <p className="text-xs text-white/60 mt-1">This month</p>
+            <p className="text-xs text-gray-900/60 mt-1">This month</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-yellow-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Pending</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Pending</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl font-bold text-gray-900">
               RWF {systemStats?.pendingPayments 
                 ? (systemStats.pendingPayments / 1000).toFixed(0) 
                 : (financialData.pendingPayments / 1000).toFixed(0)}K
             </div>
-            <p className="text-xs text-white/60 mt-1">To be collected</p>
+            <p className="text-xs text-gray-900/60 mt-1">To be collected</p>
           </CardContent>
         </Card>
       </div>
 
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white">Revenue Trends</CardTitle>
+          <CardTitle className="text-gray-900">Revenue Trends</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-80">
@@ -2443,29 +2664,29 @@ export const AdminDashboard = () => {
 
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white">Commission Rate Settings</CardTitle>
+          <CardTitle className="text-gray-900">Commission Rate Settings</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-700">
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Type</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Rate</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Total Revenue</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Commission Earned</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Status</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Actions</th>
+                <tr className="border-b border-gray-300">
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Type</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Rate</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Total Revenue</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Commission Earned</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Status</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {commissionRates.map((item, idx) => (
-                  <tr key={idx} className="border-b border-gray-800 hover:bg-gray-800/50">
-                    <td className="py-3 px-4 text-white font-medium">{item.type}</td>
+                  <tr key={idx} className="border-b border-gray-800 hover:bg-gray-100/50">
+                    <td className="py-3 px-4 text-gray-900 font-medium">{item.type}</td>
                     <td className="py-3 px-4">
                       <Badge className="bg-purple-600">{item.rate}%</Badge>
                     </td>
-                    <td className="py-3 px-4 text-white">RWF {(item.revenue / 1000000).toFixed(1)}M</td>
+                    <td className="py-3 px-4 text-gray-900">RWF {(item.revenue / 1000000).toFixed(1)}M</td>
                     <td className="py-3 px-4 text-green-400 font-medium">
                       RWF {(item.commission / 1000000).toFixed(1)}M
                     </td>
@@ -2473,7 +2694,7 @@ export const AdminDashboard = () => {
                       <Badge className="bg-green-600">{item.status}</Badge>
                     </td>
                     <td className="py-3 px-4">
-                      <Button variant="ghost" size="sm" className="text-white/60 hover:text-white">
+                      <Button variant="ghost" size="sm" className="text-gray-900/60 hover:text-gray-900">
                         <Edit className="h-4 w-4" />
                       </Button>
                     </td>
@@ -2492,15 +2713,15 @@ export const AdminDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">System Configuration</h2>
-          <p className="text-white/60">Configure platform settings and preferences</p>
+          <h2 className="text-2xl font-bold text-gray-900">System Configuration</h2>
+          <p className="text-gray-900/60">Configure platform settings and preferences</p>
         </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <Server className="h-5 w-5" />
               Server Settings
             </CardTitle>
@@ -2512,8 +2733,8 @@ export const AdminDashboard = () => {
               { label: 'API Version', value: 'v2.4.1', status: 'info' },
               { label: 'Backup Status', value: 'Last: 2 hours ago', status: 'success' }
             ].map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
-                <span className="text-sm text-white/80">{item.label}</span>
+              <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <span className="text-sm text-gray-900/80">{item.label}</span>
                 <Badge className={`${
                   item.status === 'success' ? 'bg-green-600' :
                   item.status === 'warning' ? 'bg-yellow-600' :
@@ -2528,7 +2749,7 @@ export const AdminDashboard = () => {
 
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <Database className="h-5 w-5" />
               Database Management
             </CardTitle>
@@ -2546,7 +2767,7 @@ export const AdminDashboard = () => {
               <Download className="h-4 w-4 mr-2" />
               Export Data
             </Button>
-            <Button variant="outline" className="w-full border-gray-700 text-white hover:bg-gray-800">
+            <Button variant="outline" className="w-full border-gray-300 text-gray-900 hover:bg-gray-100">
               <Settings className="h-4 w-4 mr-2" />
               Database Settings
             </Button>
@@ -2555,7 +2776,7 @@ export const AdminDashboard = () => {
 
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <Lock className="h-5 w-5" />
               Security Settings
             </CardTitle>
@@ -2567,8 +2788,8 @@ export const AdminDashboard = () => {
               { label: 'SSL/TLS Encryption', enabled: true },
               { label: 'Session Timeout', enabled: true }
             ].map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
-                <span className="text-sm text-white/80">{item.label}</span>
+              <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <span className="text-sm text-gray-900/80">{item.label}</span>
                 <div className={`w-12 h-6 rounded-full ${item.enabled ? 'bg-green-600' : 'bg-gray-600'} relative cursor-pointer`}>
                   <div className={`absolute w-5 h-5 bg-white rounded-full top-0.5 transition-all ${item.enabled ? 'right-0.5' : 'left-0.5'}`} />
                 </div>
@@ -2579,7 +2800,7 @@ export const AdminDashboard = () => {
 
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <Bell className="h-5 w-5" />
               Notification Settings
             </CardTitle>
@@ -2591,8 +2812,8 @@ export const AdminDashboard = () => {
               { label: 'Performance Alerts', enabled: true },
               { label: 'User Activity Alerts', enabled: false }
             ].map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
-                <span className="text-sm text-white/80">{item.label}</span>
+              <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <span className="text-sm text-gray-900/80">{item.label}</span>
                 <div className={`w-12 h-6 rounded-full ${item.enabled ? 'bg-red-600' : 'bg-gray-600'} relative cursor-pointer`}>
                   <div className={`absolute w-5 h-5 bg-white rounded-full top-0.5 transition-all ${item.enabled ? 'right-0.5' : 'left-0.5'}`} />
                 </div>
@@ -2609,11 +2830,11 @@ export const AdminDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">System Activity Logs</h2>
-          <p className="text-white/60">Monitor all system activities and user actions</p>
+          <h2 className="text-2xl font-bold text-gray-900">System Activity Logs</h2>
+          <p className="text-gray-900/60">Monitor all system activities and user actions</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="border-gray-700 text-white hover:bg-gray-800">
+          <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-100">
             <Filter className="h-4 w-4 mr-2" />
             Filter
           </Button>
@@ -2627,37 +2848,37 @@ export const AdminDashboard = () => {
       <div className="grid gap-6 md:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Total Events</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Total Events</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">15,247</div>
-            <p className="text-xs text-white/60 mt-1">Last 30 days</p>
+            <div className="text-2xl font-bold text-gray-900">15,247</div>
+            <p className="text-xs text-gray-900/60 mt-1">Last 30 days</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Success</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Success</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">14,892</div>
+            <div className="text-2xl font-bold text-gray-900">14,892</div>
             <p className="text-xs text-green-400 mt-1">97.7% success rate</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-yellow-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Warnings</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Warnings</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">298</div>
-            <p className="text-xs text-white/60 mt-1">Need review</p>
+            <div className="text-2xl font-bold text-gray-900">298</div>
+            <p className="text-xs text-gray-900/60 mt-1">Need review</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-red-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Errors</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Errors</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">57</div>
+            <div className="text-2xl font-bold text-gray-900">57</div>
             <p className="text-xs text-red-400 mt-1">0.4% error rate</p>
           </CardContent>
         </Card>
@@ -2665,7 +2886,7 @@ export const AdminDashboard = () => {
 
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white">Recent Activity</CardTitle>
+          <CardTitle className="text-gray-900">Recent Activity</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -2690,12 +2911,12 @@ export const AdminDashboard = () => {
                       }`}>
                         {activity.type.toUpperCase()}
                       </Badge>
-                      <span className="text-xs text-white/60">{activity.timestamp}</span>
+                      <span className="text-xs text-gray-900/60">{activity.timestamp}</span>
                     </div>
-                    <h4 className="text-sm font-semibold text-white mb-1">{activity.action}</h4>
-                    <p className="text-xs text-white/70">User: {activity.user} • {activity.details}</p>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-1">{activity.action}</h4>
+                    <p className="text-xs text-gray-900/70">User: {activity.user} • {activity.details}</p>
                   </div>
-                  <Button variant="ghost" size="sm" className="text-white/60 hover:text-white">
+                  <Button variant="ghost" size="sm" className="text-gray-900/60 hover:text-gray-900">
                     <Eye className="h-4 w-4" />
                   </Button>
                 </div>
@@ -2712,20 +2933,20 @@ export const AdminDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Platform Analytics</h2>
-          <p className="text-white/60">Deep insights into platform performance and usage</p>
+          <h2 className="text-2xl font-bold text-gray-900">Platform Analytics</h2>
+          <p className="text-gray-900/60">Deep insights into platform performance and usage</p>
         </div>
         <div className="flex gap-2">
           <Button 
             onClick={loadAdminStatistics}
             variant="outline"
-            className="border-gray-700 text-white hover:bg-gray-800"
+            className="border-gray-300 text-gray-900 hover:bg-gray-100"
             disabled={statsLoading}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${statsLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button variant="outline" className="border-gray-700 text-white hover:bg-gray-800">
+          <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-100">
             <Calendar className="h-4 w-4 mr-2" />
             Last 30 Days
           </Button>
@@ -2740,8 +2961,8 @@ export const AdminDashboard = () => {
       {statsLoading && (
         <Card className={dashboardTheme.card}>
           <CardContent className="p-8 text-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-white mx-auto mb-4" />
-            <p className="text-white/60">Loading analytics...</p>
+            <RefreshCw className="h-8 w-8 animate-spin text-gray-900 mx-auto mb-4" />
+            <p className="text-gray-900/60">Loading analytics...</p>
           </CardContent>
         </Card>
       )}
@@ -2759,7 +2980,7 @@ export const AdminDashboard = () => {
                 onClick={loadAdminStatistics}
                 variant="outline"
                 size="sm"
-                className="border-gray-700 text-white hover:bg-gray-800"
+                className="border-gray-300 text-gray-900 hover:bg-gray-100"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Retry
@@ -2773,45 +2994,38 @@ export const AdminDashboard = () => {
       {systemStats && !statsLoading && (
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <Activity className="h-5 w-5" />
               System Statistics
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-white/60 mb-1">Total Users</p>
-                <p className="text-2xl font-bold text-white">
-                  {systemStats.totalUsers || systemStats.users?.total || 0}
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-600 mb-1">Total Users</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {systemStats.totalUsers || systemStats.users?.total || analyticsUsers.length || 0}
                 </p>
               </div>
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-white/60 mb-1">Total Policies</p>
-                <p className="text-2xl font-bold text-blue-400">
-                  {systemStats.totalPolicies || systemStats.policies?.total || 0}
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-600 mb-1">Total Policies</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {systemStats.totalPolicies || systemStats.policies?.total || analyticsPolicies.length || 0}
                 </p>
               </div>
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-white/60 mb-1">Total Claims</p>
-                <p className="text-2xl font-bold text-yellow-400">
-                  {systemStats.totalClaims || systemStats.claims?.total || 0}
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-600 mb-1">Total Claims</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {systemStats.totalClaims || systemStats.claims?.total || analyticsClaims.length || 0}
                 </p>
               </div>
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-white/60 mb-1">System Uptime</p>
-                <p className="text-2xl font-bold text-green-400">
-                  {systemStats.uptime || systemMetrics.uptime}%
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-600 mb-1">Total Farms</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {analyticsFarms.length || systemStats.totalFarms || 0}
                 </p>
               </div>
             </div>
-            {systemStats && (
-              <div className="mt-4 text-sm text-white/60">
-                <pre className="bg-gray-900/50 p-4 rounded-lg overflow-auto max-h-96">
-                  {JSON.stringify(systemStats, null, 2)}
-                </pre>
-              </div>
-            )}
           </CardContent>
         </Card>
       )}
@@ -2820,48 +3034,69 @@ export const AdminDashboard = () => {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">API Calls</CardTitle>
+            <CardTitle className="text-sm text-gray-700">Active Policies</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">
-              {systemStats?.apiCalls 
-                ? (systemStats.apiCalls / 1000000).toFixed(1) + 'M'
-                : (systemMetrics.apiCalls / 1000000).toFixed(1) + 'M'}
+            <div className="text-2xl font-bold text-gray-900">
+              {analyticsPolicies.filter((p: any) => (p.status || '').toLowerCase() === 'active').length || 
+               policyOverview?.activePolicies || 
+               systemStats?.activePolicies || 
+               0}
             </div>
-            <p className="text-xs text-green-400 mt-1">+12.5% this month</p>
+            <p className="text-xs text-gray-600 mt-1">
+              {analyticsPolicies.length > 0 
+                ? `${((analyticsPolicies.filter((p: any) => (p.status || '').toLowerCase() === 'active').length / analyticsPolicies.length) * 100).toFixed(1)}% of total`
+                : 'No data'}
+            </p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Avg Response Time</CardTitle>
+            <CardTitle className="text-sm text-gray-700">Pending Claims</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">
-              {systemStats?.avgResponseTime || systemMetrics.avgResponseTime}ms
+            <div className="text-2xl font-bold text-gray-900">
+              {analyticsClaims.filter((c: any) => (c.status || '').toLowerCase() === 'pending').length || 
+               claimStats?.pendingClaims || 
+               systemStats?.pendingClaims || 
+               0}
             </div>
-            <p className="text-xs text-green-400 mt-1">-8ms from last week</p>
+            <p className="text-xs text-gray-600 mt-1">
+              {analyticsClaims.length > 0 
+                ? `${((analyticsClaims.filter((c: any) => (c.status || '').toLowerCase() === 'pending').length / analyticsClaims.length) * 100).toFixed(1)}% of total`
+                : 'No data'}
+            </p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-purple-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">User Engagement</CardTitle>
+            <CardTitle className="text-sm text-gray-700">Approved Claims</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">
-              {systemStats?.userEngagement || '87.3'}%
+            <div className="text-2xl font-bold text-gray-900">
+              {analyticsClaims.filter((c: any) => (c.status || '').toLowerCase() === 'approved').length || 
+               claimStats?.approvedClaims || 
+               systemStats?.approvedClaims || 
+               0}
             </div>
-            <p className="text-xs text-green-400 mt-1">+3.2% increase</p>
+            <p className="text-xs text-gray-600 mt-1">
+              {analyticsClaims.length > 0 
+                ? `${((analyticsClaims.filter((c: any) => (c.status || '').toLowerCase() === 'approved').length / analyticsClaims.length) * 100).toFixed(1)}% of total`
+                : 'No data'}
+            </p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-orange-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Conversion Rate</CardTitle>
+            <CardTitle className="text-sm text-gray-700">Policy Coverage Rate</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">
-              {systemStats?.conversionRate || '23.7'}%
+            <div className="text-2xl font-bold text-gray-900">
+              {analyticsUsers.length > 0 && analyticsPolicies.length > 0
+                ? `${((analyticsPolicies.length / analyticsUsers.filter((u: any) => u.role === 'FARMER').length) * 100).toFixed(1)}%`
+                : systemStats?.conversionRate || '0'}%
             </div>
-            <p className="text-xs text-white/60 mt-1">Farmer to policy</p>
+            <p className="text-xs text-gray-600 mt-1">Farmers with policies</p>
           </CardContent>
         </Card>
       </div>
@@ -2869,132 +3104,175 @@ export const AdminDashboard = () => {
       {/* Usage Analytics */}
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
+          <CardTitle className="text-gray-900 flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
-            Platform Usage Trends
+            User Distribution by Role
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={userGrowthData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="month" stroke="#9CA3AF" />
-                <YAxis stroke="#9CA3AF" />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }}
-                  labelStyle={{ color: '#F9FAFB' }}
-                />
-                <Legend />
-                <Bar dataKey="farmers" fill="#10B981" name="Farmers" />
-                <Bar dataKey="assessors" fill="#F59E0B" name="Assessors" />
-                <Line type="monotone" dataKey="total" stroke="#3B82F6" strokeWidth={3} name="Total Users" />
-              </ComposedChart>
-            </ResponsiveContainer>
+            {analyticsLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <RefreshCw className="h-8 w-8 animate-spin text-gray-600" />
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={(() => {
+                  const farmers = analyticsUsers.filter((u: any) => (u.role || '').toUpperCase() === 'FARMER').length;
+                  const assessors = analyticsUsers.filter((u: any) => (u.role || '').toUpperCase() === 'ASSESSOR').length;
+                  const insurers = analyticsUsers.filter((u: any) => (u.role || '').toUpperCase() === 'INSURER').length;
+                  const admins = analyticsUsers.filter((u: any) => (u.role || '').toUpperCase() === 'ADMIN').length;
+                  const government = analyticsUsers.filter((u: any) => (u.role || '').toUpperCase() === 'GOVERNMENT').length;
+                  return [
+                    { role: 'Farmers', count: farmers, total: analyticsUsers.length },
+                    { role: 'Assessors', count: assessors, total: analyticsUsers.length },
+                    { role: 'Insurers', count: insurers, total: analyticsUsers.length },
+                    { role: 'Admins', count: admins, total: analyticsUsers.length },
+                    { role: 'Government', count: government, total: analyticsUsers.length }
+                  ];
+                })()}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <XAxis dataKey="role" stroke="#6B7280" />
+                  <YAxis stroke="#6B7280" />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '8px', color: '#111827' }}
+                    labelStyle={{ color: '#111827' }}
+                  />
+                  <Legend />
+                  <Bar dataKey="count" fill="#10B981" name="User Count" />
+                  <Line type="monotone" dataKey="total" stroke="#3B82F6" strokeWidth={2} name="Total Users" />
+                </ComposedChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </CardContent>
       </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Feature Usage */}
+        {/* Policy Statistics */}
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
-              Feature Usage Statistics
+              Policy Statistics
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[
-                { feature: "Policy Creation", usage: 2450, percentage: 94.5 },
-                { feature: "Risk Assessment", usage: 1867, percentage: 72.1 },
-                { feature: "Claims Processing", usage: 1234, percentage: 47.6 },
-                { feature: "Crop Monitoring", usage: 987, percentage: 38.1 },
-                { feature: "Payment Integration", usage: 2156, percentage: 83.2 }
-              ].map((item, idx) => (
-                <div key={idx}>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-white/80">{item.feature}</span>
-                    <span className="font-medium text-white">{item.usage} uses ({item.percentage}%)</span>
+              {(() => {
+                const total = analyticsPolicies.length;
+                const active = analyticsPolicies.filter((p: any) => (p.status || '').toLowerCase() === 'active').length;
+                const pending = analyticsPolicies.filter((p: any) => (p.status || '').toLowerCase() === 'pending').length;
+                const expired = analyticsPolicies.filter((p: any) => (p.status || '').toLowerCase() === 'expired').length;
+                const cancelled = analyticsPolicies.filter((p: any) => (p.status || '').toLowerCase() === 'cancelled').length;
+                
+                return [
+                  { feature: "Active Policies", count: active, percentage: total > 0 ? (active / total * 100) : 0 },
+                  { feature: "Pending Policies", count: pending, percentage: total > 0 ? (pending / total * 100) : 0 },
+                  { feature: "Expired Policies", count: expired, percentage: total > 0 ? (expired / total * 100) : 0 },
+                  { feature: "Cancelled Policies", count: cancelled, percentage: total > 0 ? (cancelled / total * 100) : 0 },
+                  { feature: "Total Policies", count: total, percentage: 100 }
+                ].map((item, idx) => (
+                  <div key={idx}>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-gray-700">{item.feature}</span>
+                      <span className="font-medium text-gray-900">{item.count} ({item.percentage.toFixed(1)}%)</span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-green-500 to-emerald-500"
+                        style={{ width: `${item.percentage}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-red-500 to-orange-500"
-                      style={{ width: `${item.percentage}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+                ));
+              })()}
             </div>
           </CardContent>
         </Card>
 
-        {/* User Activity Heatmap */}
+        {/* Claim Statistics */}
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <Activity className="h-5 w-5" />
-              User Activity by Hour
+              Claim Statistics
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {[
-                { time: "00:00 - 04:00", activity: 12 },
-                { time: "04:00 - 08:00", activity: 45 },
-                { time: "08:00 - 12:00", activity: 89 },
-                { time: "12:00 - 16:00", activity: 76 },
-                { time: "16:00 - 20:00", activity: 67 },
-                { time: "20:00 - 24:00", activity: 34 }
-              ].map((item, idx) => (
-                <div key={idx} className="flex items-center gap-3">
-                  <span className="text-xs text-white/70 w-24">{item.time}</span>
-                  <div className="flex-1 h-8 bg-gray-800/50 rounded-lg overflow-hidden">
-                    <div 
-                      className={`h-full flex items-center px-2 ${
-                        item.activity > 70 ? 'bg-green-500/30' :
-                        item.activity > 40 ? 'bg-blue-500/30' :
-                        'bg-gray-500/30'
-                      }`}
-                      style={{ width: `${item.activity}%` }}
-                    >
-                      <span className="text-xs font-medium text-white">{item.activity}%</span>
+              {(() => {
+                const total = analyticsClaims.length;
+                const pending = analyticsClaims.filter((c: any) => (c.status || '').toLowerCase() === 'pending').length;
+                const approved = analyticsClaims.filter((c: any) => (c.status || '').toLowerCase() === 'approved').length;
+                const rejected = analyticsClaims.filter((c: any) => (c.status || '').toLowerCase() === 'rejected').length;
+                const inReview = analyticsClaims.filter((c: any) => (c.status || '').toLowerCase() === 'in_review' || (c.status || '').toLowerCase() === 'in review').length;
+                
+                return [
+                  { status: "Pending", count: pending, percentage: total > 0 ? (pending / total * 100) : 0 },
+                  { status: "Approved", count: approved, percentage: total > 0 ? (approved / total * 100) : 0 },
+                  { status: "In Review", count: inReview, percentage: total > 0 ? (inReview / total * 100) : 0 },
+                  { status: "Rejected", count: rejected, percentage: total > 0 ? (rejected / total * 100) : 0 },
+                  { status: "Total Claims", count: total, percentage: 100 }
+                ].map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-3">
+                    <span className="text-xs text-gray-700 w-24">{item.status}</span>
+                    <div className="flex-1 h-8 bg-gray-100 rounded-lg overflow-hidden">
+                      <div 
+                        className={`h-full flex items-center px-2 ${
+                          item.status === 'Approved' ? 'bg-green-100' :
+                          item.status === 'Pending' ? 'bg-yellow-100' :
+                          item.status === 'Rejected' ? 'bg-red-100' :
+                          'bg-blue-100'
+                        }`}
+                        style={{ width: `${item.percentage}%` }}
+                      >
+                        <span className="text-xs font-medium text-gray-900">{item.count} ({item.percentage.toFixed(1)}%)</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ));
+              })()}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Geographical Distribution */}
+      {/* User Distribution by Role */}
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
+          <CardTitle className="text-gray-900 flex items-center gap-2">
             <MapPin className="h-5 w-5" />
-            User Distribution by Province
+            User Distribution by Role
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-5">
-            {[
-              { province: "Northern", users: 1250, percentage: 15.7, color: "bg-blue-500" },
-              { province: "Southern", users: 2100, percentage: 26.4, color: "bg-green-500" },
-              { province: "Eastern", users: 1800, percentage: 22.6, color: "bg-purple-500" },
-              { province: "Western", users: 1950, percentage: 24.5, color: "bg-orange-500" },
-              { province: "Kigali", users: 850, percentage: 10.8, color: "bg-red-500" }
-            ].map((item, idx) => (
-              <Card key={idx} className="bg-gray-800/50 border-gray-700">
-                <CardContent className="p-4">
-                  <div className={`w-full h-2 ${item.color} rounded-full mb-3`} />
-                  <div className="text-sm font-medium text-white">{item.province}</div>
-                  <div className="text-2xl font-bold text-white mt-1">{item.users.toLocaleString()}</div>
-                  <div className="text-xs text-white/60 mt-1">{item.percentage}% of total</div>
-                </CardContent>
-              </Card>
-            ))}
+            {(() => {
+              const total = analyticsUsers.length;
+              const farmers = analyticsUsers.filter((u: any) => (u.role || '').toUpperCase() === 'FARMER').length;
+              const assessors = analyticsUsers.filter((u: any) => (u.role || '').toUpperCase() === 'ASSESSOR').length;
+              const insurers = analyticsUsers.filter((u: any) => (u.role || '').toUpperCase() === 'INSURER').length;
+              const admins = analyticsUsers.filter((u: any) => (u.role || '').toUpperCase() === 'ADMIN').length;
+              const government = analyticsUsers.filter((u: any) => (u.role || '').toUpperCase() === 'GOVERNMENT').length;
+              
+              return [
+                { role: "Farmers", count: farmers, percentage: total > 0 ? (farmers / total * 100) : 0, color: "bg-green-500" },
+                { role: "Assessors", count: assessors, percentage: total > 0 ? (assessors / total * 100) : 0, color: "bg-orange-500" },
+                { role: "Insurers", count: insurers, percentage: total > 0 ? (insurers / total * 100) : 0, color: "bg-blue-500" },
+                { role: "Admins", count: admins, percentage: total > 0 ? (admins / total * 100) : 0, color: "bg-purple-500" },
+                { role: "Government", count: government, percentage: total > 0 ? (government / total * 100) : 0, color: "bg-indigo-500" }
+              ].map((item, idx) => (
+                <Card key={idx} className="bg-gray-50 border border-gray-200">
+                  <CardContent className="p-4">
+                    <div className={`w-full h-2 ${item.color} rounded-full mb-3`} />
+                    <div className="text-sm font-medium text-gray-700">{item.role}</div>
+                    <div className="text-2xl font-bold text-gray-900 mt-1">{item.count.toLocaleString()}</div>
+                    <div className="text-xs text-gray-600 mt-1">{item.percentage.toFixed(1)}% of total</div>
+                  </CardContent>
+                </Card>
+              ));
+            })()}
           </div>
         </CardContent>
       </Card>
@@ -3003,126 +3281,95 @@ export const AdminDashboard = () => {
       <div className="grid gap-6 md:grid-cols-3">
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <Zap className="h-5 w-5" />
-              Performance Score
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-center">
-              <div className="relative w-40 h-40">
-                <svg className="transform -rotate-90 w-40 h-40">
-                  <circle
-                    cx="80"
-                    cy="80"
-                    r="70"
-                    stroke="#374151"
-                    strokeWidth="12"
-                    fill="none"
-                  />
-                  <circle
-                    cx="80"
-                    cy="80"
-                    r="70"
-                    stroke="#10B981"
-                    strokeWidth="12"
-                    fill="none"
-                    strokeDasharray={`${2 * Math.PI * 70}`}
-                    strokeDashoffset={`${2 * Math.PI * 70 * (1 - 0.94)}`}
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center flex-col">
-                  <span className="text-3xl font-bold text-white">94</span>
-                  <span className="text-sm text-white/60">Excellent</span>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4 space-y-2 text-xs text-white/70">
-              <div className="flex justify-between">
-                <span>First Contentful Paint</span>
-                <span className="text-green-400">1.2s</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Time to Interactive</span>
-                <span className="text-green-400">2.8s</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Speed Index</span>
-                <span className="text-green-400">3.1s</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={dashboardTheme.card}>
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              User Retention
+            <CardTitle className="text-gray-900 flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Policy Status Overview
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-white/80">Daily Active Users</span>
-                  <span className="font-medium text-white">68.5%</span>
-                </div>
-                <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-500" style={{ width: '68.5%' }} />
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-white/80">Weekly Active Users</span>
-                  <span className="font-medium text-white">84.2%</span>
-                </div>
-                <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-green-500" style={{ width: '84.2%' }} />
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-white/80">Monthly Active Users</span>
-                  <span className="font-medium text-white">91.8%</span>
-                </div>
-                <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-purple-500" style={{ width: '91.8%' }} />
-                </div>
-              </div>
-              <div className="pt-3 border-t border-gray-700">
-                <div className="flex justify-between">
-                  <span className="text-sm text-white/80">Churn Rate</span>
-                  <span className="text-sm font-medium text-green-400">3.2%</span>
-                </div>
-              </div>
+              {(() => {
+                const total = analyticsPolicies.length;
+                const active = analyticsPolicies.filter((p: any) => (p.status || '').toLowerCase() === 'active').length;
+                const pending = analyticsPolicies.filter((p: any) => (p.status || '').toLowerCase() === 'pending').length;
+                const expired = analyticsPolicies.filter((p: any) => (p.status || '').toLowerCase() === 'expired').length;
+                
+                return [
+                  { label: "Active Policies", value: active, percentage: total > 0 ? (active / total * 100) : 0, color: "bg-green-500" },
+                  { label: "Pending Policies", value: pending, percentage: total > 0 ? (pending / total * 100) : 0, color: "bg-yellow-500" },
+                  { label: "Expired Policies", value: expired, percentage: total > 0 ? (expired / total * 100) : 0, color: "bg-gray-500" },
+                  { label: "Total Policies", value: total, percentage: 100, color: "bg-blue-500" }
+                ].map((item, idx) => (
+                  <div key={idx}>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-gray-700">{item.label}</span>
+                      <span className="font-medium text-gray-900">{item.value}</span>
+                    </div>
+                    <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                      <div className={`h-full ${item.color}`} style={{ width: `${item.percentage}%` }} />
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
           </CardContent>
         </Card>
 
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              User Statistics
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {(() => {
+                const total = analyticsUsers.length;
+                const active = analyticsUsers.filter((u: any) => u.active !== false).length;
+                const inactive = analyticsUsers.filter((u: any) => u.active === false).length;
+                const farmers = analyticsUsers.filter((u: any) => (u.role || '').toUpperCase() === 'FARMER').length;
+                
+                return [
+                  { label: "Active Users", value: active, percentage: total > 0 ? (active / total * 100) : 0, color: "bg-green-500" },
+                  { label: "Inactive Users", value: inactive, percentage: total > 0 ? (inactive / total * 100) : 0, color: "bg-gray-500" },
+                  { label: "Farmers", value: farmers, percentage: total > 0 ? (farmers / total * 100) : 0, color: "bg-blue-500" },
+                  { label: "Total Users", value: total, percentage: 100, color: "bg-purple-500" }
+                ].map((item, idx) => (
+                  <div key={idx}>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-gray-700">{item.label}</span>
+                      <span className="font-medium text-gray-900">{item.value} ({item.percentage.toFixed(1)}%)</span>
+                    </div>
+                    <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                      <div className={`h-full ${item.color}`} style={{ width: `${item.percentage}%` }} />
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={dashboardTheme.card}>
+          <CardHeader>
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
-              Growth Metrics
+              Platform Metrics
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {[
-                { metric: "User Growth", value: "+18.5%", trend: "up", color: "text-green-400" },
-                { metric: "Revenue Growth", value: "+22.3%", trend: "up", color: "text-green-400" },
-                { metric: "Policy Adoption", value: "+15.7%", trend: "up", color: "text-green-400" },
-                { metric: "Session Duration", value: "+8.2%", trend: "up", color: "text-green-400" },
-                { metric: "Bounce Rate", value: "-5.1%", trend: "down", color: "text-green-400" }
+                { metric: "Total Users", value: analyticsUsers.length.toLocaleString(), color: "text-gray-700" },
+                { metric: "Total Policies", value: analyticsPolicies.length.toLocaleString(), color: "text-gray-700" },
+                { metric: "Total Claims", value: analyticsClaims.length.toLocaleString(), color: "text-gray-700" },
+                { metric: "Total Farms", value: analyticsFarms.length.toLocaleString(), color: "text-gray-700" },
+                { metric: "Avg Response Time", value: systemStats?.avgResponseTime ? `${systemStats.avgResponseTime}ms` : 'N/A', color: "text-gray-700" }
               ].map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2 bg-gray-800/50 rounded-lg">
-                  <span className="text-sm text-white/80">{item.metric}</span>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm font-medium ${item.color}`}>{item.value}</span>
-                    <TrendingUp className={`h-4 w-4 ${item.color}`} />
-                  </div>
+                <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 border border-gray-200 rounded-lg">
+                  <span className="text-sm text-gray-700">{item.metric}</span>
+                  <span className={`text-sm font-medium ${item.color}`}>{item.value}</span>
                 </div>
               ))}
             </div>
@@ -3137,11 +3384,11 @@ export const AdminDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Database Management</h2>
-          <p className="text-white/60">Manage database operations and backups</p>
+          <h2 className="text-2xl font-bold text-gray-900">Database Management</h2>
+          <p className="text-gray-900/60">Manage database operations and backups</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="border-gray-700 text-white hover:bg-gray-800">
+          <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-100">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh Status
           </Button>
@@ -3156,37 +3403,37 @@ export const AdminDashboard = () => {
       <div className="grid gap-6 md:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Database Size</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Database Size</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{systemMetrics.dbSize} GB</div>
-            <p className="text-xs text-white/60 mt-1">+2.3 GB this month</p>
+            <div className="text-2xl font-bold text-gray-900">{systemMetrics.dbSize} GB</div>
+            <p className="text-xs text-gray-900/60 mt-1">+2.3 GB this month</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Total Records</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Total Records</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">1.2M</div>
+            <div className="text-2xl font-bold text-gray-900">1.2M</div>
             <p className="text-xs text-green-400 mt-1">+45K this week</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-purple-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Active Connections</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Active Connections</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">234</div>
-            <p className="text-xs text-white/60 mt-1">Real-time</p>
+            <div className="text-2xl font-bold text-gray-900">234</div>
+            <p className="text-xs text-gray-900/60 mt-1">Real-time</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-orange-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Query Performance</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Query Performance</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">45ms</div>
+            <div className="text-2xl font-bold text-gray-900">45ms</div>
             <p className="text-xs text-green-400 mt-1">Avg query time</p>
           </CardContent>
         </Card>
@@ -3195,7 +3442,7 @@ export const AdminDashboard = () => {
       {/* Database Tables */}
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
+          <CardTitle className="text-gray-900 flex items-center gap-2">
             <Database className="h-5 w-5" />
             Database Tables Overview
           </CardTitle>
@@ -3204,13 +3451,13 @@ export const AdminDashboard = () => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-700">
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Table Name</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Records</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Size</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Growth</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Last Updated</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Actions</th>
+                <tr className="border-b border-gray-300">
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Table Name</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Records</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Size</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Growth</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Last Updated</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -3224,10 +3471,10 @@ export const AdminDashboard = () => {
                   { table: "transactions", records: 15678, size: "1.2 GB", growth: "+8.7%", updated: "1 min ago" },
                   { table: "activity_logs", records: 234567, size: "3.8 GB", growth: "+12.5%", updated: "30 sec ago" }
                 ].map((item, idx) => (
-                  <tr key={idx} className="border-b border-gray-800 hover:bg-gray-800/50">
-                    <td className="py-3 px-4 font-medium text-white">{item.table}</td>
-                    <td className="py-3 px-4 text-white">{item.records.toLocaleString()}</td>
-                    <td className="py-3 px-4 text-white">{item.size}</td>
+                  <tr key={idx} className="border-b border-gray-800 hover:bg-gray-100/50">
+                    <td className="py-3 px-4 font-medium text-gray-900">{item.table}</td>
+                    <td className="py-3 px-4 text-gray-900">{item.records.toLocaleString()}</td>
+                    <td className="py-3 px-4 text-gray-900">{item.size}</td>
                     <td className="py-3 px-4">
                       <Badge className={
                         parseFloat(item.growth) > 5 ? 'bg-green-600' :
@@ -3237,13 +3484,13 @@ export const AdminDashboard = () => {
                         {item.growth}
                       </Badge>
                     </td>
-                    <td className="py-3 px-4 text-white/60 text-sm">{item.updated}</td>
+                    <td className="py-3 px-4 text-gray-900/60 text-sm">{item.updated}</td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" className="text-white/60 hover:text-white">
+                        <Button variant="ghost" size="sm" className="text-gray-900/60 hover:text-gray-900">
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-white/60 hover:text-white">
+                        <Button variant="ghost" size="sm" className="text-gray-900/60 hover:text-gray-900">
                           <Download className="h-4 w-4" />
                         </Button>
                       </div>
@@ -3260,7 +3507,7 @@ export const AdminDashboard = () => {
         {/* Backup Management */}
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <HardDrive className="h-5 w-5" />
               Backup Management
             </CardTitle>
@@ -3271,21 +3518,21 @@ export const AdminDashboard = () => {
                 <span className="text-sm font-medium text-green-400">Last Backup</span>
                 <Badge className="bg-green-600">Success</Badge>
               </div>
-              <p className="text-xs text-white/60">March 15, 2024 at 02:00 AM</p>
-              <p className="text-xs text-white/60 mt-1">Size: 15.2 GB • Duration: 12 minutes</p>
+              <p className="text-xs text-gray-900/60">March 15, 2024 at 02:00 AM</p>
+              <p className="text-xs text-gray-900/60 mt-1">Size: 15.2 GB • Duration: 12 minutes</p>
             </div>
 
             <div className="space-y-2">
-              <h4 className="text-sm font-medium text-white/80">Backup Schedule</h4>
+              <h4 className="text-sm font-medium text-gray-900/80">Backup Schedule</h4>
               {[
                 { type: "Full Backup", schedule: "Daily at 02:00 AM", status: "active" },
                 { type: "Incremental", schedule: "Every 6 hours", status: "active" },
                 { type: "Transaction Log", schedule: "Every hour", status: "active" }
               ].map((backup, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
                   <div>
-                    <div className="text-sm font-medium text-white">{backup.type}</div>
-                    <div className="text-xs text-white/60">{backup.schedule}</div>
+                    <div className="text-sm font-medium text-gray-900">{backup.type}</div>
+                    <div className="text-xs text-gray-900/60">{backup.schedule}</div>
                   </div>
                   <Badge className="bg-green-600">{backup.status}</Badge>
                 </div>
@@ -3297,7 +3544,7 @@ export const AdminDashboard = () => {
                 <Upload className="h-4 w-4 mr-2" />
                 Backup Now
               </Button>
-              <Button variant="outline" className="border-gray-700 text-white hover:bg-gray-800">
+              <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-100">
                 <Download className="h-4 w-4 mr-2" />
                 Restore
               </Button>
@@ -3308,7 +3555,7 @@ export const AdminDashboard = () => {
         {/* Database Performance */}
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <Cpu className="h-5 w-5" />
               Database Performance
             </CardTitle>
@@ -3316,7 +3563,7 @@ export const AdminDashboard = () => {
           <CardContent className="space-y-4">
             <div>
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-white/80">Query Cache Hit Ratio</span>
+                <span className="text-gray-900/80">Query Cache Hit Ratio</span>
                 <span className="font-medium text-green-400">96.8%</span>
               </div>
               <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
@@ -3325,7 +3572,7 @@ export const AdminDashboard = () => {
             </div>
             <div>
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-white/80">Connection Pool Usage</span>
+                <span className="text-gray-900/80">Connection Pool Usage</span>
                 <span className="font-medium text-blue-400">68.5%</span>
               </div>
               <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
@@ -3334,7 +3581,7 @@ export const AdminDashboard = () => {
             </div>
             <div>
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-white/80">Index Efficiency</span>
+                <span className="text-gray-900/80">Index Efficiency</span>
                 <span className="font-medium text-purple-400">94.2%</span>
               </div>
               <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
@@ -3342,26 +3589,26 @@ export const AdminDashboard = () => {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-gray-700 space-y-2">
+            <div className="pt-4 border-t border-gray-300 space-y-2">
               <div className="flex justify-between text-xs">
-                <span className="text-white/70">Avg Query Time</span>
-                <span className="font-medium text-white">45ms</span>
+                <span className="text-gray-900/70">Avg Query Time</span>
+                <span className="font-medium text-gray-900">45ms</span>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-white/70">Slow Queries (&gt;1s)</span>
+                <span className="text-gray-900/70">Slow Queries (&gt;1s)</span>
                 <span className="font-medium text-yellow-400">3</span>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-white/70">Deadlocks</span>
+                <span className="text-gray-900/70">Deadlocks</span>
                 <span className="font-medium text-green-400">0</span>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-white/70">Replication Lag</span>
+                <span className="text-gray-900/70">Replication Lag</span>
                 <span className="font-medium text-green-400">0ms</span>
               </div>
             </div>
 
-            <Button variant="outline" className="w-full border-gray-700 text-white hover:bg-gray-800 mt-4">
+            <Button variant="outline" className="w-full border-gray-300 text-gray-900 hover:bg-gray-100 mt-4">
               <BarChart3 className="h-4 w-4 mr-2" />
               View Detailed Metrics
             </Button>
@@ -3372,7 +3619,7 @@ export const AdminDashboard = () => {
       {/* Database Operations */}
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
+          <CardTitle className="text-gray-900 flex items-center gap-2">
             <Settings className="h-5 w-5" />
             Database Operations
           </CardTitle>
@@ -3394,17 +3641,17 @@ export const AdminDashboard = () => {
               <span>Clear Cache</span>
               <span className="text-xs mt-1 opacity-80">Reset query cache</span>
             </Button>
-            <Button variant="outline" className="border-gray-700 text-white hover:bg-gray-800 h-auto py-4 flex-col">
+            <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-100 h-auto py-4 flex-col">
               <Download className="h-6 w-6 mb-2" />
               <span>Export Schema</span>
               <span className="text-xs mt-1 opacity-80">Database structure</span>
             </Button>
-            <Button variant="outline" className="border-gray-700 text-white hover:bg-gray-800 h-auto py-4 flex-col">
+            <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-100 h-auto py-4 flex-col">
               <Upload className="h-6 w-6 mb-2" />
               <span>Import Data</span>
               <span className="text-xs mt-1 opacity-80">Bulk import</span>
             </Button>
-            <Button variant="outline" className="border-gray-700 text-white hover:bg-gray-800 h-auto py-4 flex-col">
+            <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-100 h-auto py-4 flex-col">
               <Eye className="h-6 w-6 mb-2" />
               <span>View Queries</span>
               <span className="text-xs mt-1 opacity-80">Active queries</span>
@@ -3420,11 +3667,11 @@ export const AdminDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Security & Access Control</h2>
-          <p className="text-white/60">Manage platform security and user permissions</p>
+          <h2 className="text-2xl font-bold text-gray-900">Security & Access Control</h2>
+          <p className="text-gray-900/60">Manage platform security and user permissions</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="border-gray-700 text-white hover:bg-gray-800">
+          <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-100">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh Status
           </Button>
@@ -3439,37 +3686,37 @@ export const AdminDashboard = () => {
       <div className="grid gap-6 md:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Security Score</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Security Score</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">98.5%</div>
+            <div className="text-2xl font-bold text-gray-900">98.5%</div>
             <p className="text-xs text-green-400 mt-1">Excellent</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Active 2FA Users</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Active 2FA Users</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">7,890</div>
-            <p className="text-xs text-white/60 mt-1">93.4% enabled</p>
+            <div className="text-2xl font-bold text-gray-900">7,890</div>
+            <p className="text-xs text-gray-900/60 mt-1">93.4% enabled</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-yellow-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Failed Logins</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Failed Logins</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">23</div>
-            <p className="text-xs text-white/60 mt-1">Last 24 hours</p>
+            <div className="text-2xl font-bold text-gray-900">23</div>
+            <p className="text-xs text-gray-900/60 mt-1">Last 24 hours</p>
           </CardContent>
         </Card>
         <Card className={`${dashboardTheme.card} border-l-4 border-l-red-500`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-white/80">Blocked IPs</CardTitle>
+            <CardTitle className="text-sm text-gray-900/80">Blocked IPs</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">12</div>
+            <div className="text-2xl font-bold text-gray-900">12</div>
             <p className="text-xs text-red-400 mt-1">Auto-blocked</p>
           </CardContent>
         </Card>
@@ -3479,7 +3726,7 @@ export const AdminDashboard = () => {
       <div className="grid gap-6 md:grid-cols-2">
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <Shield className="h-5 w-5" />
               Security Features Status
             </CardTitle>
@@ -3495,10 +3742,10 @@ export const AdminDashboard = () => {
               { feature: "CORS Protection", status: "enabled", strength: "Strong" },
               { feature: "SQL Injection Prevention", status: "enabled", strength: "Strong" }
             ].map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+              <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
                 <div className="flex items-center gap-3">
                   <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span className="text-sm text-white">{item.feature}</span>
+                  <span className="text-sm text-gray-900">{item.feature}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge className={
@@ -3517,7 +3764,7 @@ export const AdminDashboard = () => {
 
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <AlertTriangle className="h-5 w-5" />
               Security Alerts
             </CardTitle>
@@ -3548,14 +3795,14 @@ export const AdminDashboard = () => {
                         }`}>
                           {alert.type.toUpperCase()}
                         </Badge>
-                        <span className="text-xs text-white/60">{alert.time}</span>
+                        <span className="text-xs text-gray-900/60">{alert.time}</span>
                       </div>
-                      <h4 className="text-sm font-semibold text-white">{alert.title}</h4>
-                      {alert.ip && <p className="text-xs text-white/70 mt-1">IP: {alert.ip}</p>}
-                      {alert.user && <p className="text-xs text-white/70 mt-1">User: {alert.user}</p>}
-                      {alert.details && <p className="text-xs text-white/70 mt-1">{alert.details}</p>}
+                      <h4 className="text-sm font-semibold text-gray-900">{alert.title}</h4>
+                      {alert.ip && <p className="text-xs text-gray-900/70 mt-1">IP: {alert.ip}</p>}
+                      {alert.user && <p className="text-xs text-gray-900/70 mt-1">User: {alert.user}</p>}
+                      {alert.details && <p className="text-xs text-gray-900/70 mt-1">{alert.details}</p>}
                     </div>
-                    <Button variant="ghost" size="sm" className="text-white/60 hover:text-white">
+                    <Button variant="ghost" size="sm" className="text-gray-900/60 hover:text-gray-900">
                       <Eye className="h-4 w-4" />
                     </Button>
                   </div>
@@ -3569,7 +3816,7 @@ export const AdminDashboard = () => {
       {/* Access Control */}
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
+          <CardTitle className="text-gray-900 flex items-center gap-2">
             <Lock className="h-5 w-5" />
             Role-Based Access Control
           </CardTitle>
@@ -3578,12 +3825,12 @@ export const AdminDashboard = () => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-700">
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Role</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Users</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Permissions</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Last Modified</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Actions</th>
+                <tr className="border-b border-gray-300">
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Role</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Users</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Permissions</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Last Modified</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -3594,9 +3841,9 @@ export const AdminDashboard = () => {
                   { role: "Insurer", users: 4, permissions: ["Manage Policies", "Process Claims", "View Analytics"], modified: "2024-03-14" },
                   { role: "Government", users: 2, permissions: ["View All Data", "Generate Reports", "Export Data"], modified: "2024-03-01" }
                 ].map((item, idx) => (
-                  <tr key={idx} className="border-b border-gray-800 hover:bg-gray-800/50">
-                    <td className="py-3 px-4 font-medium text-white">{item.role}</td>
-                    <td className="py-3 px-4 text-white">{item.users.toLocaleString()}</td>
+                  <tr key={idx} className="border-b border-gray-800 hover:bg-gray-100/50">
+                    <td className="py-3 px-4 font-medium text-gray-900">{item.role}</td>
+                    <td className="py-3 px-4 text-gray-900">{item.users.toLocaleString()}</td>
                     <td className="py-3 px-4">
                       <div className="flex flex-wrap gap-1">
                         {item.permissions.slice(0, 2).map((perm, pIdx) => (
@@ -3611,13 +3858,13 @@ export const AdminDashboard = () => {
                         )}
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-white/60 text-sm">{item.modified}</td>
+                    <td className="py-3 px-4 text-gray-900/60 text-sm">{item.modified}</td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" className="text-white/60 hover:text-white">
+                        <Button variant="ghost" size="sm" className="text-gray-900/60 hover:text-gray-900">
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-white/60 hover:text-white">
+                        <Button variant="ghost" size="sm" className="text-gray-900/60 hover:text-gray-900">
                           <Edit className="h-4 w-4" />
                         </Button>
                       </div>
@@ -3633,7 +3880,7 @@ export const AdminDashboard = () => {
       {/* Security Actions */}
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
+          <CardTitle className="text-gray-900 flex items-center gap-2">
             <Settings className="h-5 w-5" />
             Security Actions
           </CardTitle>
@@ -3655,17 +3902,17 @@ export const AdminDashboard = () => {
               <span>Revoke Sessions</span>
               <span className="text-xs mt-1 opacity-80">End all sessions</span>
             </Button>
-            <Button variant="outline" className="border-gray-700 text-white hover:bg-gray-800 h-auto py-4 flex-col">
+            <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-100 h-auto py-4 flex-col">
               <FileText className="h-6 w-6 mb-2" />
               <span>View Audit Logs</span>
               <span className="text-xs mt-1 opacity-80">Security events</span>
             </Button>
-            <Button variant="outline" className="border-gray-700 text-white hover:bg-gray-800 h-auto py-4 flex-col">
+            <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-100 h-auto py-4 flex-col">
               <Key className="h-6 w-6 mb-2" />
               <span>Manage API Keys</span>
               <span className="text-xs mt-1 opacity-80">Access tokens</span>
             </Button>
-            <Button variant="outline" className="border-gray-700 text-white hover:bg-gray-800 h-auto py-4 flex-col">
+            <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-100 h-auto py-4 flex-col">
               <Globe className="h-6 w-6 mb-2" />
               <span>IP Whitelist</span>
               <span className="text-xs mt-1 opacity-80">Manage IPs</span>
@@ -3677,7 +3924,7 @@ export const AdminDashboard = () => {
       {/* Login History */}
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
+          <CardTitle className="text-gray-900 flex items-center gap-2">
             <Clock className="h-5 w-5" />
             Recent Login Activity
           </CardTitle>
@@ -3691,14 +3938,14 @@ export const AdminDashboard = () => {
               { user: "alice.m@example.com", ip: "192.168.1.102", location: "Kigali, Rwanda", time: "1 hour ago", status: "success" },
               { user: "david.n@insurance.rw", ip: "192.168.1.103", location: "Huye, Rwanda", time: "2 hours ago", status: "success" }
             ].map((login, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800/70">
+              <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100">
                 <div className="flex items-center gap-3">
                   <div className={`w-2 h-2 rounded-full ${
                     login.status === 'success' ? 'bg-green-500' : 'bg-red-500'
                   }`} />
                   <div>
-                    <div className="text-sm font-medium text-white">{login.user}</div>
-                    <div className="text-xs text-white/60">
+                    <div className="text-sm font-medium text-gray-900">{login.user}</div>
+                    <div className="text-xs text-gray-900/60">
                       {login.ip} • {login.location}
                     </div>
                   </div>
@@ -3707,7 +3954,7 @@ export const AdminDashboard = () => {
                   <Badge className={login.status === 'success' ? 'bg-green-600' : 'bg-red-600'}>
                     {login.status}
                   </Badge>
-                  <div className="text-xs text-white/60 mt-1">{login.time}</div>
+                  <div className="text-xs text-gray-900/60 mt-1">{login.time}</div>
                 </div>
               </div>
             ))}
@@ -3722,35 +3969,35 @@ export const AdminDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Admin Settings</h2>
-          <p className="text-white/60">Configure your admin preferences</p>
+          <h2 className="text-2xl font-bold text-gray-900">Admin Settings</h2>
+          <p className="text-gray-900/60">Configure your admin preferences</p>
         </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <Users className="h-5 w-5" />
               Account Information
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="text-sm text-white/80 block mb-2">Admin ID</label>
-              <div className="p-3 bg-gray-800/50 rounded-lg text-white">{adminId}</div>
+              <label className="text-sm text-gray-900/80 block mb-2">Admin ID</label>
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">{adminId}</div>
             </div>
             <div>
-              <label className="text-sm text-white/80 block mb-2">Name</label>
-              <div className="p-3 bg-gray-800/50 rounded-lg text-white">{adminName}</div>
+              <label className="text-sm text-gray-900/80 block mb-2">Name</label>
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">{adminName}</div>
             </div>
             <div>
-              <label className="text-sm text-white/80 block mb-2">Role</label>
+              <label className="text-sm text-gray-900/80 block mb-2">Role</label>
               <Badge className="bg-red-600">Super Administrator</Badge>
             </div>
             <div>
-              <label className="text-sm text-white/80 block mb-2">Last Login</label>
-              <div className="p-3 bg-gray-800/50 rounded-lg text-white/70 text-sm">
+              <label className="text-sm text-gray-900/80 block mb-2">Last Login</label>
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-600 text-sm">
                 March 15, 2024 at 08:00 AM
               </div>
             </div>
@@ -3759,7 +4006,7 @@ export const AdminDashboard = () => {
 
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <Lock className="h-5 w-5" />
               Security
             </CardTitle>
@@ -3769,11 +4016,11 @@ export const AdminDashboard = () => {
               <Key className="h-4 w-4 mr-2" />
               Change Password
             </Button>
-            <Button variant="outline" className="w-full border-gray-700 text-white hover:bg-gray-800">
+            <Button variant="outline" className="w-full border-gray-300 text-gray-900 hover:bg-gray-100">
               <Shield className="h-4 w-4 mr-2" />
               Enable 2FA
             </Button>
-            <Button variant="outline" className="w-full border-gray-700 text-white hover:bg-gray-800">
+            <Button variant="outline" className="w-full border-gray-300 text-gray-900 hover:bg-gray-100">
               <Eye className="h-4 w-4 mr-2" />
               View Login History
             </Button>
@@ -3788,14 +4035,14 @@ export const AdminDashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Commission Management</h2>
-          <p className="text-white/60">Track and manage commission rates and earnings</p>
+          <h2 className="text-2xl font-bold text-gray-900">Commission Management</h2>
+          <p className="text-gray-900/60">Track and manage commission rates and earnings</p>
         </div>
         <div className="flex gap-2">
           <Button 
             onClick={loadAdminStatistics}
             variant="outline"
-            className="border-gray-700 text-white hover:bg-gray-800"
+            className="border-gray-300 text-gray-900 hover:bg-gray-100"
             disabled={statsLoading}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${statsLoading ? 'animate-spin' : ''}`} />
@@ -3812,8 +4059,8 @@ export const AdminDashboard = () => {
       {statsLoading && (
         <Card className={dashboardTheme.card}>
           <CardContent className="p-8 text-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-white mx-auto mb-4" />
-            <p className="text-white/60">Loading commission data...</p>
+            <RefreshCw className="h-8 w-8 animate-spin text-gray-900 mx-auto mb-4" />
+            <p className="text-gray-900/60">Loading commission data...</p>
           </CardContent>
         </Card>
       )}
@@ -3831,7 +4078,7 @@ export const AdminDashboard = () => {
                 onClick={loadAdminStatistics}
                 variant="outline"
                 size="sm"
-                className="border-gray-700 text-white hover:bg-gray-800"
+                className="border-gray-300 text-gray-900 hover:bg-gray-100"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Retry
@@ -3845,28 +4092,28 @@ export const AdminDashboard = () => {
       {policyOverview && !statsLoading && (
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <FileText className="h-5 w-5" />
               Policy Overview
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-white/60 mb-1">Total Policies</p>
-                <p className="text-2xl font-bold text-white">
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-900/60 mb-1">Total Policies</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {policyOverview.totalPolicies || policyOverview.policies?.total || 0}
                 </p>
               </div>
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-white/60 mb-1">Active Policies</p>
-                <p className="text-2xl font-bold text-green-400">
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-900/60 mb-1">Active Policies</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {policyOverview.activePolicies || policyOverview.policies?.active || 0}
                 </p>
               </div>
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-white/60 mb-1">Total Premium</p>
-                <p className="text-2xl font-bold text-white">
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-900/60 mb-1">Total Premium</p>
+                <p className="text-2xl font-bold text-gray-900">
                   RWF {policyOverview.totalPremium 
                     ? (policyOverview.totalPremium / 1000000).toFixed(1) 
                     : policyOverview.policies?.totalPremium 
@@ -3874,9 +4121,9 @@ export const AdminDashboard = () => {
                     : 0}M
                 </p>
               </div>
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-white/60 mb-1">Pending Claims</p>
-                <p className="text-2xl font-bold text-yellow-400">
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-900/60 mb-1">Pending Claims</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {policyOverview.pendingClaims || policyOverview.policies?.pendingClaims || 0}
                 </p>
               </div>
@@ -3889,34 +4136,34 @@ export const AdminDashboard = () => {
       {claimStats && !statsLoading && (
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <AlertTriangle className="h-5 w-5" />
               Claim Statistics
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-white/60 mb-1">Total Claims</p>
-                <p className="text-2xl font-bold text-white">
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-900/60 mb-1">Total Claims</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {claimStats.totalClaims || claimStats.claims?.total || 0}
                 </p>
               </div>
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-white/60 mb-1">Pending Claims</p>
-                <p className="text-2xl font-bold text-yellow-400">
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-900/60 mb-1">Pending Claims</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {claimStats.pendingClaims || claimStats.claims?.pending || 0}
                 </p>
               </div>
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-white/60 mb-1">Approved Claims</p>
-                <p className="text-2xl font-bold text-green-400">
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-900/60 mb-1">Approved Claims</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {claimStats.approvedClaims || claimStats.claims?.approved || 0}
                 </p>
               </div>
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-white/60 mb-1">Total Paid</p>
-                <p className="text-2xl font-bold text-white">
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-900/60 mb-1">Total Paid</p>
+                <p className="text-2xl font-bold text-gray-900">
                   RWF {claimStats.totalPaid 
                     ? (claimStats.totalPaid / 1000000).toFixed(1) 
                     : claimStats.claims?.totalPaid 
@@ -3932,29 +4179,29 @@ export const AdminDashboard = () => {
       {/* Commission Rate Settings */}
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-white">Commission Rate Settings</CardTitle>
+          <CardTitle className="text-gray-900">Commission Rate Settings</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-700">
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Type</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Rate</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Total Revenue</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Commission Earned</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Status</th>
-                  <th className="text-left py-3 px-4 text-white/80 font-medium">Actions</th>
+                <tr className="border-b border-gray-300">
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Type</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Rate</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Total Revenue</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Commission Earned</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Status</th>
+                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {commissionRates.map((item, idx) => (
-                  <tr key={idx} className="border-b border-gray-800 hover:bg-gray-800/50">
-                    <td className="py-3 px-4 text-white font-medium">{item.type}</td>
+                  <tr key={idx} className="border-b border-gray-800 hover:bg-gray-100/50">
+                    <td className="py-3 px-4 text-gray-900 font-medium">{item.type}</td>
                     <td className="py-3 px-4">
                       <Badge className="bg-purple-600">{item.rate}%</Badge>
                     </td>
-                    <td className="py-3 px-4 text-white">RWF {(item.revenue / 1000000).toFixed(1)}M</td>
+                    <td className="py-3 px-4 text-gray-900">RWF {(item.revenue / 1000000).toFixed(1)}M</td>
                     <td className="py-3 px-4 text-green-400 font-medium">
                       RWF {(item.commission / 1000000).toFixed(1)}M
                     </td>
@@ -3962,7 +4209,7 @@ export const AdminDashboard = () => {
                       <Badge className="bg-green-600">{item.status}</Badge>
                     </td>
                     <td className="py-3 px-4">
-                      <Button variant="ghost" size="sm" className="text-white/60 hover:text-white">
+                      <Button variant="ghost" size="sm" className="text-gray-900/60 hover:text-gray-900">
                         <Edit className="h-4 w-4" />
                       </Button>
                     </td>
@@ -4151,15 +4398,40 @@ export const AdminDashboard = () => {
   // Claim CRUD Functions
   const handleCreateClaim = async () => {
     try {
+      // Validate required API fields
+      if (!claimFormData.policyId) {
+        toast({
+          title: "Validation Error",
+          description: "Policy ID is required",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (!claimFormData.lossEventType) {
+        toast({
+          title: "Validation Error",
+          description: "Loss event type is required",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (!claimFormData.lossDescription) {
+        toast({
+          title: "Validation Error",
+          description: "Loss description is required",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Format according to API spec: { policyId, lossEventType, lossDescription, damagePhotos }
       const claimData = {
-        farmerId: claimFormData.farmerId,
-        policyId: claimFormData.policyId || undefined,
-        cropType: claimFormData.cropType,
-        damageType: claimFormData.damageType,
-        amount: parseFloat(claimFormData.amount),
-        description: claimFormData.description,
-        fieldId: claimFormData.fieldId || undefined,
-        status: claimFormData.status,
+        policyId: claimFormData.policyId,
+        lossEventType: claimFormData.lossEventType.toUpperCase(), // Ensure uppercase
+        lossDescription: claimFormData.lossDescription,
+        damagePhotos: claimFormData.damagePhotos || [],
       };
       
       await createClaim(claimData);
@@ -4171,9 +4443,20 @@ export const AdminDashboard = () => {
       resetClaimForm();
       loadClaims();
     } catch (err: any) {
+      console.error('❌ Claim creation error:', err);
+      
+      // Provide more specific error messages
+      let errorMessage = err.message || 'Failed to create claim';
+      
+      if (errorMessage.includes('Forbidden') || errorMessage.includes('403')) {
+        errorMessage = 'You do not have permission to create claims. Claims can typically only be created by farmers. Please ensure you are logged in with the correct role.';
+      } else if (errorMessage.includes('401') || errorMessage.includes('Authentication')) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      }
+      
       toast({
-        title: "Error",
-        description: err.message || 'Failed to create claim',
+        title: "Error Creating Claim",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -4224,8 +4507,11 @@ export const AdminDashboard = () => {
 
   const resetClaimForm = () => {
     setClaimFormData({
-      farmerId: "",
       policyId: "",
+      lossEventType: "",
+      lossDescription: "",
+      damagePhotos: [],
+      farmerId: "",
       cropType: "",
       damageType: "",
       amount: "",
@@ -4276,14 +4562,14 @@ export const AdminDashboard = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-white">Policies Management</h2>
-            <p className="text-white/60">Manage all insurance policies</p>
+            <h2 className="text-2xl font-bold text-gray-900">Policies Management</h2>
+            <p className="text-gray-900/60">Manage all insurance policies</p>
           </div>
           <div className="flex gap-2">
             <Button 
               onClick={loadPolicies}
               variant="outline"
-              className="border-gray-700 text-white hover:bg-gray-800"
+              className="border-gray-300 text-gray-900 hover:bg-gray-100"
               disabled={policiesLoading}
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${policiesLoading ? 'animate-spin' : ''}`} />
@@ -4308,17 +4594,17 @@ export const AdminDashboard = () => {
             <div className="flex gap-4">
               <div className="flex-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-900/60" />
                   <Input
                     placeholder="Search policies..."
                     value={policySearchQuery}
                     onChange={(e) => setPolicySearchQuery(e.target.value)}
-                    className="pl-10 bg-gray-800 border-gray-700 text-white"
+                    className="pl-10 bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
                   />
                 </div>
               </div>
               <Select value={policyStatusFilter} onValueChange={setPolicyStatusFilter}>
-                <SelectTrigger className="w-48 bg-gray-800 border-gray-700 text-white">
+                <SelectTrigger className="w-48 bg-gray-50 border-gray-300 text-gray-900">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -4337,8 +4623,8 @@ export const AdminDashboard = () => {
         {policiesLoading && (
           <Card className={dashboardTheme.card}>
             <CardContent className="p-8 text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-white mx-auto mb-4" />
-              <p className="text-white/60">Loading policies...</p>
+              <Loader2 className="h-8 w-8 animate-spin text-gray-900 mx-auto mb-4" />
+              <p className="text-gray-900/60">Loading policies...</p>
             </CardContent>
           </Card>
         )}
@@ -4356,7 +4642,7 @@ export const AdminDashboard = () => {
                   onClick={loadPolicies}
                   variant="outline"
                   size="sm"
-                  className="border-gray-700 text-white hover:bg-gray-800"
+                  className="border-gray-300 text-gray-900 hover:bg-gray-100"
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Retry
@@ -4370,7 +4656,7 @@ export const AdminDashboard = () => {
         {!policiesLoading && !policiesError && (
           <Card className={dashboardTheme.card}>
             <CardHeader>
-              <CardTitle className="text-white">
+              <CardTitle className="text-gray-900">
                 Policies ({filteredPolicies.length})
               </CardTitle>
             </CardHeader>
@@ -4378,37 +4664,37 @@ export const AdminDashboard = () => {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-gray-700">
-                      <th className="text-left py-3 px-4 text-white/80 font-medium">Policy ID</th>
-                      <th className="text-left py-3 px-4 text-white/80 font-medium">Farmer</th>
-                      <th className="text-left py-3 px-4 text-white/80 font-medium">Crop Type</th>
-                      <th className="text-left py-3 px-4 text-white/80 font-medium">Coverage</th>
-                      <th className="text-left py-3 px-4 text-white/80 font-medium">Premium</th>
-                      <th className="text-left py-3 px-4 text-white/80 font-medium">Status</th>
-                      <th className="text-left py-3 px-4 text-white/80 font-medium">Actions</th>
+                    <tr className="border-b border-gray-300">
+                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Policy ID</th>
+                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Farmer</th>
+                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Crop Type</th>
+                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Coverage</th>
+                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Premium</th>
+                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Status</th>
+                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredPolicies.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-white/60">
+                        <td colSpan={7} className="py-8 text-center text-gray-900/60">
                           No policies found
                         </td>
                       </tr>
                     ) : (
                       filteredPolicies.map((policy) => (
-                        <tr key={policy._id || policy.id} className="border-b border-gray-800 hover:bg-gray-800/50">
-                          <td className="py-3 px-4 text-white font-medium">
+                        <tr key={policy._id || policy.id} className="border-b border-gray-800 hover:bg-gray-100/50">
+                          <td className="py-3 px-4 text-gray-900 font-medium">
                             {policy._id?.toString().substring(0, 8) || policy.id || "N/A"}
                           </td>
-                          <td className="py-3 px-4 text-white">
+                          <td className="py-3 px-4 text-gray-900">
                             {policy.farmerId?.toString().substring(0, 8) || "N/A"}
                           </td>
-                          <td className="py-3 px-4 text-white">{policy.cropType || "N/A"}</td>
-                          <td className="py-3 px-4 text-white">
+                          <td className="py-3 px-4 text-gray-900">{policy.cropType || "N/A"}</td>
+                          <td className="py-3 px-4 text-gray-900">
                             RWF {policy.coverageAmount?.toLocaleString() || "0"}
                           </td>
-                          <td className="py-3 px-4 text-white">
+                          <td className="py-3 px-4 text-gray-900">
                             RWF {policy.premium?.toLocaleString() || "0"}
                           </td>
                           <td className="py-3 px-4">{getStatusBadge(policy.status)}</td>
@@ -4444,33 +4730,33 @@ export const AdminDashboard = () => {
 
         {/* Create/Edit Policy Dialog */}
         <Dialog open={showPolicyDialog} onOpenChange={setShowPolicyDialog}>
-          <DialogContent className="max-w-2xl bg-gray-900 border-gray-700">
+          <DialogContent className="max-w-2xl bg-white border-gray-300">
             <DialogHeader>
-              <DialogTitle className="text-white">
+              <DialogTitle className="text-gray-900">
                 {editingPolicy ? "Edit Policy" : "Create New Policy"}
               </DialogTitle>
-              <DialogDescription className="text-white/60">
+              <DialogDescription className="text-gray-900/60">
                 {editingPolicy ? "Update policy information" : "Fill in the details to create a new policy"}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 mt-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-white/80">Farmer ID</Label>
+                  <Label className="text-gray-900/80">Farmer ID</Label>
                   <Input
                     value={policyFormData.farmerId}
                     onChange={(e) => setPolicyFormData({ ...policyFormData, farmerId: e.target.value })}
-                    className="bg-gray-800 border-gray-700 text-white"
+                    className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
                     placeholder="Enter farmer ID"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/80">Crop Type</Label>
+                  <Label className="text-gray-900/80">Crop Type</Label>
                   <Select
                     value={policyFormData.cropType}
                     onValueChange={(value) => setPolicyFormData({ ...policyFormData, cropType: value })}
                   >
-                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                    <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-900">
                       <SelectValue placeholder="Select crop type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -4485,53 +4771,53 @@ export const AdminDashboard = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-white/80">Coverage Amount (RWF)</Label>
+                  <Label className="text-gray-900/80">Coverage Amount (RWF)</Label>
                   <Input
                     type="number"
                     value={policyFormData.coverageAmount}
                     onChange={(e) => setPolicyFormData({ ...policyFormData, coverageAmount: e.target.value })}
-                    className="bg-gray-800 border-gray-700 text-white"
+                    className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
                     placeholder="Enter coverage amount"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/80">Premium (RWF)</Label>
+                  <Label className="text-gray-900/80">Premium (RWF)</Label>
                   <Input
                     type="number"
                     value={policyFormData.premium}
                     onChange={(e) => setPolicyFormData({ ...policyFormData, premium: e.target.value })}
-                    className="bg-gray-800 border-gray-700 text-white"
+                    className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
                     placeholder="Enter premium"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-white/80">Start Date</Label>
+                  <Label className="text-gray-900/80">Start Date</Label>
                   <Input
                     type="date"
                     value={policyFormData.startDate}
                     onChange={(e) => setPolicyFormData({ ...policyFormData, startDate: e.target.value })}
-                    className="bg-gray-800 border-gray-700 text-white"
+                    className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
                   />
                 </div>
                 <div>
-                  <Label className="text-white/80">End Date</Label>
+                  <Label className="text-gray-900/80">End Date</Label>
                   <Input
                     type="date"
                     value={policyFormData.endDate}
                     onChange={(e) => setPolicyFormData({ ...policyFormData, endDate: e.target.value })}
-                    className="bg-gray-800 border-gray-700 text-white"
+                    className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
                   />
                 </div>
               </div>
               <div>
-                <Label className="text-white/80">Status</Label>
+                <Label className="text-gray-900/80">Status</Label>
                 <Select
                   value={policyFormData.status}
                   onValueChange={(value) => setPolicyFormData({ ...policyFormData, status: value })}
                 >
-                  <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                  <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-900">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -4543,11 +4829,11 @@ export const AdminDashboard = () => {
                 </Select>
               </div>
               <div>
-                <Label className="text-white/80">Notes</Label>
+                <Label className="text-gray-900/80">Notes</Label>
                 <Textarea
                   value={policyFormData.notes}
                   onChange={(e) => setPolicyFormData({ ...policyFormData, notes: e.target.value })}
-                  className="bg-gray-800 border-gray-700 text-white"
+                  className="bg-gray-800 border-gray-300 text-gray-900"
                   placeholder="Additional notes..."
                   rows={3}
                 />
@@ -4559,7 +4845,7 @@ export const AdminDashboard = () => {
                     setShowPolicyDialog(false);
                     resetPolicyForm();
                   }}
-                  className="border-gray-700 text-white hover:bg-gray-800"
+                  className="border-gray-300 text-gray-900 hover:bg-gray-100"
                 >
                   Cancel
                 </Button>
@@ -4577,10 +4863,10 @@ export const AdminDashboard = () => {
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={!!deletingPolicyId} onOpenChange={(open) => !open && setDeletingPolicyId(null)}>
-          <DialogContent className="bg-gray-900 border-gray-700">
+          <DialogContent className="bg-white border-gray-300">
             <DialogHeader>
-              <DialogTitle className="text-white">Delete Policy</DialogTitle>
-              <DialogDescription className="text-white/60">
+              <DialogTitle className="text-gray-900">Delete Policy</DialogTitle>
+              <DialogDescription className="text-gray-900/60">
                 Are you sure you want to delete this policy? This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
@@ -4588,7 +4874,7 @@ export const AdminDashboard = () => {
               <Button
                 variant="outline"
                 onClick={() => setDeletingPolicyId(null)}
-                className="border-gray-700 text-white hover:bg-gray-800"
+                className="border-gray-300 text-gray-900 hover:bg-gray-100"
               >
                 Cancel
               </Button>
@@ -4631,14 +4917,14 @@ export const AdminDashboard = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-white">Claims Management</h2>
-            <p className="text-white/60">Manage all insurance claims</p>
+            <h2 className="text-2xl font-bold text-gray-900">Claims Management</h2>
+            <p className="text-gray-900/60">Manage all insurance claims</p>
           </div>
           <div className="flex gap-2">
             <Button 
               onClick={loadClaims}
               variant="outline"
-              className="border-gray-700 text-white hover:bg-gray-800"
+              className="border-gray-300 text-gray-900 hover:bg-gray-100"
               disabled={claimsLoading}
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${claimsLoading ? 'animate-spin' : ''}`} />
@@ -4663,17 +4949,17 @@ export const AdminDashboard = () => {
             <div className="flex gap-4">
               <div className="flex-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-900/60" />
                   <Input
                     placeholder="Search claims..."
                     value={claimSearchQuery}
                     onChange={(e) => setClaimSearchQuery(e.target.value)}
-                    className="pl-10 bg-gray-800 border-gray-700 text-white"
+                    className="pl-10 bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
                   />
                 </div>
               </div>
               <Select value={claimStatusFilter} onValueChange={setClaimStatusFilter}>
-                <SelectTrigger className="w-48 bg-gray-800 border-gray-700 text-white">
+                <SelectTrigger className="w-48 bg-gray-50 border-gray-300 text-gray-900">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -4692,8 +4978,8 @@ export const AdminDashboard = () => {
         {claimsLoading && (
           <Card className={dashboardTheme.card}>
             <CardContent className="p-8 text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-white mx-auto mb-4" />
-              <p className="text-white/60">Loading claims...</p>
+              <Loader2 className="h-8 w-8 animate-spin text-gray-900 mx-auto mb-4" />
+              <p className="text-gray-900/60">Loading claims...</p>
             </CardContent>
           </Card>
         )}
@@ -4711,7 +4997,7 @@ export const AdminDashboard = () => {
                   onClick={loadClaims}
                   variant="outline"
                   size="sm"
-                  className="border-gray-700 text-white hover:bg-gray-800"
+                  className="border-gray-300 text-gray-900 hover:bg-gray-100"
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Retry
@@ -4725,7 +5011,7 @@ export const AdminDashboard = () => {
         {!claimsLoading && !claimsError && (
           <Card className={dashboardTheme.card}>
             <CardHeader>
-              <CardTitle className="text-white">
+              <CardTitle className="text-gray-900">
                 Claims ({filteredClaims.length})
               </CardTitle>
             </CardHeader>
@@ -4733,35 +5019,35 @@ export const AdminDashboard = () => {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-gray-700">
-                      <th className="text-left py-3 px-4 text-white/80 font-medium">Claim ID</th>
-                      <th className="text-left py-3 px-4 text-white/80 font-medium">Farmer</th>
-                      <th className="text-left py-3 px-4 text-white/80 font-medium">Crop Type</th>
-                      <th className="text-left py-3 px-4 text-white/80 font-medium">Damage Type</th>
-                      <th className="text-left py-3 px-4 text-white/80 font-medium">Amount</th>
-                      <th className="text-left py-3 px-4 text-white/80 font-medium">Status</th>
-                      <th className="text-left py-3 px-4 text-white/80 font-medium">Actions</th>
+                    <tr className="border-b border-gray-300">
+                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Claim ID</th>
+                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Farmer</th>
+                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Crop Type</th>
+                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Damage Type</th>
+                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Amount</th>
+                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Status</th>
+                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredClaims.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-white/60">
+                        <td colSpan={7} className="py-8 text-center text-gray-900/60">
                           No claims found
                         </td>
                       </tr>
                     ) : (
                       filteredClaims.map((claim) => (
-                        <tr key={claim._id || claim.id} className="border-b border-gray-800 hover:bg-gray-800/50">
-                          <td className="py-3 px-4 text-white font-medium">
+                        <tr key={claim._id || claim.id} className="border-b border-gray-800 hover:bg-gray-100/50">
+                          <td className="py-3 px-4 text-gray-900 font-medium">
                             {claim._id?.toString().substring(0, 8) || claim.id || "N/A"}
                           </td>
-                          <td className="py-3 px-4 text-white">
+                          <td className="py-3 px-4 text-gray-900">
                             {claim.farmerId?.toString().substring(0, 8) || "N/A"}
                           </td>
-                          <td className="py-3 px-4 text-white">{claim.cropType || "N/A"}</td>
-                          <td className="py-3 px-4 text-white">{claim.damageType || "N/A"}</td>
-                          <td className="py-3 px-4 text-white">
+                          <td className="py-3 px-4 text-gray-900">{claim.cropType || "N/A"}</td>
+                          <td className="py-3 px-4 text-gray-900">{claim.damageType || "N/A"}</td>
+                          <td className="py-3 px-4 text-gray-900">
                             RWF {claim.amount?.toLocaleString() || "0"}
                           </td>
                           <td className="py-3 px-4">{getStatusBadge(claim.status)}</td>
@@ -4797,114 +5083,118 @@ export const AdminDashboard = () => {
 
         {/* Create/Edit Claim Dialog */}
         <Dialog open={showClaimDialog} onOpenChange={setShowClaimDialog}>
-          <DialogContent className="max-w-2xl bg-gray-900 border-gray-700">
+          <DialogContent className="max-w-2xl bg-white border-gray-300">
             <DialogHeader>
-              <DialogTitle className="text-white">
+              <DialogTitle className="text-gray-900">
                 {editingClaim ? "Edit Claim" : "Create New Claim"}
               </DialogTitle>
-              <DialogDescription className="text-white/60">
+              <DialogDescription className="text-gray-900/60">
                 {editingClaim ? "Update claim information" : "Fill in the details to create a new claim"}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-white/80">Farmer ID</Label>
-                  <Input
-                    value={claimFormData.farmerId}
-                    onChange={(e) => setClaimFormData({ ...claimFormData, farmerId: e.target.value })}
-                    className="bg-gray-800 border-gray-700 text-white"
-                    placeholder="Enter farmer ID"
-                  />
-                </div>
-                <div>
-                  <Label className="text-white/80">Policy ID (Optional)</Label>
-                  <Input
-                    value={claimFormData.policyId}
-                    onChange={(e) => setClaimFormData({ ...claimFormData, policyId: e.target.value })}
-                    className="bg-gray-800 border-gray-700 text-white"
-                    placeholder="Enter policy ID"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-white/80">Crop Type</Label>
-                  <Select
-                    value={claimFormData.cropType}
-                    onValueChange={(value) => setClaimFormData({ ...claimFormData, cropType: value })}
-                  >
-                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                      <SelectValue placeholder="Select crop type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="MAIZE">Maize</SelectItem>
-                      <SelectItem value="BEANS">Beans</SelectItem>
-                      <SelectItem value="RICE">Rice</SelectItem>
-                      <SelectItem value="WHEAT">Wheat</SelectItem>
-                      <SelectItem value="POTATOES">Potatoes</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-white/80">Damage Type</Label>
-                  <Select
-                    value={claimFormData.damageType}
-                    onValueChange={(value) => setClaimFormData({ ...claimFormData, damageType: value })}
-                  >
-                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                      <SelectValue placeholder="Select damage type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="DROUGHT">Drought</SelectItem>
-                      <SelectItem value="FLOOD">Flood</SelectItem>
-                      <SelectItem value="PEST">Pest</SelectItem>
-                      <SelectItem value="DISEASE">Disease</SelectItem>
-                      <SelectItem value="HAIL">Hail</SelectItem>
-                      <SelectItem value="FIRE">Fire</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-white/80">Amount (RWF)</Label>
-                  <Input
-                    type="number"
-                    value={claimFormData.amount}
-                    onChange={(e) => setClaimFormData({ ...claimFormData, amount: e.target.value })}
-                    className="bg-gray-800 border-gray-700 text-white"
-                    placeholder="Enter claim amount"
-                  />
-                </div>
-                <div>
-                  <Label className="text-white/80">Status</Label>
-                  <Select
-                    value={claimFormData.status}
-                    onValueChange={(value) => setClaimFormData({ ...claimFormData, status: value })}
-                  >
-                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="approved">Approved</SelectItem>
-                      <SelectItem value="rejected">Rejected</SelectItem>
-                      <SelectItem value="processing">Processing</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              {/* API Required Fields */}
               <div>
-                <Label className="text-white/80">Description</Label>
-                <Textarea
-                  value={claimFormData.description}
-                  onChange={(e) => setClaimFormData({ ...claimFormData, description: e.target.value })}
-                  className="bg-gray-800 border-gray-700 text-white"
-                  placeholder="Describe the damage..."
-                  rows={3}
+                <Label className="text-gray-900/80">Policy ID *</Label>
+                <Input
+                  value={claimFormData.policyId}
+                  onChange={(e) => setClaimFormData({ ...claimFormData, policyId: e.target.value })}
+                  className="bg-gray-800 border-gray-300 text-gray-900"
+                  placeholder="Enter policy ID (required)"
+                  required
                 />
+                <p className="text-xs text-gray-900/60 mt-1">The policy ID for this claim</p>
               </div>
+
+              <div>
+                <Label className="text-gray-900/80">Loss Event Type *</Label>
+                <Select
+                  value={claimFormData.lossEventType}
+                  onValueChange={(value) => setClaimFormData({ ...claimFormData, lossEventType: value })}
+                  required
+                >
+                  <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-900">
+                    <SelectValue placeholder="Select loss event type (required)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="DROUGHT">Drought</SelectItem>
+                    <SelectItem value="FLOOD">Flood</SelectItem>
+                    <SelectItem value="PEST_ATTACK">Pest Attack</SelectItem>
+                    <SelectItem value="DISEASE_OUTBREAK">Disease Outbreak</SelectItem>
+                    <SelectItem value="HAIL">Hail Damage</SelectItem>
+                    <SelectItem value="FIRE">Fire</SelectItem>
+                    <SelectItem value="THEFT">Theft</SelectItem>
+                    <SelectItem value="STORM">Storm</SelectItem>
+                    <SelectItem value="FROST">Frost</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-900/60 mt-1">Type of event that caused the loss</p>
+              </div>
+
+              <div>
+                <Label className="text-gray-900/80">Loss Description *</Label>
+                <Textarea
+                  value={claimFormData.lossDescription}
+                  onChange={(e) => setClaimFormData({ ...claimFormData, lossDescription: e.target.value })}
+                  className="bg-gray-800 border-gray-300 text-gray-900"
+                  placeholder="Describe the loss event and damage to your crops..."
+                  rows={4}
+                  required
+                />
+                <p className="text-xs text-gray-900/60 mt-1">Detailed description of the loss event</p>
+              </div>
+
+              <div>
+                <Label className="text-gray-900/80">Damage Photos (Optional)</Label>
+                <Input
+                  value={claimFormData.damagePhotos?.join(', ') || ''}
+                  onChange={(e) => {
+                    const urls = e.target.value.split(',').map(url => url.trim()).filter(url => url);
+                    setClaimFormData({ ...claimFormData, damagePhotos: urls });
+                  }}
+                  className="bg-gray-800 border-gray-300 text-gray-900"
+                  placeholder="Enter photo URLs separated by commas (e.g., https://example.com/photo1.jpg, https://example.com/photo2.jpg)"
+                />
+                <p className="text-xs text-gray-900/60 mt-1">URLs of photos showing the damage (comma-separated)</p>
+              </div>
+
+              {/* Legacy/Display Fields (not sent to API) */}
+              {editingClaim && (
+                <>
+                  <div className="pt-4 border-t border-gray-300">
+                    <p className="text-sm text-gray-900/60 mb-4">Additional Information (Display Only)</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-gray-900/80">Farmer ID</Label>
+                        <Input
+                          value={claimFormData.farmerId}
+                          onChange={(e) => setClaimFormData({ ...claimFormData, farmerId: e.target.value })}
+                          className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
+                          placeholder="Enter farmer ID"
+                          disabled
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-gray-900/80">Status</Label>
+                        <Select
+                          value={claimFormData.status}
+                          onValueChange={(value) => setClaimFormData({ ...claimFormData, status: value })}
+                        >
+                          <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-900">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="approved">Approved</SelectItem>
+                            <SelectItem value="rejected">Rejected</SelectItem>
+                            <SelectItem value="processing">Processing</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
               <div className="flex justify-end gap-2 pt-4">
                 <Button
                   variant="outline"
@@ -4912,7 +5202,7 @@ export const AdminDashboard = () => {
                     setShowClaimDialog(false);
                     resetClaimForm();
                   }}
-                  className="border-gray-700 text-white hover:bg-gray-800"
+                  className="border-gray-300 text-gray-900 hover:bg-gray-100"
                 >
                   Cancel
                 </Button>
@@ -4930,10 +5220,10 @@ export const AdminDashboard = () => {
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={!!deletingClaimId} onOpenChange={(open) => !open && setDeletingClaimId(null)}>
-          <DialogContent className="bg-gray-900 border-gray-700">
+          <DialogContent className="bg-white border-gray-300">
             <DialogHeader>
-              <DialogTitle className="text-white">Delete Claim</DialogTitle>
-              <DialogDescription className="text-white/60">
+              <DialogTitle className="text-gray-900">Delete Claim</DialogTitle>
+              <DialogDescription className="text-gray-900/60">
                 Are you sure you want to delete this claim? This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
@@ -4941,7 +5231,7 @@ export const AdminDashboard = () => {
               <Button
                 variant="outline"
                 onClick={() => setDeletingClaimId(null)}
-                className="border-gray-700 text-white hover:bg-gray-800"
+                className="border-gray-300 text-gray-900 hover:bg-gray-100"
               >
                 Cancel
               </Button>
@@ -5108,8 +5398,8 @@ export const AdminDashboard = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white">Assessments Management</h1>
-            <p className="text-white/60 mt-1">Manage and create assessments for farms</p>
+            <h1 className="text-3xl font-bold text-gray-900">Assessments Management</h1>
+            <p className="text-gray-900/60 mt-1">Manage and create assessments for farms</p>
           </div>
           <Button
             onClick={() => setShowAssessmentDialog(true)}
@@ -5122,7 +5412,7 @@ export const AdminDashboard = () => {
 
         {/* Error Message */}
         {assessmentsError && (
-          <Card className="bg-gray-900 border-gray-700">
+          <Card className="bg-white border-gray-300">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -5133,7 +5423,7 @@ export const AdminDashboard = () => {
                   onClick={loadAssessments}
                   variant="outline"
                   size="sm"
-                  className="border-gray-700 text-white hover:bg-gray-800"
+                  className="border-gray-300 text-gray-900 hover:bg-gray-100"
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Retry
@@ -5146,19 +5436,19 @@ export const AdminDashboard = () => {
         {/* Search and Filter */}
         <div className="flex items-center gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-900/60" />
             <Input
               placeholder="Search assessments..."
               value={assessmentSearchQuery}
               onChange={(e) => setAssessmentSearchQuery(e.target.value)}
-              className="pl-10 bg-gray-900 border-gray-700 text-white"
+              className="pl-10 bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
             />
           </div>
           <Select value={assessmentStatusFilter} onValueChange={setAssessmentStatusFilter}>
-            <SelectTrigger className="w-48 bg-gray-900 border-gray-700 text-white">
+            <SelectTrigger className="w-48 bg-gray-50 border-gray-300 text-gray-900">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
-            <SelectContent className="bg-gray-900 border-gray-700">
+            <SelectContent className="bg-white border-gray-300">
               <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="in-progress">In Progress</SelectItem>
@@ -5170,7 +5460,7 @@ export const AdminDashboard = () => {
             onClick={loadAssessments}
             disabled={assessmentsLoading}
             variant="outline"
-            className="border-gray-700 text-white hover:bg-gray-800"
+            className="border-gray-300 text-gray-900 hover:bg-gray-100"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${assessmentsLoading ? 'animate-spin' : ''}`} />
             Refresh
@@ -5178,20 +5468,20 @@ export const AdminDashboard = () => {
         </div>
 
         {/* Assessments Table */}
-        <Card className="bg-gray-900 border-gray-700">
+        <Card className="bg-gray-900 border-gray-300">
           <CardContent className="p-0">
             {assessmentsLoading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="text-center">
                   <Loader2 className="h-12 w-12 animate-spin text-red-500 mx-auto mb-4" />
-                  <p className="text-white/60">Loading assessments...</p>
+                  <p className="text-gray-900/60">Loading assessments...</p>
                 </div>
               </div>
             ) : filteredAssessments.length === 0 ? (
               <div className="flex items-center justify-center py-12">
                 <div className="text-center">
-                  <FileText className="h-12 w-12 mx-auto mb-4 text-white/40" />
-                  <p className="text-white/60">No assessments found</p>
+                  <FileText className="h-12 w-12 mx-auto mb-4 text-gray-900/40" />
+                  <p className="text-gray-900/60">No assessments found</p>
                 </div>
               </div>
             ) : (
@@ -5199,25 +5489,25 @@ export const AdminDashboard = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-800">
-                      <th className="text-left py-4 px-6 font-medium text-white/80">Farm</th>
-                      <th className="text-left py-4 px-6 font-medium text-white/80">Farmer</th>
-                      <th className="text-left py-4 px-6 font-medium text-white/80">Assessor</th>
-                      <th className="text-left py-4 px-6 font-medium text-white/80">Status</th>
-                      <th className="text-left py-4 px-6 font-medium text-white/80">Created</th>
-                      <th className="text-left py-4 px-6 font-medium text-white/80">Actions</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-900/80">Farm</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-900/80">Farmer</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-900/80">Assessor</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-900/80">Status</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-900/80">Created</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-900/80">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredAssessments.map((assessment, index) => (
                       <tr
                         key={assessment._id || assessment.id || index}
-                        className={`border-b border-gray-800/50 hover:bg-gray-800/50 transition-colors ${
+                        className={`border-b border-gray-800/50 hover:bg-gray-100/50 transition-colors ${
                           index % 2 === 0 ? "bg-gray-950/30" : ""
                         }`}
                       >
-                        <td className="py-4 px-6 text-white">{assessment.farm?.name || 'N/A'}</td>
-                        <td className="py-4 px-6 text-white">{assessment.farmer?.name || assessment.farm?.farmerName || 'N/A'}</td>
-                        <td className="py-4 px-6 text-white">{assessment.assessor?.name || assessment.assessorId || 'N/A'}</td>
+                        <td className="py-4 px-6 text-gray-900">{assessment.farm?.name || 'N/A'}</td>
+                        <td className="py-4 px-6 text-gray-900">{assessment.farmer?.name || assessment.farm?.farmerName || 'N/A'}</td>
+                        <td className="py-4 px-6 text-gray-900">{assessment.assessor?.name || assessment.assessorId || 'N/A'}</td>
                         <td className="py-4 px-6">
                           <Badge
                             variant={
@@ -5238,7 +5528,7 @@ export const AdminDashboard = () => {
                             {assessment.status || 'Pending'}
                           </Badge>
                         </td>
-                        <td className="py-4 px-6 text-white/80">
+                        <td className="py-4 px-6 text-gray-900/80">
                           {assessment.createdAt
                             ? new Date(assessment.createdAt).toLocaleDateString()
                             : 'N/A'}
@@ -5256,10 +5546,27 @@ export const AdminDashboard = () => {
                                   variant: "default",
                                 });
                               }}
-                              className="text-white hover:bg-gray-800"
+                              className="text-gray-900 hover:bg-gray-100"
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
+                            {(assessment.status === 'SUBMITTED' || assessment.status === 'submitted' || assessment.status === 'completed') && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setPolicyIssuanceDialog({
+                                    open: true,
+                                    assessmentId: assessment._id || assessment.id,
+                                    assessment: assessment
+                                  });
+                                }}
+                                className="border-green-600 text-green-600 hover:bg-green-50"
+                              >
+                                <Shield className="h-4 w-4 mr-1" />
+                                Issue Policy
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -5271,26 +5578,163 @@ export const AdminDashboard = () => {
           </CardContent>
         </Card>
 
+        {/* Policy Issuance Dialog */}
+        <Dialog open={policyIssuanceDialog.open} onOpenChange={(open) => 
+          setPolicyIssuanceDialog({ ...policyIssuanceDialog, open })
+        }>
+          <DialogContent className="bg-white border-gray-300 sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="text-gray-900">Issue Policy from Assessment</DialogTitle>
+              <DialogDescription className="text-gray-600">
+                Create a new policy based on this assessment. Premium will be calculated automatically.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              {policyIssuanceDialog.assessment && (
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <p className="text-sm text-gray-600 mb-2">Assessment Details:</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    Farm: {policyIssuanceDialog.assessment.farm?.name || 'N/A'}
+                  </p>
+                  {policyIssuanceDialog.assessment.riskScore && (
+                    <p className="text-sm text-gray-700">
+                      Risk Score: {policyIssuanceDialog.assessment.riskScore}
+                    </p>
+                  )}
+                </div>
+              )}
+              <div>
+                <Label className="text-gray-700">Coverage Level *</Label>
+                <Select
+                  value={policyIssuanceData.coverageLevel}
+                  onValueChange={(value: 'BASIC' | 'STANDARD' | 'PREMIUM') => 
+                    setPolicyIssuanceData({ ...policyIssuanceData, coverageLevel: value })
+                  }
+                >
+                  <SelectTrigger className="mt-2 bg-gray-50 border-gray-300 text-gray-900">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-gray-300">
+                    <SelectItem value="BASIC">Basic</SelectItem>
+                    <SelectItem value="STANDARD">Standard</SelectItem>
+                    <SelectItem value="PREMIUM">Premium</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-gray-700">Start Date *</Label>
+                  <Input
+                    type="date"
+                    value={policyIssuanceData.startDate}
+                    onChange={(e) => setPolicyIssuanceData({ ...policyIssuanceData, startDate: e.target.value })}
+                    className="mt-2 bg-gray-50 border-gray-300 text-gray-900"
+                  />
+                </div>
+                <div>
+                  <Label className="text-gray-700">End Date *</Label>
+                  <Input
+                    type="date"
+                    value={policyIssuanceData.endDate}
+                    onChange={(e) => setPolicyIssuanceData({ ...policyIssuanceData, endDate: e.target.value })}
+                    className="mt-2 bg-gray-50 border-gray-300 text-gray-900"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 justify-end pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setPolicyIssuanceDialog({ open: false, assessmentId: null, assessment: null });
+                    setPolicyIssuanceData({
+                      coverageLevel: 'STANDARD',
+                      startDate: new Date().toISOString().split('T')[0],
+                      endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                    });
+                  }}
+                  className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (!policyIssuanceDialog.assessmentId) return;
+                    
+                    setIssuingPolicy(true);
+                    try {
+                      await createPolicyFromAssessment(
+                        policyIssuanceDialog.assessmentId,
+                        policyIssuanceData.coverageLevel,
+                        new Date(policyIssuanceData.startDate).toISOString(),
+                        new Date(policyIssuanceData.endDate).toISOString()
+                      );
+                      
+                      toast({
+                        title: "Success",
+                        description: "Policy issued successfully!",
+                      });
+                      
+                      setPolicyIssuanceDialog({ open: false, assessmentId: null, assessment: null });
+                      setPolicyIssuanceData({
+                        coverageLevel: 'STANDARD',
+                        startDate: new Date().toISOString().split('T')[0],
+                        endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                      });
+                      
+                      // Reload assessments and policies
+                      await loadAssessments();
+                      await loadPolicies();
+                    } catch (err: any) {
+                      console.error('Failed to issue policy:', err);
+                      toast({
+                        title: "Error",
+                        description: err.message || 'Failed to issue policy',
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setIssuingPolicy(false);
+                    }
+                  }}
+                  disabled={issuingPolicy}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {issuingPolicy ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Issuing...
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="h-4 w-4 mr-2" />
+                      Issue Policy
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Create Assessment Dialog */}
         <Dialog open={showAssessmentDialog} onOpenChange={setShowAssessmentDialog}>
-          <DialogContent className="bg-gray-900 border-gray-700">
+          <DialogContent className="bg-white border-gray-300">
             <DialogHeader>
-              <DialogTitle className="text-white">Create Assessment</DialogTitle>
-              <DialogDescription className="text-white/60">
+              <DialogTitle className="text-gray-900">Create Assessment</DialogTitle>
+              <DialogDescription className="text-gray-900/60">
                 Create a new assessment by selecting a farm and an assessor.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 mt-4">
               <div>
-                <Label htmlFor="farmId" className="text-white">Farm</Label>
+                <Label htmlFor="farmId" className="text-gray-900">Farm</Label>
                 <Select
                   value={assessmentFormData.farmId}
                   onValueChange={(value) => setAssessmentFormData({ ...assessmentFormData, farmId: value })}
                 >
-                  <SelectTrigger id="farmId" className="bg-gray-800 border-gray-700 text-white mt-1">
+                  <SelectTrigger id="farmId" className="bg-gray-50 border-gray-300 text-gray-900 mt-1">
                     <SelectValue placeholder="Select a farm" />
                   </SelectTrigger>
-                  <SelectContent className="bg-gray-900 border-gray-700">
+                  <SelectContent className="bg-white border-gray-300">
                     {farmsLoading ? (
                       <SelectItem value="loading" disabled>Loading farms...</SelectItem>
                     ) : !Array.isArray(farms) || farms.length === 0 ? (
@@ -5306,15 +5750,15 @@ export const AdminDashboard = () => {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="assessorId" className="text-white">Assessor</Label>
+                <Label htmlFor="assessorId" className="text-gray-900">Assessor</Label>
                 <Select
                   value={assessmentFormData.assessorId}
                   onValueChange={(value) => setAssessmentFormData({ ...assessmentFormData, assessorId: value })}
                 >
-                  <SelectTrigger id="assessorId" className="bg-gray-800 border-gray-700 text-white mt-1">
+                  <SelectTrigger id="assessorId" className="bg-gray-50 border-gray-300 text-gray-900 mt-1">
                     <SelectValue placeholder="Select an assessor" />
                   </SelectTrigger>
-                  <SelectContent className="bg-gray-900 border-gray-700">
+                  <SelectContent className="bg-white border-gray-300">
                     {!Array.isArray(assessors) || assessors.length === 0 ? (
                       <SelectItem value="none" disabled>No assessors available</SelectItem>
                     ) : (
@@ -5334,7 +5778,7 @@ export const AdminDashboard = () => {
                     setShowAssessmentDialog(false);
                     setAssessmentFormData({ farmId: "", assessorId: "" });
                   }}
-                  className="border-gray-700 text-white hover:bg-gray-800"
+                  className="border-gray-300 text-gray-900 hover:bg-gray-100"
                 >
                   Cancel
                 </Button>

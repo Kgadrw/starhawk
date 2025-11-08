@@ -144,8 +144,8 @@ export default function RiskReviewManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Risk Assessment Reviews</h1>
-          <p className="text-white/70 mt-1">Review and approve risk assessments for farmers</p>
+          <h1 className="text-3xl font-bold text-gray-700">Risk Assessment Reviews</h1>
+          <p className="text-gray-600 mt-1">Review and approve risk assessments for farmers</p>
         </div>
       </div>
 

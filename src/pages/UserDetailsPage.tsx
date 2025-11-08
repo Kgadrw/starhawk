@@ -28,6 +28,7 @@ import {
   Award,
   Globe,
   FileText,
+  FileCheck,
   Image as ImageIcon,
   CheckCircle,
   XCircle,
@@ -39,7 +40,8 @@ import {
   DollarSign,
   TrendingUp,
   BarChart3,
-  Percent
+  Percent,
+  AlertCircle
 } from "lucide-react";
 
 export default function UserDetailsPage() {
@@ -107,24 +109,18 @@ export default function UserDetailsPage() {
   };
 
   const handlePageChange = (page: string) => {
-    if (page === "users") {
-      navigate("/admin-dashboard");
-    } else {
-      navigate("/admin-dashboard");
-      // You can add more navigation logic here if needed
-    }
+    // Navigate to admin dashboard with the selected page
+    navigate("/admin-dashboard");
+    // The AdminDashboard will handle the page change internally
   };
 
+  // Use the same navigation items as AdminDashboard to keep sidebar consistent
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: BarChart3 },
     { id: "users", label: "User Management", icon: Users },
-    { id: "financial", label: "Financial", icon: DollarSign },
-    { id: "commission", label: "Commission", icon: Percent },
-    { id: "system", label: "System Config", icon: Settings },
-    { id: "security", label: "Security", icon: Shield },
-    { id: "logs", label: "Activity Logs", icon: FileText },
-    { id: "database", label: "Database", icon: Database },
-    { id: "analytics", label: "Analytics", icon: TrendingUp },
+    { id: "policies", label: "Policies", icon: FileCheck },
+    { id: "claims", label: "Claims", icon: AlertCircle },
+    { id: "assessments", label: "Assessments", icon: FileText },
     { id: "settings", label: "Settings", icon: Settings }
   ];
 
@@ -276,10 +272,10 @@ export default function UserDetailsPage() {
   const renderContent = () => {
     if (loading) {
       return (
-        <Card className={`${dashboardTheme.card} border-gray-800`}>
+        <Card className={`${dashboardTheme.card} border-gray-200`}>
           <CardContent className="p-8 text-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-white mx-auto mb-4" />
-            <p className="text-white/60">Loading user details...</p>
+            <RefreshCw className="h-8 w-8 animate-spin text-gray-900 mx-auto mb-4" />
+            <p className="text-gray-900/60">Loading user details...</p>
           </CardContent>
         </Card>
       );
@@ -290,13 +286,13 @@ export default function UserDetailsPage() {
         <Card className={`${dashboardTheme.card} border-l-4 border-l-red-500`}>
           <CardContent className="p-8">
             <div className="flex items-center gap-3 mb-4">
-              <XCircle className="h-6 w-6 text-red-400" />
-              <p className="text-red-400">{error || "User not found"}</p>
+              <XCircle className="h-6 w-6 text-red-600" />
+              <p className="text-red-600">{error || "User not found"}</p>
             </div>
             <Button
               onClick={() => navigate("/admin-dashboard")}
               variant="outline"
-              className="border-gray-700 text-white hover:bg-gray-800"
+              className="border-gray-300 text-gray-900 hover:bg-gray-100"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Dashboard
@@ -314,16 +310,16 @@ export default function UserDetailsPage() {
             <Button
               onClick={() => navigate("/admin-dashboard")}
               variant="ghost"
-              className="text-white/60 hover:text-white"
+              className="text-gray-900/60 hover:text-gray-900"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-white">
+              <h1 className="text-3xl font-bold text-gray-900">
                 {isEditing ? "Edit User" : "User Details"}
               </h1>
-              <p className="text-white/60 mt-1">
+              <p className="text-gray-900/60 mt-1">
                 {user.role} • {user.nationalId || "N/A"}
               </p>
             </div>
@@ -333,7 +329,7 @@ export default function UserDetailsPage() {
               <>
                 <Button
                   onClick={() => setIsEditing(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-blue-600 hover:bg-blue-700 text-gray-900"
                 >
                   <Edit className="h-4 w-4 mr-2" />
                   Edit
@@ -360,7 +356,7 @@ export default function UserDetailsPage() {
                     loadUser();
                   }}
                   variant="outline"
-                  className="border-gray-700 text-white hover:bg-gray-800"
+                  className="border-gray-300 text-gray-900 hover:bg-gray-100"
                 >
                   <X className="h-4 w-4 mr-2" />
                   Cancel
@@ -368,7 +364,7 @@ export default function UserDetailsPage() {
                 <Button
                   onClick={handleUpdateUser}
                   disabled={saving}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-green-600 hover:bg-green-700 text-gray-900"
                 >
                   {saving ? (
                     <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -401,9 +397,9 @@ export default function UserDetailsPage() {
         </div>
 
         {/* Basic Information */}
-        <Card className={`${dashboardTheme.card} border-gray-800`}>
+        <Card className={`${dashboardTheme.card} border-gray-200`}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <User className="h-5 w-5" />
               Basic Information
             </CardTitle>
@@ -411,24 +407,24 @@ export default function UserDetailsPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-white/60">National ID</Label>
+                <Label className="text-gray-900/60">National ID</Label>
                 {isEditing ? (
                   <Input
                     value={user.nationalId || ""}
                     disabled
-                    className={`${dashboardTheme.input} border-gray-700 opacity-50`}
+                    className={`${dashboardTheme.input} border-gray-300 opacity-50`}
                   />
                 ) : (
-                  <p className="text-white">{user.nationalId || "N/A"}</p>
+                  <p className="text-gray-900">{user.nationalId || "N/A"}</p>
                 )}
               </div>
               <div>
-                <Label className="text-white/60">Role</Label>
+                <Label className="text-gray-900/60">Role</Label>
                 {isEditing ? (
                   <Input
                     value={user.role || ""}
                     disabled
-                    className={`${dashboardTheme.input} border-gray-700 opacity-50`}
+                    className={`${dashboardTheme.input} border-gray-300 opacity-50`}
                   />
                 ) : (
                   <Badge className="bg-blue-600">{user.role}</Badge>
@@ -437,33 +433,33 @@ export default function UserDetailsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-white/60">First Name</Label>
+                <Label className="text-gray-900/60">First Name</Label>
                 {isEditing ? (
                   <Input
                     value={editUserData.firstName}
                     onChange={(e) => setEditUserData({ ...editUserData, firstName: e.target.value })}
-                    className={`${dashboardTheme.input} border-gray-700`}
+                    className={`${dashboardTheme.input} border-gray-300`}
                   />
                 ) : (
-                  <p className="text-white">{user.firstName || "N/A"}</p>
+                  <p className="text-gray-900">{user.firstName || "N/A"}</p>
                 )}
               </div>
               <div>
-                <Label className="text-white/60">Last Name</Label>
+                <Label className="text-gray-900/60">Last Name</Label>
                 {isEditing ? (
                   <Input
                     value={editUserData.lastName}
                     onChange={(e) => setEditUserData({ ...editUserData, lastName: e.target.value })}
-                    className={`${dashboardTheme.input} border-gray-700`}
+                    className={`${dashboardTheme.input} border-gray-300`}
                   />
                 ) : (
-                  <p className="text-white">{user.lastName || "N/A"}</p>
+                  <p className="text-gray-900">{user.lastName || "N/A"}</p>
                 )}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-white/60 flex items-center gap-2">
+                <Label className="text-gray-900/60 flex items-center gap-2">
                   <Mail className="h-4 w-4" />
                   Email
                 </Label>
@@ -472,14 +468,14 @@ export default function UserDetailsPage() {
                     type="email"
                     value={editUserData.email}
                     onChange={(e) => setEditUserData({ ...editUserData, email: e.target.value })}
-                    className={`${dashboardTheme.input} border-gray-700`}
+                    className={`${dashboardTheme.input} border-gray-300`}
                   />
                 ) : (
-                  <p className="text-white">{user.email || "N/A"}</p>
+                  <p className="text-gray-900">{user.email || "N/A"}</p>
                 )}
               </div>
               <div>
-                <Label className="text-white/60 flex items-center gap-2">
+                <Label className="text-gray-900/60 flex items-center gap-2">
                   <Phone className="h-4 w-4" />
                   Phone Number
                 </Label>
@@ -487,16 +483,16 @@ export default function UserDetailsPage() {
                   <Input
                     value={editUserData.phoneNumber}
                     onChange={(e) => setEditUserData({ ...editUserData, phoneNumber: e.target.value })}
-                    className={`${dashboardTheme.input} border-gray-700`}
+                    className={`${dashboardTheme.input} border-gray-300`}
                   />
                 ) : (
-                  <p className="text-white">{user.phoneNumber || "N/A"}</p>
+                  <p className="text-gray-900">{user.phoneNumber || "N/A"}</p>
                 )}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-white/60 flex items-center gap-2">
+                <Label className="text-gray-900/60 flex items-center gap-2">
                   <MapPin className="h-4 w-4" />
                   Province
                 </Label>
@@ -504,66 +500,66 @@ export default function UserDetailsPage() {
                   <Input
                     value={editUserData.province}
                     onChange={(e) => setEditUserData({ ...editUserData, province: e.target.value })}
-                    className={`${dashboardTheme.input} border-gray-700`}
+                    className={`${dashboardTheme.input} border-gray-300`}
                   />
                 ) : (
-                  <p className="text-white">{user.province || "N/A"}</p>
+                  <p className="text-gray-900">{user.province || "N/A"}</p>
                 )}
               </div>
               <div>
-                <Label className="text-white/60">District</Label>
+                <Label className="text-gray-900/60">District</Label>
                 {isEditing ? (
                   <Input
                     value={editUserData.district}
                     onChange={(e) => setEditUserData({ ...editUserData, district: e.target.value })}
-                    className={`${dashboardTheme.input} border-gray-700`}
+                    className={`${dashboardTheme.input} border-gray-300`}
                   />
                 ) : (
-                  <p className="text-white">{user.district || "N/A"}</p>
+                  <p className="text-gray-900">{user.district || "N/A"}</p>
                 )}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-white/60">Sector</Label>
+                <Label className="text-gray-900/60">Sector</Label>
                 {isEditing ? (
                   <Input
                     value={editUserData.sector}
                     onChange={(e) => setEditUserData({ ...editUserData, sector: e.target.value })}
-                    className={`${dashboardTheme.input} border-gray-700`}
+                    className={`${dashboardTheme.input} border-gray-300`}
                   />
                 ) : (
-                  <p className="text-white">{user.sector || "N/A"}</p>
+                  <p className="text-gray-900">{user.sector || "N/A"}</p>
                 )}
               </div>
               <div>
-                <Label className="text-white/60">Cell</Label>
+                <Label className="text-gray-900/60">Cell</Label>
                 {isEditing ? (
                   <Input
                     value={editUserData.cell}
                     onChange={(e) => setEditUserData({ ...editUserData, cell: e.target.value })}
-                    className={`${dashboardTheme.input} border-gray-700`}
+                    className={`${dashboardTheme.input} border-gray-300`}
                   />
                 ) : (
-                  <p className="text-white">{user.cell || "N/A"}</p>
+                  <p className="text-gray-900">{user.cell || "N/A"}</p>
                 )}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-white/60">Village</Label>
+                <Label className="text-gray-900/60">Village</Label>
                 {isEditing ? (
                   <Input
                     value={editUserData.village}
                     onChange={(e) => setEditUserData({ ...editUserData, village: e.target.value })}
-                    className={`${dashboardTheme.input} border-gray-700`}
+                    className={`${dashboardTheme.input} border-gray-300`}
                   />
                 ) : (
-                  <p className="text-white">{user.village || "N/A"}</p>
+                  <p className="text-gray-900">{user.village || "N/A"}</p>
                 )}
               </div>
               <div>
-                <Label className="text-white/60">Sex</Label>
+                <Label className="text-gray-900/60">Sex</Label>
                 {isEditing ? (
                   <Select
                     value={editUserData.sex}
@@ -579,12 +575,12 @@ export default function UserDetailsPage() {
                     </SelectContent>
                   </Select>
                 ) : (
-                  <p className="text-white">{user.sex || "N/A"}</p>
+                  <p className="text-gray-900">{user.sex || "N/A"}</p>
                 )}
               </div>
             </div>
             <div>
-              <Label className="text-white/60 flex items-center gap-2">
+              <Label className="text-gray-900/60 flex items-center gap-2">
                 <Shield className="h-4 w-4" />
                 Status
               </Label>
@@ -596,7 +592,7 @@ export default function UserDetailsPage() {
                     onChange={(e) => setEditUserData({ ...editUserData, active: e.target.checked })}
                     className="w-4 h-4"
                   />
-                  <span className="text-white">Active</span>
+                  <span className="text-gray-900">Active</span>
                 </div>
               ) : (
                 <Badge className={user.active ? "bg-green-600" : "bg-gray-600"}>
@@ -609,9 +605,9 @@ export default function UserDetailsPage() {
 
         {/* Role-specific Profile */}
         {user.role === 'FARMER' && user.farmerProfile && (
-          <Card className={`${dashboardTheme.card} border-gray-800`}>
+          <Card className={`${dashboardTheme.card} border-gray-200`}>
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-gray-900 flex items-center gap-2">
                 <Building2 className="h-5 w-5" />
                 Farmer Profile
               </CardTitle>
@@ -619,7 +615,7 @@ export default function UserDetailsPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-white/60">Farm Province</Label>
+                  <Label className="text-gray-900/60">Farm Province</Label>
                   {isEditing ? (
                     <Input
                       value={editUserData.farmerProfile.farmProvince}
@@ -627,14 +623,14 @@ export default function UserDetailsPage() {
                         ...editUserData,
                         farmerProfile: { ...editUserData.farmerProfile, farmProvince: e.target.value }
                       })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                     />
                   ) : (
-                    <p className="text-white">{user.farmerProfile.farmProvince || "N/A"}</p>
+                    <p className="text-gray-900">{user.farmerProfile.farmProvince || "N/A"}</p>
                   )}
                 </div>
                 <div>
-                  <Label className="text-white/60">Farm District</Label>
+                  <Label className="text-gray-900/60">Farm District</Label>
                   {isEditing ? (
                     <Input
                       value={editUserData.farmerProfile.farmDistrict}
@@ -642,16 +638,16 @@ export default function UserDetailsPage() {
                         ...editUserData,
                         farmerProfile: { ...editUserData.farmerProfile, farmDistrict: e.target.value }
                       })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                     />
                   ) : (
-                    <p className="text-white">{user.farmerProfile.farmDistrict || "N/A"}</p>
+                    <p className="text-gray-900">{user.farmerProfile.farmDistrict || "N/A"}</p>
                   )}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-white/60">Farm Sector</Label>
+                  <Label className="text-gray-900/60">Farm Sector</Label>
                   {isEditing ? (
                     <Input
                       value={editUserData.farmerProfile.farmSector}
@@ -659,14 +655,14 @@ export default function UserDetailsPage() {
                         ...editUserData,
                         farmerProfile: { ...editUserData.farmerProfile, farmSector: e.target.value }
                       })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                     />
                   ) : (
-                    <p className="text-white">{user.farmerProfile.farmSector || "N/A"}</p>
+                    <p className="text-gray-900">{user.farmerProfile.farmSector || "N/A"}</p>
                   )}
                 </div>
                 <div>
-                  <Label className="text-white/60">Farm Cell</Label>
+                  <Label className="text-gray-900/60">Farm Cell</Label>
                   {isEditing ? (
                     <Input
                       value={editUserData.farmerProfile.farmCell}
@@ -674,15 +670,15 @@ export default function UserDetailsPage() {
                         ...editUserData,
                         farmerProfile: { ...editUserData.farmerProfile, farmCell: e.target.value }
                       })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                     />
                   ) : (
-                    <p className="text-white">{user.farmerProfile.farmCell || "N/A"}</p>
+                    <p className="text-gray-900">{user.farmerProfile.farmCell || "N/A"}</p>
                   )}
                 </div>
               </div>
               <div>
-                <Label className="text-white/60">Farm Village</Label>
+                <Label className="text-gray-900/60">Farm Village</Label>
                 {isEditing ? (
                   <Input
                     value={editUserData.farmerProfile.farmVillage}
@@ -690,10 +686,10 @@ export default function UserDetailsPage() {
                       ...editUserData,
                       farmerProfile: { ...editUserData.farmerProfile, farmVillage: e.target.value }
                     })}
-                    className={`${dashboardTheme.input} border-gray-700`}
+                    className={`${dashboardTheme.input} border-gray-300`}
                   />
                 ) : (
-                  <p className="text-white">{user.farmerProfile.farmVillage || "N/A"}</p>
+                  <p className="text-gray-900">{user.farmerProfile.farmVillage || "N/A"}</p>
                 )}
               </div>
             </CardContent>
@@ -701,9 +697,9 @@ export default function UserDetailsPage() {
         )}
 
         {user.role === 'ASSESSOR' && user.assessorProfile && (
-          <Card className={`${dashboardTheme.card} border-gray-800`}>
+          <Card className={`${dashboardTheme.card} border-gray-200`}>
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-gray-900 flex items-center gap-2">
                 <Award className="h-5 w-5" />
                 Assessor Profile
               </CardTitle>
@@ -711,7 +707,7 @@ export default function UserDetailsPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-white/60">Specialization</Label>
+                  <Label className="text-gray-900/60">Specialization</Label>
                   {isEditing ? (
                     <Input
                       value={editUserData.assessorProfile.specialization}
@@ -719,14 +715,14 @@ export default function UserDetailsPage() {
                         ...editUserData,
                         assessorProfile: { ...editUserData.assessorProfile, specialization: e.target.value }
                       })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                     />
                   ) : (
-                    <p className="text-white">{user.assessorProfile.specialization || "N/A"}</p>
+                    <p className="text-gray-900">{user.assessorProfile.specialization || "N/A"}</p>
                   )}
                 </div>
                 <div>
-                  <Label className="text-white/60">Experience Years</Label>
+                  <Label className="text-gray-900/60">Experience Years</Label>
                   {isEditing ? (
                     <Input
                       type="number"
@@ -735,15 +731,15 @@ export default function UserDetailsPage() {
                         ...editUserData,
                         assessorProfile: { ...editUserData.assessorProfile, experienceYears: parseInt(e.target.value) || 0 }
                       })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                     />
                   ) : (
-                    <p className="text-white">{user.assessorProfile.experienceYears || 0}</p>
+                    <p className="text-gray-900">{user.assessorProfile.experienceYears || 0}</p>
                   )}
                 </div>
               </div>
               <div>
-                <Label className="text-white/60 flex items-center gap-2">
+                <Label className="text-gray-900/60 flex items-center gap-2">
                   <ImageIcon className="h-4 w-4" />
                   Profile Photo URL
                 </Label>
@@ -754,14 +750,14 @@ export default function UserDetailsPage() {
                       ...editUserData,
                       assessorProfile: { ...editUserData.assessorProfile, profilePhotoUrl: e.target.value }
                     })}
-                    className={`${dashboardTheme.input} border-gray-700`}
+                    className={`${dashboardTheme.input} border-gray-300`}
                   />
                 ) : (
-                  <p className="text-white break-all">{user.assessorProfile.profilePhotoUrl || "N/A"}</p>
+                  <p className="text-gray-900 break-all">{user.assessorProfile.profilePhotoUrl || "N/A"}</p>
                 )}
               </div>
               <div>
-                <Label className="text-white/60">Address</Label>
+                <Label className="text-gray-900/60">Address</Label>
                 {isEditing ? (
                   <Input
                     value={editUserData.assessorProfile.address}
@@ -769,14 +765,14 @@ export default function UserDetailsPage() {
                       ...editUserData,
                       assessorProfile: { ...editUserData.assessorProfile, address: e.target.value }
                     })}
-                    className={`${dashboardTheme.input} border-gray-700`}
+                    className={`${dashboardTheme.input} border-gray-300`}
                   />
                 ) : (
-                  <p className="text-white">{user.assessorProfile.address || "N/A"}</p>
+                  <p className="text-gray-900">{user.assessorProfile.address || "N/A"}</p>
                 )}
               </div>
               <div>
-                <Label className="text-white/60">Bio</Label>
+                <Label className="text-gray-900/60">Bio</Label>
                 {isEditing ? (
                   <Textarea
                     value={editUserData.assessorProfile.bio}
@@ -784,10 +780,10 @@ export default function UserDetailsPage() {
                       ...editUserData,
                       assessorProfile: { ...editUserData.assessorProfile, bio: e.target.value }
                     })}
-                    className={`${dashboardTheme.input} border-gray-700 min-h-[100px]`}
+                    className={`${dashboardTheme.input} border-gray-300 min-h-[100px]`}
                   />
                 ) : (
-                  <p className="text-white whitespace-pre-wrap">{user.assessorProfile.bio || "N/A"}</p>
+                  <p className="text-gray-900 whitespace-pre-wrap">{user.assessorProfile.bio || "N/A"}</p>
                 )}
               </div>
             </CardContent>
@@ -795,9 +791,9 @@ export default function UserDetailsPage() {
         )}
 
         {user.role === 'INSURER' && user.insurerProfile && (
-          <Card className={`${dashboardTheme.card} border-gray-800`}>
+          <Card className={`${dashboardTheme.card} border-gray-200`}>
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-gray-900 flex items-center gap-2">
                 <Building2 className="h-5 w-5" />
                 Insurer Profile
               </CardTitle>
@@ -805,7 +801,7 @@ export default function UserDetailsPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-white/60">Company Name</Label>
+                  <Label className="text-gray-900/60">Company Name</Label>
                   {isEditing ? (
                     <Input
                       value={editUserData.insurerProfile.companyName}
@@ -813,14 +809,14 @@ export default function UserDetailsPage() {
                         ...editUserData,
                         insurerProfile: { ...editUserData.insurerProfile, companyName: e.target.value }
                       })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                     />
                   ) : (
-                    <p className="text-white">{user.insurerProfile.companyName || "N/A"}</p>
+                    <p className="text-gray-900">{user.insurerProfile.companyName || "N/A"}</p>
                   )}
                 </div>
                 <div>
-                  <Label className="text-white/60">Contact Person</Label>
+                  <Label className="text-gray-900/60">Contact Person</Label>
                   {isEditing ? (
                     <Input
                       value={editUserData.insurerProfile.contactPerson}
@@ -828,16 +824,16 @@ export default function UserDetailsPage() {
                         ...editUserData,
                         insurerProfile: { ...editUserData.insurerProfile, contactPerson: e.target.value }
                       })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                     />
                   ) : (
-                    <p className="text-white">{user.insurerProfile.contactPerson || "N/A"}</p>
+                    <p className="text-gray-900">{user.insurerProfile.contactPerson || "N/A"}</p>
                   )}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-white/60 flex items-center gap-2">
+                  <Label className="text-gray-900/60 flex items-center gap-2">
                     <Globe className="h-4 w-4" />
                     Website
                   </Label>
@@ -848,14 +844,14 @@ export default function UserDetailsPage() {
                         ...editUserData,
                         insurerProfile: { ...editUserData.insurerProfile, website: e.target.value }
                       })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                     />
                   ) : (
-                    <p className="text-white break-all">{user.insurerProfile.website || "N/A"}</p>
+                    <p className="text-gray-900 break-all">{user.insurerProfile.website || "N/A"}</p>
                   )}
                 </div>
                 <div>
-                  <Label className="text-white/60">License Number</Label>
+                  <Label className="text-gray-900/60">License Number</Label>
                   {isEditing ? (
                     <Input
                       value={editUserData.insurerProfile.licenseNumber}
@@ -863,16 +859,16 @@ export default function UserDetailsPage() {
                         ...editUserData,
                         insurerProfile: { ...editUserData.insurerProfile, licenseNumber: e.target.value }
                       })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                     />
                   ) : (
-                    <p className="text-white">{user.insurerProfile.licenseNumber || "N/A"}</p>
+                    <p className="text-gray-900">{user.insurerProfile.licenseNumber || "N/A"}</p>
                   )}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-white/60 flex items-center gap-2">
+                  <Label className="text-gray-900/60 flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
                     Registration Date
                   </Label>
@@ -884,14 +880,14 @@ export default function UserDetailsPage() {
                         ...editUserData,
                         insurerProfile: { ...editUserData.insurerProfile, registrationDate: e.target.value }
                       })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                     />
                   ) : (
-                    <p className="text-white">{user.insurerProfile.registrationDate || "N/A"}</p>
+                    <p className="text-gray-900">{user.insurerProfile.registrationDate || "N/A"}</p>
                   )}
                 </div>
                 <div>
-                  <Label className="text-white/60 flex items-center gap-2">
+                  <Label className="text-gray-900/60 flex items-center gap-2">
                     <ImageIcon className="h-4 w-4" />
                     Company Logo URL
                   </Label>
@@ -902,15 +898,15 @@ export default function UserDetailsPage() {
                         ...editUserData,
                         insurerProfile: { ...editUserData.insurerProfile, companyLogoUrl: e.target.value }
                       })}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                      className={`${dashboardTheme.input} border-gray-300`}
                     />
                   ) : (
-                    <p className="text-white break-all">{user.insurerProfile.companyLogoUrl || "N/A"}</p>
+                    <p className="text-gray-900 break-all">{user.insurerProfile.companyLogoUrl || "N/A"}</p>
                   )}
                 </div>
               </div>
               <div>
-                <Label className="text-white/60">Address</Label>
+                <Label className="text-gray-900/60">Address</Label>
                 {isEditing ? (
                   <Input
                     value={editUserData.insurerProfile.address}
@@ -918,14 +914,14 @@ export default function UserDetailsPage() {
                       ...editUserData,
                       insurerProfile: { ...editUserData.insurerProfile, address: e.target.value }
                     })}
-                    className={`${dashboardTheme.input} border-gray-700`}
+                    className={`${dashboardTheme.input} border-gray-300`}
                   />
                 ) : (
-                  <p className="text-white">{user.insurerProfile.address || "N/A"}</p>
+                  <p className="text-gray-900">{user.insurerProfile.address || "N/A"}</p>
                 )}
               </div>
               <div>
-                <Label className="text-white/60">Company Description</Label>
+                <Label className="text-gray-900/60">Company Description</Label>
                 {isEditing ? (
                   <Textarea
                     value={editUserData.insurerProfile.companyDescription}
@@ -933,10 +929,10 @@ export default function UserDetailsPage() {
                       ...editUserData,
                       insurerProfile: { ...editUserData.insurerProfile, companyDescription: e.target.value }
                     })}
-                    className={`${dashboardTheme.input} border-gray-700 min-h-[100px]`}
+                    className={`${dashboardTheme.input} border-gray-300 min-h-[100px]`}
                   />
                 ) : (
-                  <p className="text-white whitespace-pre-wrap">{user.insurerProfile.companyDescription || "N/A"}</p>
+                  <p className="text-gray-900 whitespace-pre-wrap">{user.insurerProfile.companyDescription || "N/A"}</p>
                 )}
               </div>
             </CardContent>

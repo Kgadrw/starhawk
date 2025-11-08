@@ -74,7 +74,7 @@ export default function RoleSelection() {
 
   return (
     <CustomScrollbar>
-      <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 min-h-screen">
+      <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50 min-h-screen">
         {/* Navigation */}
         <HomeNavbar />
 
@@ -111,15 +111,15 @@ export default function RoleSelection() {
           transition={{ duration: 0.8, delay: 0.2 }}
           className="text-center mb-20"
         >
-          <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
-            <Sparkles className="h-4 w-4 text-yellow-400" />
-            <span className="text-white/90 text-sm font-medium">Choose Your Portal</span>
+          <div className="inline-flex items-center space-x-2 bg-green-50 border border-green-200 px-4 py-2 rounded-full mb-6 shadow-sm">
+            <Sparkles className="h-4 w-4 text-green-600" />
+            <span className="text-gray-700 text-sm font-medium">Choose Your Portal</span>
           </div>
-          <h2 className="text-6xl font-bold mb-6">
-            <span className="text-white">Welcome to </span>
-            <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">the Future</span>
+          <h2 className="text-5xl md:text-6xl font-bold mb-6">
+            <span className="text-gray-900">Welcome to </span>
+            <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">the Future</span>
           </h2>
-          <p className="text-xl text-white/80 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
             Select your role to access the appropriate portal and begin your journey with our cutting-edge digital insurance platform.
           </p>
         </motion.div>
@@ -139,44 +139,46 @@ export default function RoleSelection() {
                   className="block group cursor-pointer" 
                   onClick={() => setIsFarmerModalOpen(true)}
                 >
-                <Card className="bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-500 rounded-2xl cursor-pointer h-full relative overflow-hidden">
+                <Card className={`bg-white border-2 ${role.borderColor} hover:shadow-xl transition-all duration-300 rounded-3xl cursor-pointer h-full relative overflow-hidden group`}>
                   {/* Badge */}
                   {role.badge && (
                     <div className="absolute top-4 right-4 z-10">
-                      <div className="bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full flex items-center space-x-1 border border-white/20">
-                        <Star className="h-3 w-3" />
+                      <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center space-x-1 shadow-md">
+                        <Star className="h-3 w-3 fill-white" />
                         <span>{role.badge}</span>
                       </div>
                     </div>
                   )}
 
-                  <CardHeader className="pb-6 relative z-10">
+                  <CardHeader className="pb-6 relative z-10 pt-8">
                     <div className="flex items-center justify-center mb-6">
-                      <div className="w-20 h-20 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-500">
-                        <Icon className="h-10 w-10 text-white" />
+                      <div className={`w-24 h-24 bg-gradient-to-br ${role.iconBg} border-2 ${role.borderColor} rounded-3xl flex items-center justify-center group-hover:scale-110 group-hover:shadow-lg transition-all duration-300`}>
+                        <Icon className={`h-12 w-12 ${role.iconColor} group-hover:scale-110 transition-all duration-300`} />
                       </div>
                     </div>
-                    <CardTitle className="text-xl font-bold text-center text-white group-hover:text-green-200 transition-colors">
+                    <CardTitle className="text-2xl font-bold text-center text-gray-900 group-hover:text-green-600 transition-colors">
                       {role.title}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0 relative z-10">
-                    <p className="text-white/80 text-center mb-6 leading-relaxed text-sm">
+                  <CardContent className="pt-0 relative z-10 px-6 pb-6">
+                    <p className="text-gray-600 text-center mb-6 leading-relaxed">
                       {role.description}
                     </p>
                     
                     {/* Features List */}
-                    <div className="space-y-2 mb-6">
+                    <div className="space-y-3 mb-8">
                       {role.features.map((feature, featureIndex) => (
-                        <div key={featureIndex} className="flex items-center text-xs text-white/70">
-                          <CheckCircle className="h-3 w-3 text-green-400 mr-2 flex-shrink-0" />
+                        <div key={featureIndex} className="flex items-center text-sm text-gray-700">
+                          <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                            <CheckCircle className="h-3 w-3 text-green-600" />
+                          </div>
                           <span>{feature}</span>
                         </div>
                       ))}
                     </div>
 
                     <Button 
-                      className="w-full bg-green-600 hover:bg-green-700 border-0 text-white py-3 rounded-xl font-medium text-base shadow-lg shadow-green-500/30 transition-all duration-300 group-hover:scale-105"
+                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3.5 rounded-xl font-semibold text-base shadow-md hover:shadow-lg transition-all duration-300 group-hover:scale-[1.02]"
                     >
                       Register Now
                       <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -194,44 +196,46 @@ export default function RoleSelection() {
                 transition={{ duration: 0.6, delay: 0.4 + index * 0.1 }}
               >
                 <Link to={role.href} className="block group">
-                  <Card className="bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-500 rounded-2xl cursor-pointer h-full relative overflow-hidden">
+                  <Card className={`bg-white border-2 ${role.borderColor} hover:shadow-xl transition-all duration-300 rounded-3xl cursor-pointer h-full relative overflow-hidden group`}>
                   {/* Badge */}
                   {role.badge && (
                     <div className="absolute top-4 right-4 z-10">
-                        <div className="bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full flex items-center space-x-1 border border-white/20">
-                        <Star className="h-3 w-3" />
+                        <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center space-x-1 shadow-md">
+                        <Star className="h-3 w-3 fill-white" />
                         <span>{role.badge}</span>
                       </div>
                     </div>
                   )}
 
-                  <CardHeader className="pb-6 relative z-10">
+                  <CardHeader className="pb-6 relative z-10 pt-8">
                     <div className="flex items-center justify-center mb-6">
-                        <div className="w-20 h-20 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-500">
-                          <Icon className="h-10 w-10 text-white" />
+                        <div className={`w-24 h-24 bg-gradient-to-br ${role.iconBg} border-2 ${role.borderColor} rounded-3xl flex items-center justify-center group-hover:scale-110 group-hover:shadow-lg transition-all duration-300`}>
+                          <Icon className={`h-12 w-12 ${role.iconColor} group-hover:scale-110 transition-all duration-300`} />
                       </div>
                     </div>
-                      <CardTitle className="text-xl font-bold text-center text-white group-hover:text-green-200 transition-colors">
+                      <CardTitle className="text-2xl font-bold text-center text-gray-900 group-hover:text-green-600 transition-colors">
                       {role.title}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0 relative z-10">
-                      <p className="text-white/80 text-center mb-6 leading-relaxed text-sm">
+                  <CardContent className="pt-0 relative z-10 px-6 pb-6">
+                      <p className="text-gray-600 text-center mb-6 leading-relaxed">
                       {role.description}
                     </p>
                     
                     {/* Features List */}
-                      <div className="space-y-2 mb-6">
+                      <div className="space-y-3 mb-8">
                       {role.features.map((feature, featureIndex) => (
-                          <div key={featureIndex} className="flex items-center text-xs text-white/70">
-                            <CheckCircle className="h-3 w-3 text-green-400 mr-2 flex-shrink-0" />
+                          <div key={featureIndex} className="flex items-center text-sm text-gray-700">
+                            <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                              <CheckCircle className="h-3 w-3 text-green-600" />
+                            </div>
                           <span>{feature}</span>
                         </div>
                       ))}
                     </div>
 
                     <Button 
-                        className="w-full bg-green-600 hover:bg-green-700 border-0 text-white py-3 rounded-xl font-medium text-base shadow-lg shadow-green-500/30 transition-all duration-300 group-hover:scale-105"
+                        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3.5 rounded-xl font-semibold text-base shadow-md hover:shadow-lg transition-all duration-300 group-hover:scale-[1.02]"
                     >
                       Access Portal
                         <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />

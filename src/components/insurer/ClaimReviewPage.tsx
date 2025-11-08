@@ -111,7 +111,7 @@ export default function ClaimReviewPage() {
       case "approved": return "bg-green-100 text-green-800";
       case "rejected": return "bg-red-100 text-red-800";
       case "under_investigation": return "bg-blue-100 text-blue-800";
-      default: return "bg-gray-100 text-white/90";
+      default: return "bg-gray-100 text-gray-700 border border-gray-200";
     }
   };
 
@@ -200,11 +200,11 @@ export default function ClaimReviewPage() {
       <CardContent className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <Label className="text-sm font-medium text-white/70 dark:text-gray-400">Claim ID</Label>
+            <Label className="text-sm font-medium text-gray-700">Claim ID</Label>
             <p className="text-lg font-semibold">{currentClaim?._id || currentClaim?.id || 'N/A'}</p>
           </div>
           <div>
-            <Label className="text-sm font-medium text-white/70 dark:text-gray-400">Status</Label>
+            <Label className="text-sm font-medium text-gray-700 dark:text-gray-400">Status</Label>
             <div className="mt-1">
               <Badge className={getStatusColor(currentClaim?.status || "")}>
                 {getStatusIcon(currentClaim?.status || "")}
@@ -216,20 +216,20 @@ export default function ClaimReviewPage() {
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <Label className="text-sm font-medium text-white/70 dark:text-gray-400">Claim Amount</Label>
+            <Label className="text-sm font-medium text-gray-700 dark:text-gray-400">Claim Amount</Label>
             <p className="text-lg font-semibold text-green-600">
               {(currentClaim?.amount || currentClaim?.claimAmount || 0).toLocaleString()} RWF
             </p>
           </div>
           <div>
-            <Label className="text-sm font-medium text-white/70 dark:text-gray-400">Filed Date</Label>
+            <Label className="text-sm font-medium text-gray-700 dark:text-gray-400">Filed Date</Label>
             <p className="text-lg">{currentClaim?.filedDate || currentClaim?.createdAt || 'N/A'}</p>
           </div>
         </div>
 
         <div>
-          <Label className="text-sm font-medium text-white/70 dark:text-gray-400">Description</Label>
-          <p className="text-white/80 mt-1">{currentClaim?.description || currentClaim?.lossDescription || 'No description available'}</p>
+          <Label className="text-sm font-medium text-gray-700 dark:text-gray-400">Description</Label>
+          <p className="text-gray-900 mt-1">{currentClaim?.description || currentClaim?.lossDescription || 'No description available'}</p>
         </div>
       </CardContent>
     </Card>
@@ -246,7 +246,7 @@ export default function ClaimReviewPage() {
       <CardContent className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <Label className="text-sm font-medium text-white/70">Farmer Name</Label>
+            <Label className="text-sm font-medium text-gray-700">Farmer Name</Label>
             <p className="text-lg font-semibold">
               {currentClaim?.farmer?.firstName && currentClaim?.farmer?.lastName
                 ? `${currentClaim.farmer.firstName} ${currentClaim.farmer.lastName}`
@@ -254,19 +254,19 @@ export default function ClaimReviewPage() {
             </p>
           </div>
           <div>
-            <Label className="text-sm font-medium text-white/70">Farmer ID</Label>
+            <Label className="text-sm font-medium text-gray-700">Farmer ID</Label>
             <p className="text-lg">{currentClaim?.farmerId || currentClaim?.farmer?._id || currentClaim?.farmer?.id || 'N/A'}</p>
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <Label className="text-sm font-medium text-white/70">Location</Label>
-            <p className="text-white/80">{currentClaim?.location || currentClaim?.farm?.location || 'N/A'}</p>
+            <Label className="text-sm font-medium text-gray-700">Location</Label>
+            <p className="text-gray-900">{currentClaim?.location || currentClaim?.farm?.location || 'N/A'}</p>
           </div>
           <div>
-            <Label className="text-sm font-medium text-white/70">Farm Size</Label>
-            <p className="text-white/80">{currentClaim?.farmSize || currentClaim?.farm?.size || 'N/A'} {currentClaim?.farmSize ? 'hectares' : ''}</p>
+            <Label className="text-sm font-medium text-gray-700">Farm Size</Label>
+            <p className="text-gray-900">{currentClaim?.farmSize || currentClaim?.farm?.size || 'N/A'} {currentClaim?.farmSize ? 'hectares' : ''}</p>
           </div>
         </div>
 
@@ -295,40 +295,40 @@ export default function ClaimReviewPage() {
       <CardContent className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <Label className="text-sm font-medium text-white/70">Policy ID</Label>
+            <Label className="text-sm font-medium text-gray-700">Policy ID</Label>
             <p className="text-lg font-semibold">{currentClaim?.policyId}</p>
           </div>
           <div>
-            <Label className="text-sm font-medium text-white/70">Crop Type</Label>
+            <Label className="text-sm font-medium text-gray-700">Crop Type</Label>
             <p className="text-lg">{currentClaim?.cropType}</p>
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
           <div>
-            <Label className="text-sm font-medium text-white/70">Coverage</Label>
+            <Label className="text-sm font-medium text-gray-700">Coverage</Label>
             <p className="text-lg font-semibold text-blue-600">
               {(currentClaim?.policy?.coverageAmount || currentClaim?.policy?.coverage || currentClaim?.policyDetails?.coverage || 0).toLocaleString()} RWF
             </p>
           </div>
           <div>
-            <Label className="text-sm font-medium text-white/70">Premium</Label>
+            <Label className="text-sm font-medium text-gray-700">Premium</Label>
             <p className="text-lg">{(currentClaim?.policy?.premiumAmount || currentClaim?.policy?.premium || currentClaim?.policyDetails?.premium || 0).toLocaleString()} RWF</p>
           </div>
           <div>
-            <Label className="text-sm font-medium text-white/70">Deductible</Label>
+            <Label className="text-sm font-medium text-gray-700">Deductible</Label>
             <p className="text-lg">{(currentClaim?.policy?.deductible || currentClaim?.policyDetails?.deductible || 0).toLocaleString()} RWF</p>
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <Label className="text-sm font-medium text-white/70">Policy Start</Label>
-            <p className="text-white/80">{currentClaim?.policy?.startDate || currentClaim?.policy?.validityPeriod?.start || currentClaim?.policyDetails?.startDate || 'N/A'}</p>
+            <Label className="text-sm font-medium text-gray-700">Policy Start</Label>
+            <p className="text-gray-900">{currentClaim?.policy?.startDate || currentClaim?.policy?.validityPeriod?.start || currentClaim?.policyDetails?.startDate || 'N/A'}</p>
           </div>
           <div>
-            <Label className="text-sm font-medium text-white/70">Policy End</Label>
-            <p className="text-white/80">{currentClaim?.policy?.endDate || currentClaim?.policy?.validityPeriod?.end || currentClaim?.policy?.validityPeriod || currentClaim?.policyDetails?.endDate || 'N/A'}</p>
+            <Label className="text-sm font-medium text-gray-700">Policy End</Label>
+            <p className="text-gray-900">{currentClaim?.policy?.endDate || currentClaim?.policy?.validityPeriod?.end || currentClaim?.policy?.validityPeriod || currentClaim?.policyDetails?.endDate || 'N/A'}</p>
           </div>
         </div>
       </CardContent>
@@ -346,7 +346,7 @@ export default function ClaimReviewPage() {
       <CardContent className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <Label className="text-sm font-medium text-white/70">Assessor</Label>
+            <Label className="text-sm font-medium text-gray-700">Assessor</Label>
             <p className="text-lg font-semibold">
               {currentClaim?.assessor?.firstName && currentClaim?.assessor?.lastName
                 ? `${currentClaim.assessor.firstName} ${currentClaim.assessor.lastName}`
@@ -354,14 +354,14 @@ export default function ClaimReviewPage() {
             </p>
           </div>
           <div>
-            <Label className="text-sm font-medium text-white/70">Assessment Date</Label>
+            <Label className="text-sm font-medium text-gray-700">Assessment Date</Label>
             <p className="text-lg">{currentClaim?.assessmentDate || currentClaim?.assessment?.date || currentClaim?.createdAt || 'N/A'}</p>
           </div>
         </div>
 
         <div>
-          <Label className="text-sm font-medium text-white/70">Assessment Notes</Label>
-          <p className="text-white/80 mt-1">{currentClaim?.assessmentNotes || currentClaim?.assessment?.notes || currentClaim?.notes || 'No assessment notes available'}</p>
+          <Label className="text-sm font-medium text-gray-700">Assessment Notes</Label>
+          <p className="text-gray-900 mt-1">{currentClaim?.assessmentNotes || currentClaim?.assessment?.notes || currentClaim?.notes || 'No assessment notes available'}</p>
         </div>
 
         <div className="flex space-x-4">
@@ -398,7 +398,7 @@ export default function ClaimReviewPage() {
                     className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
                   />
                 </div>
-                <p className="text-sm text-white/70 text-center">{photo.description || 'Claim photo'}</p>
+                <p className="text-sm text-gray-700 text-center">{photo.description || 'Claim photo'}</p>
               </div>
             ))
           ) : currentClaim?.damagePhotos && Array.isArray(currentClaim.damagePhotos) && currentClaim.damagePhotos.length > 0 ? (
@@ -411,11 +411,11 @@ export default function ClaimReviewPage() {
                     className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
                   />
                 </div>
-                <p className="text-sm text-white/70 text-center">Damage photo {index + 1}</p>
+                <p className="text-sm text-gray-700 text-center">Damage photo {index + 1}</p>
               </div>
             ))
           ) : (
-            <p className="text-white/60 col-span-full text-center py-8">No photos available</p>
+            <p className="text-gray-500 col-span-full text-center py-8">No photos available</p>
           )}
         </div>
       </CardContent>
@@ -449,7 +449,7 @@ export default function ClaimReviewPage() {
               </div>
             ))
           ) : (
-            <p className="text-white/60 text-center py-8">No documents available</p>
+            <p className="text-gray-500 text-center py-8">No documents available</p>
           )}
         </div>
       </CardContent>
@@ -535,13 +535,13 @@ export default function ClaimReviewPage() {
           </Button>
           <div>
             <h2 className="text-2xl font-bold text-white">Claim Review</h2>
-            <p className="text-white/70">Review and make decisions on insurance claims</p>
+            <p className="text-gray-700">Review and make decisions on insurance claims</p>
           </div>
         </div>
         
         <div className="flex items-center space-x-2">
           {loading ? (
-            <div className="text-white/60">Loading claims...</div>
+            <div className="text-gray-500">Loading claims...</div>
           ) : (
             <Select value={selectedClaimId} onValueChange={setSelectedClaimId}>
               <SelectTrigger className="w-48">
@@ -570,14 +570,14 @@ export default function ClaimReviewPage() {
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <Clock className="h-12 w-12 animate-spin text-blue-500 mx-auto mb-4" />
-            <p className="text-white/60">Loading claim details...</p>
+            <p className="text-gray-500">Loading claim details...</p>
           </div>
         </div>
       ) : !currentClaim ? (
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <FileText className="h-12 w-12 mx-auto mb-4 text-white/40" />
-            <p className="text-white/60">Please select a claim to review</p>
+            <p className="text-gray-500">Please select a claim to review</p>
           </div>
         </div>
       ) : (

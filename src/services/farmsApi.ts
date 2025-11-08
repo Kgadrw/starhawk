@@ -1,8 +1,8 @@
 // Farms API Service
-// Use proxy in development to avoid CORS issues, full URL in production
-const FARMS_BASE_URL = import.meta.env.DEV
-  ? '/api/v1/farms'
-  : 'https://starhawk-backend-agriplatform.onrender.com/api/v1/farms';
+// Using centralized API configuration
+import { API_BASE_URL, API_ENDPOINTS, getAuthToken } from '@/config/api';
+
+const FARMS_BASE_URL = `${API_BASE_URL}${API_ENDPOINTS.FARMS.BASE}`;
 
 interface FarmData {
   name: string;
@@ -40,7 +40,7 @@ class FarmsApiService {
   }
 
   private getToken(): string | null {
-    return localStorage.getItem('token');
+    return getAuthToken();
   }
 
   private async request<T>(
@@ -64,12 +64,41 @@ class FarmsApiService {
       headers,
     };
 
+    // Log request details for debugging
+    if (options.method === 'POST' || options.method === 'PUT') {
+      let bodyData = null;
+      try {
+        bodyData = options.body ? JSON.parse(options.body as string) : null;
+      } catch (e) {
+        bodyData = options.body;
+      }
+      
+      console.log('🌐 API Request:', {
+        method: options.method || 'GET',
+        url: url,
+        headers: Object.keys(headers),
+        hasAuth: !!headers.Authorization,
+        body: bodyData
+      });
+    }
+
     try {
       const response = await fetch(url, config);
 
       if (response.status === 401) {
+        // Clear all authentication data
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('role');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('phoneNumber');
+        localStorage.removeItem('email');
+        
+        // Redirect to login page
+        if (typeof window !== 'undefined') {
+          window.location.href = '/';
+        }
+        
         throw new Error('Authentication required. Please log in again.');
       }
 
@@ -83,7 +112,21 @@ class FarmsApiService {
       }
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || `HTTP error! status: ${response.status}`);
+        // Log the full error response for debugging
+        console.error('API Error Response:', JSON.stringify({
+          status: response.status,
+          statusText: response.statusText,
+          url: url,
+          data: data
+        }, null, 2));
+        
+        // Try to extract more detailed error information
+        const errorMessage = data.message || data.error || data.details || data.title || `HTTP error! status: ${response.status}`;
+        const errorDetails = data.errors ? JSON.stringify(data.errors) : '';
+        const instance = data.instance ? ` (${data.instance})` : '';
+        const fullError = errorDetails ? `${errorMessage}${instance} - ${errorDetails}` : `${errorMessage}${instance}`;
+        
+        throw new Error(fullError);
       }
 
       return data;
@@ -94,27 +137,79 @@ class FarmsApiService {
   }
 
   // Create New Farm
+  // API: POST /api/v1/farms
+  // Request body format (per API spec):
+  // {
+  //   "name": "Main Farm",
+  //   "location": {
+  //     "type": "Point",
+  //     "coordinates": [longitude, latitude]
+  //   },
+  //   "boundary": { "type": "Polygon", "coordinates": [...] }, // Optional
+  //   "cropType": "MAIZE" // Optional, uppercase
+  // }
   async createFarm(farmData: FarmData) {
+    const coordinates = farmData.coordinates || farmData.location?.coordinates;
+    
+    if (!coordinates || !Array.isArray(coordinates) || coordinates.length !== 2) {
+      throw new Error('Invalid coordinates. Expected [longitude, latitude] array.');
+    }
+
+    // Build request body matching exact API specification
     const requestBody: any = {
       name: farmData.name,
       location: {
         type: 'Point',
-        coordinates: farmData.coordinates || farmData.location?.coordinates,
+        coordinates: coordinates, // [longitude, latitude] format
       },
     };
 
+    // Add optional boundary if provided
     if (farmData.boundary) {
-      requestBody.boundary = farmData.boundary;
+      requestBody.boundary = {
+        type: 'Polygon',
+        coordinates: farmData.boundary.coordinates || farmData.boundary,
+      };
     }
 
+    // Add optional cropType if provided (should be uppercase per API spec)
     if (farmData.cropType) {
       requestBody.cropType = farmData.cropType;
     }
 
-    return this.request<any>('', {
+    // Validate request body before sending
+    if (!requestBody.name) {
+      throw new Error('Farm name is required');
+    }
+    if (!requestBody.location || !requestBody.location.coordinates) {
+      throw new Error('Location coordinates are required');
+    }
+    if (!requestBody.boundary || !requestBody.boundary.coordinates) {
+      throw new Error('Boundary coordinates are required');
+    }
+
+    console.log('📤 Sending farm creation request (POST /api/v1/farms):', JSON.stringify(requestBody, null, 2));
+    console.log('📤 Request details:', {
+      url: `${this.baseURL}`,
+      method: 'POST',
+      hasName: !!requestBody.name,
+      hasLocation: !!requestBody.location,
+      locationType: requestBody.location?.type,
+      locationCoordinates: requestBody.location?.coordinates,
+      hasBoundary: !!requestBody.boundary,
+      boundaryType: requestBody.boundary?.type,
+      boundaryCoordinatesCount: requestBody.boundary?.coordinates?.[0]?.length,
+      cropType: requestBody.cropType || 'Not provided'
+    });
+
+    const response = await this.request<any>('', {
       method: 'POST',
       body: JSON.stringify(requestBody),
     });
+
+    console.log('✅ Farm creation API response received:', response);
+    
+    return response;
   }
 
   // List All Farms
