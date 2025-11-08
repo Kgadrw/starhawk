@@ -1,102 +1,116 @@
 import { Zap, Satellite, Camera, Shield, Database } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 
+const SOLUTIONS = [
+  {
+    title: "Drone Surveillance",
+    summary: "High-resolution aerial monitoring for precise crop assessment.",
+    icon: Camera,
+    points: [
+      "Capture field images in minutes",
+      "Detect anomalies early",
+      "Monitor growth stages continuously"
+    ]
+  },
+  {
+    title: "Satellite Analytics",
+    summary: "Long-range crop intelligence powered by multi-spectral imagery.",
+    icon: Satellite,
+    points: [
+      "Assess vegetation health trends",
+      "Track moisture and drought risk",
+      "Evaluate seasonal performance"
+    ]
+  },
+  {
+    title: "AI Risk Assessment",
+    summary: "Predictive scoring that blends field data with historical baselines.",
+    icon: Shield,
+    points: [
+      "Automated risk classifications",
+      "Scenario modelling for insurers",
+      "Real-time portfolio heatmaps"
+    ]
+  },
+  {
+    title: "Smart Insurance",
+    summary: "Guided policy workflows and streamlined claims management.",
+    icon: Database,
+    points: [
+      "Configurable product templates",
+      "Automated document handling",
+      "Live claims tracking dashboards"
+    ]
+  }
+];
+
 export function FeaturesSection() {
-  const features = [
-    {
-      title: 'Drone Surveillance',
-      description: 'Advanced aerial monitoring with high-resolution imaging for precise field assessment',
-      icon: Camera,
-      image: '/surviellance.webp'
-    },
-    {
-      title: 'Satellite Analytics',
-      description: 'AI-powered analysis of satellite imagery for comprehensive crop monitoring',
-      icon: Satellite,
-      image: '/satelite.jpg'
-    },
-    {
-      title: 'AI Risk Assessment',
-      description: 'Intelligent risk evaluation using machine learning and predictive analytics',
-      icon: Shield,
-      image: '/risk.png'
-    },
-    {
-      title: 'Smart Insurance',
-      description: 'Data-driven insurance solutions with automated claims processing',
-      icon: Database,
-      image: '/insurance.jpg'
-    }
-  ];
-
   return (
-    <section className="relative z-10 py-24 px-4 bg-gradient-to-b from-transparent to-gray-50">
-      {/* Grid Pattern Background */}
-      <div className="absolute inset-0 opacity-70 flex items-center justify-center">
-        <img
-          src="/lines.png"
-          alt="Grid lines"
-          className="w-3/4 h-3/4 object-contain"
-        />
-      </div>
+    <section className="relative bg-white py-16 sm:py-20">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
 
-      <div className="relative z-10 max-w-7xl mx-auto">
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }}
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.45 }}
+          className="text-center space-y-3 sm:space-y-4 mb-12 sm:mb-16"
         >
-          <div className="inline-flex items-center space-x-2 bg-green-50 border border-green-200 px-4 py-2 rounded-full mb-6">
-            <Zap className="h-4 w-4 text-green-600" />
-            <span className="text-gray-700 text-sm font-medium">Advanced Technology</span>
+          <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-600">
+            <Zap className="h-3.5 w-3.5" />
+            <span>Tech Solutions</span>
           </div>
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            <span className="text-gray-900">Technology </span>
-            <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">Solutions</span>
+          <h2 className="text-3xl sm:text-4xl font-semibold text-gray-900 tracking-tight">
+            Built for precision agriculture
           </h2>
-          <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Our platform integrates cutting-edge technology to deliver comprehensive agricultural monitoring and insurance services.
+          <p className="text-sm sm:text-base text-gray-600 max-w-2xl mx-auto">
+            Four connected modules give insurers, agronomists, and field teams the clarity they need—from season planning to claims settlement.
           </p>
         </motion.div>
-        
-        {/* Features Grid */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {features.map((feature, index) => {
-            const Icon = feature.icon;
+
+        <div className="grid gap-5 sm:gap-6 md:grid-cols-2">
+          {SOLUTIONS.map((solution, index) => {
+            const Icon = solution.icon;
             return (
               <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 50 }}
+                key={solution.title}
+                initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
+                viewport={{ once: true, margin: "-60px" }}
+                transition={{ duration: 0.35, delay: index * 0.08 }}
               >
-                <Card 
-                  className="group bg-white border border-gray-200 hover:border-green-300 hover:shadow-lg transition-all duration-500 rounded-2xl overflow-hidden h-full"
-                >
-                <div className="relative h-48 overflow-hidden">
-                  <img 
-                    src={feature.image} 
-                    alt={feature.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-white via-white/50 to-transparent"></div>
-                  <div className="absolute top-4 right-4 w-12 h-12 bg-green-100 border border-green-300 rounded-xl flex items-center justify-center">
-                    <Icon className="h-6 w-6 text-green-600" />
-                  </div>
-                </div>
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors">
-                    {feature.title}
-                  </h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">
-                    {feature.description}
-                  </p>
-                </CardContent>
-              </Card>
+                <Card className="h-full border-gray-200 hover:border-gray-300 transition-colors">
+                  <CardHeader className="pb-4 flex flex-row items-start gap-3">
+                    <div className="rounded-lg bg-gray-100 text-gray-700 p-2.5">
+                      <Icon className="h-4.5 w-4.5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg font-semibold text-gray-900">
+                        {solution.title}
+                      </CardTitle>
+                      <p className="mt-1 text-sm text-gray-600">
+                        {solution.summary}
+                      </p>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-0 space-y-3">
+                    <ul className="space-y-2">
+                      {solution.points.map(point => (
+                        <li key={point} className="flex items-start gap-2 text-sm text-gray-600">
+                          <span className="mt-1 h-1.5 w-1.5 rounded-full bg-gray-400" />
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <Button variant="ghost" className="px-0 text-sm text-gray-700 hover:text-gray-900">
+                      Explore capability
+                    </Button>
+                  </CardContent>
+                </Card>
               </motion.div>
             );
           })}

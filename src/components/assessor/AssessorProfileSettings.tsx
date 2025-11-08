@@ -278,7 +278,7 @@ export default function AssessorProfileSettings() {
       <Card>
         <CardHeader className="border-b border-white/10">
           <CardTitle className="flex items-center text-white">
-            <User className="h-5 w-5 mr-2 text-orange-400" />
+            <User className="h-5 w-5 mr-2 text-gray-300" />
             Personal Information
           </CardTitle>
         </CardHeader>
@@ -298,7 +298,7 @@ export default function AssessorProfileSettings() {
                 id="assessorId"
                 value={profileData.assessorId}
                 disabled
-                className="bg-orange-500/10 border-orange-600/30 text-orange-100 cursor-not-allowed"
+                className="bg-gray-500/10 border-gray-600/30 text-gray-200 cursor-not-allowed"
               />
             </div>
           </div>
@@ -347,7 +347,7 @@ export default function AssessorProfileSettings() {
       <Card>
         <CardHeader className="border-b border-white/10">
           <CardTitle className="flex items-center text-white">
-            <Award className="h-5 w-5 mr-2 text-orange-400" />
+            <Award className="h-5 w-5 mr-2 text-gray-300" />
             Professional Information
           </CardTitle>
         </CardHeader>
@@ -378,7 +378,7 @@ export default function AssessorProfileSettings() {
                 id="licenseNumber"
                 value={profileData.licenseNumber}
                 disabled
-                className="bg-orange-500/10 border-orange-600/30 text-orange-100 cursor-not-allowed"
+                className="bg-gray-500/10 border-gray-600/30 text-gray-200 cursor-not-allowed"
               />
             </div>
             <div className="space-y-2">
@@ -387,7 +387,7 @@ export default function AssessorProfileSettings() {
                 id="certificationDate"
                 value={profileData.certificationDate}
                 disabled
-                className="bg-orange-500/10 border-orange-600/30 text-orange-100 cursor-not-allowed"
+                className="bg-gray-500/10 border-gray-600/30 text-gray-200 cursor-not-allowed"
               />
             </div>
           </div>
@@ -401,7 +401,7 @@ export default function AssessorProfileSettings() {
       <Card>
         <CardHeader className="border-b border-white/10">
           <CardTitle className="flex items-center text-white">
-            <Map className="h-5 w-5 mr-2 text-orange-400" />
+            <Map className="h-5 w-5 mr-2 text-gray-300" />
             Work Preferences
           </CardTitle>
         </CardHeader>
@@ -491,7 +491,7 @@ export default function AssessorProfileSettings() {
                         }));
                       }
                     }}
-                    className="mr-2 w-4 h-4 text-orange-600 border-gray-600 rounded focus:ring-orange-500 bg-gray-800/50 cursor-pointer group-hover:border-orange-500/50 transition-colors" 
+                    className="mr-2 w-4 h-4 text-gray-500 border-gray-600 rounded focus:ring-gray-500 bg-gray-800/50 cursor-pointer group-hover:border-gray-400 transition-colors" 
                   />
                   <span className="text-sm text-white/80 group-hover:text-white transition-colors">{equipment}</span>
                 </label>
@@ -520,7 +520,7 @@ export default function AssessorProfileSettings() {
                         }));
                       }
                     }}
-                    className="mr-2 w-4 h-4 text-orange-600 border-gray-600 rounded focus:ring-orange-500 bg-gray-800/50 cursor-pointer group-hover:border-orange-500/50 transition-colors" 
+                    className="mr-2 w-4 h-4 text-gray-500 border-gray-600 rounded focus:ring-gray-500 bg-gray-800/50 cursor-pointer group-hover:border-gray-400 transition-colors" 
                   />
                   <span className="text-sm text-white/80 group-hover:text-white transition-colors">{language}</span>
                 </label>
@@ -537,7 +537,7 @@ export default function AssessorProfileSettings() {
       <Card>
         <CardHeader className="border-b border-white/10">
           <CardTitle className="flex items-center text-white">
-            <Key className="h-5 w-5 mr-2 text-orange-400" />
+            <Key className="h-5 w-5 mr-2 text-gray-300" />
             Change Password
           </CardTitle>
         </CardHeader>
@@ -617,7 +617,7 @@ export default function AssessorProfileSettings() {
             </div>
           </div>
 
-          <Button className="bg-orange-600 hover:bg-orange-700">
+          <Button className="bg-gray-600 hover:bg-gray-700">
             Update Password
           </Button>
         </CardContent>
@@ -626,7 +626,7 @@ export default function AssessorProfileSettings() {
       <Card>
         <CardHeader className="border-b border-white/10">
           <CardTitle className="flex items-center text-white">
-            <Shield className="h-5 w-5 mr-2 text-orange-400" />
+            <Shield className="h-5 w-5 mr-2 text-gray-300" />
             Security Settings
           </CardTitle>
         </CardHeader>
@@ -669,7 +669,7 @@ export default function AssessorProfileSettings() {
       <Card>
         <CardHeader className="border-b border-white/10">
           <CardTitle className="flex items-center text-white">
-            <Bell className="h-5 w-5 mr-2 text-orange-400" />
+            <Bell className="h-5 w-5 mr-2 text-gray-300" />
             Notification Preferences
           </CardTitle>
         </CardHeader>
@@ -797,7 +797,7 @@ export default function AssessorProfileSettings() {
           <CardContent className="p-12">
             <div className="flex items-center justify-center">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-500 mx-auto mb-4"></div>
                 <p className="text-white/60">Loading profile...</p>
               </div>
             </div>
@@ -810,14 +810,14 @@ export default function AssessorProfileSettings() {
   return (
     <div className="space-y-6">
       {/* Header with Profile Photo */}
-      <Card className="bg-gradient-to-r from-orange-600/20 to-red-600/20 border-orange-600/30">
+      <Card className="bg-gradient-to-r from-gray-700/20 to-gray-900/20 border-gray-600/30">
         <CardContent className="p-6">
           <div className="flex items-center gap-6">
             <div className="relative group">
-              <div className="w-24 h-24 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center shadow-lg ring-4 ring-orange-500/20">
+              <div className="w-24 h-24 bg-gradient-to-br from-gray-600 to-gray-800 rounded-full flex items-center justify-center shadow-lg ring-4 ring-gray-600/20">
                 <User className="h-12 w-12 text-white" />
               </div>
-              <button className="absolute bottom-0 right-0 w-8 h-8 bg-orange-600 rounded-full flex items-center justify-center hover:bg-orange-700 transition-colors shadow-lg border-2 border-gray-900">
+              <button className="absolute bottom-0 right-0 w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center hover:bg-gray-700 transition-colors shadow-lg border-2 border-gray-900">
                 <Camera className="h-4 w-4 text-white" />
               </button>
             </div>
@@ -861,7 +861,7 @@ export default function AssessorProfileSettings() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
                   activeTab === tab.id
-                    ? "border-orange-500 text-orange-400"
+                    ? "border-gray-500 text-gray-200"
                     : "border-transparent text-white/60 hover:text-white/90 hover:border-white/20"
                 }`}
               >
@@ -884,7 +884,7 @@ export default function AssessorProfileSettings() {
       {/* Save Button */}
       <div className="flex justify-end pt-6 border-t border-white/10">
         <Button 
-          className="bg-orange-600 hover:bg-orange-700 min-w-[120px]"
+          className="bg-gray-600 hover:bg-gray-700 min-w-[120px]"
           onClick={handleSaveChanges}
           disabled={saving || loading}
         >

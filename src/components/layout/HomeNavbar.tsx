@@ -18,31 +18,27 @@ export function HomeNavbar() {
   const navigate = useNavigate();
   const location = useLocation();
 
-
   return (
-    <nav className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-7xl px-4">
-      {/* Rounded Navbar Container */}
-      <div className="bg-gradient-to-r from-green-600 to-emerald-600 backdrop-blur-md border border-green-500 rounded-2xl shadow-lg">
-        <div className="flex items-center justify-between px-6 py-4">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-3">
-            <Satellite className="h-8 w-8 text-white" />
+    <nav className="fixed top-3 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-6xl px-3">
+      <div className="bg-gradient-to-r from-green-600 to-emerald-600 backdrop-blur-md border border-green-500 rounded-xl shadow-md">
+        <div className="flex items-center justify-between px-4 py-3">
+          <Link to="/" className="flex items-center gap-2.5">
+            <Satellite className="h-6 w-6 text-white" />
             <div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">
+              <h1 className="text-xl font-semibold text-white tracking-tight">
                 STARHAWK
               </h1>
-              <p className="text-green-100 text-sm font-medium">Agricultural Insurance Platform</p>
+              <p className="text-green-100 text-xs font-medium">Agricultural Insurance Platform</p>
             </div>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-8">
+          <div className="hidden lg:flex items-center gap-5">
             <NavigationMenu>
               <NavigationMenuList>
                 <NavigationMenuItem>
                   <Link 
                     to="/" 
-                    className={`px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                    className={`px-2.5 py-1.5 text-xs font-medium transition-colors rounded-lg ${
                       location.pathname === '/' 
                         ? 'text-white bg-white/20 shadow-sm' 
                         : 'text-white/90 hover:text-white hover:bg-white/10'
@@ -51,11 +47,10 @@ export function HomeNavbar() {
                     Home
                   </Link>
                 </NavigationMenuItem>
-                
                 <NavigationMenuItem>
                   <Link 
                     to="/services" 
-                    className={`px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                    className={`px-2.5 py-1.5 text-xs font-medium transition-colors rounded-lg ${
                       location.pathname === '/services' 
                         ? 'text-white bg-white/20 shadow-sm' 
                         : 'text-white/90 hover:text-white hover:bg-white/10'
@@ -64,11 +59,10 @@ export function HomeNavbar() {
                     Services
                   </Link>
                 </NavigationMenuItem>
-
                 <NavigationMenuItem>
                   <Link 
                     to="/team" 
-                    className={`px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                    className={`px-2.5 py-1.5 text-xs font-medium transition-colors rounded-lg ${
                       location.pathname === '/team' 
                         ? 'text-white bg-white/20 shadow-sm' 
                         : 'text-white/90 hover:text-white hover:bg-white/10'
@@ -77,11 +71,10 @@ export function HomeNavbar() {
                     Team
                   </Link>
                 </NavigationMenuItem>
-
                 <NavigationMenuItem>
                   <Link 
                     to="/contact" 
-                    className={`px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                    className={`px-2.5 py-1.5 text-xs font-medium transition-colors rounded-lg ${
                       location.pathname === '/contact' 
                         ? 'text-white bg-white/20 shadow-sm' 
                         : 'text-white/90 hover:text-white hover:bg-white/10'
@@ -94,35 +87,32 @@ export function HomeNavbar() {
             </NavigationMenu>
           </div>
 
-          {/* Action Button */}
-          <div className="hidden lg:flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-2.5">
             <Button 
-              className="bg-white text-green-600 hover:bg-green-50 rounded-full px-6 shadow-md hover:shadow-lg transition-all duration-300 font-medium"
+              className="bg-white text-green-600 hover:bg-green-50 rounded-full px-5 py-2.5 shadow-sm hover:shadow-md transition-all duration-300 text-sm font-medium"
               onClick={() => navigate("/role-selection")}
             >
               Get Started
-              <ArrowRight className="h-4 w-4 ml-2" />
+              <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
             </Button>
           </div>
 
-          {/* Mobile Menu Button */}
           <Button
             variant="ghost"
             size="sm"
             className="lg:hidden text-white hover:text-white hover:bg-white/10 border-0"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
-            {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {isMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </Button>
         </div>
 
-        {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="lg:hidden border-t border-white/20 py-6 px-6">
-            <div className="space-y-6">
+          <div className="lg:hidden border-t border-white/20 py-5 px-4">
+            <div className="space-y-4">
               <Link
                 to="/"
-                className={`block px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                className={`block px-2.5 py-1.5 text-xs font-medium transition-colors rounded-lg ${
                   location.pathname === '/' 
                     ? 'text-white bg-white/20 shadow-sm' 
                     : 'text-white/90 hover:text-white hover:bg-white/10'
@@ -133,7 +123,7 @@ export function HomeNavbar() {
               </Link>
               <Link
                 to="/services"
-                className={`block px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                className={`block px-2.5 py-1.5 text-xs font-medium transition-colors rounded-lg ${
                   location.pathname === '/services' 
                     ? 'text-white bg-white/20 shadow-sm' 
                     : 'text-white/90 hover:text-white hover:bg-white/10'
@@ -144,7 +134,7 @@ export function HomeNavbar() {
               </Link>
               <Link
                 to="/team"
-                className={`block px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                className={`block px-2.5 py-1.5 text-xs font-medium transition-colors rounded-lg ${
                   location.pathname === '/team' 
                     ? 'text-white bg-white/20 shadow-sm' 
                     : 'text-white/90 hover:text-white hover:bg-white/10'
@@ -155,7 +145,7 @@ export function HomeNavbar() {
               </Link>
               <Link
                 to="/contact"
-                className={`block px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                className={`block px-2.5 py-1.5 text-xs font-medium transition-colors rounded-lg ${
                   location.pathname === '/contact' 
                     ? 'text-white bg-white/20 shadow-sm' 
                     : 'text-white/90 hover:text-white hover:bg-white/10'
@@ -164,9 +154,9 @@ export function HomeNavbar() {
               >
                 Contact
               </Link>
-              <div className="px-3 py-2 pt-4 border-t border-white/20">
+              <div className="px-2.5 pt-3 border-t border-white/20">
                 <Button 
-                  className="w-full bg-white text-green-600 hover:bg-green-50 rounded-full font-medium"
+                  className="w-full bg-white text-green-600 hover:bg-green-50 rounded-full text-sm font-medium"
                   onClick={() => {
                     navigate("/role-selection");
                     setIsMenuOpen(false);

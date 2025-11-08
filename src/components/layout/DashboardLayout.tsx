@@ -143,7 +143,7 @@ export default function DashboardLayout({
   };
 
   return (
-     <div className="min-h-screen bg-gray-50 flex relative">
+     <div className="dashboard-layout min-h-screen bg-gray-50 flex relative">
       
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
