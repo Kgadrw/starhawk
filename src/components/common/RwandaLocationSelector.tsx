@@ -113,13 +113,35 @@ export default function RwandaLocationSelector({
     }
   }, [selectedProvince, selectedDistrict, selectedSector, selectedVillage, selectedCell, provinces, districts, sectors, villages, cells, onLocationChange]);
 
+  // Helper function to ensure data is an array
+  const ensureArray = (data: any): LocationData[] => {
+    if (Array.isArray(data)) {
+      return data;
+    }
+    if (data && typeof data === 'object') {
+      // Check if data has a nested array property
+      if (data.data && Array.isArray(data.data)) {
+        return data.data;
+      }
+      if (data.items && Array.isArray(data.items)) {
+        return data.items;
+      }
+      if (data.results && Array.isArray(data.results)) {
+        return data.results;
+      }
+    }
+    console.warn('API returned non-array data, defaulting to empty array:', data);
+    return [];
+  };
+
   const loadProvinces = async () => {
     setLoading(prev => ({ ...prev, provinces: true }));
     try {
       const data = await rwandaApiService.getProvinces();
-      setProvinces(data);
+      setProvinces(ensureArray(data));
     } catch (error) {
       console.error('Failed to load provinces:', error);
+      setProvinces([]);
     } finally {
       setLoading(prev => ({ ...prev, provinces: false }));
     }
@@ -129,9 +151,10 @@ export default function RwandaLocationSelector({
     setLoading(prev => ({ ...prev, districts: true }));
     try {
       const data = await rwandaApiService.getDistricts(provinceId);
-      setDistricts(data);
+      setDistricts(ensureArray(data));
     } catch (error) {
       console.error('Failed to load districts:', error);
+      setDistricts([]);
     } finally {
       setLoading(prev => ({ ...prev, districts: false }));
     }
@@ -141,9 +164,10 @@ export default function RwandaLocationSelector({
     setLoading(prev => ({ ...prev, sectors: true }));
     try {
       const data = await rwandaApiService.getSectors(districtId);
-      setSectors(data);
+      setSectors(ensureArray(data));
     } catch (error) {
       console.error('Failed to load sectors:', error);
+      setSectors([]);
     } finally {
       setLoading(prev => ({ ...prev, sectors: false }));
     }
@@ -153,9 +177,10 @@ export default function RwandaLocationSelector({
     setLoading(prev => ({ ...prev, villages: true }));
     try {
       const data = await rwandaApiService.getVillages(sectorId);
-      setVillages(data);
+      setVillages(ensureArray(data));
     } catch (error) {
       console.error('Failed to load villages:', error);
+      setVillages([]);
     } finally {
       setLoading(prev => ({ ...prev, villages: false }));
     }
@@ -165,9 +190,10 @@ export default function RwandaLocationSelector({
     setLoading(prev => ({ ...prev, cells: true }));
     try {
       const data = await rwandaApiService.getCells(villageId);
-      setCells(data);
+      setCells(ensureArray(data));
     } catch (error) {
       console.error('Failed to load cells:', error);
+      setCells([]);
     } finally {
       setLoading(prev => ({ ...prev, cells: false }));
     }
@@ -213,7 +239,7 @@ export default function RwandaLocationSelector({
               <SelectValue placeholder={loading.provinces ? "Loading provinces..." : "Select province"} />
             </SelectTrigger>
             <SelectContent>
-              {provinces.map((province) => (
+              {Array.isArray(provinces) && provinces.map((province) => (
                 <SelectItem key={province.id} value={province.id}>
                   {province.name}
                 </SelectItem>
@@ -231,7 +257,7 @@ export default function RwandaLocationSelector({
               <SelectValue placeholder={loading.districts ? "Loading districts..." : "Select district"} />
             </SelectTrigger>
             <SelectContent>
-              {districts.map((district) => (
+              {Array.isArray(districts) && districts.map((district) => (
                 <SelectItem key={district.id} value={district.id}>
                   {district.name}
                 </SelectItem>
@@ -249,7 +275,7 @@ export default function RwandaLocationSelector({
               <SelectValue placeholder={loading.sectors ? "Loading sectors..." : "Select sector"} />
             </SelectTrigger>
             <SelectContent>
-              {sectors.map((sector) => (
+              {Array.isArray(sectors) && sectors.map((sector) => (
                 <SelectItem key={sector.id} value={sector.id}>
                   {sector.name}
                 </SelectItem>
@@ -267,7 +293,7 @@ export default function RwandaLocationSelector({
               <SelectValue placeholder={loading.villages ? "Loading villages..." : "Select village"} />
             </SelectTrigger>
             <SelectContent>
-              {villages.map((village) => (
+              {Array.isArray(villages) && villages.map((village) => (
                 <SelectItem key={village.id} value={village.id}>
                   {village.name}
                 </SelectItem>
@@ -285,7 +311,7 @@ export default function RwandaLocationSelector({
               <SelectValue placeholder={loading.cells ? "Loading cells..." : "Select cell"} />
             </SelectTrigger>
             <SelectContent>
-              {cells.map((cell) => (
+              {Array.isArray(cells) && cells.map((cell) => (
                 <SelectItem key={cell.id} value={cell.id}>
                   {cell.name}
                 </SelectItem>
