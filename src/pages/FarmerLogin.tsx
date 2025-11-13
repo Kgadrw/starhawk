@@ -55,14 +55,14 @@ export default function FarmerLogin() {
         // Call the farmer login API
         await farmerLogin(formData.phoneNumber, formData.password);
         
-        // Show success message
+        // Navigate immediately without waiting for toast
+        navigate('/farmer-dashboard');
+        
+        // Show success message after navigation
         toast({
           title: "Login successful",
-          description: "Welcome back! Redirecting to your dashboard...",
+          description: "Welcome back!",
         });
-
-        // Navigate to farmer dashboard
-        navigate('/farmer-dashboard');
       } else {
         // Registration mode
         if (!formData.phoneNumber || !formData.email || !formData.password || !formData.confirmPassword) {

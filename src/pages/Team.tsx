@@ -80,7 +80,7 @@ const Team = () => {
               <span className="text-gray-900/90 text-sm font-medium">Meet Our Team</span>
             </div>
 
-            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent">
+            <h1 className="text-4xl md:text-6xl font-bold text-green-700 mb-6">
               Our Expert Team
             </h1>
             
@@ -126,10 +126,10 @@ const Team = () => {
                   </div>
 
                 {/* Text Overlay - Bottom */}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent p-4">
-                  <h3 className="text-lg font-bold text-gray-900 mb-1">{member.title}</h3>
-                  <p className="text-green-400 text-sm font-medium mb-1">{member.subtitle}</p>
-                  <p className="text-gray-900/70 text-xs">{member.handle}</p>      
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4">
+                  <h3 className="text-lg font-semibold text-white mb-1">{member.title}</h3>
+                  <p className="text-green-200 text-sm font-medium mb-1">{member.subtitle}</p>
+                  <p className="text-white/80 text-xs">{member.handle}</p>      
                 </div>
               </motion.div>
             ))}

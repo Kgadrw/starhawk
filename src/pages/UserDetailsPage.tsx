@@ -325,54 +325,59 @@ export default function UserDetailsPage() {
             </div>
           </div>
           <div className="flex gap-2">
-            {!isEditing ? (
+            <Button
+              onClick={handleDeactivateUser}
+              disabled={deactivating}
+              variant={user.active ? "destructive" : "default"}
+              className={user.active ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}
+            >
+              {deactivating ? (
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <UserMinus className="h-4 w-4 mr-2" />
+              )}
+              {user.active ? "Deactivate" : "Activate"}
+            </Button>
+            {/* Edit functionality removed - view details should be read-only */}
+            {false && (
               <>
-                <Button
-                  onClick={() => setIsEditing(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-gray-900"
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
-                <Button
-                  onClick={handleDeactivateUser}
-                  disabled={deactivating}
-                  variant={user.active ? "destructive" : "default"}
-                  className={user.active ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}
-                >
-                  {deactivating ? (
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <UserMinus className="h-4 w-4 mr-2" />
-                  )}
-                  {user.active ? "Deactivate" : "Activate"}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  onClick={() => {
-                    setIsEditing(false);
-                    loadUser();
-                  }}
-                  variant="outline"
-                  className="border-gray-300 text-gray-900 hover:bg-gray-100"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleUpdateUser}
-                  disabled={saving}
-                  className="bg-green-600 hover:bg-green-700 text-gray-900"
-                >
-                  {saving ? (
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4 mr-2" />
-                  )}
-                  Save Changes
-                </Button>
+                {!isEditing ? (
+                  <>
+                    <Button
+                      onClick={() => setIsEditing(true)}
+                      className="bg-blue-600 hover:bg-blue-700 text-gray-900"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      onClick={() => {
+                        setIsEditing(false);
+                        loadUser();
+                      }}
+                      variant="outline"
+                      className="border-gray-300 text-gray-900 hover:bg-gray-100"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleUpdateUser}
+                      disabled={saving}
+                      className="bg-green-600 hover:bg-green-700 text-gray-900"
+                    >
+                      {saving ? (
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-2" />
+                      )}
+                      Save Changes
+                    </Button>
+                  </>
+                )}
               </>
             )}
           </div>

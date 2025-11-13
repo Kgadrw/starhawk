@@ -18,7 +18,6 @@ import FarmerDashboard from "./components/dashboards/FarmerDashboard";
 import AssessorDashboard from "./components/dashboards/AssessorDashboard";
 import InsurerDashboard from "./components/dashboards/InsurerDashboard";
 import { AdminDashboard } from "./components/dashboards/AdminDashboard";
-import { GovernmentDashboard } from "./components/dashboards/GovernmentDashboard";
 import PolicyDetailsPage from "./components/insurer/PolicyDetailsPage";
 import { PolicyRequestForm } from "./components/requests/PolicyRequestForm";
 import { RiskAssessmentModule } from "./components/assessment/RiskAssessmentModule";
@@ -65,7 +64,6 @@ const App = () => {
               <Route path="/assessor-dashboard" element={<AssessorDashboard />} />
               <Route path="/insurer-dashboard" element={<InsurerDashboard />} />
               <Route path="/admin-dashboard" element={<AdminDashboard />} />
-              <Route path="/government-dashboard" element={<GovernmentDashboard />} />
               
               {/* User Details Route */}
               <Route path="/admin-dashboard/users/:userId" element={<UserDetailsPage />} />

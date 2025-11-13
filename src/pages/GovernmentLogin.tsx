@@ -27,10 +27,9 @@ export default function GovernmentLogin() {
     setTimeout(() => {
       if (formData.username === "government" && formData.password === "gov123") {
         toast({
-          title: "Login Successful",
-          description: "Welcome to the Government Portal",
+          title: "Access Limited",
+          description: "The government portal is currently unavailable.",
         });
-        navigate("/government-dashboard");
       } else {
         toast({
           title: "Login Failed",

@@ -9,7 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import DashboardLayout from "../layout/DashboardLayout";
+import RwandaLocationSelector from "@/components/common/RwandaLocationSelector";
 import { getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
+import { getUserProfile } from "@/services/usersAPI";
 import { getFarms, createFarm, createInsuranceRequest, getFarmById, getWeatherForecast, getHistoricalWeather, getVegetationStats } from "@/services/farmsApi";
 import { getClaims, createClaim } from "@/services/claimsApi";
 import { getPolicies } from "@/services/policiesApi";
@@ -37,7 +39,9 @@ import {
   CloudRain,
   Droplets,
   Thermometer,
-  Wind
+  Wind,
+  X,
+  Calendar
 } from "lucide-react";
 
 export default function FarmerDashboard() {
@@ -68,8 +72,17 @@ export default function FarmerDashboard() {
     latitude: "",
     longitude: "",
     area: "",
-    boundaryType: "auto" // "auto" or "manual"
+    boundaryType: "auto", // "auto" or "manual"
+    sowingDate: "",
+    province: "",
+    district: "",
+    sector: ""
   });
+  const [selectedLocation, setSelectedLocation] = useState<{
+    province?: { id: string; name: string };
+    district?: { id: string; name: string };
+    sector?: { id: string; name: string };
+  }>({});
   
   // State for File Claim Page
   const [policies, setPolicies] = useState<any[]>([]);
@@ -81,6 +94,8 @@ export default function FarmerDashboard() {
     lossDescription: "",
     damagePhotos: [] as string[]
   });
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
 
   // State for Insurance Request
   const [insuranceRequestDialog, setInsuranceRequestDialog] = useState<{
@@ -107,6 +122,10 @@ export default function FarmerDashboard() {
     vegetationStats: null,
     loading: false
   });
+
+  // State for Profile
+  const [farmerProfile, setFarmerProfile] = useState<any>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
   
   // Load data for dashboard and pages
   useEffect(() => {
@@ -126,9 +145,24 @@ export default function FarmerDashboard() {
       } else if (activePage === "farm-analytics" && selectedFarm) {
         const farmId = selectedFarm._id || selectedFarm.id;
         if (farmId) loadFarmAnalytics(farmId);
+      } else if (activePage === "profile") {
+        loadFarmerProfile();
       }
     }
   }, [activePage, farmerId, selectedFarm]);
+
+  const loadFarmerProfile = async () => {
+    if (profileLoading) return;
+    setProfileLoading(true);
+    try {
+      const profile = await getUserProfile();
+      setFarmerProfile(profile.data || profile);
+    } catch (err: any) {
+      console.error('Failed to load farmer profile:', err);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
   
   const loadFarms = async () => {
     setFarmsLoading(true);
@@ -332,6 +366,99 @@ export default function FarmerDashboard() {
     }
   };
 
+  // Convert file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  // Handle file selection
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    
+    if (files.length === 0) return;
+
+    // Validate file types
+    const validFiles = files.filter(file => {
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        toast({
+          title: 'Invalid File Type',
+          description: `${file.name} is not a valid image. Please upload JPG, PNG, or WEBP files.`,
+          variant: 'destructive'
+        });
+        return false;
+      }
+      // Check file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: 'File Too Large',
+          description: `${file.name} is too large. Maximum size is 10MB.`,
+          variant: 'destructive'
+        });
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length === 0) return;
+
+    // Check total files limit (max 10 photos)
+    if (uploadedFiles.length + validFiles.length > 10) {
+      toast({
+        title: 'Too Many Files',
+        description: 'Maximum 10 photos allowed. Please remove some photos first.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setUploadingPhotos(true);
+    try {
+      // Convert files to base64
+      const base64Promises = validFiles.map(file => fileToBase64(file));
+      const base64Strings = await Promise.all(base64Promises);
+      
+      // Add to uploaded files and photo URLs
+      setUploadedFiles(prev => [...prev, ...validFiles]);
+      setClaimFormData(prev => ({
+        ...prev,
+        damagePhotos: [...prev.damagePhotos, ...base64Strings]
+      }));
+      
+      toast({
+        title: 'Success',
+        description: `${validFiles.length} photo(s) uploaded successfully`,
+      });
+    } catch (err: any) {
+      console.error('Failed to process files:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to process uploaded files',
+        variant: 'destructive'
+      });
+    } finally {
+      setUploadingPhotos(false);
+      // Reset file input
+      if (e.target) {
+        e.target.value = '';
+      }
+    }
+  };
+
+  // Remove uploaded photo
+  const handleRemovePhoto = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    setClaimFormData(prev => ({
+      ...prev,
+      damagePhotos: prev.damagePhotos.filter((_, i) => i !== index)
+    }));
+  };
+
   const handleSubmitClaim = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -385,6 +512,7 @@ export default function FarmerDashboard() {
         lossDescription: "",
         damagePhotos: []
       });
+      setUploadedFiles([]);
       
       // Navigate to loss reports to see the new claim
       setActivePage("loss-reports");
@@ -404,91 +532,130 @@ export default function FarmerDashboard() {
   const handleCreateField = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!newFieldData.name || !newFieldData.latitude || !newFieldData.longitude) {
+    // Validate required fields
+    if (!newFieldData.name) {
       toast({
         title: 'Validation Error',
-        description: 'Please fill in all required fields (Name, Latitude, Longitude)',
+        description: 'Field name is required',
         variant: 'destructive'
       });
       return;
     }
 
-    const lat = parseFloat(newFieldData.latitude);
-    const lng = parseFloat(newFieldData.longitude);
-
-    if (isNaN(lat) || isNaN(lng)) {
+    if (!newFieldData.cropType) {
       toast({
         title: 'Validation Error',
-        description: 'Please enter valid numeric values for latitude and longitude',
+        description: 'Crop type is required',
         variant: 'destructive'
       });
       return;
     }
 
-    if (lat < -90 || lat > 90) {
+    if (!newFieldData.sowingDate) {
       toast({
         title: 'Validation Error',
-        description: 'Latitude must be between -90 and 90',
+        description: 'Sowing date is required',
         variant: 'destructive'
       });
       return;
     }
 
-    if (lng < -180 || lng > 180) {
+    if (!selectedLocation.province || !selectedLocation.district || !selectedLocation.sector) {
       toast({
         title: 'Validation Error',
-        description: 'Longitude must be between -180 and 180',
+        description: 'Please select Province, District, and Sector',
         variant: 'destructive'
       });
       return;
+    }
+
+    // Validate coordinates if provided (optional)
+    let lat: number | null = null;
+    let lng: number | null = null;
+    
+    if (newFieldData.latitude && newFieldData.longitude) {
+      lat = parseFloat(newFieldData.latitude);
+      lng = parseFloat(newFieldData.longitude);
+
+      if (isNaN(lat) || isNaN(lng)) {
+        toast({
+          title: 'Validation Error',
+          description: 'Please enter valid numeric values for latitude and longitude',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      if (lat < -90 || lat > 90) {
+        toast({
+          title: 'Validation Error',
+          description: 'Latitude must be between -90 and 90',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      if (lng < -180 || lng > 180) {
+        toast({
+          title: 'Validation Error',
+          description: 'Longitude must be between -180 and 180',
+          variant: 'destructive'
+        });
+        return;
+      }
     }
 
     setIsCreating(true);
     try {
-      // Calculate boundary offset based on area if provided
-      let offset = 0.001; // Default offset (approximately 111 meters)
-      if (newFieldData.area && parseFloat(newFieldData.area) > 0) {
-        // Convert hectares to approximate degrees
-        // 1 hectare ≈ 0.0001 square degrees (rough approximation)
-        const areaInDegrees = Math.sqrt(parseFloat(newFieldData.area) * 0.0001);
-        offset = areaInDegrees / 2;
-      }
-
-      // Create a simple square boundary around the point location
-      const boundaryCoordinates = [
-        [
-          [lng - offset, lat - offset], // Southwest corner
-          [lng + offset, lat - offset], // Southeast corner
-          [lng + offset, lat + offset], // Northeast corner
-          [lng - offset, lat + offset], // Northwest corner
-          [lng - offset, lat - offset]  // Close the polygon
-        ]
-      ];
-
       // Format data according to API specification
       const farmData: any = {
         name: newFieldData.name.trim(),
-        coordinates: [lng, lat], // [longitude, latitude] format
-        boundary: {
-          type: 'Polygon',
-          coordinates: boundaryCoordinates
+        cropType: newFieldData.cropType.trim().toUpperCase(),
+        sowingDate: newFieldData.sowingDate,
+        location: {
+          province: selectedLocation.province?.name || '',
+          district: selectedLocation.district?.name || '',
+          sector: selectedLocation.sector?.name || ''
         }
       };
 
-      // Add cropType in uppercase format as per API spec
-      if (newFieldData.cropType && newFieldData.cropType.trim()) {
-        farmData.cropType = newFieldData.cropType.trim().toUpperCase();
+      // Add coordinates and boundary only if provided (optional)
+      if (lat !== null && lng !== null) {
+        // Calculate boundary offset based on area if provided
+        let offset = 0.001; // Default offset (approximately 111 meters)
+        if (newFieldData.area && parseFloat(newFieldData.area) > 0) {
+          // Convert hectares to approximate degrees
+          // 1 hectare ≈ 0.0001 square degrees (rough approximation)
+          const areaInDegrees = Math.sqrt(parseFloat(newFieldData.area) * 0.0001);
+          offset = areaInDegrees / 2;
+        }
+
+        // Create a simple square boundary around the point location
+        const boundaryCoordinates = [
+          [
+            [lng - offset, lat - offset], // Southwest corner
+            [lng + offset, lat - offset], // Southeast corner
+            [lng + offset, lat + offset], // Northeast corner
+            [lng - offset, lat + offset], // Northwest corner
+            [lng - offset, lat - offset]  // Close the polygon
+          ]
+        ];
+
+        farmData.coordinates = [lng, lat]; // [longitude, latitude] format
+        farmData.boundary = {
+          type: 'Polygon',
+          coordinates: boundaryCoordinates
+        };
       }
 
-      // Validate all required fields are present
+      // Add area if provided
+      if (newFieldData.area && parseFloat(newFieldData.area) > 0) {
+        farmData.area = parseFloat(newFieldData.area);
+      }
+
+      // Validate required fields
       if (!farmData.name) {
         throw new Error('Field name is required');
-      }
-      if (!farmData.coordinates || farmData.coordinates.length !== 2) {
-        throw new Error('Valid coordinates are required');
-      }
-      if (!farmData.boundary || !farmData.boundary.coordinates) {
-        throw new Error('Boundary coordinates are required');
       }
 
       console.log('📤 Preparing to create farm with data:', JSON.stringify(farmData, null, 2));
@@ -522,16 +689,22 @@ export default function FarmerDashboard() {
         latitude: "",
         longitude: "",
         area: "",
-        boundaryType: "auto"
+        boundaryType: "auto",
+        sowingDate: "",
+        province: "",
+        district: "",
+        sector: ""
       });
+      setSelectedLocation({});
       
-      // Reload farms first to ensure new farm is fetched
-      await loadFarms();
+      // Navigate back to my fields page immediately
+      setActivePage("my-fields");
       
-      // Navigate back to my fields page after a short delay to show success
-      setTimeout(() => {
-        setActivePage("my-fields");
-      }, 500);
+      // Reload farms after navigation to ensure new farm is fetched
+      // Use a small delay to ensure state is updated
+      setTimeout(async () => {
+        await loadFarms();
+      }, 100);
     } catch (err: any) {
       console.error('Failed to create field:', err);
       toast({
@@ -944,9 +1117,47 @@ export default function FarmerDashboard() {
                 <p className="text-xs text-gray-500">Select the type of crop grown in this field</p>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="sowingDate" className="text-gray-900">Sowing Date *</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="sowingDate"
+                    type="date"
+                    value={newFieldData.sowingDate}
+                    onChange={(e) => setNewFieldData({ ...newFieldData, sowingDate: e.target.value })}
+                    required
+                    className="bg-gray-50 border-gray-300 text-gray-900 pl-10"
+                  />
+                </div>
+                <p className="text-xs text-gray-500">Select the date when the crop was sown</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-gray-900">Location *</Label>
+                <RwandaLocationSelector
+                  onLocationChange={(location) => {
+                    setSelectedLocation({
+                      province: location.province,
+                      district: location.district,
+                      sector: location.sector
+                    });
+                    setNewFieldData(prev => ({
+                      ...prev,
+                      province: location.province?.name || '',
+                      district: location.district?.name || '',
+                      sector: location.sector?.name || ''
+                    }));
+                  }}
+                  levels={['province', 'district', 'sector']}
+                  className="space-y-4"
+                />
+                <p className="text-xs text-gray-500">Select Province, District, and Sector where the field is located</p>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="latitude" className="text-gray-900">Latitude *</Label>
+                  <Label htmlFor="latitude" className="text-gray-900">Latitude (Optional)</Label>
                   <Input
                     id="latitude"
                     type="number"
@@ -954,13 +1165,12 @@ export default function FarmerDashboard() {
                     value={newFieldData.latitude}
                     onChange={(e) => setNewFieldData({ ...newFieldData, latitude: e.target.value })}
                     placeholder="e.g., -1.9441"
-                    required
                     className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 "
                   />
-                  <p className="text-xs text-gray-500">Field center latitude (-90 to 90)</p>
+                  <p className="text-xs text-gray-500">Field center latitude (-90 to 90). Will be determined during field inspection if not provided.</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="longitude" className="text-gray-900">Longitude *</Label>
+                  <Label htmlFor="longitude" className="text-gray-900">Longitude (Optional)</Label>
                   <Input
                     id="longitude"
                     type="number"
@@ -968,10 +1178,9 @@ export default function FarmerDashboard() {
                     value={newFieldData.longitude}
                     onChange={(e) => setNewFieldData({ ...newFieldData, longitude: e.target.value })}
                     placeholder="e.g., 30.0619"
-                    required
                     className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 "
                   />
-                  <p className="text-xs text-gray-500">Field center longitude (-180 to 180)</p>
+                  <p className="text-xs text-gray-500">Field center longitude (-180 to 180). Will be determined during field inspection if not provided.</p>
                 </div>
               </div>
 
@@ -997,22 +1206,40 @@ export default function FarmerDashboard() {
                 </p>
               </div>
 
-              <div className="pt-4 border-t border-gray-200">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                  <div className="flex items-start gap-3">
-                    <MapPin className="h-5 w-5 text-blue-600 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 mb-1">Boundary Information</p>
-                      <p className="text-xs text-gray-600">
-                        The field boundary will be automatically calculated as a square polygon around the center point.
-                        {newFieldData.area && parseFloat(newFieldData.area) > 0 
-                          ? ` Size: ~${calculateOffset().toFixed(4)} degrees (based on ${newFieldData.area} hectares).`
-                          : " Default size: 0.001 degrees (~111 meters)."}
-                      </p>
+              {(newFieldData.latitude && newFieldData.longitude) && (
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <div className="flex items-start gap-3">
+                      <MapPin className="h-5 w-5 text-blue-600 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 mb-1">Boundary Information</p>
+                        <p className="text-xs text-gray-600">
+                          The field boundary will be automatically calculated as a square polygon around the center point.
+                          {newFieldData.area && parseFloat(newFieldData.area) > 0 
+                            ? ` Size: ~${calculateOffset().toFixed(4)} degrees (based on ${newFieldData.area} hectares).`
+                            : " Default size: 0.001 degrees (~111 meters)."}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
+              
+              {(!newFieldData.latitude || !newFieldData.longitude) && (
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                    <div className="flex items-start gap-3">
+                      <MapPin className="h-5 w-5 text-yellow-600 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 mb-1">Coordinates Information</p>
+                        <p className="text-xs text-gray-600">
+                          Latitude and Longitude are optional. If not provided, the exact coordinates will be determined by the assessor during field inspection using EOS API.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-3 pt-4">
                 <Button
@@ -1026,8 +1253,13 @@ export default function FarmerDashboard() {
                       latitude: "",
                       longitude: "",
                       area: "",
-                      boundaryType: "auto"
+                      boundaryType: "auto",
+                      sowingDate: "",
+                      province: "",
+                      district: "",
+                      sector: ""
                     });
+                    setSelectedLocation({});
                   }}
                   className="flex-1 bg-gray-50 hover:bg-gray-100 border border-gray-300 text-gray-900 "
                 >
@@ -1151,17 +1383,77 @@ export default function FarmerDashboard() {
 
             <div className="space-y-2">
               <Label htmlFor="damagePhotos" className="text-gray-900">Damage Photos (Optional)</Label>
-              <Input
-                id="damagePhotos"
-                value={claimFormData.damagePhotos.join(', ')}
-                onChange={(e) => {
-                  const urls = e.target.value.split(',').map(url => url.trim()).filter(url => url);
-                  setClaimFormData({ ...claimFormData, damagePhotos: urls });
-                }}
-                placeholder="Enter photo URLs separated by commas (e.g., https://example.com/photo1.jpg, https://example.com/photo2.jpg)"
-                className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 "
-              />
-              <p className="text-xs text-gray-500">URLs of photos showing the damage (comma-separated)</p>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="file"
+                    id="damagePhotos"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    multiple
+                    onChange={handleFileSelect}
+                    disabled={uploadingPhotos || uploadedFiles.length >= 10}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="damagePhotos"
+                    className={`flex items-center gap-2 px-4 py-2 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                      uploadingPhotos || uploadedFiles.length >= 10
+                        ? 'border-gray-300 bg-gray-100 cursor-not-allowed'
+                        : 'border-green-300 bg-green-50 hover:bg-green-100 hover:border-green-400'
+                    }`}
+                  >
+                    <Camera className={`h-5 w-5 ${uploadingPhotos || uploadedFiles.length >= 10 ? 'text-gray-400' : 'text-green-600'}`} />
+                    <span className={`text-sm font-medium ${uploadingPhotos || uploadedFiles.length >= 10 ? 'text-gray-500' : 'text-green-700'}`}>
+                      {uploadingPhotos 
+                        ? 'Uploading...' 
+                        : uploadedFiles.length >= 10
+                        ? 'Maximum 10 photos reached'
+                        : 'Upload Photos from Device'}
+                    </span>
+                  </label>
+                  {uploadedFiles.length > 0 && (
+                    <span className="text-sm text-gray-600">
+                      {uploadedFiles.length} / 10 photos
+                    </span>
+                  )}
+                </div>
+                
+                {uploadedFiles.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+                    {uploadedFiles.map((file, index) => {
+                      // Use base64 from claimFormData for preview (already converted to base64)
+                      const previewUrl = claimFormData.damagePhotos[index] || URL.createObjectURL(file);
+                      
+                      return (
+                        <div key={index} className="relative group">
+                          <div className="aspect-square rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-50">
+                            <img
+                              src={previewUrl}
+                              alt={`Damage photo ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePhoto(index)}
+                            className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Remove photo"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                          <p className="text-xs text-gray-600 mt-1 truncate" title={file.name}>
+                            {file.name}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                
+                <p className="text-xs text-gray-500">
+                  Upload photos showing the damage (JPG, PNG, WEBP - Max 10MB per file, up to 10 photos)
+                </p>
+              </div>
             </div>
 
             <div className="flex justify-end gap-4 pt-4">
@@ -1627,6 +1919,53 @@ export default function FarmerDashboard() {
           <div className="space-y-2">
             <Label htmlFor="location">Location</Label>
             <Input id="location" placeholder="Province, District, Sector, Cell, Village" />
+          </div>
+
+          {/* UPI Credentials Section */}
+          <div className="pt-4 border-t border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">UPI Payment Information</h3>
+            {profileLoading ? (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto"></div>
+                <p className="text-gray-500 mt-2">Loading UPI information...</p>
+              </div>
+            ) : farmerProfile?.personalInfo?.upiCredentials ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="upiId">UPI ID</Label>
+                  <Input 
+                    id="upiId" 
+                    value={farmerProfile.personalInfo.upiCredentials.upiId || ""} 
+                    readOnly 
+                    className="bg-gray-50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bankAccount">Bank Account Number</Label>
+                  <Input 
+                    id="bankAccount" 
+                    value={farmerProfile.personalInfo.upiCredentials.bankAccount || ""} 
+                    readOnly 
+                    className="bg-gray-50"
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="ifscCode">IFSC Code</Label>
+                  <Input 
+                    id="ifscCode" 
+                    value={farmerProfile.personalInfo.upiCredentials.ifscCode || ""} 
+                    readOnly 
+                    className="bg-gray-50"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-sm text-yellow-800">
+                  UPI credentials not found. Please complete your registration to add payment information.
+                </p>
+              </div>
+            )}
           </div>
 
           <Button className="bg-green-600 hover:bg-green-700">

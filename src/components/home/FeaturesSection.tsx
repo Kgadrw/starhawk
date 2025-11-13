@@ -64,7 +64,7 @@ export function FeaturesSection() {
             <Zap className="h-3.5 w-3.5" />
             <span>Tech Solutions</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-semibold text-gray-900 tracking-tight">
+          <h2 className="text-3xl sm:text-4xl font-semibold text-green-700 tracking-tight">
             Built for precision agriculture
           </h2>
           <p className="text-sm sm:text-base text-gray-600 max-w-2xl mx-auto">
@@ -89,7 +89,7 @@ export function FeaturesSection() {
                       <Icon className="h-4.5 w-4.5" />
                     </div>
                     <div>
-                      <CardTitle className="text-lg font-semibold text-gray-900">
+                      <CardTitle className="text-lg font-semibold text-green-700">
                         {solution.title}
                       </CardTitle>
                       <p className="mt-1 text-sm text-gray-600">

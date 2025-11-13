@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../layout/DashboardLayout";
 import { isAdmin, logout as authLogout, getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
-import { getAllUsers, deactivateUser, updateUser, getUserById, createUser } from "@/services/usersAPI";
+import { getAllUsers, deactivateUser, updateUser, getUserById, createUser, getUserProfile, updateUserProfile } from "@/services/usersAPI";
 import { getSystemStatistics, getPolicyOverview, getClaimStatistics } from "@/services/adminApi";
 import { createPolicy, createPolicyFromAssessment, getPolicies, getPolicyById, updatePolicy, deletePolicy } from "@/services/policiesApi";
 import { createClaim, getClaims, getClaimById, updateClaim, deleteClaim } from "@/services/claimsApi";
@@ -135,7 +135,156 @@ export const AdminDashboard = () => {
     if (activePage === "analytics") {
       loadAnalyticsData();
     }
+    if (activePage === "settings") {
+      loadAdminProfile();
+    }
   }, [activePage]);
+
+  // Load admin profile from API
+  const loadAdminProfile = async () => {
+    setAdminProfileLoading(true);
+    setAdminProfileError(null);
+    try {
+      const response: any = await getUserProfile();
+      const profileData = response.data || response;
+      setAdminProfile(profileData);
+    } catch (err: any) {
+      console.error('Failed to load admin profile:', err);
+      setAdminProfileError(err.message || 'Failed to load profile');
+      // Fallback to basic info from localStorage
+      setAdminProfile({
+        _id: adminId,
+        userId: adminId,
+        email: getEmail() || "",
+        phoneNumber: getPhoneNumber() || "",
+        firstName: adminName.split(' ')[0] || "",
+        lastName: adminName.split(' ').slice(1).join(' ') || "",
+        role: "ADMIN",
+        active: true
+      });
+    } finally {
+      setAdminProfileLoading(false);
+    }
+  };
+
+  // Load login history
+  const loadLoginHistory = async () => {
+    setLoginHistoryLoading(true);
+    try {
+      // TODO: Replace with actual API endpoint when available
+      // const response = await getLoginHistory();
+      // setLoginHistory(response.data || response);
+      
+      // Placeholder: Mock data structure - replace with actual API call
+      setLoginHistory([
+        { id: 1, timestamp: new Date().toISOString(), ipAddress: "192.168.1.1", location: "Kigali, Rwanda", success: true },
+        { id: 2, timestamp: new Date(Date.now() - 86400000).toISOString(), ipAddress: "192.168.1.2", location: "Kigali, Rwanda", success: true }
+      ]);
+    } catch (err: any) {
+      console.error('Failed to load login history:', err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to load login history",
+        variant: "destructive",
+      });
+    } finally {
+      setLoginHistoryLoading(false);
+    }
+  };
+
+  // Handle change password
+  const handleChangePassword = async () => {
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all password fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast({
+        title: "Validation Error",
+        description: "New password and confirm password do not match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      toast({
+        title: "Validation Error",
+        description: "Password must be at least 8 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      // TODO: Replace with actual API endpoint when available
+      // await changePassword({
+      //   currentPassword: passwordData.currentPassword,
+      //   newPassword: passwordData.newPassword
+      // });
+      
+      // Placeholder: Simulate API call - replace with actual API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      toast({
+        title: "Success",
+        description: "Password changed successfully",
+      });
+      
+      setShowChangePasswordDialog(false);
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+      });
+    } catch (err: any) {
+      console.error('Failed to change password:', err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to change password",
+        variant: "destructive",
+      });
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  // Handle 2FA toggle
+  const handleToggle2FA = async (enable: boolean) => {
+    try {
+      // TODO: Replace with actual API endpoint when available
+      // await update2FAStatus({ enabled: enable });
+      
+      // Placeholder: Simulate API call - replace with actual API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Update local state
+      setAdminProfile((prev: any) => ({
+        ...prev,
+        twoFactorEnabled: enable
+      }));
+      
+      toast({
+        title: "Success",
+        description: `2FA ${enable ? 'enabled' : 'disabled'} successfully`,
+      });
+      
+      setShow2FADialog(false);
+    } catch (err: any) {
+      console.error('Failed to update 2FA status:', err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to update 2FA status",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Helper function to calculate time ago
   const getTimeAgo = (date: Date): string => {
@@ -294,6 +443,22 @@ export const AdminDashboard = () => {
   const [showEditUserDialog, setShowEditUserDialog] = useState(false);
   const [editingUser, setEditingUser] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  
+  // Admin Profile State
+  const [adminProfile, setAdminProfile] = useState<any | null>(null);
+  const [adminProfileLoading, setAdminProfileLoading] = useState(false);
+  const [adminProfileError, setAdminProfileError] = useState<string | null>(null);
+  const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false);
+  const [show2FADialog, setShow2FADialog] = useState(false);
+  const [showLoginHistoryDialog, setShowLoginHistoryDialog] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+  const [loginHistory, setLoginHistory] = useState<any[]>([]);
+  const [loginHistoryLoading, setLoginHistoryLoading] = useState(false);
   const [editUserData, setEditUserData] = useState({
     firstName: "",
     lastName: "",
@@ -511,6 +676,19 @@ export const AdminDashboard = () => {
   };
 
   // Commission Settings
+  // DESIGN LOGIC: Commission Breakdown Component
+  // This component displays commission rates for different revenue streams in the platform.
+  // Currently uses hardcoded data as a placeholder/demo. In production, this should:
+  // 1. Fetch commission rates from an admin settings API or database
+  // 2. Allow admins to configure commission rates per revenue type
+  // 3. Calculate commission amounts dynamically based on actual revenue data
+  // 4. Show historical commission trends and allow rate adjustments
+  // The structure includes:
+  // - type: Revenue stream category (Policy Premium, Claim Processing, etc.)
+  // - rate: Commission percentage for that revenue type
+  // - revenue: Total revenue generated in that category (for calculation)
+  // - commission: Calculated commission amount (revenue * rate / 100)
+  // - status: Whether the commission rate is currently active
   const commissionRates = [
     { type: "Policy Premium", rate: 3.5, revenue: 169400000, commission: 5929000, status: "active" },
     { type: "Claim Processing", rate: 2.0, revenue: 1278000000, commission: 25560000, status: "active" },
@@ -519,6 +697,23 @@ export const AdminDashboard = () => {
   ];
 
   // System Metrics
+  // DESIGN LOGIC: System Performance Component
+  // This component displays key system health and performance metrics.
+  // Currently uses hardcoded data as a placeholder/demo. In production, this should:
+  // 1. Connect to system monitoring tools (e.g., Prometheus, Grafana, CloudWatch)
+  // 2. Fetch real-time metrics from the backend infrastructure
+  // 3. Display live updates via WebSocket or polling
+  // 4. Set up alerts for critical thresholds (e.g., uptime < 99%, error rate > 1%)
+  // The metrics tracked include:
+  // - uptime: System availability percentage (target: 99.9%+)
+  // - apiCalls: Total API requests processed (for traffic analysis)
+  // - avgResponseTime: Average API response time in milliseconds (target: <200ms)
+  // - errorRate: Percentage of failed requests (target: <0.1%)
+  // - activeConnections: Current number of active user sessions
+  // - dbSize: Database size in GB (for capacity planning)
+  // - cpuUsage: Server CPU utilization percentage (target: <80%)
+  // - memoryUsage: Server memory utilization percentage (target: <80%)
+  // - diskUsage: Disk space utilization percentage (target: <80%)
   const systemMetrics = {
     uptime: 99.97,
     apiCalls: 1234567,
@@ -641,16 +836,6 @@ export const AdminDashboard = () => {
   // Dashboard Overview
   const renderDashboard = () => (
     <div className="space-y-6">
-      {/* Loading State */}
-      {statsLoading && (
-        <Card className={dashboardTheme.card}>
-          <CardContent className="p-8 text-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-gray-900 mx-auto mb-4" />
-            <p className="text-gray-900/60">Loading statistics...</p>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Error State */}
       {statsError && !statsLoading && (
         <Card className={`${dashboardTheme.card} border-l-4 border-l-red-500`}>
@@ -678,59 +863,59 @@ export const AdminDashboard = () => {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-900/80">Total Users</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Total Users</CardTitle>
             <Users className="h-5 w-5 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-900">
+            <div className="text-3xl font-bold text-gray-700">
               {systemStats?.totalUsers || userStats.total.toLocaleString()}
             </div>
-            <p className="text-xs text-gray-900/60 mt-1">
-              <span className="text-gray-600">+{systemStats?.newUsersThisMonth || userStats.newThisMonth}</span> this month
+            <p className="text-xs text-gray-600 mt-1">
+              <span className="text-gray-500">+{systemStats?.newUsersThisMonth || userStats.newThisMonth}</span> this month
             </p>
           </CardContent>
         </Card>
 
         <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-900/80">Monthly Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Monthly Revenue</CardTitle>
             <DollarSign className="h-5 w-5 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-900">
+            <div className="text-3xl font-bold text-gray-700">
               RWF {systemStats?.monthlyRevenue ? (systemStats.monthlyRevenue / 1000000).toFixed(1) : (financialData.monthlyRevenue / 1000000).toFixed(1)}M
             </div>
-            <p className="text-xs text-gray-900/60 mt-1">
-              <span className="text-gray-600">+{systemStats?.revenueGrowth || financialData.growthRate}%</span> from last month
+            <p className="text-xs text-gray-600 mt-1">
+              <span className="text-gray-500">+{systemStats?.revenueGrowth || financialData.growthRate}%</span> from last month
             </p>
           </CardContent>
         </Card>
 
         <Card className={`${dashboardTheme.card} border-l-4 border-l-purple-500`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-900/80">System Health</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">System Health</CardTitle>
             <Activity className="h-5 w-5 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-900">
+            <div className="text-3xl font-bold text-gray-700">
               {systemStats?.uptime || systemMetrics.uptime}%
             </div>
-            <p className="text-xs text-gray-900/60 mt-1">
-              <span className="text-gray-600">Excellent</span> uptime
+            <p className="text-xs text-gray-600 mt-1">
+              <span className="text-gray-500">Excellent</span> uptime
             </p>
           </CardContent>
         </Card>
 
         <Card className={`${dashboardTheme.card} border-l-4 border-l-orange-500`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-900/80">Active Sessions</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Active Sessions</CardTitle>
             <Zap className="h-5 w-5 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-900">
+            <div className="text-3xl font-bold text-gray-700">
               {systemStats?.activeSessions || systemMetrics.activeConnections}
             </div>
-            <p className="text-xs text-gray-900/60 mt-1">Live connections</p>
+            <p className="text-xs text-gray-600 mt-1">Live connections</p>
           </CardContent>
         </Card>
       </div>
@@ -738,7 +923,7 @@ export const AdminDashboard = () => {
       {/* Analytics Tabs */}
       <Card className={dashboardTheme.card}>
         <CardHeader>
-          <CardTitle className="text-gray-900 flex items-center gap-2">
+          <CardTitle className="text-gray-700 flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
             Platform Analytics
           </CardTitle>
@@ -746,19 +931,19 @@ export const AdminDashboard = () => {
         <CardContent>
           <Tabs defaultValue="users" className="w-full">
             <TabsList className="grid w-full grid-cols-4 bg-gray-100">
-              <TabsTrigger value="users" className="data-[state=active]:bg-red-600">
+              <TabsTrigger value="users" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
                 <Users className="h-4 w-4 mr-2" />
                 Users
               </TabsTrigger>
-              <TabsTrigger value="revenue" className="data-[state=active]:bg-red-600">
+              <TabsTrigger value="revenue" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
                 <DollarSign className="h-4 w-4 mr-2" />
                 Revenue
               </TabsTrigger>
-              <TabsTrigger value="system" className="data-[state=active]:bg-red-600">
+              <TabsTrigger value="system" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
                 <Server className="h-4 w-4 mr-2" />
                 System
               </TabsTrigger>
-              <TabsTrigger value="activity" className="data-[state=active]:bg-red-600">
+              <TabsTrigger value="activity" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
                 <Activity className="h-4 w-4 mr-2" />
                 Activity
               </TabsTrigger>
@@ -833,10 +1018,10 @@ export const AdminDashboard = () => {
               <div className="grid gap-4 md:grid-cols-3">
                 <Card className="bg-gray-50 border border-gray-200">
                   <CardHeader>
-                    <CardTitle className="text-sm text-gray-900/80">System Uptime</CardTitle>
+                    <CardTitle className="text-sm text-gray-600">System Uptime</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-gray-900">
+                    <div className="text-2xl font-bold text-gray-700">
                       {systemStats?.uptime || systemMetrics.uptime || 99.9}%
                     </div>
                     <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden mt-2">
@@ -846,10 +1031,10 @@ export const AdminDashboard = () => {
                 </Card>
                 <Card className="bg-gray-50 border border-gray-200">
                   <CardHeader>
-                    <CardTitle className="text-sm text-gray-900/80">Avg Response Time</CardTitle>
+                    <CardTitle className="text-sm text-gray-600">Avg Response Time</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-gray-900">
+                    <div className="text-2xl font-bold text-gray-700">
                       {systemStats?.avgResponseTime || systemMetrics.avgResponseTime || 127}ms
                     </div>
                     <p className="text-xs text-gray-600 mt-1">API response time</p>
@@ -857,10 +1042,10 @@ export const AdminDashboard = () => {
                 </Card>
                 <Card className="bg-gray-50 border border-gray-200">
                   <CardHeader>
-                    <CardTitle className="text-sm text-gray-900/80">Active Sessions</CardTitle>
+                    <CardTitle className="text-sm text-gray-600">Active Sessions</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-gray-900">
+                    <div className="text-2xl font-bold text-gray-700">
                       {systemStats?.activeSessions || systemMetrics.activeConnections || analyticsUsers.filter((u: any) => u.active !== false).length}
                     </div>
                     <p className="text-xs text-gray-600 mt-1">Current connections</p>
@@ -931,11 +1116,11 @@ export const AdminDashboard = () => {
                         'bg-blue-500'
                       }`}></div>
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-                        <p className="text-xs text-gray-900/60">{activity.user} • {activity.details}</p>
+                        <p className="text-sm font-medium text-gray-700">{activity.action}</p>
+                        <p className="text-xs text-gray-600">{activity.user} • {activity.details}</p>
                       </div>
                     </div>
-                    <span className="text-xs text-gray-900/50">{activity.timestamp}</span>
+                    <span className="text-xs text-gray-500">{activity.timestamp}</span>
                   </div>
                 ))}
               </div>
@@ -945,10 +1130,10 @@ export const AdminDashboard = () => {
       </Card>
 
       {/* Quick Stats Grid */}
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2">
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-sm text-gray-900/80 flex items-center gap-2">
+            <CardTitle className="text-sm text-gray-600 flex items-center gap-2">
               <Users className="h-4 w-4 text-blue-500" />
               User Distribution
             </CardTitle>
@@ -964,9 +1149,9 @@ export const AdminDashboard = () => {
               <div key={idx} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className={`w-3 h-3 rounded-full ${item.color}`}></div>
-                  <span className="text-sm text-gray-900/80">{item.role}</span>
+                  <span className="text-sm text-gray-600">{item.role}</span>
                 </div>
-                <span className="text-sm font-medium text-gray-900">{item.count.toLocaleString()}</span>
+                <span className="text-sm font-medium text-gray-700">{item.count.toLocaleString()}</span>
               </div>
             ))}
           </CardContent>
@@ -974,29 +1159,7 @@ export const AdminDashboard = () => {
 
         <Card className={dashboardTheme.card}>
           <CardHeader>
-            <CardTitle className="text-sm text-gray-900/80 flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-green-500" />
-              Commission Breakdown
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {commissionRates.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between">
-                <span className="text-xs text-gray-900/80">{item.type}</span>
-                <div className="text-right">
-                  <div className="text-sm font-medium text-gray-900">{item.rate}%</div>
-                  <div className="text-xs text-green-400">
-                    RWF {(item.commission / 1000000).toFixed(1)}M
-                  </div>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card className={dashboardTheme.card}>
-          <CardHeader>
-            <CardTitle className="text-sm text-gray-900/80 flex items-center gap-2">
+            <CardTitle className="text-sm text-gray-600 flex items-center gap-2">
               <Activity className="h-4 w-4 text-purple-500" />
               System Performance
             </CardTitle>
@@ -1004,7 +1167,7 @@ export const AdminDashboard = () => {
           <CardContent className="space-y-4">
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-900/60">Uptime</span>
+                <span className="text-gray-600">Uptime</span>
                 <span className="text-green-400">{systemMetrics.uptime}%</span>
               </div>
               <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
@@ -1013,7 +1176,7 @@ export const AdminDashboard = () => {
             </div>
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-900/60">API Response</span>
+                <span className="text-gray-600">API Response</span>
                 <span className="text-blue-400">{systemMetrics.avgResponseTime}ms</span>
               </div>
               <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
@@ -1022,7 +1185,7 @@ export const AdminDashboard = () => {
             </div>
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-900/60">Error Rate</span>
+                <span className="text-gray-600">Error Rate</span>
                 <span className="text-green-400">{systemMetrics.errorRate}%</span>
               </div>
               <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
@@ -1069,7 +1232,63 @@ export const AdminDashboard = () => {
 
   // Handle edit user button click
   const handleEditUser = async (userId: string) => {
-    await handleViewUser(userId);
+    try {
+      // Load user data
+      const response: any = await getUserById(userId);
+      const userData = response.data || response;
+      
+      // Set selected user
+      setSelectedUser(userData);
+      
+      // Populate edit form with user data
+      setEditUserData({
+        firstName: userData.firstName || "",
+        lastName: userData.lastName || "",
+        email: userData.email || "",
+        phoneNumber: userData.phoneNumber || "",
+        province: userData.province || "",
+        district: userData.district || "",
+        sector: userData.sector || "",
+        cell: userData.cell || "",
+        village: userData.village || "",
+        sex: userData.sex || "",
+        active: userData.active !== false,
+        farmerProfile: {
+          farmProvince: userData.farmerProfile?.farmProvince || "",
+          farmDistrict: userData.farmerProfile?.farmDistrict || "",
+          farmSector: userData.farmerProfile?.farmSector || "",
+          farmCell: userData.farmerProfile?.farmCell || "",
+          farmVillage: userData.farmerProfile?.farmVillage || ""
+        },
+        assessorProfile: {
+          specialization: userData.assessorProfile?.specialization || "",
+          experienceYears: userData.assessorProfile?.experienceYears || 0,
+          profilePhotoUrl: userData.assessorProfile?.profilePhotoUrl || "",
+          bio: userData.assessorProfile?.bio || "",
+          address: userData.assessorProfile?.address || ""
+        },
+        insurerProfile: {
+          companyName: userData.insurerProfile?.companyName || "",
+          contactPerson: userData.insurerProfile?.contactPerson || "",
+          website: userData.insurerProfile?.website || "",
+          address: userData.insurerProfile?.address || "",
+          companyDescription: userData.insurerProfile?.companyDescription || "",
+          licenseNumber: userData.insurerProfile?.licenseNumber || "",
+          registrationDate: userData.insurerProfile?.registrationDate || "",
+          companyLogoUrl: userData.insurerProfile?.companyLogoUrl || ""
+        }
+      });
+      
+      // Open edit dialog
+      setShowEditUserDialog(true);
+    } catch (err: any) {
+      console.error('Failed to load user for editing:', err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to load user details",
+        variant: "destructive",
+      });
+    }
   };
 
   // Handle update user
@@ -2275,40 +2494,49 @@ export const AdminDashboard = () => {
         </Card>
       </div>
 
-      <Card className={dashboardTheme.card}>
-        <CardHeader>
-          <CardTitle className="text-gray-900">All Users</CardTitle>
+      <Card className="bg-white border-gray-200 shadow-sm">
+        <CardHeader className="border-b border-gray-200 bg-gray-50">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl font-semibold text-gray-900">All Users</CardTitle>
+            <div className="text-sm text-gray-600">
+              {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'}
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="mb-4">
+        <CardContent className="p-0">
+          <div className="p-4 border-b border-gray-200 bg-white">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-900/40" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search users..."
+                placeholder="Search users by name, email, or role..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-500 focus:outline-none focus:border-green-500"
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
               />
             </div>
           </div>
           {usersLoading ? (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex items-center justify-center py-16">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4"></div>
-                <p className="text-gray-900/60">Loading users...</p>
+                <Loader2 className="h-10 w-10 animate-spin text-red-500 mx-auto mb-4" />
+                <p className="text-gray-600">Loading users...</p>
               </div>
             </div>
           ) : filteredUsers.length === 0 ? (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex items-center justify-center py-16">
               <div className="text-center">
-                <Users className="h-12 w-12 mx-auto mb-4 text-gray-900/40" />
-                <p className="text-gray-900/60">No users found</p>
+                <Users className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                <p className="text-gray-600 font-medium mb-1">No users found</p>
+                <p className="text-sm text-gray-500 mb-4">
+                  {searchQuery ? "Try adjusting your search criteria" : "No users available"}
+                </p>
                 {searchQuery && (
                   <Button
                     onClick={() => setSearchQuery("")}
                     variant="outline"
-                    className="mt-4 border-gray-300 text-gray-900 hover:bg-gray-100"
+                    size="sm"
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
                   >
                     Clear Search
                   </Button>
@@ -2319,58 +2547,91 @@ export const AdminDashboard = () => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-300">
-                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium text-sm">User</th>
-                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium text-sm">Email</th>
-                    <th className="text-left py-3 px-4 text-gray-900/80 font-medium text-sm">Phone</th>
-                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium text-sm">Role</th>
-                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium text-sm">Region</th>
-                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium text-sm">Status</th>
-                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium text-sm">Last Login</th>
-                  <th className="text-left py-3 px-4 text-gray-900/80 font-medium text-sm">Actions</th>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="text-left py-4 px-6 text-gray-700 font-semibold text-xs uppercase tracking-wider">User</th>
+                  <th className="text-left py-4 px-6 text-gray-700 font-semibold text-xs uppercase tracking-wider">Contact</th>
+                  <th className="text-left py-4 px-6 text-gray-700 font-semibold text-xs uppercase tracking-wider">Role</th>
+                  <th className="text-left py-4 px-6 text-gray-700 font-semibold text-xs uppercase tracking-wider">Location</th>
+                  <th className="text-left py-4 px-6 text-gray-700 font-semibold text-xs uppercase tracking-wider">Status</th>
+                  <th className="text-left py-4 px-6 text-gray-700 font-semibold text-xs uppercase tracking-wider">Last Login</th>
+                  <th className="text-left py-4 px-6 text-gray-700 font-semibold text-xs uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                  {filteredUsers.map((user) => (
-                  <tr key={user.id} className="border-b border-gray-800 hover:bg-gray-100/50">
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-orange-600 rounded-full flex items-center justify-center text-gray-900 text-sm font-medium">
-                            {user.name.charAt(0).toUpperCase()}
+              <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredUsers.map((user, index) => (
+                  <tr 
+                    key={user.id} 
+                    className={`hover:bg-gray-50 transition-colors ${
+                      index % 2 === 0 ? "bg-white" : "bg-gray-50/30"
+                    }`}
+                  >
+                    <td className="py-4 px-6 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-orange-600 rounded-full flex items-center justify-center text-white text-sm font-semibold shadow-sm">
+                            {(user.name || user.firstName || 'U').charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                            <div className="text-xs text-gray-900/60">{user.userId}</div>
+                          <div className="text-sm font-semibold text-gray-900">
+                            {user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown User'}
+                          </div>
+                            <div className="text-xs text-gray-500 mt-0.5">{user.userId || user.id || 'N/A'}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-sm text-gray-900/80">{user.email}</td>
-                      <td className="py-3 px-4 text-sm text-gray-900/80">{user.phoneNumber || 'N/A'}</td>
-                    <td className="py-3 px-4">
-                      <Badge className={`${
-                          user.role === 'FARMER' || user.role === 'Farmer' ? 'bg-green-600' :
-                          user.role === 'ASSESSOR' || user.role === 'Assessor' ? 'bg-orange-600' :
-                          user.role === 'INSURER' || user.role === 'Insurer' ? 'bg-blue-600' :
-                          user.role === 'GOVERNMENT' || user.role === 'Government' ? 'bg-purple-600' :
-                          user.role === 'ADMIN' || user.role === 'Admin' ? 'bg-red-600' :
-                          'bg-gray-600'
-                      }`}>
-                        {user.role}
+                    <td className="py-4 px-6 whitespace-nowrap">
+                      <div className="space-y-1">
+                        <div className="text-sm text-gray-900 flex items-center gap-1.5">
+                          <Mail className="h-3.5 w-3.5 text-gray-400" />
+                          {user.email || 'N/A'}
+                        </div>
+                        {user.phoneNumber && (
+                          <div className="text-xs text-gray-600 flex items-center gap-1.5">
+                            <Phone className="h-3 w-3 text-gray-400" />
+                            {user.phoneNumber}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-4 px-6 whitespace-nowrap">
+                      <Badge className={`text-xs font-medium px-2.5 py-1 ${
+                          user.role === 'FARMER' || user.role === 'Farmer' ? 'bg-green-100 text-green-700 border-green-300' :
+                          user.role === 'ASSESSOR' || user.role === 'Assessor' ? 'bg-orange-100 text-orange-700 border-orange-300' :
+                          user.role === 'INSURER' || user.role === 'Insurer' ? 'bg-blue-100 text-blue-700 border-blue-300' :
+                          user.role === 'GOVERNMENT' || user.role === 'Government' ? 'bg-purple-100 text-purple-700 border-purple-300' :
+                          user.role === 'ADMIN' || user.role === 'Admin' ? 'bg-red-100 text-red-700 border-red-300' :
+                          'bg-gray-100 text-gray-700 border-gray-300'
+                      } border`}>
+                        {user.role || 'N/A'}
                       </Badge>
                     </td>
-                    <td className="py-3 px-4 text-sm text-gray-900/80">{user.region}</td>
-                    <td className="py-3 px-4">
-                        <Badge className={user.active !== false ? 'bg-green-600' : 'bg-gray-600'}>
+                    <td className="py-4 px-6 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {user.region || user.province || user.district || 'N/A'}
+                      </div>
+                    </td>
+                    <td className="py-4 px-6 whitespace-nowrap">
+                        <Badge className={`text-xs font-medium px-2.5 py-1 border ${
+                          user.active !== false 
+                            ? 'bg-green-100 text-green-700 border-green-300' 
+                            : 'bg-gray-100 text-gray-700 border-gray-300'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full mr-1.5 inline-block ${
+                            user.active !== false ? 'bg-green-500' : 'bg-gray-400'
+                          }`}></span>
                           {user.active !== false ? 'Active' : 'Inactive'}
                       </Badge>
                     </td>
-                    <td className="py-3 px-4 text-sm text-gray-900/60">{user.lastLogin}</td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
+                    <td className="py-4 px-6 whitespace-nowrap">
+                      <div className="text-sm text-gray-600">
+                        {user.lastLogin || 'Never'}
+                      </div>
+                    </td>
+                    <td className="py-4 px-6 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
                           <Button 
                             variant="ghost" 
                             size="sm" 
-                            className="text-gray-900/60 hover:text-gray-900"
+                            className="h-8 w-8 p-0 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                             onClick={() => handleViewUser(user.userId)}
                             title="View Details"
                           >
@@ -2379,7 +2640,7 @@ export const AdminDashboard = () => {
                           <Button 
                             variant="ghost" 
                             size="sm" 
-                            className="text-gray-900/60 hover:text-gray-900"
+                            className="h-8 w-8 p-0 text-gray-600 hover:text-blue-600 hover:bg-blue-50"
                             onClick={() => handleEditUser(user.userId)}
                             title="Edit User"
                           >
@@ -2389,12 +2650,16 @@ export const AdminDashboard = () => {
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              className="text-red-400 hover:text-red-300"
+                              className="h-8 w-8 p-0 text-gray-600 hover:text-red-600 hover:bg-red-50"
                               onClick={() => handleDeactivateUser(user.userId)}
                               disabled={updatingUserId === user.userId}
                               title="Deactivate User"
                             >
-                              <UserMinus className="h-4 w-4" />
+                              {updatingUserId === user.userId ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <UserMinus className="h-4 w-4" />
+                              )}
                         </Button>
                           )}
                       </div>
@@ -2938,12 +3203,15 @@ export const AdminDashboard = () => {
         </div>
         <div className="flex gap-2">
           <Button 
-            onClick={loadAdminStatistics}
+            onClick={() => {
+              loadAdminStatistics();
+              loadAnalyticsData();
+            }}
             variant="outline"
             className="border-gray-300 text-gray-900 hover:bg-gray-100"
-            disabled={statsLoading}
+            disabled={statsLoading || analyticsLoading}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${statsLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 mr-2 ${(statsLoading || analyticsLoading) ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-100">
@@ -2991,7 +3259,7 @@ export const AdminDashboard = () => {
       )}
 
       {/* System Statistics Section */}
-      {systemStats && !statsLoading && (
+      {!statsLoading && (
         <Card className={dashboardTheme.card}>
           <CardHeader>
             <CardTitle className="text-gray-900 flex items-center gap-2">
@@ -3004,25 +3272,25 @@ export const AdminDashboard = () => {
               <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
                 <p className="text-sm text-gray-600 mb-1">Total Users</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {systemStats.totalUsers || systemStats.users?.total || analyticsUsers.length || 0}
+                  {systemStats?.totalUsers || systemStats?.users?.total || analyticsUsers.length || 0}
                 </p>
               </div>
               <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
                 <p className="text-sm text-gray-600 mb-1">Total Policies</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {systemStats.totalPolicies || systemStats.policies?.total || analyticsPolicies.length || 0}
+                  {systemStats?.totalPolicies || systemStats?.policies?.total || analyticsPolicies.length || 0}
                 </p>
               </div>
               <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
                 <p className="text-sm text-gray-600 mb-1">Total Claims</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {systemStats.totalClaims || systemStats.claims?.total || analyticsClaims.length || 0}
+                  {systemStats?.totalClaims || systemStats?.claims?.total || analyticsClaims.length || 0}
                 </p>
               </div>
               <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
                 <p className="text-sm text-gray-600 mb-1">Total Farms</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {analyticsFarms.length || systemStats.totalFarms || 0}
+                  {analyticsFarms.length || systemStats?.totalFarms || 0}
                 </p>
               </div>
             </div>
@@ -3965,70 +4233,328 @@ export const AdminDashboard = () => {
   );
 
   // Settings Page
-  const renderSettings = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Admin Settings</h2>
-          <p className="text-gray-900/60">Configure your admin preferences</p>
-        </div>
-      </div>
+  const renderSettings = () => {
+    const profile = adminProfile || {
+      _id: adminId,
+      userId: adminId,
+      email: getEmail() || "",
+      phoneNumber: getPhoneNumber() || "",
+      firstName: adminName.split(' ')[0] || "",
+      lastName: adminName.split(' ').slice(1).join(' ') || "",
+      role: "ADMIN",
+      active: true,
+      lastLogin: null
+    };
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className={dashboardTheme.card}>
-          <CardHeader>
-            <CardTitle className="text-gray-900 flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Account Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm text-gray-900/80 block mb-2">Admin ID</label>
-              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">{adminId}</div>
-            </div>
-            <div>
-              <label className="text-sm text-gray-900/80 block mb-2">Name</label>
-              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">{adminName}</div>
-            </div>
-            <div>
-              <label className="text-sm text-gray-900/80 block mb-2">Role</label>
-              <Badge className="bg-red-600">Super Administrator</Badge>
-            </div>
-            <div>
-              <label className="text-sm text-gray-900/80 block mb-2">Last Login</label>
-              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-600 text-sm">
-                March 15, 2024 at 08:00 AM
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-700">Admin Settings</h2>
+            <p className="text-gray-600">Configure your admin preferences</p>
+          </div>
+          <Button
+            onClick={loadAdminProfile}
+            variant="outline"
+            className="border-gray-300 text-gray-700 hover:bg-gray-100"
+            disabled={adminProfileLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${adminProfileLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
+
+        {/* Error State */}
+        {adminProfileError && (
+          <Card className={`${dashboardTheme.card} border-l-4 border-l-red-500`}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-red-400" />
+                  <p className="text-red-400">{adminProfileError}</p>
+                </div>
+                <Button
+                  onClick={loadAdminProfile}
+                  variant="outline"
+                  size="sm"
+                  className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Loading State */}
+        {adminProfileLoading && !adminProfile && (
+          <Card className={dashboardTheme.card}>
+            <CardContent className="p-8 text-center">
+              <RefreshCw className="h-8 w-8 animate-spin text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-600">Loading profile...</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {!adminProfileLoading && (
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card className={dashboardTheme.card}>
+              <CardHeader>
+                <CardTitle className="text-gray-700 flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Account Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm text-gray-600 block mb-2">Admin ID</label>
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700">
+                    {profile.userId || profile._id || adminId}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600 block mb-2">Name</label>
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700">
+                    {profile.firstName && profile.lastName 
+                      ? `${profile.firstName} ${profile.lastName}` 
+                      : profile.name || adminName}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600 block mb-2">Email</label>
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700">
+                    {profile.email || getEmail() || 'N/A'}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600 block mb-2">Phone Number</label>
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700">
+                    {profile.phoneNumber || getPhoneNumber() || 'N/A'}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600 block mb-2">Role</label>
+                  <Badge className="bg-red-600">Super Administrator</Badge>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600 block mb-2">Last Login</label>
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-600 text-sm">
+                    {profile.lastLogin 
+                      ? new Date(profile.lastLogin).toLocaleString()
+                      : profile.lastLoginDate
+                      ? new Date(profile.lastLoginDate).toLocaleString()
+                      : 'Never'}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className={dashboardTheme.card}>
+              <CardHeader>
+                <CardTitle className="text-gray-700 flex items-center gap-2">
+                  <Lock className="h-5 w-5" />
+                  Security
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button 
+                  className="w-full bg-red-600 hover:bg-red-700"
+                  onClick={() => setShowChangePasswordDialog(true)}
+                >
+                  <Key className="h-4 w-4 mr-2" />
+                  Change Password
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full border-gray-300 text-gray-700 hover:bg-gray-100"
+                  onClick={() => setShow2FADialog(true)}
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  {profile.twoFactorEnabled ? 'Disable' : 'Enable'} 2FA
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full border-gray-300 text-gray-700 hover:bg-gray-100"
+                  onClick={() => {
+                    setShowLoginHistoryDialog(true);
+                    loadLoginHistory();
+                  }}
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  View Login History
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Change Password Dialog */}
+        <Dialog open={showChangePasswordDialog} onOpenChange={setShowChangePasswordDialog}>
+          <DialogContent className={`${dashboardTheme.card} border-gray-800 max-w-md`}>
+            <DialogHeader>
+              <DialogTitle className="text-gray-900 text-2xl">Change Password</DialogTitle>
+              <DialogDescription className="text-gray-900/60 text-sm mt-2">
+                Enter your current password and choose a new one
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div>
+                <Label htmlFor="currentPassword" className="text-gray-900">Current Password</Label>
+                <Input
+                  id="currentPassword"
+                  type="password"
+                  value={passwordData.currentPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                  className={`${dashboardTheme.input} border-gray-300`}
+                  placeholder="Enter current password"
+                />
+              </div>
+              <div>
+                <Label htmlFor="newPassword" className="text-gray-900">New Password</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={passwordData.newPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                  className={`${dashboardTheme.input} border-gray-300`}
+                  placeholder="Enter new password (min 8 characters)"
+                />
+              </div>
+              <div>
+                <Label htmlFor="confirmPassword" className="text-gray-900">Confirm New Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={passwordData.confirmPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                  className={`${dashboardTheme.input} border-gray-300`}
+                  placeholder="Confirm new password"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowChangePasswordDialog(false);
+                    setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+                  }}
+                  className="border-gray-300 text-gray-900 hover:bg-gray-100"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleChangePassword}
+                  disabled={changingPassword}
+                  className="bg-red-600 hover:bg-red-700 text-gray-900"
+                >
+                  {changingPassword ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Changing...
+                    </>
+                  ) : (
+                    <>
+                      <Key className="h-4 w-4 mr-2" />
+                      Change Password
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </DialogContent>
+        </Dialog>
 
-        <Card className={dashboardTheme.card}>
-          <CardHeader>
-            <CardTitle className="text-gray-900 flex items-center gap-2">
-              <Lock className="h-5 w-5" />
-              Security
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button className="w-full bg-red-600 hover:bg-red-700">
-              <Key className="h-4 w-4 mr-2" />
-              Change Password
-            </Button>
-            <Button variant="outline" className="w-full border-gray-300 text-gray-900 hover:bg-gray-100">
-              <Shield className="h-4 w-4 mr-2" />
-              Enable 2FA
-            </Button>
-            <Button variant="outline" className="w-full border-gray-300 text-gray-900 hover:bg-gray-100">
-              <Eye className="h-4 w-4 mr-2" />
-              View Login History
-            </Button>
-          </CardContent>
-        </Card>
+        {/* 2FA Dialog */}
+        <Dialog open={show2FADialog} onOpenChange={setShow2FADialog}>
+          <DialogContent className={`${dashboardTheme.card} border-gray-800 max-w-md`}>
+            <DialogHeader>
+              <DialogTitle className="text-gray-900 text-2xl">
+                {profile.twoFactorEnabled ? 'Disable' : 'Enable'} Two-Factor Authentication
+              </DialogTitle>
+              <DialogDescription className="text-gray-900/60 text-sm mt-2">
+                {profile.twoFactorEnabled 
+                  ? 'Disabling 2FA will reduce your account security.'
+                  : 'Enable 2FA to add an extra layer of security to your account.'}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-800 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShow2FADialog(false)}
+                className="border-gray-300 text-gray-900 hover:bg-gray-100"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => handleToggle2FA(!profile.twoFactorEnabled)}
+                className={profile.twoFactorEnabled 
+                  ? "bg-gray-600 hover:bg-gray-700 text-gray-900"
+                  : "bg-red-600 hover:bg-red-700 text-gray-900"}
+              >
+                <Shield className="h-4 w-4 mr-2" />
+                {profile.twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Login History Dialog */}
+        <Dialog open={showLoginHistoryDialog} onOpenChange={setShowLoginHistoryDialog}>
+          <DialogContent className={`${dashboardTheme.card} border-gray-800 max-w-2xl max-h-[80vh] overflow-y-auto`}>
+            <DialogHeader>
+              <DialogTitle className="text-gray-900 text-2xl">Login History</DialogTitle>
+              <DialogDescription className="text-gray-900/60 text-sm mt-2">
+                View your recent login activity
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4">
+              {loginHistoryLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <RefreshCw className="h-6 w-6 animate-spin text-gray-600 mr-2" />
+                  <p className="text-gray-600">Loading login history...</p>
+                </div>
+              ) : loginHistory.length === 0 ? (
+                <div className="text-center py-8">
+                  <Eye className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <p className="text-gray-600">No login history available</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {loginHistory.map((entry: any) => (
+                    <div key={entry.id} className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {new Date(entry.timestamp).toLocaleString()}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            {entry.ipAddress} • {entry.location || 'Unknown'}
+                          </p>
+                        </div>
+                        <Badge className={entry.success ? 'bg-green-600' : 'bg-red-600'}>
+                          {entry.success ? 'Success' : 'Failed'}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end pt-4 border-t border-gray-800 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowLoginHistoryDialog(false)}
+                className="border-gray-300 text-gray-900 hover:bg-gray-100"
+              >
+                Close
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Commission Management Page
   const renderCommission = () => (
@@ -5468,7 +5994,7 @@ export const AdminDashboard = () => {
         </div>
 
         {/* Assessments Table */}
-        <Card className="bg-gray-900 border-gray-300">
+        <Card className="bg-white border-gray-300">
           <CardContent className="p-0">
             {assessmentsLoading ? (
               <div className="flex items-center justify-center py-12">
@@ -5488,21 +6014,21 @@ export const AdminDashboard = () => {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-gray-800">
-                      <th className="text-left py-4 px-6 font-medium text-gray-900/80">Farm</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-900/80">Farmer</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-900/80">Assessor</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-900/80">Status</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-900/80">Created</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-900/80">Actions</th>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <th className="text-left py-4 px-6 font-medium text-gray-900">Farm</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-900">Farmer</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-900">Assessor</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-900">Status</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-900">Created</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-900">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredAssessments.map((assessment, index) => (
                       <tr
                         key={assessment._id || assessment.id || index}
-                        className={`border-b border-gray-800/50 hover:bg-gray-100/50 transition-colors ${
-                          index % 2 === 0 ? "bg-gray-950/30" : ""
+                        className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${
+                          index % 2 === 0 ? "bg-white" : "bg-gray-50/50"
                         }`}
                       >
                         <td className="py-4 px-6 text-gray-900">{assessment.farm?.name || 'N/A'}</td>
@@ -5519,10 +6045,10 @@ export const AdminDashboard = () => {
                             }
                             className={
                               assessment.status === 'completed' || assessment.status === 'submitted'
-                                ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                                ? 'bg-green-100 text-green-700 border-green-300'
                                 : assessment.status === 'in-progress'
-                                ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
-                                : 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+                                ? 'bg-yellow-100 text-yellow-700 border-yellow-300'
+                                : 'bg-gray-100 text-gray-700 border-gray-300'
                             }
                           >
                             {assessment.status || 'Pending'}

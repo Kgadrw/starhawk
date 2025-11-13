@@ -172,14 +172,14 @@ export default function Services() {
           >
             <Button 
               size="lg" 
-              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-gray-900 shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-white shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
             >
                 Get Started Today
               <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 ml-2" />
               </Button>
             <Button 
               size="lg" 
-              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-gray-900 shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-white shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
             >
                 Schedule Demo
               </Button>
@@ -252,7 +252,7 @@ export default function Services() {
                     </div>
 
                     <Button 
-                      className="w-full bg-green-600 hover:bg-green-700 border-0 text-gray-900 shadow-lg shadow-green-500/30 rounded-3xl py-2.5 sm:py-3 font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1 text-sm sm:text-base"
+                      className="w-full bg-green-600 hover:bg-green-700 border-0 text-white shadow-lg shadow-green-500/30 rounded-3xl py-2.5 sm:py-3 font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1 text-sm sm:text-base"
                     >
                     Learn More
                       <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2" />
@@ -298,21 +298,21 @@ export default function Services() {
           >
             <Button 
               size="lg" 
-              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-gray-900 shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-white shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
             >
               <Phone className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               Schedule Consultation
             </Button>
             <Button 
               size="lg" 
-              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-gray-900 shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-white shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
             >
               <Mail className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               Contact Sales
             </Button>
             <Button 
               size="lg" 
-              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-gray-900 shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 border-0 text-white shadow-lg shadow-green-500/30 rounded-3xl px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-lg font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
             >
               <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               Live Chat

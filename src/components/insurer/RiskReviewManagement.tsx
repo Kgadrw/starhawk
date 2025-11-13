@@ -195,12 +195,12 @@ export default function RiskReviewManagement() {
 
       {/* Stats Cards */}
       <div className="grid gap-6 md:grid-cols-4">
-        <Card>
+        <Card className="bg-white border border-gray-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-white/70">Total Assessments</p>
-                <p className="text-2xl font-bold text-white">{assessments.length}</p>
+                <p className="text-sm font-medium text-gray-700">Total Assessments</p>
+                <p className="text-2xl font-bold text-gray-900">{assessments.length}</p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                 <BarChart3 className="h-6 w-6 text-blue-600" />
@@ -209,12 +209,12 @@ export default function RiskReviewManagement() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white border border-gray-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-white/70">Pending Review</p>
-                <p className="text-2xl font-bold text-white">
+                <p className="text-sm font-medium text-gray-700">Pending Review</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {assessments.filter(a => a.status === 'pending_review').length}
                 </p>
               </div>
@@ -225,12 +225,12 @@ export default function RiskReviewManagement() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white border border-gray-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-white/70">Approved</p>
-                <p className="text-2xl font-bold text-white">
+                <p className="text-sm font-medium text-gray-700">Approved</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {assessments.filter(a => a.status === 'approved').length}
                 </p>
               </div>
@@ -241,12 +241,12 @@ export default function RiskReviewManagement() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white border border-gray-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-white/70">High Risk</p>
-                <p className="text-2xl font-bold text-white">
+                <p className="text-sm font-medium text-gray-700">High Risk</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {assessments.filter(a => a.riskLevel === 'high').length}
                 </p>
               </div>

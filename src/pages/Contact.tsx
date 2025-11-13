@@ -143,7 +143,7 @@ export default function Contact() {
               <span className="text-gray-900/90 text-xs font-medium">Get in Touch</span>
             </div>
             
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent">
+            <h1 className="text-3xl md:text-4xl font-bold text-green-700 mb-4">
               Contact Our Team
             </h1>
             
@@ -241,7 +241,7 @@ export default function Contact() {
                 <Button 
                   type="submit" 
                   disabled={isSubmitting}
-                  className="w-full bg-green-500/20 hover:bg-green-500/30 border border-green-400/30 text-gray-900 backdrop-blur-sm rounded-3xl py-3 font-medium duration-500 ease-out hover:scale-105 hover:-translate-y-1"
+                  className="w-full bg-green-600 hover:bg-green-700 text-white rounded-3xl py-3 font-medium shadow-md transition-all duration-300"
                 >
                   {isSubmitting ? (
                     "Sending Message..."
