@@ -129,6 +129,16 @@ export default function RwandaLocationSelector({
       if (data.results && Array.isArray(data.results)) {
         return data.results;
       }
+      // Check for other common formats
+      if (data.provinces && Array.isArray(data.provinces)) {
+        return data.provinces;
+      }
+      if (data.districts && Array.isArray(data.districts)) {
+        return data.districts;
+      }
+      if (data.sectors && Array.isArray(data.sectors)) {
+        return data.sectors;
+      }
     }
     console.warn('API returned non-array data, defaulting to empty array:', data);
     return [];
@@ -138,10 +148,33 @@ export default function RwandaLocationSelector({
     setLoading(prev => ({ ...prev, provinces: true }));
     try {
       const data = await rwandaApiService.getProvinces();
-      setProvinces(ensureArray(data));
+      console.log('Provinces API response:', data);
+      const provincesArray = ensureArray(data);
+      console.log('Processed provinces array:', provincesArray);
+      
+      if (provincesArray.length === 0) {
+        console.warn('No provinces found, using fallback mock data');
+        // Use mock data as fallback
+        setProvinces([
+          { id: '1', name: 'Kigali City' },
+          { id: '2', name: 'Northern Province' },
+          { id: '3', name: 'Southern Province' },
+          { id: '4', name: 'Eastern Province' },
+          { id: '5', name: 'Western Province' }
+        ]);
+      } else {
+        setProvinces(provincesArray);
+      }
     } catch (error) {
       console.error('Failed to load provinces:', error);
-      setProvinces([]);
+      // Use mock data on error
+      setProvinces([
+        { id: '1', name: 'Kigali City' },
+        { id: '2', name: 'Northern Province' },
+        { id: '3', name: 'Southern Province' },
+        { id: '4', name: 'Eastern Province' },
+        { id: '5', name: 'Western Province' }
+      ]);
     } finally {
       setLoading(prev => ({ ...prev, provinces: false }));
     }
@@ -239,13 +272,22 @@ export default function RwandaLocationSelector({
               <SelectValue placeholder={loading.provinces ? "Loading provinces..." : "Select province"} />
             </SelectTrigger>
             <SelectContent>
-              {Array.isArray(provinces) && provinces.map((province) => (
-                <SelectItem key={province.id} value={province.id}>
-                  {province.name}
-                </SelectItem>
-              ))}
+              {loading.provinces ? (
+                <SelectItem value="loading" disabled>Loading provinces...</SelectItem>
+              ) : Array.isArray(provinces) && provinces.length > 0 ? (
+                provinces.map((province) => (
+                  <SelectItem key={province.id} value={province.id}>
+                    {province.name}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="no-data" disabled>No provinces available</SelectItem>
+              )}
             </SelectContent>
           </Select>
+          {!loading.provinces && (!Array.isArray(provinces) || provinces.length === 0) && (
+            <p className="text-xs text-yellow-600">Unable to load provinces. Please refresh the page.</p>
+          )}
         </div>
       )}
 
