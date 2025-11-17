@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import DashboardLayout from "../layout/DashboardLayout";
-import RwandaLocationSelector from "@/components/common/RwandaLocationSelector";
 import { getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
 import { getUserProfile } from "@/services/usersAPI";
 import { getFarms, createFarm, createInsuranceRequest, getFarmById, getWeatherForecast, getHistoricalWeather, getVegetationStats } from "@/services/farmsApi";
@@ -22,11 +21,9 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  MapPin,
   Phone,
   Mail,
   Settings,
-  Upload,
   Camera,
   Crop,
   BarChart3,
@@ -40,8 +37,7 @@ import {
   Droplets,
   Thermometer,
   Wind,
-  X,
-  Calendar
+  X
 } from "lucide-react";
 
 export default function FarmerDashboard() {
@@ -71,18 +67,10 @@ export default function FarmerDashboard() {
     cropType: "",
     latitude: "",
     longitude: "",
-    area: "",
-    boundaryType: "auto", // "auto" or "manual"
-    sowingDate: "",
-    province: "",
-    district: "",
-    sector: ""
+    boundaryCoordinates: ""
   });
-  const [selectedLocation, setSelectedLocation] = useState<{
-    province?: { id: string; name: string };
-    district?: { id: string; name: string };
-    sector?: { id: string; name: string };
-  }>({});
+  const [boundaryError, setBoundaryError] = useState<string | null>(null);
+  const [boundaryStats, setBoundaryStats] = useState<{ rings: number; points: number } | null>(null);
   
   // State for File Claim Page
   const [policies, setPolicies] = useState<any[]>([]);
@@ -135,6 +123,8 @@ export default function FarmerDashboard() {
         loadClaims();
       } else if (activePage === "my-fields") {
         loadFarms();
+      } else if (activePage === "create-farm") {
+        loadFarms();
       } else if (activePage === "loss-reports") {
         loadClaims();
       } else if (activePage === "file-claim") {
@@ -176,14 +166,16 @@ export default function FarmerDashboard() {
       
       if (Array.isArray(response)) {
         farmsArray = response;
-      } else if (response?.data) {
-        farmsArray = Array.isArray(response.data) ? response.data : [];
-      } else if (response?.items) {
-        farmsArray = Array.isArray(response.items) ? response.items : [];
-      } else if (response?.results) {
-        farmsArray = Array.isArray(response.results) ? response.results : [];
-      } else if (response?.farms) {
-        farmsArray = Array.isArray(response.farms) ? response.farms : [];
+      } else if (Array.isArray(response?.data)) {
+        farmsArray = response.data;
+      } else if (Array.isArray(response?.data?.items)) {
+        farmsArray = response.data.items;
+      } else if (Array.isArray(response?.items)) {
+        farmsArray = response.items;
+      } else if (Array.isArray(response?.results)) {
+        farmsArray = response.results;
+      } else if (Array.isArray(response?.farms)) {
+        farmsArray = response.farms;
       }
       
       console.log('Extracted farms array:', farmsArray);
@@ -459,6 +451,123 @@ export default function FarmerDashboard() {
     }));
   };
 
+  const upsertCreatedFarm = (farmResponse: any) => {
+    if (!farmResponse) return;
+    const createdFarm = typeof farmResponse === 'object'
+      ? (farmResponse.data || farmResponse)
+      : null;
+    if (!createdFarm || typeof createdFarm !== 'object') return;
+
+    const farmId = createdFarm._id || createdFarm.id || createdFarm.uuid || createdFarm.farmId;
+    const normalizedFarm = {
+      status: createdFarm.status || 'REGISTERED',
+      ...createdFarm,
+      _tempId: farmId ? undefined : `temp-${Date.now()}`
+    };
+
+    setFarms(prev => {
+      if (!prev || prev.length === 0) {
+        return [normalizedFarm];
+      }
+
+      const identifier = farmId || normalizedFarm._tempId;
+      if (!identifier) {
+        return [normalizedFarm, ...prev];
+      }
+
+      const updated = prev.some(f => {
+        const existingId = f._id || f.id || f.uuid || f.farmId || f._tempId;
+        return existingId && existingId === identifier;
+      })
+        ? prev.map(f => {
+            const existingId = f._id || f.id || f.uuid || f.farmId || f._tempId;
+            return existingId === identifier ? { ...f, ...normalizedFarm } : f;
+          })
+        : [normalizedFarm, ...prev];
+
+      return updated;
+    });
+  };
+
+  const normalizeBoundaryCoordinates = (rawInput: string): number[][][] => {
+    if (!rawInput?.trim()) {
+      throw new Error('Boundary coordinates are required');
+    }
+
+    let parsed: any;
+    try {
+      parsed = JSON.parse(rawInput);
+    } catch {
+      throw new Error('Boundary coordinates must be valid JSON.');
+    }
+
+    let coordinates = parsed;
+    if (parsed?.type === 'Polygon' && Array.isArray(parsed.coordinates)) {
+      coordinates = parsed.coordinates;
+    }
+
+    if (!Array.isArray(coordinates)) {
+      throw new Error('Boundary coordinates must be an array of coordinate rings.');
+    }
+
+    if (coordinates.length === 0) {
+      throw new Error('At least one ring is required.');
+    }
+
+    coordinates.forEach((ring: any, ringIndex: number) => {
+      if (!Array.isArray(ring) || ring.length < 4) {
+        throw new Error(`Ring ${ringIndex + 1} must contain at least 4 points.`);
+      }
+
+      ring.forEach((point: any, pointIndex: number) => {
+        if (
+          !Array.isArray(point) ||
+          point.length < 2 ||
+          typeof point[0] !== 'number' ||
+          typeof point[1] !== 'number'
+        ) {
+          throw new Error(`Invalid coordinate at ring ${ringIndex + 1}, point ${pointIndex + 1}.`);
+        }
+      });
+    });
+
+    return coordinates as number[][][];
+  };
+
+  const handleBoundaryInputChange = (value: string) => {
+    setNewFieldData(prev => ({ ...prev, boundaryCoordinates: value }));
+
+    if (!value.trim()) {
+      setBoundaryError(null);
+      setBoundaryStats(null);
+      return;
+    }
+
+    try {
+      const coordinates = normalizeBoundaryCoordinates(value);
+      setBoundaryError(null);
+
+      let pointCount = 0;
+      coordinates.forEach(ring => {
+        if (Array.isArray(ring)) {
+          ring.forEach(point => {
+            if (Array.isArray(point) && point.length >= 2) {
+              pointCount += 1;
+            }
+          });
+        }
+      });
+
+      setBoundaryStats({
+        rings: coordinates.length,
+        points: pointCount
+      });
+    } catch (err: any) {
+      setBoundaryError(err.message || 'Invalid boundary coordinates');
+      setBoundaryStats(null);
+    }
+  };
+
   const handleSubmitClaim = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -531,9 +640,9 @@ export default function FarmerDashboard() {
 
   const handleCreateField = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate required fields
-    if (!newFieldData.name) {
+
+    const trimmedName = newFieldData.name.trim();
+    if (!trimmedName) {
       toast({
         title: 'Validation Error',
         description: 'Field name is required',
@@ -551,160 +660,96 @@ export default function FarmerDashboard() {
       return;
     }
 
-    if (!newFieldData.sowingDate) {
+    if (!newFieldData.latitude || !newFieldData.longitude) {
       toast({
         title: 'Validation Error',
-        description: 'Sowing date is required',
+        description: 'Latitude and longitude are required',
         variant: 'destructive'
       });
       return;
     }
 
-    if (!selectedLocation.province || !selectedLocation.district || !selectedLocation.sector) {
+    const lat = parseFloat(newFieldData.latitude);
+    const lng = parseFloat(newFieldData.longitude);
+
+    if (isNaN(lat) || isNaN(lng)) {
       toast({
         title: 'Validation Error',
-        description: 'Please select Province, District, and Sector',
+        description: 'Latitude and longitude must be numeric values',
         variant: 'destructive'
       });
       return;
     }
 
-    // Validate coordinates if provided (optional)
-    let lat: number | null = null;
-    let lng: number | null = null;
-    
-    if (newFieldData.latitude && newFieldData.longitude) {
-      lat = parseFloat(newFieldData.latitude);
-      lng = parseFloat(newFieldData.longitude);
+    if (lat < -90 || lat > 90) {
+      toast({
+        title: 'Validation Error',
+        description: 'Latitude must be between -90 and 90 degrees',
+        variant: 'destructive'
+      });
+      return;
+    }
 
-      if (isNaN(lat) || isNaN(lng)) {
-        toast({
-          title: 'Validation Error',
-          description: 'Please enter valid numeric values for latitude and longitude',
-          variant: 'destructive'
-        });
-        return;
-      }
+    if (lng < -180 || lng > 180) {
+      toast({
+        title: 'Validation Error',
+        description: 'Longitude must be between -180 and 180 degrees',
+        variant: 'destructive'
+      });
+      return;
+    }
 
-      if (lat < -90 || lat > 90) {
-        toast({
-          title: 'Validation Error',
-          description: 'Latitude must be between -90 and 90',
-          variant: 'destructive'
-        });
-        return;
-      }
-
-      if (lng < -180 || lng > 180) {
-        toast({
-          title: 'Validation Error',
-          description: 'Longitude must be between -180 and 180',
-          variant: 'destructive'
-        });
-        return;
-      }
+    let boundaryCoordinates: number[][][];
+    try {
+      boundaryCoordinates = normalizeBoundaryCoordinates(newFieldData.boundaryCoordinates);
+      setBoundaryError(null);
+    } catch (err: any) {
+      const message = err.message || 'Boundary coordinates are invalid';
+      setBoundaryError(message);
+      toast({
+        title: 'Invalid Boundary',
+        description: message,
+        variant: 'destructive'
+      });
+      return;
     }
 
     setIsCreating(true);
     try {
-      // Format data according to API specification
       const farmData: any = {
-        name: newFieldData.name.trim(),
-        cropType: newFieldData.cropType.trim().toUpperCase(),
-        sowingDate: newFieldData.sowingDate,
+        name: trimmedName,
         location: {
-          province: selectedLocation.province?.name || '',
-          district: selectedLocation.district?.name || '',
-          sector: selectedLocation.sector?.name || ''
-        }
-      };
-
-      // Add coordinates and boundary only if provided (optional)
-      if (lat !== null && lng !== null) {
-        // Calculate boundary offset based on area if provided
-        let offset = 0.001; // Default offset (approximately 111 meters)
-        if (newFieldData.area && parseFloat(newFieldData.area) > 0) {
-          // Convert hectares to approximate degrees
-          // 1 hectare ≈ 0.0001 square degrees (rough approximation)
-          const areaInDegrees = Math.sqrt(parseFloat(newFieldData.area) * 0.0001);
-          offset = areaInDegrees / 2;
-        }
-
-        // Create a simple square boundary around the point location
-        const boundaryCoordinates = [
-          [
-            [lng - offset, lat - offset], // Southwest corner
-            [lng + offset, lat - offset], // Southeast corner
-            [lng + offset, lat + offset], // Northeast corner
-            [lng - offset, lat + offset], // Northwest corner
-            [lng - offset, lat - offset]  // Close the polygon
-          ]
-        ];
-
-        farmData.coordinates = [lng, lat]; // [longitude, latitude] format
-        farmData.boundary = {
+          type: 'Point',
+          coordinates: [lng, lat] // [longitude, latitude]
+        },
+        boundary: {
           type: 'Polygon',
           coordinates: boundaryCoordinates
-        };
-      }
-
-      // Add area if provided
-      if (newFieldData.area && parseFloat(newFieldData.area) > 0) {
-        farmData.area = parseFloat(newFieldData.area);
-      }
-
-      // Validate required fields
-      if (!farmData.name) {
-        throw new Error('Field name is required');
-      }
+        },
+        cropType: newFieldData.cropType.trim().toUpperCase()
+      };
 
       console.log('📤 Preparing to create farm with data:', JSON.stringify(farmData, null, 2));
-      console.log('📤 Farm data validation:', {
-        hasName: !!farmData.name,
-        hasCoordinates: !!farmData.coordinates,
-        coordinates: farmData.coordinates,
-        hasBoundary: !!farmData.boundary,
-        boundaryType: farmData.boundary?.type,
-        boundaryCoordinatesLength: farmData.boundary?.coordinates?.[0]?.length,
-        cropType: farmData.cropType || 'Not provided'
-      });
 
       const response = await createFarm(farmData);
-      
       console.log('✅ Farm creation API response:', response);
-      
-      if (response) {
-        console.log('✅ Farm created successfully with ID:', response.id || response._id || 'N/A');
-      }
-      
+      upsertCreatedFarm(response);
+
       toast({
         title: 'Success',
         description: 'Field created successfully!',
       });
 
-      // Reset form
       setNewFieldData({
         name: "",
         cropType: "",
         latitude: "",
         longitude: "",
-        area: "",
-        boundaryType: "auto",
-        sowingDate: "",
-        province: "",
-        district: "",
-        sector: ""
+        boundaryCoordinates: ""
       });
-      setSelectedLocation({});
-      
-      // Navigate back to my fields page immediately
-      setActivePage("my-fields");
-      
-      // Reload farms after navigation to ensure new farm is fetched
-      // Use a small delay to ensure state is updated
-      setTimeout(async () => {
-        await loadFarms();
-      }, 100);
+      setBoundaryStats(null);
+      setBoundaryError(null);
+      await loadFarms();
     } catch (err: any) {
       console.error('Failed to create field:', err);
       toast({
@@ -1045,250 +1090,181 @@ export default function FarmerDashboard() {
     </div>
   );
 
-  const renderCreateFarm = () => {
-    // Calculate boundary offset based on area if provided
-    const calculateOffset = () => {
-      if (newFieldData.area && parseFloat(newFieldData.area) > 0) {
-        // Convert hectares to approximate degrees
-        // 1 hectare ≈ 0.0001 square degrees (rough approximation)
-        const areaInDegrees = Math.sqrt(parseFloat(newFieldData.area) * 0.0001);
-        return areaInDegrees / 2;
-      }
-      return 0.001; // Default offset
-    };
-
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <Button
-              variant="ghost"
-              onClick={() => setActivePage("my-fields")}
-              className="text-gray-900 hover:bg-gray-50 mb-4"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to My Fields
-            </Button>
-            <h2 className="text-2xl font-bold text-gray-900">Create New Field</h2>
-            <p className="text-gray-600">Fill in all the details to register a new field</p>
-          </div>
+  const renderCreateFarm = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <Button
+            variant="ghost"
+            onClick={() => setActivePage("my-fields")}
+            className="text-gray-900 hover:bg-gray-50 mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to My Fields
+          </Button>
+          <h2 className="text-2xl font-bold text-gray-900">Register New Field</h2>
+          <p className="text-gray-600">
+            Submit the official farm record required by Starhawk&apos;s backend APIs.
+          </p>
         </div>
+      </div>
 
-        <Card className={`${dashboardTheme.card}`}>
-          <CardHeader>
-            <CardTitle className="text-gray-900">Field Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleCreateField} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="fieldName" className="text-gray-900">Field Name *</Label>
-                <Input
-                  id="fieldName"
-                  value={newFieldData.name}
-                  onChange={(e) => setNewFieldData({ ...newFieldData, name: e.target.value })}
-                  placeholder="Enter field name (e.g., North Field, Main Farm)"
-                  required
-                  className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 "
-                />
-                <p className="text-xs text-gray-500">Give your field a descriptive name</p>
+      <Card className={`${dashboardTheme.card}`}>
+        <CardHeader>
+          <CardTitle className="text-gray-900">Farm Information</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleCreateField} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="fieldName" className="text-gray-900">Field Name *</Label>
+              <Input
+                id="fieldName"
+                value={newFieldData.name}
+                onChange={(e) => setNewFieldData({ ...newFieldData, name: e.target.value })}
+                placeholder="e.g., Main Farm"
+                required
+                className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
+              />
+              <p className="text-xs text-gray-500">
+                Use the same field label that appears on your insurance paperwork.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cropType" className="text-gray-900">Crop Type *</Label>
+              <Input
+                id="cropType"
+                value={newFieldData.cropType}
+                onChange={(e) => setNewFieldData({ ...newFieldData, cropType: e.target.value })}
+                placeholder="e.g., MAIZE, RICE, BEANS"
+                required
+                className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
+              />
+              <p className="text-xs text-gray-500">
+                Enter crop type (will be converted to uppercase).
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="border-b border-gray-200 pb-3">
+                <h3 className="text-gray-900 font-semibold text-base mb-1">Location (GeoJSON Point) *</h3>
+                <p className="text-xs text-gray-500">
+                  Enter the coordinates for the farm location.
+                </p>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cropType" className="text-gray-900">Crop Type *</Label>
-                <Select
-                  value={newFieldData.cropType}
-                  onValueChange={(value) => setNewFieldData({ ...newFieldData, cropType: value })}
-                  required
-                >
-                  <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-900 ">
-                    <SelectValue placeholder="Select crop type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="MAIZE">Maize</SelectItem>
-                    <SelectItem value="RICE">Rice</SelectItem>
-                    <SelectItem value="BEANS">Beans</SelectItem>
-                    <SelectItem value="WHEAT">Wheat</SelectItem>
-                    <SelectItem value="POTATOES">Potatoes</SelectItem>
-                    <SelectItem value="COFFEE">Coffee</SelectItem>
-                    <SelectItem value="BANANAS">Bananas</SelectItem>
-                    <SelectItem value="SORGHUM">Sorghum</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-gray-500">Select the type of crop grown in this field</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="sowingDate" className="text-gray-900">Sowing Date *</Label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="sowingDate"
-                    type="date"
-                    value={newFieldData.sowingDate}
-                    onChange={(e) => setNewFieldData({ ...newFieldData, sowingDate: e.target.value })}
-                    required
-                    className="bg-gray-50 border-gray-300 text-gray-900 pl-10"
-                  />
-                </div>
-                <p className="text-xs text-gray-500">Select the date when the crop was sown</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-gray-900">Location *</Label>
-                <RwandaLocationSelector
-                  onLocationChange={(location) => {
-                    setSelectedLocation({
-                      province: location.province,
-                      district: location.district,
-                      sector: location.sector
-                    });
-                    setNewFieldData(prev => ({
-                      ...prev,
-                      province: location.province?.name || '',
-                      district: location.district?.name || '',
-                      sector: location.sector?.name || ''
-                    }));
-                  }}
-                  levels={['province', 'district', 'sector']}
-                  className="space-y-4"
-                />
-                <p className="text-xs text-gray-500">Select Province, District, and Sector where the field is located</p>
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="latitude" className="text-gray-900">Latitude (Optional)</Label>
+                  <Label htmlFor="latitude" className="text-sm text-gray-700">Latitude *</Label>
                   <Input
                     id="latitude"
                     type="number"
                     step="any"
                     value={newFieldData.latitude}
                     onChange={(e) => setNewFieldData({ ...newFieldData, latitude: e.target.value })}
-                    placeholder="e.g., -1.9441"
-                    className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 "
+                    placeholder="-1.9441"
+                    required
+                    className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
                   />
-                  <p className="text-xs text-gray-500">Field center latitude (-90 to 90). Will be determined during field inspection if not provided.</p>
+                  <p className="text-xs text-gray-500">
+                    Decimal degrees between -90 and 90.
+                  </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="longitude" className="text-gray-900">Longitude (Optional)</Label>
+                  <Label htmlFor="longitude" className="text-sm text-gray-700">Longitude *</Label>
                   <Input
                     id="longitude"
                     type="number"
                     step="any"
                     value={newFieldData.longitude}
                     onChange={(e) => setNewFieldData({ ...newFieldData, longitude: e.target.value })}
-                    placeholder="e.g., 30.0619"
-                    className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 "
+                    placeholder="30.0619"
+                    required
+                    className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
                   />
-                  <p className="text-xs text-gray-500">Field center longitude (-180 to 180). Will be determined during field inspection if not provided.</p>
+                  <p className="text-xs text-gray-500">
+                    Decimal degrees between -180 and 180.
+                  </p>
                 </div>
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="area" className="text-gray-900">Area (hectares)</Label>
-                <Input
-                  id="area"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={newFieldData.area}
-                  onChange={(e) => setNewFieldData({ ...newFieldData, area: e.target.value })}
-                  placeholder="e.g., 2.5"
-                  className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 "
-                />
-                <p className="text-xs text-gray-500">
-                  Optional: Enter the field area in hectares. This will be used to calculate the boundary size.
-                  {newFieldData.area && parseFloat(newFieldData.area) > 0 && (
-                    <span className="block mt-1 text-green-600">
-                      Boundary will be calculated automatically based on {newFieldData.area} hectares
-                    </span>
-                  )}
+            <div className="space-y-2">
+              <Label htmlFor="boundaryCoordinates" className="text-gray-900">
+                Boundary (GeoJSON Polygon) *
+              </Label>
+              <Textarea
+                id="boundaryCoordinates"
+                value={newFieldData.boundaryCoordinates}
+                onChange={(e) => handleBoundaryInputChange(e.target.value)}
+                rows={8}
+                placeholder={`[
+  [
+    [30.0619, -1.9441],
+    [30.0625, -1.9441],
+    [30.0625, -1.9435],
+    [30.0619, -1.9435],
+    [30.0619, -1.9441]
+  ]
+]`}
+                className="bg-gray-50 border-gray-300 text-gray-900 font-mono text-xs"
+                required
+              />
+              {boundaryError && (
+                <p className="text-sm text-red-600">{boundaryError}</p>
+              )}
+              {boundaryStats && (
+                <p className="text-xs text-green-600">
+                  Detected {boundaryStats.rings} ring(s) • {boundaryStats.points} coordinate pairs
                 </p>
-              </div>
-
-              {(newFieldData.latitude && newFieldData.longitude) && (
-                <div className="pt-4 border-t border-gray-200">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                    <div className="flex items-start gap-3">
-                      <MapPin className="h-5 w-5 text-blue-600 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900 mb-1">Boundary Information</p>
-                        <p className="text-xs text-gray-600">
-                          The field boundary will be automatically calculated as a square polygon around the center point.
-                          {newFieldData.area && parseFloat(newFieldData.area) > 0 
-                            ? ` Size: ~${calculateOffset().toFixed(4)} degrees (based on ${newFieldData.area} hectares).`
-                            : " Default size: 0.001 degrees (~111 meters)."}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               )}
-              
-              {(!newFieldData.latitude || !newFieldData.longitude) && (
-                <div className="pt-4 border-t border-gray-200">
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                    <div className="flex items-start gap-3">
-                      <MapPin className="h-5 w-5 text-yellow-600 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900 mb-1">Coordinates Information</p>
-                        <p className="text-xs text-gray-600">
-                          Latitude and Longitude are optional. If not provided, the exact coordinates will be determined by the assessor during field inspection using EOS API.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <p className="text-xs text-gray-500">
+                Paste the coordinates array from your GIS tool or the entire GeoJSON Polygon.
+              </p>
+            </div>
 
-              <div className="flex gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setActivePage("my-fields");
-                    setNewFieldData({
-                      name: "",
-                      cropType: "",
-                      latitude: "",
-                      longitude: "",
-                      area: "",
-                      boundaryType: "auto",
-                      sowingDate: "",
-                      province: "",
-                      district: "",
-                      sector: ""
-                    });
-                    setSelectedLocation({});
-                  }}
-                  className="flex-1 bg-gray-50 hover:bg-gray-100 border border-gray-300 text-gray-900 "
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isCreating}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                >
-                  {isCreating ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Create Field
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  };
+            <div className="flex gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setActivePage("my-fields");
+                  setNewFieldData({
+                    name: "",
+                    cropType: "",
+                    latitude: "",
+                    longitude: "",
+                    boundaryCoordinates: ""
+                  });
+                  setBoundaryError(null);
+                  setBoundaryStats(null);
+                }}
+                className="flex-1 bg-gray-50 hover:bg-gray-100 border border-gray-300 text-gray-900"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isCreating}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+              >
+                {isCreating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Create Field
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
 
   const renderFileClaim = () => (
     <div className="space-y-6">
@@ -1417,6 +1393,7 @@ export default function FarmerDashboard() {
                     </span>
                   )}
                 </div>
+
                 
                 {uploadedFiles.length > 0 && (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">

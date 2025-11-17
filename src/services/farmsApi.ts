@@ -149,22 +149,28 @@ class FarmsApiService {
   //   "cropType": "MAIZE" // Optional, uppercase
   // }
   async createFarm(farmData: FarmData) {
-    const coordinates = farmData.coordinates || farmData.location?.coordinates;
-    
-    if (!coordinates || !Array.isArray(coordinates) || coordinates.length !== 2) {
-      throw new Error('Invalid coordinates. Expected [longitude, latitude] array.');
-    }
-
     // Build request body matching exact API specification
     const requestBody: any = {
       name: farmData.name,
-      location: {
-        type: 'Point',
-        coordinates: coordinates, // [longitude, latitude] format
-      },
     };
 
-    // Add optional boundary if provided
+    // Use location object directly if provided, otherwise construct from coordinates
+    if (farmData.location && farmData.location.type && farmData.location.coordinates) {
+      requestBody.location = farmData.location;
+    } else if (farmData.coordinates) {
+      const coordinates = farmData.coordinates;
+      if (!Array.isArray(coordinates) || coordinates.length !== 2) {
+        throw new Error('Invalid coordinates. Expected [longitude, latitude] array.');
+      }
+      requestBody.location = {
+        type: 'Point',
+        coordinates: coordinates, // [longitude, latitude] format
+      };
+    } else {
+      throw new Error('Location is required. Provide either location object or coordinates array.');
+    }
+
+    // Add boundary if provided
     if (farmData.boundary) {
       requestBody.boundary = {
         type: 'Polygon',
@@ -172,7 +178,7 @@ class FarmsApiService {
       };
     }
 
-    // Add optional cropType if provided (should be uppercase per API spec)
+    // Add cropType if provided (should be uppercase per API spec)
     if (farmData.cropType) {
       requestBody.cropType = farmData.cropType;
     }
