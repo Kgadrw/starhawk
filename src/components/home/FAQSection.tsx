@@ -50,17 +50,8 @@ export function FAQSection() {
   ];
 
   return (
-    <section className="relative z-10 py-24 px-4 bg-gradient-to-b from-transparent to-gray-50">
-      {/* Grid Pattern Background */}
-      <div className="absolute inset-0 opacity-70 flex items-center justify-center">
-        <img
-          src="/lines.png"
-          alt="Grid lines"
-          className="w-3/4 h-3/4 object-contain"
-        />
-      </div>
-
-      <div className="relative z-10 max-w-4xl mx-auto">
+    <section className="relative bg-white py-20 sm:py-24">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -68,15 +59,10 @@ export function FAQSection() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <div className="inline-flex items-center space-x-2 bg-green-50 border border-green-200 px-4 py-2 rounded-full mb-6">
-            <HelpCircle className="h-4 w-4 text-green-600" />
-            <span className="text-gray-700 text-sm font-medium">Frequently Asked Questions</span>
-          </div>
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            <span className="text-gray-900">Got </span>
-            <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">Questions?</span>
+          <h2 className="text-4xl sm:text-5xl font-bold text-gray-700 mb-4">
+            Frequently Asked Questions
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Find answers to common questions about our agricultural insurance platform
           </p>
         </motion.div>
@@ -91,20 +77,20 @@ export function FAQSection() {
               transition={{ duration: 0.4, delay: index * 0.05 }}
             >
               <Card 
-                className="bg-white border border-gray-200 hover:border-green-300 transition-all duration-300 rounded-2xl overflow-hidden"
+                className="bg-white border border-gray-200 hover:border-green-300 transition-all duration-300 rounded-xl overflow-hidden"
               >
               <button
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
                 className="w-full text-left p-6 flex items-center justify-between group"
               >
-                <span className="text-lg font-semibold text-gray-900 group-hover:text-green-600 transition-colors pr-4">
+                <span className="text-lg font-semibold text-gray-700 group-hover:text-green-600 transition-colors pr-4">
                   {faq.question}
                 </span>
-                <div className="w-8 h-8 rounded-full bg-green-100 border border-green-300 flex items-center justify-center flex-shrink-0 group-hover:bg-green-200 transition-all duration-300">
+                <div className="w-10 h-10 rounded-lg bg-green-50 border border-green-200 flex items-center justify-center flex-shrink-0 group-hover:bg-green-100 transition-all duration-300">
                   {openIndex === index ? (
-                    <Minus className="h-4 w-4 text-green-600" />
+                    <Minus className="h-5 w-5 text-green-600" />
                   ) : (
-                    <Plus className="h-4 w-4 text-green-600" />
+                    <Plus className="h-5 w-5 text-green-600" />
                   )}
                 </div>
               </button>

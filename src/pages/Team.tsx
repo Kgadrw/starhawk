@@ -1,9 +1,10 @@
 import { HomeNavbar } from "@/components/layout/HomeNavbar";
 import { FooterSection } from "@/components/home/FooterSection";
-import { Users, ArrowLeft, Linkedin, Github } from "lucide-react";
+import { Linkedin, Github } from "lucide-react";
 import { Link } from "react-router-dom";
 import CustomScrollbar from "@/components/ui/CustomScrollbar";
 import { motion } from "framer-motion";
+import { Card, CardContent } from "@/components/ui/card";
 
 const Team = () => {
   const teamMembers = [
@@ -12,133 +13,105 @@ const Team = () => {
       title: "Victor Muragwa",
       subtitle: "Business Lead",
       handle: "@victormuragwa",
-      borderColor: "#22C55E",
-      gradient: "linear-gradient(145deg, #22C55E, #000)",
-      url: "https://linkedin.com/in/victormuragwa"
+      url: "https://linkedin.com/in/victormuragwa",
+      icon: Linkedin
     },
     {
       image: "/kiba.jpg",
       title: "Kiba Muvunyi MBA",
       subtitle: "Growth & Strategy Advisory",
       handle: "@kibamuvunyi",
-      borderColor: "#F59E0B",
-      gradient: "linear-gradient(145deg, #F59E0B, #000)",
-      url: "https://linkedin.com/in/kibamuvunyi"
+      url: "https://linkedin.com/in/kibamuvunyi",
+      icon: Linkedin
     },
     {
       image: "/gad.jpeg",
       title: "Gad Kalisa",
       subtitle: "Software Engineer & Product Designer",
       handle: "@gadkalisa",
-      borderColor: "#3B82F6",
-      gradient: "linear-gradient(180deg, #3B82F6, #000)",
-      url: "https://github.com/gadkalisa"
+      url: "https://github.com/gadkalisa",
+      icon: Github
     }
   ];
 
   return (
     <CustomScrollbar>
-      <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50 min-h-screen">
-        {/* Navigation */}
+      <div className="bg-white relative min-h-screen">
         <HomeNavbar />
 
-      {/* Hero Section */}
-      <section className="relative pt-32 pb-16 px-4">
-        {/* Grid Pattern Background */}
-        <div className="absolute inset-0 opacity-70 flex items-center justify-center">
-          <img
-            src="/lines.png"
-            alt="Grid lines"
-            className="w-3/4 h-3/4 object-contain"
-          />
-                    </div>
-
-        {/* Bottom Corner Lines */}
-        <div className="absolute bottom-0 left-0 opacity-60">
-          <img
-            src="/lines2.png"
-            alt="Bottom left lines"
-            className="w-[32rem] h-[32rem]"
-          />
-                  </div>
-        <div className="absolute bottom-0 right-0 opacity-60">
-          <img
-            src="/lines2.png"
-            alt="Bottom right lines"
-            className="w-[32rem] h-[32rem]"
-          />
-      </div>
-
-        <div className="relative z-10 max-w-7xl mx-auto text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          >
-            <div className="inline-flex items-center space-x-2 bg-green-50 border border-green-200 px-4 py-2 rounded-full mb-6">
-              <Users className="h-4 w-4 text-yellow-400" />
-              <span className="text-gray-900/90 text-sm font-medium">Meet Our Team</span>
-            </div>
-
-            <h1 className="text-4xl md:text-6xl font-bold text-green-700 mb-6">
-              Our Expert Team
-            </h1>
-            
-            <p className="text-lg md:text-xl text-gray-900/80 max-w-3xl mx-auto leading-relaxed mb-8">
-              The talented individuals behind STARHAWK's revolutionary agricultural insurance platform.
-              Our team combines expertise in technology, agriculture, and insurance to deliver 
-              innovative solutions for farmers worldwide.
-            </p>
-          </motion.div>
-
-                    </div>
-      </section>
-
-      {/* Team Grid */}
-      <section className="relative z-10 py-16 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            {teamMembers.map((member, index) => (
-              <motion.div 
-                key={index}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: index * 0.2 }}
-                className="relative bg-white border border-gray-200 rounded-xl overflow-hidden w-full max-w-80 h-80 mx-auto"
-              >
-                <img 
-                  src={member.image} 
-                  alt={member.title}
-                  className="w-full h-full object-cover"
-                />
-                
-                {/* LinkedIn Icon - Top Right */}
-                <div className="absolute top-3 right-3">
-                  <a 
-                    href={member.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center w-8 h-8 bg-green-100 hover:bg-green-200 rounded-full backdrop-blur-sm transition-colors"
-                  >
-                    <Linkedin className="h-4 w-4 text-gray-900" />
-                  </a>
-                  </div>
-
-                {/* Text Overlay - Bottom */}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4">
-                  <h3 className="text-lg font-semibold text-white mb-1">{member.title}</h3>
-                  <p className="text-green-200 text-sm font-medium mb-1">{member.subtitle}</p>
-                  <p className="text-white/80 text-xs">{member.handle}</p>      
-                </div>
-              </motion.div>
-            ))}
+        {/* Hero Section */}
+        <section className="relative pt-32 pb-20 bg-gradient-to-br from-green-50 via-white to-emerald-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-700 mb-6">
+                Our Expert Team
+              </h1>
+              
+              <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+                The talented individuals behind STARHAWK's revolutionary agricultural insurance platform.
+                Our team combines expertise in technology, agriculture, and insurance to deliver 
+                innovative solutions for farmers worldwide.
+              </p>
+            </motion.div>
           </div>
-        </div>
-      </section>
+        </section>
 
+        {/* Team Grid */}
+        <section className="py-20 bg-white">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {teamMembers.map((member, index) => {
+                const Icon = member.icon;
+                return (
+                  <motion.div 
+                    key={index}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <Card className="border border-gray-200 hover:border-green-300 hover:shadow-lg transition-all duration-300 overflow-hidden group">
+                      <div className="relative h-80 overflow-hidden">
+                        <img 
+                          src={member.image} 
+                          alt={member.title}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                        
+                        {/* Social Icon - Top Right */}
+                        <div className="absolute top-4 right-4">
+                          <a 
+                            href={member.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center w-10 h-10 bg-white/90 hover:bg-white rounded-full backdrop-blur-sm transition-colors shadow-lg"
+                          >
+                            <Icon className="h-5 w-5 text-gray-700" />
+                          </a>
+                        </div>
 
-        {/* Footer */}
+                        {/* Gradient Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                        
+                        {/* Text Overlay - Bottom */}
+                        <div className="absolute bottom-0 left-0 right-0 p-6">
+                          <h3 className="text-xl font-bold text-white mb-1">{member.title}</h3>
+                          <p className="text-green-300 text-sm font-medium mb-1">{member.subtitle}</p>
+                          <p className="text-white/80 text-xs">{member.handle}</p>      
+                        </div>
+                      </div>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
         <FooterSection />
       </div>
     </CustomScrollbar>

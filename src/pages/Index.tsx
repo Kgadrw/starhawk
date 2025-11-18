@@ -10,7 +10,7 @@ import CustomScrollbar from "@/components/ui/CustomScrollbar";
 const Index = () => {
   return (
     <CustomScrollbar>
-      <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50 relative min-h-screen">
+      <div className="bg-white relative min-h-screen">
         <HomeNavbar />
         <HeroSection />
         <div className="relative z-10">

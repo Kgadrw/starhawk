@@ -19,29 +19,31 @@ export function HomeNavbar() {
   const location = useLocation();
 
   return (
-    <nav className="fixed top-3 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-6xl px-3">
-      <div className="bg-gradient-to-r from-green-600 to-emerald-600 backdrop-blur-md border border-green-500 rounded-xl shadow-md">
-        <div className="flex items-center justify-between px-4 py-3">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-200 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-2.5">
-            <Satellite className="h-6 w-6 text-white" />
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-600 to-emerald-600 flex items-center justify-center">
+              <Satellite className="h-6 w-6 text-white" />
+            </div>
             <div>
-              <h1 className="text-xl font-semibold text-white tracking-tight">
+              <h1 className="text-xl font-bold text-gray-700 tracking-tight">
                 STARHAWK
               </h1>
-              <p className="text-green-100 text-xs font-medium">Agricultural Insurance Platform</p>
+              <p className="text-green-600 text-xs font-medium">Agricultural Insurance</p>
             </div>
           </Link>
 
-          <div className="hidden lg:flex items-center gap-5">
+          <div className="hidden lg:flex items-center gap-8">
             <NavigationMenu>
-              <NavigationMenuList>
+              <NavigationMenuList className="gap-2">
                 <NavigationMenuItem>
                   <Link 
                     to="/" 
-                    className={`px-2.5 py-1.5 text-xs font-medium transition-colors rounded-lg ${
+                    className={`px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
                       location.pathname === '/' 
-                        ? 'text-white bg-white/20 shadow-sm' 
-                        : 'text-white/90 hover:text-white hover:bg-white/10'
+                        ? 'text-green-600 bg-green-50' 
+                        : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
                     }`}
                   >
                     Home
@@ -50,10 +52,10 @@ export function HomeNavbar() {
                 <NavigationMenuItem>
                   <Link 
                     to="/services" 
-                    className={`px-2.5 py-1.5 text-xs font-medium transition-colors rounded-lg ${
+                    className={`px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
                       location.pathname === '/services' 
-                        ? 'text-white bg-white/20 shadow-sm' 
-                        : 'text-white/90 hover:text-white hover:bg-white/10'
+                        ? 'text-green-600 bg-green-50' 
+                        : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
                     }`}
                   >
                     Services
@@ -62,10 +64,10 @@ export function HomeNavbar() {
                 <NavigationMenuItem>
                   <Link 
                     to="/team" 
-                    className={`px-2.5 py-1.5 text-xs font-medium transition-colors rounded-lg ${
+                    className={`px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
                       location.pathname === '/team' 
-                        ? 'text-white bg-white/20 shadow-sm' 
-                        : 'text-white/90 hover:text-white hover:bg-white/10'
+                        ? 'text-green-600 bg-green-50' 
+                        : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
                     }`}
                   >
                     Team
@@ -74,10 +76,10 @@ export function HomeNavbar() {
                 <NavigationMenuItem>
                   <Link 
                     to="/contact" 
-                    className={`px-2.5 py-1.5 text-xs font-medium transition-colors rounded-lg ${
+                    className={`px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
                       location.pathname === '/contact' 
-                        ? 'text-white bg-white/20 shadow-sm' 
-                        : 'text-white/90 hover:text-white hover:bg-white/10'
+                        ? 'text-green-600 bg-green-50' 
+                        : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
                     }`}
                   >
                     Contact
@@ -87,35 +89,35 @@ export function HomeNavbar() {
             </NavigationMenu>
           </div>
 
-          <div className="hidden lg:flex items-center gap-2.5">
+          <div className="hidden lg:flex items-center gap-3">
             <Button 
-              className="bg-white text-green-600 hover:bg-green-50 rounded-full px-5 py-2.5 shadow-sm hover:shadow-md transition-all duration-300 text-sm font-medium"
+              className="bg-green-600 hover:bg-green-700 text-white rounded-full px-6 py-2 shadow-sm hover:shadow-md transition-all duration-300 text-sm font-medium"
               onClick={() => navigate("/role-selection")}
             >
               Get Started
-              <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+              <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
 
           <Button
             variant="ghost"
             size="sm"
-            className="lg:hidden text-white hover:text-white hover:bg-white/10 border-0"
+            className="lg:hidden text-gray-700 hover:text-gray-900 hover:bg-gray-100"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
-            {isMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </div>
 
         {isMenuOpen && (
-          <div className="lg:hidden border-t border-white/20 py-5 px-4">
-            <div className="space-y-4">
+          <div className="lg:hidden border-t border-gray-200 py-4">
+            <div className="space-y-2">
               <Link
                 to="/"
-                className={`block px-2.5 py-1.5 text-xs font-medium transition-colors rounded-lg ${
+                className={`block px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
                   location.pathname === '/' 
-                    ? 'text-white bg-white/20 shadow-sm' 
-                    : 'text-white/90 hover:text-white hover:bg-white/10'
+                    ? 'text-green-600 bg-green-50' 
+                    : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
                 }`}
                 onClick={() => setIsMenuOpen(false)}
               >
@@ -123,10 +125,10 @@ export function HomeNavbar() {
               </Link>
               <Link
                 to="/services"
-                className={`block px-2.5 py-1.5 text-xs font-medium transition-colors rounded-lg ${
+                className={`block px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
                   location.pathname === '/services' 
-                    ? 'text-white bg-white/20 shadow-sm' 
-                    : 'text-white/90 hover:text-white hover:bg-white/10'
+                    ? 'text-green-600 bg-green-50' 
+                    : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
                 }`}
                 onClick={() => setIsMenuOpen(false)}
               >
@@ -134,10 +136,10 @@ export function HomeNavbar() {
               </Link>
               <Link
                 to="/team"
-                className={`block px-2.5 py-1.5 text-xs font-medium transition-colors rounded-lg ${
+                className={`block px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
                   location.pathname === '/team' 
-                    ? 'text-white bg-white/20 shadow-sm' 
-                    : 'text-white/90 hover:text-white hover:bg-white/10'
+                    ? 'text-green-600 bg-green-50' 
+                    : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
                 }`}
                 onClick={() => setIsMenuOpen(false)}
               >
@@ -145,24 +147,25 @@ export function HomeNavbar() {
               </Link>
               <Link
                 to="/contact"
-                className={`block px-2.5 py-1.5 text-xs font-medium transition-colors rounded-lg ${
+                className={`block px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
                   location.pathname === '/contact' 
-                    ? 'text-white bg-white/20 shadow-sm' 
-                    : 'text-white/90 hover:text-white hover:bg-white/10'
+                    ? 'text-green-600 bg-green-50' 
+                    : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
                 }`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 Contact
               </Link>
-              <div className="px-2.5 pt-3 border-t border-white/20">
+              <div className="px-3 pt-3 border-t border-gray-200">
                 <Button 
-                  className="w-full bg-white text-green-600 hover:bg-green-50 rounded-full text-sm font-medium"
+                  className="w-full bg-green-600 hover:bg-green-700 text-white rounded-full text-sm font-medium"
                   onClick={() => {
                     navigate("/role-selection");
                     setIsMenuOpen(false);
                   }}
                 >
                   Get Started
+                  <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
             </div>

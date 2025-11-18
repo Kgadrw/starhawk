@@ -14,13 +14,12 @@ import {
   Mail, 
   MapPin, 
   Clock,
-  MessageCircle,
   Send,
   CheckCircle,
   Users,
   Briefcase,
   Globe,
-  ArrowRight,
+  MessageCircle
 } from "lucide-react";
 
 export default function Contact() {
@@ -114,146 +113,209 @@ export default function Contact() {
 
   return (
     <CustomScrollbar>
-      <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50 relative">
-        {/* Navigation */}
+      <div className="bg-white relative min-h-screen">
         <HomeNavbar />
       
-      {/* Hero Section with Contact Form */}
-      <div className="relative min-h-screen flex items-center justify-center">
-        {/* Grid Pattern Background */}
-        <div className="absolute inset-0 opacity-70 flex items-center justify-center">
-          <img
-            src="/lines.png"
-            alt="Grid lines"
-            className="w-3/4 h-3/4 object-contain"
-          />
-        </div>
+        {/* Hero Section */}
+        <section className="relative pt-32 pb-20 bg-gradient-to-br from-green-50 via-white to-emerald-50">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-700 mb-4">
+                Contact Our Team
+              </h1>
+              <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">
+                Ready to transform your agricultural insurance? Send us a message and we'll get back to you within 24 hours.
+              </p>
+            </motion.div>
+          </div>
+        </section>
 
-        {/* Hero Content */}
-        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20">
-          <motion.div 
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-center mb-12"
-          >
-            <h1 className="text-3xl md:text-4xl font-bold text-green-700 mb-4">
-              Contact Our Team
-            </h1>
-            
-            <p className="text-base text-gray-900/80 max-w-2xl mx-auto leading-relaxed">
-              Ready to transform your agricultural insurance? Send us a message and we'll get back to you within 24 hours.
-            </p>
-          </motion.div>
+        {/* Contact Form & Info */}
+        <section className="py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid gap-8 lg:grid-cols-2">
+              {/* Contact Form */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+              >
+                <Card className="border border-gray-200 shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="text-2xl font-bold text-gray-700">Send us a Message</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {submitSuccess && (
+                      <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                          <span className="text-green-700 font-medium">Message sent successfully!</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div>
+                          <Label htmlFor="name" className="text-gray-700">Full Name *</Label>
+                          <Input
+                            id="name"
+                            value={formData.name}
+                            onChange={(e) => handleInputChange("name", e.target.value)}
+                            placeholder="Enter your full name"
+                            required
+                            className="bg-gray-50 border-gray-300 text-gray-700 mt-2"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="email" className="text-gray-700">Email Address *</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            value={formData.email}
+                            onChange={(e) => handleInputChange("email", e.target.value)}
+                            placeholder="Enter your email"
+                            required
+                            className="bg-gray-50 border-gray-300 text-gray-700 mt-2"
+                          />
+                        </div>
+                      </div>
 
-          {/* Contact Form */}
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.5 }}
-          >
-            <Card className="bg-white border border-gray-200 max-w-2xl mx-auto">
-            <CardContent className="p-8">
-              {submitSuccess && (
-                <div className="mb-6 p-4 bg-green-500/20 border border-green-500/30 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <span className="text-green-600 font-medium">Message sent successfully!</span>
-                  </div>
-                </div>
-              )}
-              
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <Label htmlFor="name" className="text-gray-900 text-sm">Full Name *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange("name", e.target.value)}
-                      placeholder="Enter your full name"
-                      required
-                      className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-900/60 backdrop-blur-sm mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="email" className="text-gray-900 text-sm">Email Address *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
-                      placeholder="Enter your email"
-                      required
-                      className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-900/60 backdrop-blur-sm mt-1"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="inquiryType" className="text-gray-900 text-sm">Type of Inquiry *</Label>
+                      <div>
+                        <Label htmlFor="inquiryType" className="text-gray-700">Type of Inquiry *</Label>
                         <Select value={formData.inquiryType} onValueChange={(value) => handleInputChange("inquiryType", value)}>
-                          <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-900 backdrop-blur-sm mt-1">
+                          <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-700 mt-2">
                             <SelectValue placeholder="Select inquiry type" />
                           </SelectTrigger>
-                          <SelectContent className="bg-transparent backdrop-blur-sm border border-gray-200">
-                            <SelectItem value="general" className="text-gray-900 hover:bg-white/10">General Inquiry</SelectItem>
-                            <SelectItem value="sales" className="text-gray-900 hover:bg-white/10">Sales & Partnership</SelectItem>
-                            <SelectItem value="support" className="text-gray-900 hover:bg-white/10">Technical Support</SelectItem>
-                            <SelectItem value="demo" className="text-gray-900 hover:bg-white/10">Request Demo</SelectItem>
-                            <SelectItem value="pricing" className="text-gray-900 hover:bg-white/10">Pricing Information</SelectItem>
-                            <SelectItem value="media" className="text-gray-900 hover:bg-white/10">Media & Press</SelectItem>
+                          <SelectContent>
+                            <SelectItem value="general">General Inquiry</SelectItem>
+                            <SelectItem value="sales">Sales & Partnership</SelectItem>
+                            <SelectItem value="support">Technical Support</SelectItem>
+                            <SelectItem value="demo">Request Demo</SelectItem>
+                            <SelectItem value="pricing">Pricing Information</SelectItem>
+                            <SelectItem value="media">Media & Press</SelectItem>
                           </SelectContent>
                         </Select>
-                </div>
+                      </div>
 
+                      <div>
+                        <Label htmlFor="subject" className="text-gray-700">Subject *</Label>
+                        <Input
+                          id="subject"
+                          value={formData.subject}
+                          onChange={(e) => handleInputChange("subject", e.target.value)}
+                          placeholder="Enter message subject"
+                          required
+                          className="bg-gray-50 border-gray-300 text-gray-900 mt-2"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="message" className="text-gray-700">Message *</Label>
+                        <Textarea
+                          id="message"
+                          value={formData.message}
+                          onChange={(e) => handleInputChange("message", e.target.value)}
+                          placeholder="Enter your message"
+                          rows={5}
+                          required
+                          className="bg-gray-50 border-gray-300 text-gray-900 mt-2"
+                        />
+                      </div>
+
+                      <Button 
+                        type="submit" 
+                        disabled={isSubmitting}
+                        className="w-full bg-green-600 hover:bg-green-700 text-white rounded-full py-6 font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300"
+                      >
+                        {isSubmitting ? (
+                          "Sending Message..."
+                        ) : (
+                          <>
+                            <Send className="h-5 w-5 mr-2" />
+                            Send Message
+                          </>
+                        )}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Contact Info */}
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+                className="space-y-6"
+              >
+                {/* Quick Contact */}
                 <div>
-                  <Label htmlFor="subject" className="text-gray-900 text-sm">Subject *</Label>
-                  <Input
-                    id="subject"
-                    value={formData.subject}
-                    onChange={(e) => handleInputChange("subject", e.target.value)}
-                    placeholder="Enter message subject"
-                    required
-                    className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-900/60 backdrop-blur-sm mt-1"
-                  />
+                  <h3 className="text-xl font-bold text-gray-700 mb-6">Quick Contact</h3>
+                  <div className="grid gap-4">
+                    {contactInfo.map((info, index) => {
+                      const Icon = info.icon;
+                      return (
+                        <Card key={index} className="border border-gray-200">
+                          <CardContent className="p-4">
+                            <div className="flex items-start gap-4">
+                              <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                                <Icon className="h-6 w-6 text-green-600" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-700 mb-1">{info.title}</h4>
+                                <p className="text-sm text-gray-600 mb-2">{info.description}</p>
+                                {info.details.map((detail, idx) => (
+                                  <p key={idx} className="text-sm text-gray-700">{detail}</p>
+                                ))}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
                 </div>
 
+                {/* Departments */}
                 <div>
-                  <Label htmlFor="message" className="text-gray-900 text-sm">Message *</Label>
-                  <Textarea
-                    id="message"
-                    value={formData.message}
-                    onChange={(e) => handleInputChange("message", e.target.value)}
-                    placeholder="Enter your message"
-                    rows={5}
-                    required
-                    className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-900/60 backdrop-blur-sm mt-1"
-                  />
+                  <h3 className="text-xl font-bold text-gray-700 mb-6">Contact by Department</h3>
+                  <div className="grid gap-4">
+                    {departments.map((dept, index) => {
+                      const Icon = dept.icon;
+                      return (
+                        <Card key={index} className="border border-gray-200 hover:border-green-300 transition-colors">
+                          <CardContent className="p-4">
+                            <div className="flex items-start gap-4">
+                              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                                <Icon className="h-5 w-5 text-emerald-600" />
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-700 mb-1">{dept.name}</h4>
+                                <p className="text-sm text-gray-600 mb-2">{dept.description}</p>
+                                <div className="space-y-1">
+                                  <p className="text-sm text-gray-700">{dept.email}</p>
+                                  <p className="text-sm text-gray-700">{dept.phone}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
                 </div>
+              </motion.div>
+            </div>
+          </div>
+        </section>
 
-                <Button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white rounded-3xl py-3 font-medium shadow-md transition-all duration-300"
-                >
-                  {isSubmitting ? (
-                    "Sending Message..."
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4 mr-2" />
-                      Send Message
-                    </>
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-          </motion.div>
-        </div>
-      </div>
-
-        {/* Footer */}
         <FooterSection />
       </div>
     </CustomScrollbar>
