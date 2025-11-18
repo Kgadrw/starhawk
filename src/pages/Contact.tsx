@@ -21,7 +21,6 @@ import {
   Briefcase,
   Globe,
   ArrowRight,
-  Sparkles
 } from "lucide-react";
 
 export default function Contact() {
@@ -138,11 +137,6 @@ export default function Contact() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="text-center mb-12"
           >
-            <div className="inline-flex items-center space-x-2 bg-green-50 border border-green-200 px-3 py-1.5 rounded-full mb-4">
-              <Sparkles className="h-3 w-3 text-green-600" />
-              <span className="text-gray-900/90 text-xs font-medium">Get in Touch</span>
-            </div>
-            
             <h1 className="text-3xl md:text-4xl font-bold text-green-700 mb-4">
               Contact Our Team
             </h1>

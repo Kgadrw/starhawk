@@ -1,12 +1,10 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import LightRays from "@/components/ui/LightRays";
 import VariableProximity from "@/components/ui/VariableProximity";
 import { useRef } from 'react';
 import { motion } from "framer-motion";
 import { 
-  ArrowRight,
-  Sparkles
+  ArrowRight
 } from "lucide-react";
 
 export function HeroSection() {
@@ -15,70 +13,11 @@ export function HeroSection() {
   return (
     <section 
       ref={containerRef}
-      className="relative min-h-screen flex items-center justify-center overflow-hidden"
+      className="relative min-h-screen flex items-center justify-center overflow-hidden bg-white"
       style={{ position: 'relative' }}
     >
-      {/* Grid Pattern Background */}
-      <div className="absolute inset-0 opacity-70 flex items-center justify-center">
-        <img 
-          src="/lines.png" 
-          alt="Grid lines" 
-          className="w-3/4 h-3/4 object-contain"
-        />
-      </div>
-
-      {/* Bottom Corner Lines */}
-      <div className="absolute bottom-0 left-0 opacity-60">
-        <img 
-          src="/lines2.png" 
-          alt="Bottom left lines" 
-          className="w-[32rem] h-[32rem]"
-        />
-      </div>
-      <div className="absolute bottom-0 right-0 opacity-60">
-        <img 
-          src="/lines2.png" 
-          alt="Bottom right lines" 
-          className="w-[32rem] h-[32rem]"
-        />
-      </div>
-
-      {/* LightRays Background */}
-      <div style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}>
-        <LightRays
-          raysOrigin="top-center"
-          raysColor="#00ffff"
-          raysSpeed={1.5}
-          lightSpread={0.8}
-          rayLength={1.2}
-          followMouse={true}
-          mouseInfluence={0.1}
-          noiseAmount={0.1}
-          distortion={0.05}
-          className="custom-rays"
-        />
-      </div>
-
       {/* Content */}
       <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="inline-flex items-center space-x-2 bg-green-50 border border-green-200 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full mb-6 sm:mb-8"
-        >
-          <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
-          <VariableProximity
-            label="Revolutionary Agricultural Technology"
-            className="text-gray-700 text-xs sm:text-sm font-medium cursor-pointer"
-            fromFontVariationSettings="'wght' 400, 'opsz' 8"
-            toFontVariationSettings="'wght' 700, 'opsz' 16"
-            containerRef={containerRef}
-            radius={100}
-            falloff="linear"
-          />
-        </motion.div>
-        
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -109,17 +48,9 @@ export function HeroSection() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
-          className="text-base sm:text-lg lg:text-xl text-gray-600 mb-8 sm:mb-12 max-w-4xl mx-auto leading-relaxed px-4"
+          className="text-base sm:text-lg lg:text-xl text-gray-600 mb-8 sm:mb-12 max-w-4xl mx-auto leading-relaxed px-4 text-center"
         >
-          <VariableProximity
-            label="STARHAWK combines drone surveillance, satellite analytics, and AI to provide comprehensive agricultural insurance solutions for farmers, insurers, and governments."
-            className="text-center cursor-pointer"
-            fromFontVariationSettings="'wght' 300, 'opsz' 8"
-            toFontVariationSettings="'wght' 600, 'opsz' 20"
-            containerRef={containerRef}
-            radius={120}
-            falloff="linear"
-          />
+          STARHAWK combines drone surveillance, satellite analytics, and AI to provide comprehensive agricultural insurance solutions for farmers, insurers, and governments.
         </motion.div>
         
         <motion.div 

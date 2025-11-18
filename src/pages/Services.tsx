@@ -19,7 +19,6 @@ import {
   Phone,
   Mail,
   MessageCircle,
-  Sparkles
 } from "lucide-react";
 
 export default function Services() {
@@ -133,17 +132,6 @@ export default function Services() {
 
         {/* Hero Content */}
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-32 pb-16 sm:pb-20 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            <div className="inline-flex items-center space-x-2 bg-green-50 border border-green-200 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full mb-4 sm:mb-6">
-              <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
-              <span className="text-gray-900/90 text-xs sm:text-sm font-medium">Our Services</span>
-            </div>
-          </motion.div>
-          
           <motion.h1 
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
