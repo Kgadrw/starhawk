@@ -9,6 +9,7 @@ import CreatePolicyPage from "../insurer/CreatePolicyPage";
 import RiskReviewManagement from "../insurer/RiskReviewManagement";
 import RiskAssessmentSystem from "../assessor/RiskAssessmentSystem";
 import { getUserId, getPhoneNumber, getEmail, isAuthenticated, getToken } from "@/services/authAPI";
+import { getUserProfile } from "@/services/usersAPI";
 import { getPolicies } from "@/services/policiesApi";
 import { getClaims } from "@/services/claimsApi";
 import { getInsuranceRequests } from "@/services/farmsApi";
@@ -77,14 +78,33 @@ export default function InsurerDashboard() {
   // Use email or phone number as display name, or fallback to "Insurer"
   const insurerName = insurerEmail || insurerPhone || "Insurer";
 
+  // State for Profile
+  const [insurerProfile, setInsurerProfile] = useState<any>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+
 
   useEffect(() => {
     if (activePage === 'insurance-requests') {
       loadInsuranceRequests();
     } else if (activePage === 'submitted-assessments') {
       loadSubmittedAssessments();
+    } else if (activePage === 'dashboard' && insurerId) {
+      loadInsurerProfile();
     }
-  }, [activePage]);
+  }, [activePage, insurerId]);
+
+  const loadInsurerProfile = async () => {
+    if (profileLoading) return;
+    setProfileLoading(true);
+    try {
+      const profile = await getUserProfile();
+      setInsurerProfile(profile.data || profile);
+    } catch (err: any) {
+      console.error('Failed to load insurer profile:', err);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (activePage !== 'dashboard') return;
@@ -602,11 +622,18 @@ export default function InsurerDashboard() {
     { id: "profile-settings", label: "Profile Settings", icon: Settings }
   ];
 
+  // Get display name from profile if available
+  const displayName = insurerProfile 
+    ? (insurerProfile.firstName && insurerProfile.lastName 
+        ? `${insurerProfile.firstName} ${insurerProfile.lastName}`.trim()
+        : insurerProfile.name || insurerProfile.firstName || insurerProfile.lastName || insurerName)
+    : insurerName;
+
   return (
     <DashboardLayout
       userType="insurer"
       userId={insurerId}
-      userName={insurerName}
+      userName={displayName}
       navigationItems={navigationItems}
       activePage={activePage}
       onPageChange={setActivePage}

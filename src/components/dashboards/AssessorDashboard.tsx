@@ -18,6 +18,7 @@ import meteosourceApiService from "@/services/meteosourceApi";
 import assessmentsApiService from "@/services/assessmentsApi";
 import farmsApiService, { getFarms, getFarmById, getWeatherForecast, getHistoricalWeather, getVegetationStats, uploadShapefile, uploadKML, createFarm, createInsuranceRequest, updateFarm } from "@/services/farmsApi";
 import { getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
+import { getUserProfile } from "@/services/usersAPI";
 import { useToast } from "@/hooks/use-toast";
 import { 
   FileText, 
@@ -179,6 +180,10 @@ export default function AssessorDashboard() {
   const [loadingWeather, setLoadingWeather] = useState(false);
   const [loadingVegetation, setLoadingVegetation] = useState(false);
 
+  // State for Profile
+  const [assessorProfile, setAssessorProfile] = useState<any>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+
   // Computed values for dashboard stats
   const totalAssessments = assessments.length;
   const totalRiskAssessments = assessments.filter(a => a.type === "Risk Assessment").length;
@@ -189,6 +194,26 @@ export default function AssessorDashboard() {
   useEffect(() => {
     loadAssessments();
   }, []);
+
+  // Load profile when dashboard is shown
+  useEffect(() => {
+    if (activePage === "dashboard" && assessorId) {
+      loadAssessorProfile();
+    }
+  }, [activePage, assessorId]);
+
+  const loadAssessorProfile = async () => {
+    if (profileLoading) return;
+    setProfileLoading(true);
+    try {
+      const profile = await getUserProfile();
+      setAssessorProfile(profile.data || profile);
+    } catch (err: any) {
+      console.error('Failed to load assessor profile:', err);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
 
   const loadAssessments = async () => {
     setLoading(true);
@@ -2141,11 +2166,18 @@ export default function AssessorDashboard() {
     { id: "profile-settings", label: "Profile Settings", icon: User }
   ];
 
+  // Get display name from profile if available
+  const displayName = assessorProfile 
+    ? (assessorProfile.firstName && assessorProfile.lastName 
+        ? `${assessorProfile.firstName} ${assessorProfile.lastName}`.trim()
+        : assessorProfile.name || assessorProfile.firstName || assessorProfile.lastName || assessorName)
+    : assessorName;
+
   return (
     <DashboardLayout
       userType="assessor"
       userId={assessorId}
-      userName={assessorName}
+      userName={displayName}
       navigationItems={navigationItems}
       activePage={activePage} 
       onPageChange={handlePageChange}

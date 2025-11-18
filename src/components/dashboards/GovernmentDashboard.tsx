@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "../layout/DashboardLayout";
+import { getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
+import { getUserProfile } from "@/services/usersAPI";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,8 +59,35 @@ import {
 
 export const GovernmentDashboard = () => {
   const [activePage, setActivePage] = useState("dashboard");
-  const [governmentId] = useState("GOV-001");
-  const [governmentName] = useState("Ministry of Agriculture");
+  const governmentId = getUserId() || "GOV-001";
+  const governmentEmail = getEmail() || "";
+  const governmentPhone = getPhoneNumber() || "";
+  const defaultGovernmentName = "Ministry of Agriculture";
+  const governmentName = governmentEmail || governmentPhone || defaultGovernmentName;
+
+  // State for Profile
+  const [governmentProfile, setGovernmentProfile] = useState<any>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  // Load profile when dashboard is shown
+  useEffect(() => {
+    if (activePage === "dashboard" && governmentId) {
+      loadGovernmentProfile();
+    }
+  }, [activePage, governmentId]);
+
+  const loadGovernmentProfile = async () => {
+    if (profileLoading) return;
+    setProfileLoading(true);
+    try {
+      const profile = await getUserProfile();
+      setGovernmentProfile(profile.data || profile);
+    } catch (err: any) {
+      console.error('Failed to load government profile:', err);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
 
   // Comprehensive Government Data
   
@@ -1861,11 +1890,18 @@ export const GovernmentDashboard = () => {
     { id: "settings", label: "Settings", icon: Settings }
   ];
 
+  // Get display name from profile if available
+  const displayName = governmentProfile 
+    ? (governmentProfile.firstName && governmentProfile.lastName 
+        ? `${governmentProfile.firstName} ${governmentProfile.lastName}`.trim()
+        : governmentProfile.name || governmentProfile.firstName || governmentProfile.lastName || governmentName)
+    : governmentName;
+
   return (
     <DashboardLayout
       userType="government"
       userId={governmentId}
-      userName={governmentName}
+      userName={displayName}
       navigationItems={navigationItems}
       activePage={activePage}
       onPageChange={setActivePage}

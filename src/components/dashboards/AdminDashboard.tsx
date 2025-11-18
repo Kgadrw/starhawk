@@ -131,6 +131,7 @@ export const AdminDashboard = () => {
   useEffect(() => {
     if (activePage === "dashboard" || activePage === "analytics") {
       loadAdminStatistics();
+      loadAdminProfile();
     }
     if (activePage === "analytics") {
       loadAnalyticsData();
@@ -2658,7 +2659,7 @@ export const AdminDashboard = () => {
                               {updatingUserId === user.userId ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                               ) : (
-                                <UserMinus className="h-4 w-4" />
+                              <UserMinus className="h-4 w-4" />
                               )}
                         </Button>
                           )}
@@ -4247,12 +4248,12 @@ export const AdminDashboard = () => {
     };
 
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
             <h2 className="text-2xl font-bold text-gray-700">Admin Settings</h2>
             <p className="text-gray-600">Configure your admin preferences</p>
-          </div>
+        </div>
           <Button
             onClick={loadAdminProfile}
             variant="outline"
@@ -4262,7 +4263,7 @@ export const AdminDashboard = () => {
             <RefreshCw className={`h-4 w-4 mr-2 ${adminProfileLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-        </div>
+      </div>
 
         {/* Error State */}
         {adminProfileError && (
@@ -4298,30 +4299,30 @@ export const AdminDashboard = () => {
         )}
 
         {!adminProfileLoading && (
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className={dashboardTheme.card}>
-              <CardHeader>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className={dashboardTheme.card}>
+          <CardHeader>
                 <CardTitle className="text-gray-700 flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Account Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
+              <Users className="h-5 w-5" />
+              Account Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
                   <label className="text-sm text-gray-600 block mb-2">Admin ID</label>
                   <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700">
                     {profile.userId || profile._id || adminId}
                   </div>
-                </div>
-                <div>
+            </div>
+            <div>
                   <label className="text-sm text-gray-600 block mb-2">Name</label>
                   <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700">
                     {profile.firstName && profile.lastName 
                       ? `${profile.firstName} ${profile.lastName}` 
                       : profile.name || adminName}
                   </div>
-                </div>
-                <div>
+            </div>
+            <div>
                   <label className="text-sm text-gray-600 block mb-2">Email</label>
                   <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700">
                     {profile.email || getEmail() || 'N/A'}
@@ -4335,44 +4336,44 @@ export const AdminDashboard = () => {
                 </div>
                 <div>
                   <label className="text-sm text-gray-600 block mb-2">Role</label>
-                  <Badge className="bg-red-600">Super Administrator</Badge>
-                </div>
-                <div>
+              <Badge className="bg-red-600">Super Administrator</Badge>
+            </div>
+            <div>
                   <label className="text-sm text-gray-600 block mb-2">Last Login</label>
-                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-600 text-sm">
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-600 text-sm">
                     {profile.lastLogin 
                       ? new Date(profile.lastLogin).toLocaleString()
                       : profile.lastLoginDate
                       ? new Date(profile.lastLoginDate).toLocaleString()
                       : 'Never'}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-            <Card className={dashboardTheme.card}>
-              <CardHeader>
+        <Card className={dashboardTheme.card}>
+          <CardHeader>
                 <CardTitle className="text-gray-700 flex items-center gap-2">
-                  <Lock className="h-5 w-5" />
-                  Security
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
+              <Lock className="h-5 w-5" />
+              Security
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
                 <Button 
                   className="w-full bg-red-600 hover:bg-red-700"
                   onClick={() => setShowChangePasswordDialog(true)}
                 >
-                  <Key className="h-4 w-4 mr-2" />
-                  Change Password
-                </Button>
+              <Key className="h-4 w-4 mr-2" />
+              Change Password
+            </Button>
                 <Button 
                   variant="outline" 
                   className="w-full border-gray-300 text-gray-700 hover:bg-gray-100"
                   onClick={() => setShow2FADialog(true)}
                 >
-                  <Shield className="h-4 w-4 mr-2" />
+              <Shield className="h-4 w-4 mr-2" />
                   {profile.twoFactorEnabled ? 'Disable' : 'Enable'} 2FA
-                </Button>
+            </Button>
                 <Button 
                   variant="outline" 
                   className="w-full border-gray-300 text-gray-700 hover:bg-gray-100"
@@ -4381,12 +4382,12 @@ export const AdminDashboard = () => {
                     loadLoginHistory();
                   }}
                 >
-                  <Eye className="h-4 w-4 mr-2" />
-                  View Login History
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+              <Eye className="h-4 w-4 mr-2" />
+              View Login History
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
         )}
 
         {/* Change Password Dialog */}
@@ -4552,8 +4553,8 @@ export const AdminDashboard = () => {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
-    );
+    </div>
+  );
   };
 
   // Commission Management Page
@@ -6355,11 +6356,18 @@ export const AdminDashboard = () => {
     { id: "settings", label: "Settings", icon: Settings }
   ];
 
+  // Get display name from profile if available
+  const displayName = adminProfile 
+    ? (adminProfile.firstName && adminProfile.lastName 
+        ? `${adminProfile.firstName} ${adminProfile.lastName}`.trim()
+        : adminProfile.name || adminProfile.firstName || adminProfile.lastName || adminName)
+    : adminName;
+
   return (
     <DashboardLayout
       userType="admin"
       userId={adminId}
-      userName={adminName}
+      userName={displayName}
       navigationItems={navigationItems}
       activePage={activePage}
       onPageChange={setActivePage}

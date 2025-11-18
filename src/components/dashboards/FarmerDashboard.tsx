@@ -128,6 +128,7 @@ export default function FarmerDashboard() {
       if (activePage === "dashboard") {
         loadFarms();
         loadClaims();
+        loadFarmerProfile();
       } else if (activePage === "my-fields") {
         loadFarms();
       } else if (activePage === "create-farm") {
@@ -881,12 +882,20 @@ export default function FarmerDashboard() {
     }
   };
 
-  const renderDashboard = () => (
+  const renderDashboard = () => {
+    // Get display name from profile if available
+    const displayName = farmerProfile 
+      ? (farmerProfile.firstName && farmerProfile.lastName 
+          ? `${farmerProfile.firstName} ${farmerProfile.lastName}`.trim()
+          : farmerProfile.name || farmerProfile.firstName || farmerProfile.lastName || farmerName)
+      : farmerName;
+
+    return (
     <div className="space-y-6">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6 shadow-sm">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Welcome back, {farmerName}
+          <h1 className="text-2xl font-bold text-gray-900">
+            Welcome back, {displayName}
         </h1>
       </div>
 
@@ -950,6 +959,7 @@ export default function FarmerDashboard() {
       </div>
     </div>
   );
+  };
 
 
   const renderMyFields = () => (
@@ -2177,11 +2187,18 @@ export default function FarmerDashboard() {
     { id: "profile", label: "Profile", icon: User }
   ];
 
+  // Get display name from profile if available
+  const displayName = farmerProfile 
+    ? (farmerProfile.firstName && farmerProfile.lastName 
+        ? `${farmerProfile.firstName} ${farmerProfile.lastName}`.trim()
+        : farmerProfile.name || farmerProfile.firstName || farmerProfile.lastName || farmerName)
+    : farmerName;
+
   return (
     <DashboardLayout
       userType="farmer"
       userId={farmerId}
-      userName={farmerName}
+      userName={displayName}
       navigationItems={navigationItems}
       activePage={activePage} 
       onPageChange={setActivePage}
