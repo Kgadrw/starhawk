@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import DashboardLayout from "../layout/DashboardLayout";
 import { getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
 import { getUserProfile } from "@/services/usersAPI";
-import { getFarms, createFarm, createInsuranceRequest, getFarmById, getWeatherForecast, getHistoricalWeather, getVegetationStats } from "@/services/farmsApi";
+import { getFarms, createFarm, createInsuranceRequest, getFarmById, getWeatherForecast, getHistoricalWeather, getVegetationStats, uploadShapefile } from "@/services/farmsApi";
 import { getClaims, createClaim } from "@/services/claimsApi";
 import { getPolicies } from "@/services/policiesApi";
 import { useToast } from "@/hooks/use-toast";
@@ -72,6 +72,11 @@ export default function FarmerDashboard() {
   const [boundaryError, setBoundaryError] = useState<string | null>(null);
   const [boundaryStats, setBoundaryStats] = useState<{ rings: number; points: number } | null>(null);
   
+  // State for Shapefile Upload
+  const [shapefile, setShapefile] = useState<File | null>(null);
+  const [isUploadingShapefile, setIsUploadingShapefile] = useState(false);
+  const [uploadMethod, setUploadMethod] = useState<"manual" | "shapefile">("manual");
+  
   // State for File Claim Page
   const [policies, setPolicies] = useState<any[]>([]);
   const [policiesLoading, setPoliciesLoading] = useState(false);
@@ -80,7 +85,9 @@ export default function FarmerDashboard() {
     policyId: "",
     lossEventType: "",
     lossDescription: "",
-    damagePhotos: [] as string[]
+    damagePhotos: [] as string[],
+    eventDate: "",
+    estimatedLoss: ""
   });
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
@@ -598,12 +605,32 @@ export default function FarmerDashboard() {
       return;
     }
 
+    if (!claimFormData.eventDate) {
+      toast({
+        title: 'Validation Error',
+        description: 'Event date is required',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!claimFormData.estimatedLoss || isNaN(parseFloat(claimFormData.estimatedLoss))) {
+      toast({
+        title: 'Validation Error',
+        description: 'Estimated loss is required and must be a valid number',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     setIsSubmittingClaim(true);
     try {
-      const claimData = {
+      const claimData: any = {
         policyId: claimFormData.policyId,
-        lossEventType: claimFormData.lossEventType.toUpperCase(),
-        lossDescription: claimFormData.lossDescription,
+        eventType: claimFormData.lossEventType.toUpperCase(),
+        eventDate: new Date(claimFormData.eventDate).toISOString(),
+        description: claimFormData.lossDescription,
+        estimatedLoss: parseFloat(claimFormData.estimatedLoss),
         damagePhotos: claimFormData.damagePhotos || []
       };
       
@@ -619,7 +646,9 @@ export default function FarmerDashboard() {
         policyId: "",
         lossEventType: "",
         lossDescription: "",
-        damagePhotos: []
+        damagePhotos: [],
+        eventDate: "",
+        estimatedLoss: ""
       });
       setUploadedFiles([]);
       
@@ -640,12 +669,12 @@ export default function FarmerDashboard() {
 
   const handleCreateField = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     const trimmedName = newFieldData.name.trim();
     if (!trimmedName) {
       toast({
         title: 'Validation Error',
-        description: 'Field name is required',
+        description: 'Farm name is required',
         variant: 'destructive'
       });
       return;
@@ -734,10 +763,10 @@ export default function FarmerDashboard() {
       const response = await createFarm(farmData);
       console.log('✅ Farm creation API response:', response);
       upsertCreatedFarm(response);
-
+      
       toast({
         title: 'Success',
-        description: 'Field created successfully!',
+        description: 'Farm created successfully!',
       });
 
       setNewFieldData({
@@ -751,14 +780,82 @@ export default function FarmerDashboard() {
       setBoundaryError(null);
       await loadFarms();
     } catch (err: any) {
-      console.error('Failed to create field:', err);
+      console.error('Failed to create farm:', err);
       toast({
-        title: 'Error creating field',
-        description: err.message || 'Failed to create field',
+        title: 'Error creating farm',
+        description: err.message || 'Failed to create farm',
         variant: 'destructive'
       });
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleShapefileUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!shapefile) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select a shapefile to upload',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Validate file type - shapefiles typically come as .zip containing .shp, .shx, .dbf, etc.
+    const validExtensions = ['.zip', '.shp'];
+    const fileName = shapefile.name.toLowerCase();
+    const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
+    
+    if (!hasValidExtension) {
+      toast({
+        title: 'Invalid File Type',
+        description: 'Please upload a shapefile (.zip or .shp format)',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsUploadingShapefile(true);
+    try {
+      console.log('📤 Uploading shapefile:', shapefile.name);
+      
+      const response = await uploadShapefile(shapefile);
+      console.log('✅ Shapefile upload response:', response);
+      
+      // The API returns the created farm data
+      const farmResponse = response.data || response;
+      upsertCreatedFarm(farmResponse);
+      
+      toast({
+        title: 'Success',
+        description: 'Farm created successfully from shapefile!',
+      });
+
+      // Reset form
+      setShapefile(null);
+      setUploadMethod("manual");
+      await loadFarms();
+      
+      // Navigate to my-fields page
+        setActivePage("my-fields");
+    } catch (err: any) {
+      console.error('Failed to upload shapefile:', err);
+      toast({
+        title: 'Error uploading shapefile',
+        description: err.message || 'Failed to upload shapefile',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsUploadingShapefile(false);
+    }
+  };
+
+  const handleShapefileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setShapefile(file);
     }
   };
 
@@ -788,12 +885,9 @@ export default function FarmerDashboard() {
     <div className="space-y-6">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6 shadow-sm">
-        <h1 className="text-2xl font-bold mb-2 text-gray-900">
+        <h1 className="text-2xl font-bold text-gray-900">
           Welcome back, {farmerName}
         </h1>
-        <p className="text-green-600">
-          Farmer ID: {farmerId}
-        </p>
       </div>
 
       {/* Stats Cards */}
@@ -802,7 +896,7 @@ export default function FarmerDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">My Fields</p>
+                <p className="text-sm font-medium text-gray-600">My Farms</p>
                 <p className="text-2xl font-bold text-gray-900">{farms.length}</p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
@@ -862,8 +956,8 @@ export default function FarmerDashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">My Fields</h2>
-          <p className="text-gray-600">Manage and view your registered fields</p>
+          <h2 className="text-2xl font-bold text-gray-900">My Farms</h2>
+          <p className="text-gray-600">Manage and view your registered farms</p>
         </div>
         <div className="flex gap-3">
           <Button 
@@ -880,7 +974,7 @@ export default function FarmerDashboard() {
             className="bg-green-600 hover:bg-green-700 text-gray-900"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Create Field
+            Create Farm
           </Button>
         </div>
       </div>
@@ -891,7 +985,7 @@ export default function FarmerDashboard() {
             <div className="flex items-center justify-center">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading fields...</p>
+                <p className="text-gray-600">Loading farms...</p>
               </div>
             </div>
           </CardContent>
@@ -918,21 +1012,21 @@ export default function FarmerDashboard() {
       {!farmsLoading && !farmsError && (
         <Card className={`${dashboardTheme.card}`}>
           <CardHeader>
-            <CardTitle className="text-gray-900">Registered Fields</CardTitle>
+            <CardTitle className="text-gray-900">Registered Farms</CardTitle>
           </CardHeader>
           <CardContent>
             {farms.length === 0 ? (
               <div className="text-center py-12">
                 <Crop className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-600 text-lg mb-2">No fields registered</p>
-                <p className="text-gray-500 text-sm">Register your fields to get started with crop insurance</p>
+                <p className="text-gray-600 text-lg mb-2">No farms registered</p>
+                <p className="text-gray-500 text-sm">Register your farms to get started with crop insurance</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="text-left py-4 px-6 font-medium text-gray-700">Field Name</th>
+                      <th className="text-left py-4 px-6 font-medium text-gray-700">Farm Name</th>
                       <th className="text-left py-4 px-6 font-medium text-gray-700">Crop Type</th>
                       <th className="text-left py-4 px-6 font-medium text-gray-700">Area (ha)</th>
                       <th className="text-left py-4 px-6 font-medium text-gray-700">Location</th>
@@ -953,7 +1047,7 @@ export default function FarmerDashboard() {
                             index % 2 === 0 ? "bg-gray-50" : ""
                           }`}
                         >
-                          <td className="py-4 px-6 text-gray-900 font-medium">{farm.name || "Unnamed Field"}</td>
+                          <td className="py-4 px-6 text-gray-900 font-medium">{farm.name || "Unnamed Farm"}</td>
                           <td className="py-4 px-6 text-gray-700">
                             {farm.cropType || farm.crop || "N/A"}
                           </td>
@@ -989,7 +1083,7 @@ export default function FarmerDashboard() {
                                   onClick={() => setInsuranceRequestDialog({
                                     open: true,
                                     farmId: farmId,
-                                    farmName: farm.name || "Unnamed Field"
+                                    farmName: farm.name || "Unnamed Farm"
                                   })}
                                   className="border-green-600 text-green-600 hover:bg-green-50"
                                 >
@@ -1091,59 +1185,183 @@ export default function FarmerDashboard() {
   );
 
   const renderCreateFarm = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <Button
-            variant="ghost"
-            onClick={() => setActivePage("my-fields")}
-            className="text-gray-900 hover:bg-gray-50 mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to My Fields
-          </Button>
-          <h2 className="text-2xl font-bold text-gray-900">Register New Field</h2>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <Button
+              variant="ghost"
+              onClick={() => setActivePage("my-fields")}
+              className="text-gray-900 hover:bg-gray-50 mb-4"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to My Farms
+            </Button>
+          <h2 className="text-2xl font-bold text-gray-900">Register New Farm</h2>
           <p className="text-gray-600">
             Submit the official farm record required by Starhawk&apos;s backend APIs.
           </p>
+          </div>
         </div>
-      </div>
 
-      <Card className={`${dashboardTheme.card}`}>
-        <CardHeader>
+        <Card className={`${dashboardTheme.card}`}>
+          <CardHeader>
           <CardTitle className="text-gray-900">Farm Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleCreateField} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="fieldName" className="text-gray-900">Field Name *</Label>
-              <Input
-                id="fieldName"
-                value={newFieldData.name}
-                onChange={(e) => setNewFieldData({ ...newFieldData, name: e.target.value })}
-                placeholder="e.g., Main Farm"
-                required
-                className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
-              />
-              <p className="text-xs text-gray-500">
-                Use the same field label that appears on your insurance paperwork.
-              </p>
+          </CardHeader>
+          <CardContent>
+          {/* Upload Method Selection */}
+          <div className="mb-6 pb-4 border-b border-gray-200">
+            <Label className="text-gray-900 mb-3 block">Upload Method</Label>
+            <div className="flex gap-4">
+              <Button
+                type="button"
+                variant={uploadMethod === "manual" ? "default" : "outline"}
+                onClick={() => {
+                  setUploadMethod("manual");
+                  setShapefile(null);
+                }}
+                className={uploadMethod === "manual" 
+                  ? "bg-green-600 hover:bg-green-700 text-white" 
+                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                }
+              >
+                Manual Entry
+              </Button>
+              <Button
+                type="button"
+                variant={uploadMethod === "shapefile" ? "default" : "outline"}
+                onClick={() => {
+                  setUploadMethod("shapefile");
+                  setNewFieldData({
+                    name: "",
+                    cropType: "",
+                    latitude: "",
+                    longitude: "",
+                    boundaryCoordinates: ""
+                  });
+                  setBoundaryError(null);
+                  setBoundaryStats(null);
+                }}
+                className={uploadMethod === "shapefile" 
+                  ? "bg-green-600 hover:bg-green-700 text-white" 
+                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                }
+              >
+                Upload Shapefile
+              </Button>
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="cropType" className="text-gray-900">Crop Type *</Label>
+          {uploadMethod === "shapefile" ? (
+            <form onSubmit={handleShapefileUpload} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="shapefile" className="text-gray-900">Shapefile *</Label>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <label
+                      htmlFor="shapefile"
+                      className="flex items-center gap-2 px-4 py-2 border-2 border-dashed rounded-lg cursor-pointer transition-colors border-green-300 bg-green-50 hover:bg-green-100 hover:border-green-400"
+                    >
+                      <FileText className="h-5 w-5 text-green-600" />
+                      <span className="text-sm font-medium text-green-700">
+                        {shapefile ? 'Change File' : 'Select Shapefile'}
+                      </span>
+                    </label>
+                    <input
+                      id="shapefile"
+                      type="file"
+                      accept=".zip,.shp"
+                      onChange={handleShapefileSelect}
+                      className="hidden"
+                      required
+                    />
+                    {shapefile && (
+                      <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
+                        <FileText className="h-4 w-4" />
+                        <span className="max-w-xs truncate">{shapefile.name}</span>
+                        <span className="text-xs text-gray-500">
+                          ({(shapefile.size / 1024 / 1024).toFixed(2)} MB)
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShapefile(null)}
+                          className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Upload a shapefile (.zip or .shp format). The shapefile should contain the farm boundary and location data.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setActivePage("my-fields");
+                    setShapefile(null);
+                    setUploadMethod("manual");
+                  }}
+                  className="flex-1 bg-gray-50 hover:bg-gray-100 border border-gray-300 text-gray-900"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isUploadingShapefile || !shapefile}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {isUploadingShapefile ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Upload & Create Farm
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleCreateField} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="fieldName" className="text-gray-900">Farm Name *</Label>
+                <Input
+                  id="fieldName"
+                  value={newFieldData.name}
+                  onChange={(e) => setNewFieldData({ ...newFieldData, name: e.target.value })}
+                placeholder="e.g., Main Farm"
+                  required
+                className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
+                />
+              <p className="text-xs text-gray-500">
+                Use the same farm name that appears on your insurance paperwork.
+              </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cropType" className="text-gray-900">Crop Type *</Label>
               <Input
                 id="cropType"
-                value={newFieldData.cropType}
+                  value={newFieldData.cropType}
                 onChange={(e) => setNewFieldData({ ...newFieldData, cropType: e.target.value })}
                 placeholder="e.g., MAIZE, RICE, BEANS"
-                required
+                  required
                 className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
               />
               <p className="text-xs text-gray-500">
                 Enter crop type (will be converted to uppercase).
               </p>
-            </div>
+              </div>
 
             <div className="space-y-3">
               <div className="border-b border-gray-200 pb-3">
@@ -1185,10 +1403,10 @@ export default function FarmerDashboard() {
                     Decimal degrees between -180 and 180.
                   </p>
                 </div>
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
+              <div className="space-y-2">
               <Label htmlFor="boundaryCoordinates" className="text-gray-900">
                 Boundary (GeoJSON Polygon) *
               </Label>
@@ -1220,51 +1438,52 @@ export default function FarmerDashboard() {
               <p className="text-xs text-gray-500">
                 Paste the coordinates array from your GIS tool or the entire GeoJSON Polygon.
               </p>
-            </div>
+              </div>
 
             <div className="flex gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setActivePage("my-fields");
-                  setNewFieldData({
-                    name: "",
-                    cropType: "",
-                    latitude: "",
-                    longitude: "",
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setActivePage("my-fields");
+                    setNewFieldData({
+                      name: "",
+                      cropType: "",
+                      latitude: "",
+                      longitude: "",
                     boundaryCoordinates: ""
-                  });
+                    });
                   setBoundaryError(null);
                   setBoundaryStats(null);
-                }}
+                  }}
                 className="flex-1 bg-gray-50 hover:bg-gray-100 border border-gray-300 text-gray-900"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isCreating}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-              >
-                {isCreating ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Create Field
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
-  );
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isCreating}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {isCreating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Create Farm
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          )}
+          </CardContent>
+        </Card>
+      </div>
+    );
 
   const renderFileClaim = () => (
     <div className="space-y-6">
@@ -1344,6 +1563,36 @@ export default function FarmerDashboard() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="eventDate" className="text-gray-900">Event Date *</Label>
+              <Input
+                id="eventDate"
+                type="date"
+                value={claimFormData.eventDate}
+                onChange={(e) => setClaimFormData({ ...claimFormData, eventDate: e.target.value })}
+                required
+                className="bg-gray-50 border-gray-300 text-gray-900"
+                max={new Date().toISOString().split('T')[0]}
+              />
+              <p className="text-xs text-gray-500">Date when the loss event occurred</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="estimatedLoss" className="text-gray-900">Estimated Loss (RWF) *</Label>
+              <Input
+                id="estimatedLoss"
+                type="number"
+                step="0.01"
+                min="0"
+                value={claimFormData.estimatedLoss}
+                onChange={(e) => setClaimFormData({ ...claimFormData, estimatedLoss: e.target.value })}
+                placeholder="500000"
+                required
+                className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
+              />
+              <p className="text-xs text-gray-500">Estimated financial loss in Rwandan Francs</p>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="lossDescription" className="text-gray-900">Loss Description *</Label>
               <Textarea
                 id="lossDescription"
@@ -1363,7 +1612,7 @@ export default function FarmerDashboard() {
                 <div className="flex items-center gap-3">
                   <input
                     type="file"
-                    id="damagePhotos"
+                id="damagePhotos"
                     accept="image/jpeg,image/jpg,image/png,image/webp"
                     multiple
                     onChange={handleFileSelect}
@@ -1619,8 +1868,8 @@ export default function FarmerDashboard() {
         </div>
 
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">{farm.name || "Unnamed Field"}</h2>
-          <p className="text-gray-600">Field Details</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{farm.name || "Unnamed Farm"}</h2>
+          <p className="text-gray-600">Farm Details</p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -1630,7 +1879,7 @@ export default function FarmerDashboard() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between">
-                <span className="text-gray-600">Field Name:</span>
+                <span className="text-gray-600">Farm Name:</span>
                 <span className="text-gray-900 font-medium">{farm.name || "N/A"}</span>
               </div>
               <div className="flex justify-between">
@@ -1678,7 +1927,7 @@ export default function FarmerDashboard() {
               )}
               {farm.eosdaFieldId && (
                 <div className="flex justify-between">
-                  <span className="text-gray-600">EOSDA Field ID:</span>
+                  <span className="text-gray-600">EOSDA Farm ID:</span>
                   <span className="text-gray-900 font-medium">{farm.eosdaFieldId}</span>
                 </div>
               )}
@@ -1697,7 +1946,7 @@ export default function FarmerDashboard() {
                   onClick={() => setInsuranceRequestDialog({
                     open: true,
                     farmId: farm._id || farm.id,
-                    farmName: farm.name || "Unnamed Field"
+                    farmName: farm.name || "Unnamed Farm"
                   })}
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >
@@ -1762,7 +2011,7 @@ export default function FarmerDashboard() {
               Back to Farm Details
             </Button>
             <h2 className="text-2xl font-bold text-gray-900 mt-2">
-              Farm Analytics: {selectedFarm.name || "Unnamed Field"}
+              Farm Analytics: {selectedFarm.name || "Unnamed Farm"}
             </h2>
             <p className="text-gray-600">Weather forecasts, historical data, and vegetation indices</p>
           </div>
@@ -1898,53 +2147,6 @@ export default function FarmerDashboard() {
             <Input id="location" placeholder="Province, District, Sector, Cell, Village" />
           </div>
 
-          {/* UPI Credentials Section */}
-          <div className="pt-4 border-t border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">UPI Payment Information</h3>
-            {profileLoading ? (
-              <div className="text-center py-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto"></div>
-                <p className="text-gray-500 mt-2">Loading UPI information...</p>
-              </div>
-            ) : farmerProfile?.personalInfo?.upiCredentials ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="upiId">UPI ID</Label>
-                  <Input 
-                    id="upiId" 
-                    value={farmerProfile.personalInfo.upiCredentials.upiId || ""} 
-                    readOnly 
-                    className="bg-gray-50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="bankAccount">Bank Account Number</Label>
-                  <Input 
-                    id="bankAccount" 
-                    value={farmerProfile.personalInfo.upiCredentials.bankAccount || ""} 
-                    readOnly 
-                    className="bg-gray-50"
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="ifscCode">IFSC Code</Label>
-                  <Input 
-                    id="ifscCode" 
-                    value={farmerProfile.personalInfo.upiCredentials.ifscCode || ""} 
-                    readOnly 
-                    className="bg-gray-50"
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-sm text-yellow-800">
-                  UPI credentials not found. Please complete your registration to add payment information.
-                </p>
-              </div>
-            )}
-          </div>
-
           <Button className="bg-green-600 hover:bg-green-700">
             Update Profile
           </Button>
@@ -1969,7 +2171,7 @@ export default function FarmerDashboard() {
 
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: BarChart3 },
-    { id: "my-fields", label: "My Fields", icon: Crop },
+    { id: "my-fields", label: "My Farms", icon: Crop },
     { id: "file-claim", label: "File Claim", icon: AlertTriangle },
     { id: "loss-reports", label: "Loss Reports", icon: FileText },
     { id: "profile", label: "Profile", icon: User }

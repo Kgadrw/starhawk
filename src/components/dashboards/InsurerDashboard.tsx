@@ -11,7 +11,15 @@ import RiskAssessmentSystem from "../assessor/RiskAssessmentSystem";
 import { getUserId, getPhoneNumber, getEmail, isAuthenticated, getToken } from "@/services/authAPI";
 import { getPolicies } from "@/services/policiesApi";
 import { getClaims } from "@/services/claimsApi";
+import { getInsuranceRequests } from "@/services/farmsApi";
+import assessmentsApiService, { createAssessment } from "@/services/assessmentsApi";
+import { createPolicyFromAssessment } from "@/services/policiesApi";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +34,8 @@ import {
   TrendingUp,
   TrendingDown,
   Eye,
-  ArrowRight
+  ArrowRight,
+  Clock
 } from "lucide-react";
 
 export default function InsurerDashboard() {
@@ -38,6 +47,29 @@ export default function InsurerDashboard() {
   const [recentClaims, setRecentClaims] = useState<any[]>([]);
   const [recentPolicies, setRecentPolicies] = useState<any[]>([]);
   
+  // Insurance Requests state
+  const [insuranceRequests, setInsuranceRequests] = useState<any[]>([]);
+  const [insuranceRequestsLoading, setInsuranceRequestsLoading] = useState(false);
+  const [createAssessmentDialog, setCreateAssessmentDialog] = useState<{
+    open: boolean;
+    insuranceRequest: any | null;
+  }>({ open: false, insuranceRequest: null });
+  const [assessorId, setAssessorId] = useState("");
+  const [assessmentNotes, setAssessmentNotes] = useState("");
+  const [isCreatingAssessment, setIsCreatingAssessment] = useState(false);
+  
+  // Submitted Assessments state
+  const [submittedAssessments, setSubmittedAssessments] = useState<any[]>([]);
+  const [submittedAssessmentsLoading, setSubmittedAssessmentsLoading] = useState(false);
+  const [createPolicyDialog, setCreatePolicyDialog] = useState<{
+    open: boolean;
+    assessment: any | null;
+  }>({ open: false, assessment: null });
+  const [coverageLevel, setCoverageLevel] = useState<"BASIC" | "STANDARD" | "PREMIUM">("STANDARD");
+  const [policyStartDate, setPolicyStartDate] = useState("");
+  const [policyEndDate, setPolicyEndDate] = useState("");
+  const [isCreatingPolicy, setIsCreatingPolicy] = useState(false);
+  
   // Get logged-in insurer data from localStorage
   const insurerId = getUserId() || "";
   const insurerPhone = getPhoneNumber() || "";
@@ -45,6 +77,14 @@ export default function InsurerDashboard() {
   // Use email or phone number as display name, or fallback to "Insurer"
   const insurerName = insurerEmail || insurerPhone || "Insurer";
 
+
+  useEffect(() => {
+    if (activePage === 'insurance-requests') {
+      loadInsuranceRequests();
+    } else if (activePage === 'submitted-assessments') {
+      loadSubmittedAssessments();
+    }
+  }, [activePage]);
 
   useEffect(() => {
     if (activePage !== 'dashboard') return;
@@ -98,6 +138,147 @@ export default function InsurerDashboard() {
     };
     load();
   }, [activePage]);
+
+  const loadInsuranceRequests = async () => {
+    setInsuranceRequestsLoading(true);
+    try {
+      const response: any = await getInsuranceRequests(1, 100, 'PENDING');
+      const requestsData = response.data || response || [];
+      const requestsArray = Array.isArray(requestsData) ? requestsData : (requestsData.items || requestsData.results || []);
+      setInsuranceRequests(requestsArray);
+    } catch (err: any) {
+      console.error('Failed to load insurance requests:', err);
+      toast({
+        title: 'Error loading insurance requests',
+        description: err.message || 'Failed to load insurance requests',
+        variant: 'destructive'
+      });
+    } finally {
+      setInsuranceRequestsLoading(false);
+    }
+  };
+
+  const handleCreateAssessment = async () => {
+    if (!createAssessmentDialog.insuranceRequest || !assessorId) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select an assessor',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsCreatingAssessment(true);
+    try {
+      const insuranceRequest = createAssessmentDialog.insuranceRequest;
+      const farmId = insuranceRequest.farmId?._id || insuranceRequest.farmId || insuranceRequest.farm?._id;
+      const insuranceRequestId = insuranceRequest._id || insuranceRequest.id;
+
+      if (!farmId || !insuranceRequestId) {
+        throw new Error('Missing farm ID or insurance request ID');
+      }
+
+      await assessmentsApiService.createAssessment({
+        farmId,
+        insuranceRequestId,
+        assessorId,
+        notes: assessmentNotes || undefined
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Assessment created successfully and assigned to assessor',
+      });
+
+      setCreateAssessmentDialog({ open: false, insuranceRequest: null });
+      setAssessorId("");
+      setAssessmentNotes("");
+      await loadInsuranceRequests();
+    } catch (err: any) {
+      console.error('Failed to create assessment:', err);
+      toast({
+        title: 'Error creating assessment',
+        description: err.message || 'Failed to create assessment',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsCreatingAssessment(false);
+    }
+  };
+
+  const loadSubmittedAssessments = async () => {
+    setSubmittedAssessmentsLoading(true);
+    try {
+      const response: any = await assessmentsApiService.getAllAssessments();
+      const assessmentsData = response.data || response || [];
+      const assessmentsArray = Array.isArray(assessmentsData) ? assessmentsData : (assessmentsData.items || assessmentsData.results || []);
+      
+      // Filter only submitted assessments
+      const submitted = assessmentsArray.filter((assessment: any) => 
+        (assessment.status || '').toUpperCase() === 'SUBMITTED'
+      );
+      setSubmittedAssessments(submitted);
+    } catch (err: any) {
+      console.error('Failed to load submitted assessments:', err);
+      toast({
+        title: 'Error loading assessments',
+        description: err.message || 'Failed to load submitted assessments',
+        variant: 'destructive'
+      });
+    } finally {
+      setSubmittedAssessmentsLoading(false);
+    }
+  };
+
+  const handleCreatePolicy = async () => {
+    if (!createPolicyDialog.assessment || !policyStartDate || !policyEndDate) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsCreatingPolicy(true);
+    try {
+      const assessmentId = createPolicyDialog.assessment._id || createPolicyDialog.assessment.id;
+      
+      // Convert dates to ISO format (YYYY-MM-DDTHH:mm:ssZ)
+      // Start date: beginning of day (00:00:00Z)
+      // End date: end of day (23:59:59Z)
+      const startDateISO = new Date(policyStartDate + 'T00:00:00Z').toISOString();
+      const endDateISO = new Date(policyEndDate + 'T23:59:59Z').toISOString();
+      
+      await createPolicyFromAssessment(
+        assessmentId,
+        coverageLevel,
+        startDateISO,
+        endDateISO
+      );
+
+      toast({
+        title: 'Success',
+        description: 'Policy created successfully from assessment',
+      });
+
+      setCreatePolicyDialog({ open: false, assessment: null });
+      setCoverageLevel("STANDARD");
+      setPolicyStartDate("");
+      setPolicyEndDate("");
+      await loadSubmittedAssessments();
+      setActivePage('policy-management');
+    } catch (err: any) {
+      console.error('Failed to create policy:', err);
+      toast({
+        title: 'Error creating policy',
+        description: err.message || 'Failed to create policy',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsCreatingPolicy(false);
+    }
+  };
 
   const StatCard = ({ icon: Icon, title, value, delta, deltaPositive }: { icon: any, title: string, value: string | number, delta?: string, deltaPositive?: boolean }) => (
     <Card className="bg-white border-gray-200">
@@ -187,11 +368,216 @@ export default function InsurerDashboard() {
 
 
 
+  const renderInsuranceRequests = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Insurance Requests</h2>
+          <p className="text-gray-600">Review and create assessments for pending insurance requests</p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={loadInsuranceRequests}
+          disabled={insuranceRequestsLoading}
+          className="border-gray-300 text-gray-700 hover:bg-gray-100"
+        >
+          <ArrowRight className={`h-4 w-4 mr-2 ${insuranceRequestsLoading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
+
+      {insuranceRequestsLoading ? (
+        <Card className="bg-white border-gray-200">
+          <CardContent className="p-12">
+            <div className="text-center text-gray-600">Loading insurance requests...</div>
+          </CardContent>
+        </Card>
+      ) : insuranceRequests.length === 0 ? (
+        <Card className="bg-white border-gray-200">
+          <CardContent className="p-12">
+            <div className="text-center">
+              <Shield className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-600 text-lg mb-2">No pending insurance requests</p>
+              <p className="text-gray-500 text-sm">All insurance requests have been processed</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="bg-white border-gray-200">
+          <CardHeader>
+            <CardTitle className="text-gray-900">Pending Insurance Requests</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-4 px-6 font-medium text-gray-700">Farm Name</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-700">Crop Type</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-700">Farmer</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-700">Request Date</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-700">Notes</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {insuranceRequests.map((request: any, index: number) => {
+                    const farm = request.farmId || request.farm || {};
+                    const farmer = request.farmerId || request.farmer || {};
+                    return (
+                      <tr
+                        key={request._id || request.id || index}
+                        className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${
+                          index % 2 === 0 ? "bg-gray-50" : ""
+                        }`}
+                      >
+                        <td className="py-4 px-6 text-gray-900 font-medium">
+                          {farm.name || "N/A"}
+                        </td>
+                        <td className="py-4 px-6 text-gray-700">
+                          {farm.cropType || farm.crop || "N/A"}
+                        </td>
+                        <td className="py-4 px-6 text-gray-700">
+                          {farmer.name || farmer.email || farmer.phoneNumber || "N/A"}
+                        </td>
+                        <td className="py-4 px-6 text-gray-700">
+                          {request.createdAt
+                            ? new Date(request.createdAt).toLocaleDateString()
+                            : "N/A"}
+                        </td>
+                        <td className="py-4 px-6 text-gray-700">
+                          <span className="text-sm">{request.notes || "—"}</span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setCreateAssessmentDialog({ open: true, insuranceRequest: request })}
+                            className="border-green-600 text-green-600 hover:bg-green-50"
+                          >
+                            <Shield className="h-3 w-3 mr-1" />
+                            Create Assessment
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+
+  const renderSubmittedAssessments = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Submitted Assessments</h2>
+          <p className="text-gray-600">Review submitted assessments and create policies</p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={loadSubmittedAssessments}
+          disabled={submittedAssessmentsLoading}
+          className="border-gray-300 text-gray-700 hover:bg-gray-100"
+        >
+          <ArrowRight className={`h-4 w-4 mr-2 ${submittedAssessmentsLoading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
+
+      {submittedAssessmentsLoading ? (
+        <Card className="bg-white border-gray-200">
+          <CardContent className="p-12">
+            <div className="text-center text-gray-600">Loading submitted assessments...</div>
+          </CardContent>
+        </Card>
+      ) : submittedAssessments.length === 0 ? (
+        <Card className="bg-white border-gray-200">
+          <CardContent className="p-12">
+            <div className="text-center">
+              <CheckCircle className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-600 text-lg mb-2">No submitted assessments</p>
+              <p className="text-gray-500 text-sm">Assessments will appear here once assessors submit them</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="bg-white border-gray-200">
+          <CardHeader>
+            <CardTitle className="text-gray-900">Ready for Policy Creation</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-4 px-6 font-medium text-gray-700">Farm Name</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-700">Crop Type</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-700">Risk Score</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-700">Submitted Date</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {submittedAssessments.map((assessment: any, index: number) => {
+                    const farm = assessment.farmId || assessment.farm || {};
+                    return (
+                      <tr
+                        key={assessment._id || assessment.id || index}
+                        className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${
+                          index % 2 === 0 ? "bg-gray-50" : ""
+                        }`}
+                      >
+                        <td className="py-4 px-6 text-gray-900 font-medium">
+                          {farm.name || "N/A"}
+                        </td>
+                        <td className="py-4 px-6 text-gray-700">
+                          {farm.cropType || farm.crop || "N/A"}
+                        </td>
+                        <td className="py-4 px-6 text-gray-700">
+                          <Badge variant={assessment.riskScore < 50 ? "default" : assessment.riskScore < 75 ? "secondary" : "destructive"}>
+                            {assessment.riskScore || "N/A"}
+                          </Badge>
+                        </td>
+                        <td className="py-4 px-6 text-gray-700">
+                          {assessment.submittedAt || assessment.completedAt
+                            ? new Date(assessment.submittedAt || assessment.completedAt).toLocaleDateString()
+                            : "N/A"}
+                        </td>
+                        <td className="py-4 px-6">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setCreatePolicyDialog({ open: true, assessment })}
+                            className="border-green-600 text-green-600 hover:bg-green-50"
+                          >
+                            <Shield className="h-3 w-3 mr-1" />
+                            Create Policy
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+
   const [policyKey, setPolicyKey] = useState(0);
 
   const renderPage = () => {
     switch (activePage) {
       case "dashboard": return renderDashboard();
+      case "insurance-requests": return renderInsuranceRequests();
+      case "submitted-assessments": return renderSubmittedAssessments();
       case "risk-reviews": return <RiskReviewManagement />;
       case "claim-reviews": return <ClaimsTable />;
       case "claim-review-detail": return <ClaimReviewPage />;
@@ -206,6 +592,8 @@ export default function InsurerDashboard() {
 
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: BarChart3 },
+    { id: "insurance-requests", label: "Insurance Requests", icon: Shield },
+    { id: "submitted-assessments", label: "Submitted Assessments", icon: CheckCircle },
     { id: "risk-reviews", label: "Risk Reviews", icon: Shield },
     { id: "claim-reviews", label: "Claim Reviews", icon: FileText },
     { id: "policy-management", label: "Policy Management", icon: CheckCircle },
@@ -233,6 +621,185 @@ export default function InsurerDashboard() {
       }}
     >
       {renderPage()}
+
+      {/* Create Assessment Dialog */}
+      <Dialog open={createAssessmentDialog.open} onOpenChange={(open) => 
+        setCreateAssessmentDialog({ ...createAssessmentDialog, open })
+      }>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-gray-900">Create Assessment</DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Assign an assessor to evaluate this insurance request
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            {createAssessmentDialog.insuranceRequest && (
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                <div className="text-sm">
+                  <span className="text-gray-600">Farm: </span>
+                  <span className="font-medium text-gray-900">
+                    {(createAssessmentDialog.insuranceRequest.farmId || createAssessmentDialog.insuranceRequest.farm)?.name || "N/A"}
+                  </span>
+                </div>
+                <div className="text-sm">
+                  <span className="text-gray-600">Crop Type: </span>
+                  <span className="font-medium text-gray-900">
+                    {(createAssessmentDialog.insuranceRequest.farmId || createAssessmentDialog.insuranceRequest.farm)?.cropType || "N/A"}
+                  </span>
+                </div>
+              </div>
+            )}
+            <div>
+              <Label className="text-gray-700">Assessor ID *</Label>
+              <Input
+                value={assessorId}
+                onChange={(e) => setAssessorId(e.target.value)}
+                placeholder="Enter assessor ID"
+                className="mt-2 border-gray-300"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">Enter the ID of the assessor to assign</p>
+            </div>
+            <div>
+              <Label className="text-gray-700">Notes (Optional)</Label>
+              <Textarea
+                value={assessmentNotes}
+                onChange={(e) => setAssessmentNotes(e.target.value)}
+                placeholder="Add any notes for the assessor..."
+                className="mt-2 border-gray-300"
+                rows={4}
+              />
+            </div>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setCreateAssessmentDialog({ open: false, insuranceRequest: null });
+                  setAssessorId("");
+                  setAssessmentNotes("");
+                }}
+                className="border-gray-300 text-gray-700 hover:bg-gray-100"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateAssessment}
+                disabled={isCreatingAssessment || !assessorId}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {isCreatingAssessment ? (
+                  <>
+                    <Clock className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Shield className="h-4 w-4 mr-2" />
+                    Create Assessment
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Policy Dialog */}
+      <Dialog open={createPolicyDialog.open} onOpenChange={(open) => 
+        setCreatePolicyDialog({ ...createPolicyDialog, open })
+      }>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-gray-900">Create Policy from Assessment</DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Create an insurance policy based on the submitted assessment
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            {createPolicyDialog.assessment && (
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                <div className="text-sm">
+                  <span className="text-gray-600">Farm: </span>
+                  <span className="font-medium text-gray-900">
+                    {(createPolicyDialog.assessment.farmId || createPolicyDialog.assessment.farm)?.name || "N/A"}
+                  </span>
+                </div>
+                <div className="text-sm">
+                  <span className="text-gray-600">Risk Score: </span>
+                  <span className="font-medium text-gray-900">
+                    {createPolicyDialog.assessment.riskScore || "N/A"}
+                  </span>
+                </div>
+              </div>
+            )}
+            <div>
+              <Label className="text-gray-700">Coverage Level *</Label>
+              <Select value={coverageLevel} onValueChange={(value: "BASIC" | "STANDARD" | "PREMIUM") => setCoverageLevel(value)}>
+                <SelectTrigger className="mt-2 border-gray-300">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="BASIC">Basic</SelectItem>
+                  <SelectItem value="STANDARD">Standard</SelectItem>
+                  <SelectItem value="PREMIUM">Premium</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-gray-700">Start Date *</Label>
+              <Input
+                type="date"
+                value={policyStartDate}
+                onChange={(e) => setPolicyStartDate(e.target.value)}
+                className="mt-2 border-gray-300"
+                required
+              />
+            </div>
+            <div>
+              <Label className="text-gray-700">End Date *</Label>
+              <Input
+                type="date"
+                value={policyEndDate}
+                onChange={(e) => setPolicyEndDate(e.target.value)}
+                className="mt-2 border-gray-300"
+                required
+              />
+            </div>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setCreatePolicyDialog({ open: false, assessment: null });
+                  setCoverageLevel("STANDARD");
+                  setPolicyStartDate("");
+                  setPolicyEndDate("");
+                }}
+                className="border-gray-300 text-gray-700 hover:bg-gray-100"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreatePolicy}
+                disabled={isCreatingPolicy || !policyStartDate || !policyEndDate}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {isCreatingPolicy ? (
+                  <>
+                    <Clock className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Shield className="h-4 w-4 mr-2" />
+                    Create Policy
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

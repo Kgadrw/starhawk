@@ -1676,12 +1676,6 @@ export default function AssessorDashboard() {
 
   const renderDashboard = () => (
     <div className="space-y-6">
-      {/* Header Section */}
-      <div>
-        <h1 className="text-4xl font-bold text-gray-900">Assessment Management</h1>
-        <p className="text-gray-900/70 mt-2">Manage risk and claim assessments for farmers</p>
-      </div>
-
       {/* Summary Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>

@@ -6,8 +6,12 @@ const CLAIMS_BASE_URL = `${API_BASE_URL}${API_ENDPOINTS.CLAIMS.BASE}`;
 
 interface ClaimData {
   policyId: string;
-  lossEventType: string; // e.g., "DROUGHT", "FLOOD", "PEST_ATTACK", etc.
-  lossDescription: string;
+  lossEventType?: string; // e.g., "DROUGHT", "FLOOD", "PEST_ATTACK", etc. (backward compatibility)
+  eventType?: string; // e.g., "DROUGHT", "FLOOD", "PEST_ATTACK", etc. (new format)
+  lossDescription?: string; // backward compatibility
+  description?: string; // new format
+  eventDate?: string; // ISO date string
+  estimatedLoss?: number; // Estimated loss amount
   damagePhotos?: string[]; // Array of photo URLs
   [key: string]: any; // Allow additional fields for backward compatibility
 }
@@ -127,25 +131,39 @@ class ClaimsApiService {
 
   // Create Claim
   // POST /claims
-  // Request: { policyId, lossEventType, lossDescription, damagePhotos }
+  // Request: { policyId, eventType, eventDate, description, estimatedLoss, damagePhotos }
   async createClaim(claimData: ClaimData) {
     // Validate required fields
     if (!claimData.policyId) {
       throw new Error('Policy ID is required');
     }
-    if (!claimData.lossEventType) {
-      throw new Error('Loss event type is required');
+    
+    // Support both old format (lossEventType, lossDescription) and new format (eventType, description)
+    const eventType = claimData.eventType || claimData.lossEventType;
+    const description = claimData.description || claimData.lossDescription;
+    
+    if (!eventType) {
+      throw new Error('Event type is required');
     }
-    if (!claimData.lossDescription) {
-      throw new Error('Loss description is required');
+    if (!description) {
+      throw new Error('Description is required');
     }
 
-    // Format according to API spec
+    // Format according to API spec (prefer new format)
     const requestBody: any = {
       policyId: claimData.policyId,
-      lossEventType: claimData.lossEventType.toUpperCase(), // Ensure uppercase
-      lossDescription: claimData.lossDescription,
+      eventType: eventType.toUpperCase(), // Ensure uppercase
+      description: description,
     };
+    
+    // Add optional fields if provided
+    if (claimData.eventDate) {
+      requestBody.eventDate = claimData.eventDate;
+    }
+    
+    if (claimData.estimatedLoss !== undefined && claimData.estimatedLoss !== null) {
+      requestBody.estimatedLoss = claimData.estimatedLoss;
+    }
     
     if (claimData.damagePhotos && claimData.damagePhotos.length > 0) {
       requestBody.damagePhotos = claimData.damagePhotos;
@@ -189,23 +207,38 @@ class ClaimsApiService {
   }
 
   // Approve Claim (Insurer Only)
-  async approveClaim(id: string, approvedAmount?: number, notes?: string) {
+  // Supports both payoutAmount (new format) and approvedAmount (backward compatibility)
+  async approveClaim(id: string, payoutAmount?: number, approvedAmount?: number, notes?: string) {
+    const amount = payoutAmount !== undefined ? payoutAmount : approvedAmount;
+    const requestBody: any = {
+      payoutAmount: amount, // Use payoutAmount as per flow spec
+      notes,
+    };
+    // Keep approvedAmount for backward compatibility if provided
+    if (approvedAmount !== undefined) {
+      requestBody.approvedAmount = approvedAmount;
+    }
     return this.request<any>(`/${id}/approve`, {
       method: 'PUT',
-      body: JSON.stringify({
-        approvedAmount,
-        notes,
-      }),
+      body: JSON.stringify(requestBody),
     });
   }
 
   // Reject Claim (Insurer Only)
-  async rejectClaim(id: string, reason: string) {
+  // Supports both rejectionReason (new format) and reason (backward compatibility)
+  async rejectClaim(id: string, rejectionReason?: string, reason?: string) {
+    const rejectReason = rejectionReason || reason;
+    if (!rejectReason) {
+      throw new Error('Rejection reason is required');
+    }
+    const requestBody: any = {
+      rejectionReason: rejectReason, // Use rejectionReason as per flow spec
+    };
+    // Keep reason for backward compatibility
+    requestBody.reason = rejectReason;
     return this.request<any>(`/${id}/reject`, {
       method: 'PUT',
-      body: JSON.stringify({
-        reason,
-      }),
+      body: JSON.stringify(requestBody),
     });
   }
 

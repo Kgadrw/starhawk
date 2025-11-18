@@ -6,7 +6,9 @@ const ASSESSMENTS_BASE_URL = `${API_BASE_URL}${API_ENDPOINTS.ASSESSMENTS.BASE}`;
 
 interface CreateAssessmentRequest {
   farmId: string;
+  insuranceRequestId: string;
   assessorId: string;
+  notes?: string;
 }
 
 interface UpdateAssessmentRequest {

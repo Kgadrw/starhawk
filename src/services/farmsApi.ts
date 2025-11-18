@@ -309,6 +309,15 @@ class FarmsApiService {
     });
   }
 
+  // Get Insurance Requests
+  async getInsuranceRequests(page: number = 1, size: number = 10, status?: string) {
+    let endpoint = `/insurance-requests?page=${page}&size=${size}`;
+    if (status) {
+      endpoint += `&status=${status}`;
+    }
+    return this.request<any>(endpoint);
+  }
+
   // Get Weather Forecast for a Farm
   async getWeatherForecast(farmId: string, startDate: string, endDate: string) {
     return this.request<any>(`/${farmId}/weather/forecast?dateStart=${startDate}&dateEnd=${endDate}`);
@@ -337,6 +346,7 @@ export const updateFarm = (farmId: string, updateData: UpdateFarmData) => farmsA
 export const uploadShapefile = (file: File) => farmsApiService.uploadShapefile(file);
 export const uploadKML = (file: File) => farmsApiService.uploadKML(file);
 export const createInsuranceRequest = (farmId: string, notes?: string) => farmsApiService.createInsuranceRequest(farmId, notes);
+export const getInsuranceRequests = (page?: number, size?: number, status?: string) => farmsApiService.getInsuranceRequests(page, size, status);
 export const getWeatherForecast = (farmId: string, startDate: string, endDate: string) => farmsApiService.getWeatherForecast(farmId, startDate, endDate);
 export const getHistoricalWeather = (farmId: string, startDate: string, endDate: string) => farmsApiService.getHistoricalWeather(farmId, startDate, endDate);
 export const getVegetationStats = (farmId: string, startDate: string, endDate: string, indices?: string) => farmsApiService.getVegetationStats(farmId, startDate, endDate, indices);

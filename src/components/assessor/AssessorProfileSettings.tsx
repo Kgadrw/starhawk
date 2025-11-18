@@ -276,13 +276,10 @@ export default function AssessorProfileSettings() {
   const renderProfileTab = () => (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="border-b border-white/10">
-          <CardTitle className="flex items-center text-white">
-            <User className="h-5 w-5 mr-2 text-gray-300" />
-            Personal Information
-          </CardTitle>
+        <CardHeader>
+          <CardTitle className="text-gray-900">Personal Information</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4 pt-6">
+        <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="fullName">Full Name</Label>
@@ -290,6 +287,7 @@ export default function AssessorProfileSettings() {
                 id="fullName"
                 value={profileData.fullName}
                 onChange={(e) => handleProfileUpdate('fullName', e.target.value)}
+                className="bg-gray-50 border-gray-300 text-gray-900"
               />
             </div>
             <div className="space-y-2">
@@ -298,7 +296,7 @@ export default function AssessorProfileSettings() {
                 id="assessorId"
                 value={profileData.assessorId}
                 disabled
-                className="bg-gray-500/10 border-gray-600/30 text-gray-200 cursor-not-allowed"
+                className="bg-gray-100 border-gray-300 text-gray-600"
               />
             </div>
           </div>
@@ -311,6 +309,7 @@ export default function AssessorProfileSettings() {
                 type="email"
                 value={profileData.email}
                 onChange={(e) => handleProfileUpdate('email', e.target.value)}
+                className="bg-gray-50 border-gray-300 text-gray-900"
               />
             </div>
             <div className="space-y-2">
@@ -319,6 +318,7 @@ export default function AssessorProfileSettings() {
                 id="phone"
                 value={profileData.phone}
                 onChange={(e) => handleProfileUpdate('phone', e.target.value)}
+                className="bg-gray-50 border-gray-300 text-gray-900"
               />
             </div>
           </div>
@@ -329,67 +329,8 @@ export default function AssessorProfileSettings() {
               id="address"
               value={profileData.address}
               onChange={(e) => handleProfileUpdate('address', e.target.value)}
+              className="bg-gray-50 border-gray-300 text-gray-900"
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="bio">Bio</Label>
-            <Textarea
-              id="bio"
-              value={profileData.bio}
-              onChange={(e) => handleProfileUpdate('bio', e.target.value)}
-              rows={3}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="border-b border-white/10">
-          <CardTitle className="flex items-center text-white">
-            <Award className="h-5 w-5 mr-2 text-gray-300" />
-            Professional Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="specialization">Specialization</Label>
-              <Input
-                id="specialization"
-                value={profileData.specialization}
-                onChange={(e) => handleProfileUpdate('specialization', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="experience">Experience</Label>
-              <Input
-                id="experience"
-                value={profileData.experience}
-                onChange={(e) => handleProfileUpdate('experience', e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="licenseNumber">License Number</Label>
-              <Input
-                id="licenseNumber"
-                value={profileData.licenseNumber}
-                disabled
-                className="bg-gray-500/10 border-gray-600/30 text-gray-200 cursor-not-allowed"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="certificationDate">Certification Date</Label>
-              <Input
-                id="certificationDate"
-                value={profileData.certificationDate}
-                disabled
-                className="bg-gray-500/10 border-gray-600/30 text-gray-200 cursor-not-allowed"
-              />
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -535,13 +476,10 @@ export default function AssessorProfileSettings() {
   const renderSecurityTab = () => (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="border-b border-white/10">
-          <CardTitle className="flex items-center text-white">
-            <Key className="h-5 w-5 mr-2 text-gray-300" />
-            Change Password
-          </CardTitle>
+        <CardHeader>
+          <CardTitle className="text-gray-900">Change Password</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4 pt-6">
+        <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="currentPassword">Current Password</Label>
             <div className="relative">
@@ -550,6 +488,7 @@ export default function AssessorProfileSettings() {
                 type={showCurrentPassword ? "text" : "password"}
                 value={securityData.currentPassword}
                 onChange={(e) => handleSecurityUpdate('currentPassword', e.target.value)}
+                className="bg-gray-50 border-gray-300 text-gray-900"
               />
               <Button
                 type="button"
@@ -575,6 +514,7 @@ export default function AssessorProfileSettings() {
                 type={showNewPassword ? "text" : "password"}
                 value={securityData.newPassword}
                 onChange={(e) => handleSecurityUpdate('newPassword', e.target.value)}
+                className="bg-gray-50 border-gray-300 text-gray-900"
               />
               <Button
                 type="button"
@@ -600,6 +540,7 @@ export default function AssessorProfileSettings() {
                 type={showConfirmPassword ? "text" : "password"}
                 value={securityData.confirmPassword}
                 onChange={(e) => handleSecurityUpdate('confirmPassword', e.target.value)}
+                className="bg-gray-50 border-gray-300 text-gray-900"
               />
               <Button
                 type="button"
@@ -617,48 +558,9 @@ export default function AssessorProfileSettings() {
             </div>
           </div>
 
-          <Button className="bg-gray-600 hover:bg-gray-700">
+          <Button className="bg-green-600 hover:bg-green-700 text-white">
             Update Password
           </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="border-b border-white/10">
-          <CardTitle className="flex items-center text-white">
-            <Shield className="h-5 w-5 mr-2 text-gray-300" />
-            Security Settings
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-medium text-white">Two-Factor Authentication</h4>
-              <p className="text-sm text-white/70">Add an extra layer of security to your account</p>
-            </div>
-            <Switch
-              checked={securityData.twoFactorEnabled}
-              onCheckedChange={(checked) => handleSecurityUpdate('twoFactorEnabled', checked)}
-            />
-          </div>
-
-          <Separator />
-
-          <div className="space-y-2">
-            <Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label>
-            <Select value={securityData.sessionTimeout} onValueChange={(value) => handleSecurityUpdate('sessionTimeout', value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="15">15 minutes</SelectItem>
-                <SelectItem value="30">30 minutes</SelectItem>
-                <SelectItem value="60">1 hour</SelectItem>
-                <SelectItem value="120">2 hours</SelectItem>
-                <SelectItem value="480">8 hours</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </CardContent>
       </Card>
     </div>
@@ -797,8 +699,8 @@ export default function AssessorProfileSettings() {
           <CardContent className="p-12">
             <div className="flex items-center justify-center">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-500 mx-auto mb-4"></div>
-                <p className="text-white/60">Loading profile...</p>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading profile...</p>
               </div>
             </div>
           </CardContent>
@@ -809,60 +711,30 @@ export default function AssessorProfileSettings() {
 
   return (
     <div className="space-y-6">
-      {/* Header with Profile Photo */}
-      <Card className="bg-gradient-to-r from-gray-700/20 to-gray-900/20 border-gray-600/30">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-6">
-            <div className="relative group">
-              <div className="w-24 h-24 bg-gradient-to-br from-gray-600 to-gray-800 rounded-full flex items-center justify-center shadow-lg ring-4 ring-gray-600/20">
-                <User className="h-12 w-12 text-white" />
-              </div>
-              <button className="absolute bottom-0 right-0 w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center hover:bg-gray-700 transition-colors shadow-lg border-2 border-gray-900">
-                <Camera className="h-4 w-4 text-white" />
-              </button>
-            </div>
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold text-white mb-1">{profileData.fullName}</h2>
-              <p className="text-white/80 mb-2">{profileData.specialization || "Assessor"}</p>
-              <div className="flex items-center gap-4 text-sm text-white/70">
-                <div className="flex items-center gap-1">
-                  <User className="h-4 w-4" />
-                  <span>{profileData.assessorId || "N/A"}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Award className="h-4 w-4" />
-                  <span>{profileData.experience || "N/A"}</span>
-                </div>
-                {workData.assignedRegion && (
-                  <div className="flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
-                    <span>{workData.assignedRegion}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Profile Settings</h2>
+          <p className="text-gray-600">Manage your account settings</p>
+        </div>
+      </div>
 
       {/* Tabs */}
-      <div className="border-b border-white/10">
-        <nav className="-mb-px flex space-x-6">
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
           {[
             { id: "profile", label: "Profile", icon: User },
-            { id: "work", label: "Work", icon: Map },
-            { id: "security", label: "Security", icon: Shield },
-            { id: "notifications", label: "Notifications", icon: Bell }
+            { id: "security", label: "Security", icon: Shield }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === tab.id
-                    ? "border-gray-500 text-gray-200"
-                    : "border-transparent text-white/60 hover:text-white/90 hover:border-white/20"
+                    ? "border-blue-500 text-gray-900"
+                    : "border-transparent text-gray-600 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
                 <Icon className="h-4 w-4 mr-2" />
@@ -876,15 +748,13 @@ export default function AssessorProfileSettings() {
       {/* Tab Content */}
       <div className="pt-6">
         {activeTab === "profile" && renderProfileTab()}
-        {activeTab === "work" && renderWorkTab()}
         {activeTab === "security" && renderSecurityTab()}
-        {activeTab === "notifications" && renderNotificationsTab()}
       </div>
 
       {/* Save Button */}
-      <div className="flex justify-end pt-6 border-t border-white/10">
+      <div className="flex justify-end pt-6 border-t border-gray-200">
         <Button 
-          className="bg-gray-600 hover:bg-gray-700 min-w-[120px]"
+          className="bg-green-600 hover:bg-green-700 text-white min-w-[120px]"
           onClick={handleSaveChanges}
           disabled={saving || loading}
         >
