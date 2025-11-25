@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import DashboardLayout from "../layout/DashboardLayout";
 import { getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
 import { getUserProfile } from "@/services/usersAPI";
-import { getFarms, createFarm, createInsuranceRequest, getFarmById, getWeatherForecast, getHistoricalWeather, getVegetationStats, uploadShapefile } from "@/services/farmsApi";
+import { getFarms, getAllFarms, createFarm, createInsuranceRequest, getFarmById, getWeatherForecast, getHistoricalWeather, getVegetationStats, uploadShapefile } from "@/services/farmsApi";
 import { getClaims, createClaim } from "@/services/claimsApi";
 import { getPolicies } from "@/services/policiesApi";
 import { useToast } from "@/hooks/use-toast";
@@ -166,18 +166,28 @@ export default function FarmerDashboard() {
     setFarmsLoading(true);
     setFarmsError(null);
     try {
-      const response: any = await getFarms(1, 100);
-      console.log('Farms API Response:', response);
-      
-      // Handle different response structures
+      // Try different pagination strategies to handle API inconsistencies
+      let response: any = null;
       let farmsArray: any[] = [];
       
-      if (Array.isArray(response)) {
+      // Strategy 1: Try page 1 first (API seems to use 1-based indexing based on response)
+      console.log('Trying page 1...');
+      response = await getFarms(1, 100);
+      console.log('Farms API Response (page 1):', response);
+      
+      // Extract farms from response
+      if (response?.success && response?.data?.items) {
+        farmsArray = Array.isArray(response.data.items) ? response.data.items : [];
+        console.log('Extracted farms from response.data.items (page 1):', farmsArray);
+        console.log('Pagination info:', {
+          currentPage: response.data.currentPage,
+          totalItems: response.data.totalItems,
+          totalPages: response.data.totalPages
+        });
+      } else if (Array.isArray(response)) {
         farmsArray = response;
       } else if (Array.isArray(response?.data)) {
         farmsArray = response.data;
-      } else if (Array.isArray(response?.data?.items)) {
-        farmsArray = response.data.items;
       } else if (Array.isArray(response?.items)) {
         farmsArray = response.items;
       } else if (Array.isArray(response?.results)) {
@@ -186,39 +196,97 @@ export default function FarmerDashboard() {
         farmsArray = response.farms;
       }
       
-      console.log('Extracted farms array:', farmsArray);
-      
-      // Filter farms by the logged-in farmer
-      // The API might associate farms with the farmer automatically, or we might need to check different fields
-      const farmerFarms = farmsArray.filter((farm: any) => {
-        // Check various possible farmer ID fields
-        const farmFarmerId = farm.farmerId?._id || 
-                            farm.farmerId || 
-                            farm.farmer?._id || 
-                            farm.farmer ||
-                            farm.userId?._id ||
-                            farm.userId;
+      // Strategy 2: If page 1 returned empty items but totalItems > 0, try page 0 (0-based indexing)
+      if (farmsArray.length === 0 && response?.data?.totalItems > 0) {
+        console.log('Page 1 returned empty items but totalItems > 0, trying page 0...');
+        response = await getFarms(0, 100);
+        console.log('Farms API Response (page 0):', response);
         
-        // If farmerId matches, or if no farmerId is set (API might auto-associate with logged-in user)
-        const matchesFarmer = farmFarmerId && (
-          farmFarmerId === farmerId || 
-          farmFarmerId === farmerId.toString() ||
-          farmFarmerId.toString() === farmerId.toString()
-        );
-        
-        // If no farmerId is set, include it (API might auto-associate with logged-in user)
-        const noFarmerId = !farmFarmerId;
-        
-        return matchesFarmer || noFarmerId;
-      });
+        if (response?.success && response?.data?.items) {
+          farmsArray = Array.isArray(response.data.items) ? response.data.items : [];
+          console.log('Extracted farms from page 0:', farmsArray);
+        } else if (Array.isArray(response)) {
+          farmsArray = response;
+        } else if (Array.isArray(response?.data)) {
+          farmsArray = response.data;
+        }
+      }
       
-      console.log('Filtered farmer farms:', farmerFarms);
-      setFarms(farmerFarms);
+      // Strategy 3: Try with larger page size if still empty
+      if (farmsArray.length === 0 && response?.data?.totalItems > 0) {
+        console.log('Trying with larger page size (500)...');
+        response = await getFarms(0, 500);
+        console.log('Farms API Response (page 0, size 500):', response);
+        
+        if (response?.success && response?.data?.items) {
+          farmsArray = Array.isArray(response.data.items) ? response.data.items : [];
+          console.log('Extracted farms with larger size:', farmsArray);
+        }
+      }
       
-      if (farmerFarms.length === 0 && farmsArray.length > 0) {
-        console.warn('No farms found for farmer, but farms exist. Showing all farms.');
-        // If filtering removed all farms but farms exist, show all (API might auto-filter)
-        setFarms(farmsArray);
+      // Strategy 4: Try without pagination parameters
+      if (farmsArray.length === 0 && response?.data?.totalItems > 0) {
+        console.log('Trying to fetch all farms without pagination...');
+        try {
+          const noPaginationResponse: any = await getAllFarms();
+          console.log('Response without pagination:', noPaginationResponse);
+          
+          if (noPaginationResponse?.success && noPaginationResponse?.data?.items) {
+            farmsArray = Array.isArray(noPaginationResponse.data.items) ? noPaginationResponse.data.items : [];
+          } else if (Array.isArray(noPaginationResponse)) {
+            farmsArray = noPaginationResponse;
+          } else if (Array.isArray(noPaginationResponse?.data)) {
+            farmsArray = noPaginationResponse.data;
+          } else if (Array.isArray(noPaginationResponse?.items)) {
+            farmsArray = noPaginationResponse.items;
+          }
+          
+          if (farmsArray.length > 0) {
+            console.log('Successfully fetched farms without pagination:', farmsArray);
+          }
+        } catch (err) {
+          console.warn('Failed to fetch without pagination:', err);
+        }
+      }
+      
+      // Strategy 5: Check if data structure has farms at a different location
+      if (farmsArray.length === 0 && response?.data?.totalItems > 0) {
+        console.warn(`⚠️ API reports ${response.data.totalItems} total items but returned empty array.`);
+        console.warn('Full response structure:', JSON.stringify(response, null, 2));
+        
+        // Check if data structure has farms at a different location
+        if (response?.data && typeof response.data === 'object') {
+          // Check all possible locations for farm data
+          const possibleKeys = ['farms', 'results', 'content', 'data'];
+          for (const key of possibleKeys) {
+            if (Array.isArray(response.data[key])) {
+              farmsArray = response.data[key];
+              console.log(`Found farms array at response.data.${key}:`, farmsArray);
+              break;
+            }
+          }
+        }
+      }
+      
+      console.log('Final extracted farms array:', farmsArray);
+      
+      setFarms(farmsArray);
+      
+      if (farmsArray.length === 0) {
+        if (response?.data?.totalItems > 0) {
+          console.error('❌ API reports farms exist but none were returned. This is likely a backend pagination bug.');
+          setFarmsError(`API reports ${response.data.totalItems} farms exist but none were returned. Please contact support.`);
+          toast({
+            title: 'Data Loading Issue',
+            description: `The API reports ${response.data.totalItems} farms but none are being returned. This may be a server-side issue.`,
+            variant: 'destructive'
+          });
+        } else {
+          console.log('No farms found. This could mean:');
+          console.log('1. The farmer has no farms assigned');
+          console.log('2. The API is filtering by farmer and this farmer has no farms');
+          console.log('3. There might be a pagination issue');
+        }
       }
     } catch (err: any) {
       console.error('Failed to load farms:', err);
@@ -1033,15 +1101,15 @@ export default function FarmerDashboard() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="text-left py-4 px-6 font-medium text-gray-700">Farm Name</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-700">Crop Type</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-700">Area (ha)</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-700">Location</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-700">Status</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-700">Actions</th>
+                      <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Farm Name</th>
+                      <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Crop Type</th>
+                      <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Area (ha)</th>
+                      <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Location</th>
+                      <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Status</th>
+                      <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1057,22 +1125,22 @@ export default function FarmerDashboard() {
                             index % 2 === 0 ? "bg-gray-50" : ""
                           }`}
                         >
-                          <td className="py-4 px-6 text-gray-900 font-medium">{farm.name || "Unnamed Farm"}</td>
-                          <td className="py-4 px-6 text-gray-700">
+                          <td className="py-1 px-2 text-gray-900 font-medium text-xs">{farm.name || "Unnamed Farm"}</td>
+                          <td className="py-1 px-2 text-gray-700 text-xs">
                             {farm.cropType || farm.crop || "N/A"}
                           </td>
-                          <td className="py-4 px-6 text-gray-700">
+                          <td className="py-1 px-2 text-gray-700 text-xs">
                             {farm.area ? `${farm.area} ha` : farm.size ? `${farm.size} ha` : "N/A"}
                           </td>
-                          <td className="py-4 px-6 text-gray-700 text-sm">
+                          <td className="py-1 px-2 text-gray-700 text-xs">
                             {farm.location?.coordinates && Array.isArray(farm.location.coordinates) && farm.location.coordinates.length >= 2
                               ? `${farm.location.coordinates[1]?.toFixed(4)}, ${farm.location.coordinates[0]?.toFixed(4)}`
                               : farm.coordinates && Array.isArray(farm.coordinates) && farm.coordinates.length >= 2
                               ? `${farm.coordinates[1]?.toFixed(4)}, ${farm.coordinates[0]?.toFixed(4)}`
                               : farm.location || "N/A"}
                           </td>
-                          <td className="py-4 px-6">
-                            <Badge className={`${
+                          <td className="py-1 px-2">
+                            <Badge className={`text-xs py-0 px-1.5 ${
                               farm.status === 'PENDING' || farm.status === 'pending' 
                                 ? "bg-yellow-100 text-yellow-700 border border-yellow-200"
                                 : farm.status === 'INSURED' || farm.status === 'insured'
@@ -1084,8 +1152,8 @@ export default function FarmerDashboard() {
                               {farm.status || "REGISTERED"}
                             </Badge>
                           </td>
-                          <td className="py-4 px-6">
-                            <div className="flex gap-2">
+                          <td className="py-1 px-2">
+                            <div className="flex gap-1 flex-wrap">
                               {isRegistered && (
                                 <Button
                                   size="sm"
@@ -1095,19 +1163,19 @@ export default function FarmerDashboard() {
                                     farmId: farmId,
                                     farmName: farm.name || "Unnamed Farm"
                                   })}
-                                  className="border-green-600 text-green-600 hover:bg-green-50"
+                                  className="border-green-600 text-green-600 hover:bg-green-50 text-xs h-6 px-2"
                                 >
-                                  <Shield className="h-3 w-3 mr-1" />
-                                  Request Insurance
+                                  <Shield className="h-2.5 w-2.5 mr-0.5" />
+                                  Insurance
                                 </Button>
                               )}
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => loadFarmDetails(farmId)}
-                                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                                className="border-gray-300 text-gray-700 hover:bg-gray-50 text-xs h-6 px-2"
                               >
-                                <Eye className="h-3 w-3 mr-1" />
+                                <Eye className="h-2.5 w-2.5 mr-0.5" />
                                 View
                               </Button>
                               <Button
@@ -1118,9 +1186,9 @@ export default function FarmerDashboard() {
                                   loadFarmAnalytics(farmId);
                                   setActivePage("farm-analytics");
                                 }}
-                                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                                className="border-blue-600 text-blue-600 hover:bg-blue-50 text-xs h-6 px-2"
                               >
-                                <TrendingUp className="h-3 w-3 mr-1" />
+                                <TrendingUp className="h-2.5 w-2.5 mr-0.5" />
                                 Analytics
                               </Button>
                             </div>
@@ -1787,15 +1855,15 @@ export default function FarmerDashboard() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="text-left py-4 px-6 font-medium text-gray-600">Claim ID</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-600">Crop</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-600">Date</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-600">Damage Type</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-600">Amount</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-600">Status</th>
+                      <th className="text-left py-1.5 px-2 font-medium text-gray-600 text-xs">Claim ID</th>
+                      <th className="text-left py-1.5 px-2 font-medium text-gray-600 text-xs">Crop</th>
+                      <th className="text-left py-1.5 px-2 font-medium text-gray-600 text-xs">Date</th>
+                      <th className="text-left py-1.5 px-2 font-medium text-gray-600 text-xs">Damage Type</th>
+                      <th className="text-left py-1.5 px-2 font-medium text-gray-600 text-xs">Amount</th>
+                      <th className="text-left py-1.5 px-2 font-medium text-gray-600 text-xs">Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1806,21 +1874,21 @@ export default function FarmerDashboard() {
                           index % 2 === 0 ? "bg-gray-50" : ""
                         }`}
                       >
-                        <td className="py-4 px-6 text-gray-900 font-medium">{claim.claimNumber || claim._id || claim.id || "N/A"}</td>
-                        <td className="py-4 px-6 text-gray-900">{claim.cropType || claim.crop || "N/A"}</td>
-                        <td className="py-4 px-6 text-gray-900">
+                        <td className="py-1 px-2 text-gray-900 font-medium text-xs">{claim.claimNumber || claim._id || claim.id || "N/A"}</td>
+                        <td className="py-1 px-2 text-gray-900 text-xs">{claim.cropType || claim.crop || "N/A"}</td>
+                        <td className="py-1 px-2 text-gray-900 text-xs">
                           {claim.createdAt || claim.submittedAt || claim.date 
                             ? new Date(claim.createdAt || claim.submittedAt || claim.date).toLocaleDateString()
                             : "N/A"}
                         </td>
-                        <td className="py-4 px-6 text-gray-900">{claim.lossEventType || claim.damageType || "N/A"}</td>
-                        <td className="py-4 px-6 text-gray-900">
+                        <td className="py-1 px-2 text-gray-900 text-xs">{claim.lossEventType || claim.damageType || "N/A"}</td>
+                        <td className="py-1 px-2 text-gray-900 text-xs">
                           {claim.amount || claim.claimAmount 
                             ? `${(claim.amount || claim.claimAmount).toLocaleString()} RWF`
                             : "N/A"}
                         </td>
-                        <td className="py-4 px-6">
-                          <Badge className={getStatusColor(claim.status?.toLowerCase() || "pending")}>
+                        <td className="py-1 px-2">
+                          <Badge className={`text-xs py-0 px-1.5 ${getStatusColor(claim.status?.toLowerCase() || "pending")}`}>
                             {getStatusIcon(claim.status?.toLowerCase() || "pending")}
                             <span className="ml-1 capitalize">{claim.status?.replace('_', ' ') || "Pending"}</span>
                           </Badge>
@@ -1864,22 +1932,43 @@ export default function FarmerDashboard() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setActivePage("my-fields");
-              setSelectedFarm(null);
-            }}
-            className="text-gray-900 hover:bg-gray-50"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to My Fields
-          </Button>
-        </div>
-
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">{farm.name || "Unnamed Farm"}</h2>
-          <p className="text-gray-600">Farm Details</p>
+          <div className="flex-1">
+            {/* Breadcrumb Navigation */}
+            <div className="flex items-center gap-2 text-sm mb-4">
+              <button
+                onClick={() => {
+                  setActivePage("my-fields");
+                  setSelectedFarm(null);
+                }}
+                className="text-gray-600 hover:text-gray-700 font-medium"
+              >
+                My Fields
+              </button>
+              <span className="text-gray-400">/</span>
+              <span className="text-gray-900 font-medium">Farm Details</span>
+            </div>
+            
+            {/* Back Button */}
+            <div className="mb-4">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setActivePage("my-fields");
+                  setSelectedFarm(null);
+                }}
+                className="text-gray-900 hover:bg-gray-50"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Fields List
+              </Button>
+            </div>
+            
+            {/* Title */}
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">{farm.name || "Unnamed Farm"}</h2>
+              <p className="text-gray-600">Farm Details</p>
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -2009,21 +2098,51 @@ export default function FarmerDashboard() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setActivePage("farm-details");
-              }}
-              className="text-gray-900 hover:bg-gray-50"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Farm Details
-            </Button>
-            <h2 className="text-2xl font-bold text-gray-900 mt-2">
+          <div className="flex-1">
+            {/* Breadcrumb Navigation */}
+            <div className="flex items-center gap-2 text-sm mb-4">
+              <button
+                onClick={() => {
+                  setActivePage("my-fields");
+                  setSelectedFarm(null);
+                }}
+                className="text-gray-600 hover:text-gray-700 font-medium"
+              >
+                My Fields
+              </button>
+              <span className="text-gray-400">/</span>
+              <button
+                onClick={() => {
+                  setActivePage("farm-details");
+                }}
+                className="text-gray-600 hover:text-gray-700 font-medium"
+              >
+                {selectedFarm.name || "Farm Details"}
+              </button>
+              <span className="text-gray-400">/</span>
+              <span className="text-gray-900 font-medium">Analytics</span>
+            </div>
+            
+            {/* Back Button */}
+            <div className="mb-4">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setActivePage("my-fields");
+                  setSelectedFarm(null);
+                }}
+                className="text-gray-900 hover:bg-gray-50"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Fields List
+              </Button>
+            </div>
+            
+            {/* Title */}
+            <h2 className="text-2xl font-bold text-gray-900">
               Farm Analytics: {selectedFarm.name || "Unnamed Farm"}
             </h2>
-            <p className="text-gray-600">Weather forecasts, historical data, and vegetation indices</p>
+            <p className="text-gray-600 mt-1">Weather forecasts, historical data, and vegetation indices</p>
           </div>
           <Button
             variant="outline"

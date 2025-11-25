@@ -2,7 +2,8 @@
 // Using centralized API configuration
 import { API_BASE_URL, API_ENDPOINTS, getAuthToken } from '@/config/api';
 
-const FARMS_BASE_URL = `${API_BASE_URL}${API_ENDPOINTS.FARMS.BASE}`;
+// Direct API URL for farms
+const FARMS_BASE_URL = 'https://starhawk-backend-agriplatform.onrender.com/api/v1/farms';
 
 interface FarmData {
   name: string;
@@ -219,8 +220,17 @@ class FarmsApiService {
   }
 
   // List All Farms
-  async getFarms(page: number = 1, size: number = 10) {
+  // GET /api/v1/farms
+  // Query Parameters:
+  //   - page (number, default: 0) - Page number (0-indexed)
+  //   - size (number, default: 10) - Number of items per page
+  async getFarms(page: number = 0, size: number = 10) {
     return this.request<any>(`?page=${page}&size=${size}`);
+  }
+
+  // Get All Farms without pagination (fallback method)
+  async getAllFarms() {
+    return this.request<any>(``);
   }
 
   // Get Farm by ID
@@ -341,6 +351,7 @@ export default farmsApiService;
 // Export convenience functions
 export const createFarm = (farmData: FarmData) => farmsApiService.createFarm(farmData);
 export const getFarms = (page?: number, size?: number) => farmsApiService.getFarms(page, size);
+export const getAllFarms = () => farmsApiService.getAllFarms();
 export const getFarmById = (farmId: string) => farmsApiService.getFarmById(farmId);
 export const updateFarm = (farmId: string, updateData: UpdateFarmData) => farmsApiService.updateFarm(farmId, updateData);
 export const uploadShapefile = (file: File) => farmsApiService.uploadShapefile(file);
