@@ -63,14 +63,95 @@ export default function ClaimsTable() {
     setLoading(true);
     setError(null);
     try {
-      const response: any = await getClaims(1, 100);
+      // Try different pagination strategies to handle API inconsistencies
+      let response: any = null;
       let claimsData: any[] = [];
       
-      if (Array.isArray(response)) {
+      // Strategy 1: Try page 1 first
+      console.log('Trying page 1 for claims...');
+      response = await getClaims(1, 100);
+      console.log('Claims API Response (page 1):', response);
+      
+      // Extract claims from response - handle multiple response structures
+      // Response structure: { success: true, message: '...', data: Array(0) }
+      if (response?.success && Array.isArray(response.data)) {
+        // Direct array in data property (non-paginated)
+        claimsData = response.data;
+        console.log('Extracted claims from response.data (direct array):', claimsData);
+      } else if (response?.success && response?.data?.items) {
+        // Paginated response: { success: true, data: { items: [], ... } }
+        claimsData = Array.isArray(response.data.items) ? response.data.items : [];
+        console.log('Extracted claims from response.data.items (paginated):', claimsData);
+      } else if (response?.success && response?.data?.data) {
+        // Nested data structure: { success: true, data: { data: [] } }
+        claimsData = Array.isArray(response.data.data) ? response.data.data : [];
+        console.log('Extracted claims from response.data.data:', claimsData);
+      } else if (Array.isArray(response)) {
         claimsData = response;
-      } else if (response && typeof response === 'object') {
-        claimsData = response.data || response.claims || [];
+      } else if (Array.isArray(response?.data)) {
+        claimsData = response.data;
+      } else if (Array.isArray(response?.items)) {
+        claimsData = response.items;
+      } else if (Array.isArray(response?.results)) {
+        claimsData = response.results;
+      } else if (response?.data?.claims && Array.isArray(response.data.claims)) {
+        claimsData = response.data.claims;
+      } else if (response?.claims && Array.isArray(response.claims)) {
+        claimsData = response.claims;
       }
+      
+      // Strategy 2: If page 1 returned empty items but totalItems > 0, try page 0
+      if (claimsData.length === 0 && (response?.data?.totalItems > 0 || response?.data?.totalPages > 0)) {
+        console.log('Page 1 returned empty items but totalItems > 0, trying page 0...');
+        response = await getClaims(0, 100);
+        console.log('Claims API Response (page 0):', response);
+        
+        if (response?.success && Array.isArray(response.data)) {
+          claimsData = response.data;
+        } else if (response?.success && response?.data?.items) {
+          claimsData = Array.isArray(response.data.items) ? response.data.items : [];
+        } else if (response?.success && response?.data?.data) {
+          claimsData = Array.isArray(response.data.data) ? response.data.data : [];
+        } else if (Array.isArray(response)) {
+          claimsData = response;
+        } else if (Array.isArray(response?.data)) {
+          claimsData = response.data;
+        }
+      }
+      
+      // Strategy 3: Try with larger page size if still empty
+      if (claimsData.length === 0 && (response?.data?.totalItems > 0 || response?.data?.totalPages > 0)) {
+        console.log('Trying with larger page size (500)...');
+        response = await getClaims(0, 500);
+        
+        if (response?.success && Array.isArray(response.data)) {
+          claimsData = response.data;
+        } else if (response?.success && response?.data?.items) {
+          claimsData = Array.isArray(response.data.items) ? response.data.items : [];
+        } else if (response?.success && response?.data?.data) {
+          claimsData = Array.isArray(response.data.data) ? response.data.data : [];
+        }
+      }
+      
+      // Strategy 4: Check if data structure has claims at a different location
+      if (claimsData.length === 0 && response?.success) {
+        console.warn('⚠️ Claims API returned success but no claims found in expected locations.');
+        console.warn('Full response structure:', JSON.stringify(response, null, 2));
+        
+        // Check all possible locations for claims data
+        if (response?.data && typeof response.data === 'object') {
+          const possibleKeys = ['claims', 'items', 'results', 'content', 'data'];
+          for (const key of possibleKeys) {
+            if (Array.isArray(response.data[key])) {
+              claimsData = response.data[key];
+              console.log(`Found claims array at response.data.${key}:`, claimsData);
+              break;
+            }
+          }
+        }
+      }
+      
+      console.log('Final extracted claims data:', claimsData);
       
       // Map API response to Claim interface
       const mappedClaims: Claim[] = claimsData.map((claim: any) => ({

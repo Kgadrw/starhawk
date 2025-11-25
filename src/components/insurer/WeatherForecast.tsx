@@ -35,10 +35,8 @@ import {
   AreaChart
 } from "recharts";
 
-// Use local backend proxy to avoid CORS issues
-const API_BASE_URL = import.meta.env.PROD 
-  ? "https://your-backend-url.com/api/satellite" // Replace with your deployed backend URL
-  : "http://localhost:3001/api/satellite";
+// Use real API
+const API_BASE_URL = "https://starhawk-backend-agriplatform.onrender.com/api/v1/satellite";
 
 interface WeatherData {
   dt: number;

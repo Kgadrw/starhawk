@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = 'https://starhawk-backend-agriplatform.onrender.com/api/v1';
 
 export class ApiClient {
   private baseURL: string;

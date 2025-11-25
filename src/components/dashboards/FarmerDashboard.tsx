@@ -37,8 +37,22 @@ import {
   Droplets,
   Thermometer,
   Wind,
-  X
+  X,
+  Sun
 } from "lucide-react";
+import { 
+  LineChart, 
+  Line,
+  BarChart,
+  Bar,
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  Legend,
+  ComposedChart
+} from "recharts";
 
 export default function FarmerDashboard() {
   const { toast } = useToast();
@@ -2197,13 +2211,297 @@ export default function FarmerDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {historicalWeather ? (
-                  <div className="text-gray-600">
-                    <pre className="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded border border-gray-200">
-                      {JSON.stringify(historicalWeather, null, 2)}
-                    </pre>
-                  </div>
-                ) : (
+                {historicalWeather ? (() => {
+                  // Extract data array from response - handle different response structures
+                  let dataArray: any[] = [];
+                  
+                  if (Array.isArray(historicalWeather)) {
+                    dataArray = historicalWeather;
+                  } else if (historicalWeather?.data && Array.isArray(historicalWeather.data)) {
+                    dataArray = historicalWeather.data;
+                  } else if (historicalWeather?.data?.data && Array.isArray(historicalWeather.data.data)) {
+                    dataArray = historicalWeather.data.data;
+                  } else if (historicalWeather?.results && Array.isArray(historicalWeather.results)) {
+                    dataArray = historicalWeather.results;
+                  } else if (historicalWeather?.items && Array.isArray(historicalWeather.items)) {
+                    dataArray = historicalWeather.items;
+                  }
+                  
+                  if (dataArray.length === 0) {
+                    return <p className="text-gray-500">No historical weather data available</p>;
+                  }
+
+                  // Calculate summary statistics
+                  const totalRainfall = dataArray.reduce((sum: number, d: any) => sum + (d.rainfall || 0), 0);
+                  const avgRainfall = totalRainfall / dataArray.length;
+                  const maxRainfall = Math.max(...dataArray.map((d: any) => d.rainfall || 0));
+                  const avgTempMin = dataArray.reduce((sum: number, d: any) => sum + (d.temperature_min || 0), 0) / dataArray.length;
+                  const avgTempMax = dataArray.reduce((sum: number, d: any) => sum + (d.temperature_max || 0), 0) / dataArray.length;
+                  const avgHumidity = dataArray.reduce((sum: number, d: any) => sum + (d.humidity_day_avg || 0), 0) / dataArray.length;
+
+                  // Prepare chart data (limit to last 60 days for readability)
+                  const chartData = dataArray.slice(-60).map((d: any) => ({
+                    date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                    rainfall: Math.round(d.rainfall * 10) / 10,
+                    tempMin: d.temperature_min,
+                    tempMax: d.temperature_max,
+                    humidity: Math.round(d.humidity_day_avg * 10) / 10,
+                    tempAvg: Math.round((d.temperature_min + d.temperature_max) / 2 * 10) / 10
+                  }));
+
+                  // Get recent data for table (last 30 days)
+                  const tableData = dataArray.slice(-30).reverse();
+
+                  return (
+                    <div className="space-y-6">
+                      {/* Summary Cards */}
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Droplets className="h-4 w-4 text-blue-600" />
+                            <p className="text-xs text-blue-700 font-medium">Avg Rainfall</p>
+                          </div>
+                          <p className="text-2xl font-bold text-blue-900">{avgRainfall.toFixed(1)}mm</p>
+                          <p className="text-xs text-blue-600 mt-1">Max: {maxRainfall.toFixed(1)}mm</p>
+                        </div>
+                        
+                        <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Thermometer className="h-4 w-4 text-orange-600" />
+                            <p className="text-xs text-orange-700 font-medium">Avg Temp</p>
+                          </div>
+                          <p className="text-2xl font-bold text-orange-900">{avgTempMax.toFixed(1)}°C</p>
+                          <p className="text-xs text-orange-600 mt-1">Range: {avgTempMin.toFixed(1)}-{avgTempMax.toFixed(1)}°C</p>
+                        </div>
+                        
+                        <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Wind className="h-4 w-4 text-purple-600" />
+                            <p className="text-xs text-purple-700 font-medium">Humidity</p>
+                          </div>
+                          <p className="text-2xl font-bold text-purple-900">{avgHumidity.toFixed(1)}%</p>
+                          <p className="text-xs text-purple-600 mt-1">Daily average</p>
+                        </div>
+                        
+                        <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                          <div className="flex items-center gap-2 mb-2">
+                            <BarChart3 className="h-4 w-4 text-green-600" />
+                            <p className="text-xs text-green-700 font-medium">Data Points</p>
+                          </div>
+                          <p className="text-2xl font-bold text-green-900">{dataArray.length}</p>
+                          <p className="text-xs text-green-600 mt-1">Days recorded</p>
+                        </div>
+                        
+                        <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                          <div className="flex items-center gap-2 mb-2">
+                            <AlertTriangle className="h-4 w-4 text-red-600" />
+                            <p className="text-xs text-red-700 font-medium">Critical Days</p>
+                          </div>
+                          <p className="text-2xl font-bold text-red-900">
+                            {dataArray.filter((d: any) => d.temp_critical > 0).length}
+                          </p>
+                          <p className="text-xs text-red-600 mt-1">Temp alerts</p>
+                        </div>
+                      </div>
+
+                      {/* Charts */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Temperature Chart */}
+                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                          <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                            <Thermometer className="h-4 w-4" />
+                            Temperature Trends (Last 60 Days)
+                          </h4>
+                          <ResponsiveContainer width="100%" height={250}>
+                            <ComposedChart data={chartData}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                              <XAxis 
+                                dataKey="date" 
+                                tick={{ fontSize: 10 }}
+                                interval="preserveStartEnd"
+                                stroke="#6b7280"
+                              />
+                              <YAxis 
+                                yAxisId="temp"
+                                label={{ value: 'Temperature (°C)', angle: -90, position: 'insideLeft' }}
+                                tick={{ fontSize: 10 }}
+                                stroke="#6b7280"
+                              />
+                              <Tooltip 
+                                contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                              />
+                              <Legend />
+                              <Bar 
+                                yAxisId="temp"
+                                dataKey="tempMin" 
+                                fill="#93c5fd" 
+                                name="Min Temp (°C)"
+                                radius={[4, 4, 0, 0]}
+                              />
+                              <Bar 
+                                yAxisId="temp"
+                                dataKey="tempMax" 
+                                fill="#f97316" 
+                                name="Max Temp (°C)"
+                                radius={[4, 4, 0, 0]}
+                              />
+                            </ComposedChart>
+                          </ResponsiveContainer>
+                        </div>
+
+                        {/* Rainfall Chart */}
+                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                          <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                            <Droplets className="h-4 w-4" />
+                            Rainfall (Last 60 Days)
+                          </h4>
+                          <ResponsiveContainer width="100%" height={250}>
+                            <BarChart data={chartData}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                              <XAxis 
+                                dataKey="date" 
+                                tick={{ fontSize: 10 }}
+                                interval="preserveStartEnd"
+                                stroke="#6b7280"
+                              />
+                              <YAxis 
+                                label={{ value: 'Rainfall (mm)', angle: -90, position: 'insideLeft' }}
+                                tick={{ fontSize: 10 }}
+                                stroke="#6b7280"
+                              />
+                              <Tooltip 
+                                contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                              />
+                              <Bar 
+                                dataKey="rainfall" 
+                                fill="#3b82f6" 
+                                name="Rainfall (mm)"
+                                radius={[4, 4, 0, 0]}
+                              />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+
+                      {/* Humidity Chart */}
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                          <Wind className="h-4 w-4" />
+                          Humidity Trend (Last 60 Days)
+                        </h4>
+                        <ResponsiveContainer width="100%" height={250}>
+                          <LineChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                            <XAxis 
+                              dataKey="date" 
+                              tick={{ fontSize: 10 }}
+                              interval="preserveStartEnd"
+                              stroke="#6b7280"
+                            />
+                            <YAxis 
+                              label={{ value: 'Humidity (%)', angle: -90, position: 'insideLeft' }}
+                              tick={{ fontSize: 10 }}
+                              domain={[0, 100]}
+                              stroke="#6b7280"
+                            />
+                            <Tooltip 
+                              contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                            />
+                            <Line 
+                              type="monotone" 
+                              dataKey="humidity" 
+                              stroke="#8b5cf6" 
+                              strokeWidth={2}
+                              dot={{ r: 3 }}
+                              name="Humidity (%)"
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      {/* Data Table */}
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                          <BarChart3 className="h-4 w-4" />
+                          Recent Weather Data (Last 30 Days)
+                        </h4>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="border-b border-gray-300">
+                                <th className="text-left py-2 px-3 font-medium text-gray-700">Date</th>
+                                <th className="text-left py-2 px-3 font-medium text-gray-700">Rainfall (mm)</th>
+                                <th className="text-left py-2 px-3 font-medium text-gray-700">Temp Range (°C)</th>
+                                <th className="text-left py-2 px-3 font-medium text-gray-700">Avg Temp (°C)</th>
+                                <th className="text-left py-2 px-3 font-medium text-gray-700">Humidity (%)</th>
+                                <th className="text-left py-2 px-3 font-medium text-gray-700">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {tableData.map((day: any, idx: number) => {
+                                const avgTemp = (day.temperature_min + day.temperature_max) / 2;
+                                const date = new Date(day.date);
+                                const isRecent = idx < 7;
+                                
+                                return (
+                                  <tr 
+                                    key={idx} 
+                                    className={`border-b border-gray-200 hover:bg-gray-100 transition-colors ${
+                                      idx % 2 === 0 ? "bg-white" : "bg-gray-50"
+                                    }`}
+                                  >
+                                    <td className="py-2 px-3 text-gray-900 font-medium">
+                                      {date.toLocaleDateString('en-US', { 
+                                        weekday: 'short', 
+                                        month: 'short', 
+                                        day: 'numeric',
+                                        year: 'numeric'
+                                      })}
+                                      {isRecent && (
+                                        <Badge className="ml-2 bg-blue-100 text-blue-700 text-xs">Recent</Badge>
+                                      )}
+                                    </td>
+                                    <td className="py-2 px-3 text-gray-700">
+                                      <div className="flex items-center gap-2">
+                                        <Droplets className="h-3 w-3 text-blue-500" />
+                                        <span className="font-medium">{day.rainfall?.toFixed(1) || '0.0'}</span>
+                                      </div>
+                                    </td>
+                                    <td className="py-2 px-3 text-gray-700">
+                                      <span className="font-medium text-orange-600">{day.temperature_max}°</span>
+                                      <span className="text-gray-400 mx-1">/</span>
+                                      <span className="text-blue-600">{day.temperature_min}°</span>
+                                    </td>
+                                    <td className="py-2 px-3 text-gray-700 font-medium">
+                                      {avgTemp.toFixed(1)}°
+                                    </td>
+                                    <td className="py-2 px-3 text-gray-700">
+                                      <div className="flex items-center gap-1">
+                                        <Wind className="h-3 w-3 text-purple-500" />
+                                        <span>{day.humidity_day_avg?.toFixed(1) || '0.0'}</span>
+                                      </div>
+                                    </td>
+                                    <td className="py-2 px-3">
+                                      {day.temp_critical > 0 ? (
+                                        <Badge className="bg-red-100 text-red-700 text-xs">Critical</Badge>
+                                      ) : day.rainfall > 20 ? (
+                                        <Badge className="bg-blue-100 text-blue-700 text-xs">Heavy Rain</Badge>
+                                      ) : day.rainfall > 5 ? (
+                                        <Badge className="bg-blue-100 text-blue-700 text-xs">Rain</Badge>
+                                      ) : (
+                                        <Badge className="bg-green-100 text-green-700 text-xs">Normal</Badge>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })() : (
                   <p className="text-gray-500">No historical weather data available</p>
                 )}
               </CardContent>

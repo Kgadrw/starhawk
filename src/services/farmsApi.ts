@@ -2,8 +2,8 @@
 // Using centralized API configuration
 import { API_BASE_URL, API_ENDPOINTS, getAuthToken } from '@/config/api';
 
-// Direct API URL for farms
-const FARMS_BASE_URL = 'https://starhawk-backend-agriplatform.onrender.com/api/v1/farms';
+// Use centralized API configuration
+const FARMS_BASE_URL = `${API_BASE_URL}${API_ENDPOINTS.FARMS.BASE}`;
 
 interface FarmData {
   name: string;

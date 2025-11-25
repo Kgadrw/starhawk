@@ -177,6 +177,19 @@ class AssessmentsApiService {
     return this.request('');
   }
 
+  // Get Assessments with Pagination
+  // Query Parameters:
+  //   - page (number, default: 0) - Page number (0-indexed)
+  //   - size (number, default: 10) - Number of items per page
+  async getAssessments(page: number = 0, size: number = 10) {
+    return this.request<any>(`?page=${page}&size=${size}`);
+  }
+
+  // Get All Assessments without pagination (fallback method)
+  async getAllAssessmentsNoPagination() {
+    return this.request('');
+  }
+
   // Get Assessment by ID
   async getAssessmentById(id: string) {
     return this.request(`/${id}`);

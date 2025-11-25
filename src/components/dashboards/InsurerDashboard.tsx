@@ -229,15 +229,127 @@ export default function InsurerDashboard() {
   const loadSubmittedAssessments = async () => {
     setSubmittedAssessmentsLoading(true);
     try {
-      const response: any = await assessmentsApiService.getAllAssessments();
-      const assessmentsData = response.data || response || [];
-      const assessmentsArray = Array.isArray(assessmentsData) ? assessmentsData : (assessmentsData.items || assessmentsData.results || []);
+      // Try different pagination strategies to handle API inconsistencies
+      let response: any = null;
+      let assessmentsArray: any[] = [];
+      
+      // Strategy 1: Try page 1 first (API seems to use 1-based indexing based on response)
+      console.log('Trying page 1 for assessments...');
+      response = await assessmentsApiService.getAssessments(1, 100);
+      console.log('Assessments API Response (page 1):', response);
+      
+      // Extract assessments from response
+      if (response?.success && response?.data?.items) {
+        assessmentsArray = Array.isArray(response.data.items) ? response.data.items : [];
+        console.log('Extracted assessments from response.data.items (page 1):', assessmentsArray);
+        console.log('Pagination info:', {
+          currentPage: response.data.currentPage,
+          totalItems: response.data.totalItems,
+          totalPages: response.data.totalPages
+        });
+      } else if (Array.isArray(response)) {
+        assessmentsArray = response;
+      } else if (Array.isArray(response?.data)) {
+        assessmentsArray = response.data;
+      } else if (Array.isArray(response?.items)) {
+        assessmentsArray = response.items;
+      } else if (Array.isArray(response?.results)) {
+        assessmentsArray = response.results;
+      }
+      
+      // Strategy 2: If page 1 returned empty items but totalItems > 0, try page 0 (0-based indexing)
+      if (assessmentsArray.length === 0 && response?.data?.totalItems > 0) {
+        console.log('Page 1 returned empty items but totalItems > 0, trying page 0...');
+        response = await assessmentsApiService.getAssessments(0, 100);
+        console.log('Assessments API Response (page 0):', response);
+        
+        if (response?.success && response?.data?.items) {
+          assessmentsArray = Array.isArray(response.data.items) ? response.data.items : [];
+          console.log('Extracted assessments from page 0:', assessmentsArray);
+        } else if (Array.isArray(response)) {
+          assessmentsArray = response;
+        } else if (Array.isArray(response?.data)) {
+          assessmentsArray = response.data;
+        }
+      }
+      
+      // Strategy 3: Try with larger page size if still empty
+      if (assessmentsArray.length === 0 && response?.data?.totalItems > 0) {
+        console.log('Trying with larger page size (500)...');
+        response = await assessmentsApiService.getAssessments(0, 500);
+        console.log('Assessments API Response (page 0, size 500):', response);
+        
+        if (response?.success && response?.data?.items) {
+          assessmentsArray = Array.isArray(response.data.items) ? response.data.items : [];
+          console.log('Extracted assessments with larger size:', assessmentsArray);
+        }
+      }
+      
+      // Strategy 4: Try without pagination parameters
+      if (assessmentsArray.length === 0 && response?.data?.totalItems > 0) {
+        console.log('Trying to fetch all assessments without pagination...');
+        try {
+          const noPaginationResponse: any = await assessmentsApiService.getAllAssessmentsNoPagination();
+          console.log('Response without pagination:', noPaginationResponse);
+          
+          if (noPaginationResponse?.success && noPaginationResponse?.data?.items) {
+            assessmentsArray = Array.isArray(noPaginationResponse.data.items) ? noPaginationResponse.data.items : [];
+          } else if (Array.isArray(noPaginationResponse)) {
+            assessmentsArray = noPaginationResponse;
+          } else if (Array.isArray(noPaginationResponse?.data)) {
+            assessmentsArray = noPaginationResponse.data;
+          } else if (Array.isArray(noPaginationResponse?.items)) {
+            assessmentsArray = noPaginationResponse.items;
+          }
+          
+          if (assessmentsArray.length > 0) {
+            console.log('Successfully fetched assessments without pagination:', assessmentsArray);
+          }
+        } catch (err) {
+          console.warn('Failed to fetch without pagination:', err);
+        }
+      }
+      
+      // Strategy 5: Check if data structure has assessments at a different location
+      if (assessmentsArray.length === 0 && response?.data?.totalItems > 0) {
+        console.warn(`⚠️ API reports ${response.data.totalItems} total items but returned empty array.`);
+        console.warn('Full response structure:', JSON.stringify(response, null, 2));
+        
+        // Check if data structure has assessments at a different location
+        if (response?.data && typeof response.data === 'object') {
+          // Check all possible locations for assessment data
+          const possibleKeys = ['assessments', 'results', 'content', 'data'];
+          for (const key of possibleKeys) {
+            if (Array.isArray(response.data[key])) {
+              assessmentsArray = response.data[key];
+              console.log(`Found assessments array at response.data.${key}:`, assessmentsArray);
+              break;
+            }
+          }
+        }
+      }
+      
+      console.log('Final extracted assessments array:', assessmentsArray);
       
       // Filter only submitted assessments
       const submitted = assessmentsArray.filter((assessment: any) => 
         (assessment.status || '').toUpperCase() === 'SUBMITTED'
       );
+      
       setSubmittedAssessments(submitted);
+      
+      if (submitted.length === 0) {
+        if (response?.data?.totalItems > 0) {
+          console.error('❌ API reports assessments exist but none were returned. This is likely a backend pagination bug.');
+          toast({
+            title: 'Data Loading Issue',
+            description: `The API reports ${response.data.totalItems} assessments but none are being returned. This may be a server-side issue.`,
+            variant: 'destructive'
+          });
+        } else {
+          console.log('No submitted assessments found.');
+        }
+      }
     } catch (err: any) {
       console.error('Failed to load submitted assessments:', err);
       toast({
@@ -532,14 +644,14 @@ export default function InsurerDashboard() {
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-4 px-6 font-medium text-gray-700">Farm Name</th>
-                    <th className="text-left py-4 px-6 font-medium text-gray-700">Crop Type</th>
-                    <th className="text-left py-4 px-6 font-medium text-gray-700">Risk Score</th>
-                    <th className="text-left py-4 px-6 font-medium text-gray-700">Submitted Date</th>
-                    <th className="text-left py-4 px-6 font-medium text-gray-700">Actions</th>
+                    <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Farm Name</th>
+                    <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Crop Type</th>
+                    <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Risk Score</th>
+                    <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Submitted Date</th>
+                    <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -552,31 +664,37 @@ export default function InsurerDashboard() {
                           index % 2 === 0 ? "bg-gray-50" : ""
                         }`}
                       >
-                        <td className="py-4 px-6 text-gray-900 font-medium">
+                        <td className="py-1 px-2 text-gray-900 font-medium text-xs">
                           {farm.name || "N/A"}
                         </td>
-                        <td className="py-4 px-6 text-gray-700">
+                        <td className="py-1 px-2 text-gray-700 text-xs">
                           {farm.cropType || farm.crop || "N/A"}
                         </td>
-                        <td className="py-4 px-6 text-gray-700">
-                          <Badge variant={assessment.riskScore < 50 ? "default" : assessment.riskScore < 75 ? "secondary" : "destructive"}>
+                        <td className="py-1 px-2 text-gray-700 text-xs">
+                          <Badge className={`text-xs py-0 px-1.5 ${
+                            assessment.riskScore < 50 
+                              ? "bg-green-100 text-green-700 border border-green-200"
+                              : assessment.riskScore < 75 
+                              ? "bg-yellow-100 text-yellow-700 border border-yellow-200"
+                              : "bg-red-100 text-red-700 border border-red-200"
+                          }`}>
                             {assessment.riskScore || "N/A"}
                           </Badge>
                         </td>
-                        <td className="py-4 px-6 text-gray-700">
+                        <td className="py-1 px-2 text-gray-700 text-xs">
                           {assessment.submittedAt || assessment.completedAt
                             ? new Date(assessment.submittedAt || assessment.completedAt).toLocaleDateString()
                             : "N/A"}
                         </td>
-                        <td className="py-4 px-6">
+                        <td className="py-1 px-2">
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => setCreatePolicyDialog({ open: true, assessment })}
-                            className="border-green-600 text-green-600 hover:bg-green-50"
+                            className="border-green-600 text-green-600 hover:bg-green-50 text-xs h-6 px-2"
                           >
-                            <Shield className="h-3 w-3 mr-1" />
-                            Create Policy
+                            <Shield className="h-2.5 w-2.5 mr-0.5" />
+                            Policy
                           </Button>
                         </td>
                       </tr>

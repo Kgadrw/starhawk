@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createPolicy as createPolicyApi } from "@/services/policiesApi";
+import { getInsuranceRequests } from "@/services/farmsApi";
+import assessmentsApiService from "@/services/assessmentsApi";
 import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft,
@@ -19,6 +21,8 @@ interface CreatePolicyPageProps {
 export default function CreatePolicyPage({ onBack, onSuccess }: CreatePolicyPageProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [farmers, setFarmers] = useState<any[]>([]);
+  const [farmersLoading, setFarmersLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     farmerId: "",
@@ -34,7 +38,10 @@ export default function CreatePolicyPage({ onBack, onSuccess }: CreatePolicyPage
     deductible: ""
   });
 
+  // Load farmers on component mount
   useEffect(() => {
+    loadFarmers();
+    
     // Set default dates
     const today = new Date();
     const nextYear = new Date();
@@ -45,6 +52,127 @@ export default function CreatePolicyPage({ onBack, onSuccess }: CreatePolicyPage
       endDate: nextYear.toISOString().split('T')[0]
     }));
   }, []);
+
+  const loadFarmers = async () => {
+    setFarmersLoading(true);
+    try {
+      // Get farmers from insurance requests and submitted assessments
+      // This approach works for insurers who don't have admin access to getAllUsers()
+      const farmersMap = new Map<string, any>();
+      
+      try {
+        // Strategy 1: Get farmers from insurance requests
+        const insuranceRequestsResponse: any = await getInsuranceRequests(1, 100);
+        let requestsData: any[] = [];
+        
+        if (insuranceRequestsResponse?.success && Array.isArray(insuranceRequestsResponse.data)) {
+          requestsData = insuranceRequestsResponse.data;
+        } else if (insuranceRequestsResponse?.success && insuranceRequestsResponse?.data?.items) {
+          requestsData = insuranceRequestsResponse.data.items;
+        } else if (Array.isArray(insuranceRequestsResponse)) {
+          requestsData = insuranceRequestsResponse;
+        } else if (Array.isArray(insuranceRequestsResponse?.data)) {
+          requestsData = insuranceRequestsResponse.data;
+        }
+        
+        // Extract farmers from insurance requests
+        requestsData.forEach((request: any) => {
+          const farmer = request.farmerId || request.farmer;
+          if (farmer) {
+            const farmerId = farmer._id || farmer.id || farmer;
+            if (farmerId && !farmersMap.has(farmerId)) {
+              farmersMap.set(farmerId, {
+                _id: farmerId,
+                id: farmerId,
+                firstName: farmer.firstName,
+                lastName: farmer.lastName,
+                name: farmer.name,
+                email: farmer.email,
+                phoneNumber: farmer.phoneNumber
+              });
+            }
+          }
+        });
+      } catch (err) {
+        console.warn('Failed to load farmers from insurance requests:', err);
+      }
+      
+      try {
+        // Strategy 2: Get farmers from submitted assessments
+        const assessmentsResponse: any = await assessmentsApiService.getAllAssessments();
+        let assessmentsData: any[] = [];
+        
+        if (assessmentsResponse?.success && Array.isArray(assessmentsResponse.data)) {
+          assessmentsData = assessmentsResponse.data;
+        } else if (assessmentsResponse?.success && assessmentsResponse?.data?.items) {
+          assessmentsData = assessmentsResponse.data.items;
+        } else if (Array.isArray(assessmentsResponse)) {
+          assessmentsData = assessmentsResponse;
+        } else if (Array.isArray(assessmentsResponse?.data)) {
+          assessmentsData = assessmentsResponse.data;
+        }
+        
+        // Extract farmers from assessments (only submitted ones)
+        assessmentsData.forEach((assessment: any) => {
+          if ((assessment.status || '').toUpperCase() === 'SUBMITTED') {
+            const farmer = assessment.farmerId || assessment.farmer;
+            if (farmer) {
+              const farmerId = farmer._id || farmer.id || farmer;
+              if (farmerId && !farmersMap.has(farmerId)) {
+                farmersMap.set(farmerId, {
+                  _id: farmerId,
+                  id: farmerId,
+                  firstName: farmer.firstName,
+                  lastName: farmer.lastName,
+                  name: farmer.name,
+                  email: farmer.email,
+                  phoneNumber: farmer.phoneNumber
+                });
+              }
+            }
+          }
+        });
+      } catch (err) {
+        console.warn('Failed to load farmers from assessments:', err);
+      }
+      
+      const farmersList = Array.from(farmersMap.values());
+      setFarmers(farmersList);
+      console.log('Loaded farmers from insurance requests and assessments:', farmersList);
+      
+      if (farmersList.length === 0) {
+        toast({
+          title: 'No Farmers Found',
+          description: 'Could not load farmers list. You can still enter farmer ID manually.',
+          variant: 'default'
+        });
+      }
+    } catch (err: any) {
+      console.error('Failed to load farmers:', err);
+      toast({
+        title: 'Warning',
+        description: 'Could not load farmers list. You can still enter farmer ID manually.',
+        variant: 'default'
+      });
+    } finally {
+      setFarmersLoading(false);
+    }
+  };
+
+  const handleFarmerSelect = (farmerId: string) => {
+    const selectedFarmer = farmers.find((f: any) => (f._id || f.id) === farmerId);
+    if (selectedFarmer) {
+      const farmerName = selectedFarmer.firstName && selectedFarmer.lastName
+        ? `${selectedFarmer.firstName} ${selectedFarmer.lastName}`
+        : selectedFarmer.name || selectedFarmer.email || selectedFarmer.phoneNumber || 'Unknown Farmer';
+      
+      setFormData({
+        ...formData,
+        farmerId: farmerId,
+        farmerName: farmerName
+      });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,14 +246,47 @@ export default function CreatePolicyPage({ onBack, onSuccess }: CreatePolicyPage
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="farmerId">Farmer ID *</Label>
-                <Input
-                  id="farmerId"
-                  value={formData.farmerId}
-                  onChange={(e) => setFormData({...formData, farmerId: e.target.value})}
-                  placeholder="Enter farmer ID"
-                  required
-                />
+                <Label htmlFor="farmerId">Select Farmer *</Label>
+                {farmersLoading ? (
+                  <div className="text-sm text-gray-500">Loading farmers...</div>
+                ) : farmers.length === 0 ? (
+                  <div className="space-y-2">
+                    <Input
+                      id="farmerId"
+                      value={formData.farmerId}
+                      onChange={(e) => setFormData({...formData, farmerId: e.target.value})}
+                      placeholder="Enter farmer ID manually"
+                      required
+                    />
+                    <p className="text-xs text-gray-500">Could not load farmers list. Please enter farmer ID manually.</p>
+                  </div>
+                ) : (
+                  <Select 
+                    value={formData.farmerId || undefined} 
+                    onValueChange={handleFarmerSelect}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a farmer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {farmers.map((farmer: any) => {
+                        const farmerId = farmer._id || farmer.id;
+                        if (!farmerId) return null; // Skip farmers without ID
+                        
+                        const farmerName = farmer.firstName && farmer.lastName
+                          ? `${farmer.firstName} ${farmer.lastName}`
+                          : farmer.name || farmer.email || farmer.phoneNumber || 'Unknown Farmer';
+                        
+                        return (
+                          <SelectItem key={farmerId} value={farmerId}>
+                            {farmerName} {farmer.email ? `(${farmer.email})` : ''}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="farmerName">Farmer Name</Label>
@@ -133,7 +294,8 @@ export default function CreatePolicyPage({ onBack, onSuccess }: CreatePolicyPage
                   id="farmerName"
                   value={formData.farmerName}
                   onChange={(e) => setFormData({...formData, farmerName: e.target.value})}
-                  placeholder="Enter farmer name (optional)"
+                  className={formData.farmerName ? "bg-gray-50" : ""}
+                  placeholder={farmers.length > 0 ? "Will be auto-filled when farmer is selected" : "Enter farmer name (optional)"}
                 />
               </div>
             </div>

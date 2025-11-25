@@ -1,8 +1,6 @@
 // API Configuration
 // Base URL for all API endpoints
-export const API_BASE_URL = import.meta.env.DEV
-  ? '/api/v1'
-  : 'https://starhawk-backend-agriplatform.onrender.com/api/v1';
+export const API_BASE_URL = 'https://starhawk-backend-agriplatform.onrender.com/api/v1';
 
 // API Endpoints
 export const API_ENDPOINTS = {

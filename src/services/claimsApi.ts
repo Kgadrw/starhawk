@@ -69,14 +69,6 @@ class ClaimsApiService {
 
       const response = await fetch(url, config);
 
-      // Log response details
-      console.log('📥 Claims API Response:', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok,
-        url: response.url
-      });
-
       if (response.status === 401) {
         // Clear all authentication data
         localStorage.removeItem('token');
@@ -113,12 +105,32 @@ class ClaimsApiService {
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
         data = await response.json();
+        
+        // Log response details with parsed data
+        console.log('📥 Claims API Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok,
+          url: response.url,
+          data: data
+        });
       } else {
         const text = await response.text();
+        console.error('📥 Claims API Response (non-JSON):', {
+          status: response.status,
+          statusText: response.statusText,
+          contentType: contentType,
+          text: text.substring(0, 200)
+        });
         throw new Error(text || `HTTP error! status: ${response.status}`);
       }
 
       if (!response.ok) {
+        console.error('❌ Claims API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data
+        });
         throw new Error(data.message || data.error || data.detail || `HTTP error! status: ${response.status}`);
       }
 

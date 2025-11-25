@@ -559,8 +559,8 @@ export const AdminDashboard = () => {
   };
 
   // Load users from API
-  const loadUsers = async () => {
-    if (activePage !== "users") return; // Only load when on users page
+  const loadUsers = async (forceLoad = false) => {
+    if (!forceLoad && activePage !== "users") return; // Only load when on users page, unless forced
     
     setUsersLoading(true);
     setUsersError(null);
@@ -4907,7 +4907,7 @@ export const AdminDashboard = () => {
     setEditingPolicy(null);
   };
 
-  const openEditPolicy = (policy: any) => {
+  const openEditPolicy = async (policy: any) => {
     setEditingPolicy(policy);
     setPolicyFormData({
       farmerId: policy.farmerId || "",
@@ -4919,6 +4919,10 @@ export const AdminDashboard = () => {
       status: policy.status || "active",
       notes: policy.notes || "",
     });
+    // Ensure users are loaded before opening dialog
+    if (systemUsers.length === 0) {
+      await loadUsers(true); // Force load users even if not on users page
+    }
     setShowPolicyDialog(true);
   };
 
@@ -5103,8 +5107,12 @@ export const AdminDashboard = () => {
               Refresh
             </Button>
             <Button 
-              onClick={() => {
+              onClick={async () => {
                 resetPolicyForm();
+                // Ensure users are loaded before opening dialog
+                if (systemUsers.length === 0) {
+                  await loadUsers(true); // Force load users even if not on users page
+                }
                 setShowPolicyDialog(true);
               }}
               className="bg-red-600 hover:bg-red-700"
@@ -5269,13 +5277,65 @@ export const AdminDashboard = () => {
             <div className="space-y-4 mt-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-gray-900/80">Farmer ID</Label>
-                  <Input
-                    value={policyFormData.farmerId}
-                    onChange={(e) => setPolicyFormData({ ...policyFormData, farmerId: e.target.value })}
-                    className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
-                    placeholder="Enter farmer ID"
-                  />
+                  <Label className="text-gray-900/80">Select Farmer</Label>
+                  <Select
+                    value={policyFormData.farmerId || undefined}
+                    onValueChange={(value) => {
+                      const selectedFarmer = systemUsers.find((u: any) => {
+                        const role = u.role?.toLowerCase() || '';
+                        return role === 'farmer' && (u._id || u.id) === value;
+                      });
+                      
+                      setPolicyFormData({ 
+                        ...policyFormData, 
+                        farmerId: value 
+                      });
+                    }}
+                    disabled={systemUsers.filter((u: any) => {
+                      const role = u.role?.toLowerCase() || '';
+                      return role === 'farmer';
+                    }).length === 0}
+                  >
+                    <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-900">
+                      <SelectValue placeholder={
+                        systemUsers.filter((u: any) => {
+                          const role = u.role?.toLowerCase() || '';
+                          return role === 'farmer';
+                        }).length === 0 
+                          ? "No farmers available. Load users first." 
+                          : "Select a farmer"
+                      } />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {systemUsers
+                        .filter((u: any) => {
+                          const role = u.role?.toLowerCase() || '';
+                          return role === 'farmer';
+                        })
+                        .map((farmer: any) => {
+                          const farmerId = farmer._id || farmer.id;
+                          if (!farmerId) return null; // Skip farmers without ID
+                          
+                          const farmerName = farmer.firstName && farmer.lastName
+                            ? `${farmer.firstName} ${farmer.lastName}`
+                            : farmer.name || farmer.email || farmer.phoneNumber || 'Unknown Farmer';
+                          
+                          return (
+                            <SelectItem key={farmerId} value={farmerId}>
+                              {farmerName} {farmer.email ? `(${farmer.email})` : ''}
+                            </SelectItem>
+                          );
+                        })
+                        .filter(Boolean) // Remove null entries
+                      }
+                      {systemUsers.filter((u: any) => {
+                        const role = u.role?.toLowerCase() || '';
+                        return role === 'farmer';
+                      }).length === 0 && (
+                        <div className="px-2 py-1.5 text-sm text-gray-500">No farmers available. Please load users first.</div>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label className="text-gray-900/80">Crop Type</Label>
