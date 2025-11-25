@@ -4,14 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createPolicy as createPolicyApi } from "@/services/policiesApi";
-import { getInsuranceRequests } from "@/services/farmsApi";
+import { createPolicyFromAssessment } from "@/services/policiesApi";
 import assessmentsApiService from "@/services/assessmentsApi";
 import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft,
-  Save
+  Save,
+  FileText,
+  AlertCircle
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface CreatePolicyPageProps {
   onBack: () => void;
@@ -21,26 +23,19 @@ interface CreatePolicyPageProps {
 export default function CreatePolicyPage({ onBack, onSuccess }: CreatePolicyPageProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [farmers, setFarmers] = useState<any[]>([]);
-  const [farmersLoading, setFarmersLoading] = useState(false);
+  const [assessments, setAssessments] = useState<any[]>([]);
+  const [assessmentsLoading, setAssessmentsLoading] = useState(false);
 
   const [formData, setFormData] = useState({
-    farmerId: "",
-    farmerName: "",
-    cropType: "",
-    coverageAmount: "",
-    premiumAmount: "",
+    assessmentId: "",
+    coverageLevel: "STANDARD" as "BASIC" | "STANDARD" | "PREMIUM",
     startDate: "",
     endDate: "",
-    location: "",
-    farmSize: "",
-    riskLevel: "low",
-    deductible: ""
   });
 
-  // Load farmers on component mount
+  // Load submitted assessments on component mount
   useEffect(() => {
-    loadFarmers();
+    loadSubmittedAssessments();
     
     // Set default dates
     const today = new Date();
@@ -53,133 +48,65 @@ export default function CreatePolicyPage({ onBack, onSuccess }: CreatePolicyPage
     }));
   }, []);
 
-  const loadFarmers = async () => {
-    setFarmersLoading(true);
+  const loadSubmittedAssessments = async () => {
+    setAssessmentsLoading(true);
     try {
-      // Get farmers from insurance requests and submitted assessments
-      // This approach works for insurers who don't have admin access to getAllUsers()
-      const farmersMap = new Map<string, any>();
+      // Try different pagination strategies to handle API inconsistencies
+      let response: any = null;
+      let assessmentsArray: any[] = [];
       
-      try {
-        // Strategy 1: Get farmers from insurance requests
-        const insuranceRequestsResponse: any = await getInsuranceRequests(1, 100);
-        let requestsData: any[] = [];
-        
-        if (insuranceRequestsResponse?.success && Array.isArray(insuranceRequestsResponse.data)) {
-          requestsData = insuranceRequestsResponse.data;
-        } else if (insuranceRequestsResponse?.success && insuranceRequestsResponse?.data?.items) {
-          requestsData = insuranceRequestsResponse.data.items;
-        } else if (Array.isArray(insuranceRequestsResponse)) {
-          requestsData = insuranceRequestsResponse;
-        } else if (Array.isArray(insuranceRequestsResponse?.data)) {
-          requestsData = insuranceRequestsResponse.data;
-        }
-        
-        // Extract farmers from insurance requests
-        requestsData.forEach((request: any) => {
-          const farmer = request.farmerId || request.farmer;
-          if (farmer) {
-            const farmerId = farmer._id || farmer.id || farmer;
-            if (farmerId && !farmersMap.has(farmerId)) {
-              farmersMap.set(farmerId, {
-                _id: farmerId,
-                id: farmerId,
-                firstName: farmer.firstName,
-                lastName: farmer.lastName,
-                name: farmer.name,
-                email: farmer.email,
-                phoneNumber: farmer.phoneNumber
-              });
-            }
-          }
-        });
-      } catch (err) {
-        console.warn('Failed to load farmers from insurance requests:', err);
+      // Strategy 1: Try page 1 first
+      console.log('Loading submitted assessments for policy creation...');
+      response = await assessmentsApiService.getAssessments(1, 100);
+      console.log('Assessments API Response:', response);
+      
+      // Extract assessments from response
+      if (response?.success && response?.data?.items) {
+        assessmentsArray = Array.isArray(response.data.items) ? response.data.items : [];
+      } else if (Array.isArray(response)) {
+        assessmentsArray = response;
+      } else if (Array.isArray(response?.data)) {
+        assessmentsArray = response.data;
+      } else if (Array.isArray(response?.items)) {
+        assessmentsArray = response.items;
+      } else if (Array.isArray(response?.results)) {
+        assessmentsArray = response.results;
       }
       
-      try {
-        // Strategy 2: Get farmers from submitted assessments
-        const assessmentsResponse: any = await assessmentsApiService.getAllAssessments();
-        let assessmentsData: any[] = [];
-        
-        if (assessmentsResponse?.success && Array.isArray(assessmentsResponse.data)) {
-          assessmentsData = assessmentsResponse.data;
-        } else if (assessmentsResponse?.success && assessmentsResponse?.data?.items) {
-          assessmentsData = assessmentsResponse.data.items;
-        } else if (Array.isArray(assessmentsResponse)) {
-          assessmentsData = assessmentsResponse;
-        } else if (Array.isArray(assessmentsResponse?.data)) {
-          assessmentsData = assessmentsResponse.data;
-        }
-        
-        // Extract farmers from assessments (only submitted ones)
-        assessmentsData.forEach((assessment: any) => {
-          if ((assessment.status || '').toUpperCase() === 'SUBMITTED') {
-            const farmer = assessment.farmerId || assessment.farmer;
-            if (farmer) {
-              const farmerId = farmer._id || farmer.id || farmer;
-              if (farmerId && !farmersMap.has(farmerId)) {
-                farmersMap.set(farmerId, {
-                  _id: farmerId,
-                  id: farmerId,
-                  firstName: farmer.firstName,
-                  lastName: farmer.lastName,
-                  name: farmer.name,
-                  email: farmer.email,
-                  phoneNumber: farmer.phoneNumber
-                });
-              }
-            }
-          }
-        });
-      } catch (err) {
-        console.warn('Failed to load farmers from assessments:', err);
-      }
+      // Filter to only SUBMITTED assessments
+      const submittedAssessments = assessmentsArray.filter((assessment: any) => {
+        const status = (assessment.status || '').toUpperCase();
+        return status === 'SUBMITTED';
+      });
       
-      const farmersList = Array.from(farmersMap.values());
-      setFarmers(farmersList);
-      console.log('Loaded farmers from insurance requests and assessments:', farmersList);
+      setAssessments(submittedAssessments);
+      console.log('Loaded submitted assessments:', submittedAssessments);
       
-      if (farmersList.length === 0) {
+      if (submittedAssessments.length === 0) {
         toast({
-          title: 'No Farmers Found',
-          description: 'Could not load farmers list. You can still enter farmer ID manually.',
+          title: 'No Submitted Assessments',
+          description: 'There are no submitted assessments available. Please wait for an assessor to submit an assessment first.',
           variant: 'default'
         });
       }
     } catch (err: any) {
-      console.error('Failed to load farmers:', err);
+      console.error('Failed to load assessments:', err);
       toast({
-        title: 'Warning',
-        description: 'Could not load farmers list. You can still enter farmer ID manually.',
-        variant: 'default'
+        title: 'Error',
+        description: err.message || 'Failed to load submitted assessments',
+        variant: 'destructive'
       });
     } finally {
-      setFarmersLoading(false);
-    }
-  };
-
-  const handleFarmerSelect = (farmerId: string) => {
-    const selectedFarmer = farmers.find((f: any) => (f._id || f.id) === farmerId);
-    if (selectedFarmer) {
-      const farmerName = selectedFarmer.firstName && selectedFarmer.lastName
-        ? `${selectedFarmer.firstName} ${selectedFarmer.lastName}`
-        : selectedFarmer.name || selectedFarmer.email || selectedFarmer.phoneNumber || 'Unknown Farmer';
-      
-      setFormData({
-        ...formData,
-        farmerId: farmerId,
-        farmerName: farmerName
-      });
+      setAssessmentsLoading(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.farmerId || !formData.cropType || !formData.coverageAmount || !formData.premiumAmount) {
+    if (!formData.assessmentId || !formData.startDate || !formData.endDate) {
       toast({
-        title: "Error",
+        title: "Validation Error",
         description: "Please fill in all required fields",
         variant: "destructive",
       });
@@ -188,22 +115,27 @@ export default function CreatePolicyPage({ onBack, onSuccess }: CreatePolicyPage
 
     setIsSubmitting(true);
     try {
-      const policyData = {
-        farmerId: formData.farmerId,
-        cropType: formData.cropType,
-        coverageAmount: parseFloat(formData.coverageAmount),
-        premium: parseFloat(formData.premiumAmount),
-        startDate: formData.startDate || new Date().toISOString().split('T')[0],
-        endDate: formData.endDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        status: "pending",
-        notes: formData.location ? `Location: ${formData.location}` : undefined,
-      };
-
-      await createPolicyApi(policyData);
+      // Format dates to ISO format (YYYY-MM-DDTHH:mm:ssZ)
+      const startDateISO = new Date(formData.startDate + 'T00:00:00Z').toISOString();
+      const endDateISO = new Date(formData.endDate + 'T23:59:59Z').toISOString();
+      
+      console.log('Creating policy from assessment:', {
+        assessmentId: formData.assessmentId,
+        coverageLevel: formData.coverageLevel,
+        startDate: startDateISO,
+        endDate: endDateISO
+      });
+      
+      await createPolicyFromAssessment(
+        formData.assessmentId,
+        formData.coverageLevel,
+        startDateISO,
+        endDateISO
+      );
       
       toast({
         title: "Success",
-        description: "Policy created successfully",
+        description: "Policy created successfully from assessment",
         variant: "default",
       });
       
@@ -223,13 +155,28 @@ export default function CreatePolicyPage({ onBack, onSuccess }: CreatePolicyPage
     }
   };
 
+  const selectedAssessment = assessments.find((a: any) => 
+    (a._id || a.id) === formData.assessmentId
+  );
+
+  const getRiskLevelBadge = (riskScore: number | undefined) => {
+    if (!riskScore && riskScore !== 0) return null;
+    if (riskScore <= 30) {
+      return <Badge className="bg-green-100 text-green-700">Low Risk</Badge>;
+    } else if (riskScore <= 70) {
+      return <Badge className="bg-yellow-100 text-yellow-700">Medium Risk</Badge>;
+    } else {
+      return <Badge className="bg-red-100 text-red-700">High Risk</Badge>;
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-700">Create New Policy</h1>
-          <p className="text-gray-600 mt-1">Fill in the details to create a new insurance policy</p>
+          <p className="text-gray-600 mt-1">Create a policy from a submitted assessment</p>
         </div>
         <Button variant="outline" onClick={onBack}>
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -244,113 +191,106 @@ export default function CreatePolicyPage({ onBack, onSuccess }: CreatePolicyPage
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="farmerId">Select Farmer *</Label>
-                {farmersLoading ? (
-                  <div className="text-sm text-gray-500">Loading farmers...</div>
-                ) : farmers.length === 0 ? (
-                  <div className="space-y-2">
-                    <Input
-                      id="farmerId"
-                      value={formData.farmerId}
-                      onChange={(e) => setFormData({...formData, farmerId: e.target.value})}
-                      placeholder="Enter farmer ID manually"
-                      required
-                    />
-                    <p className="text-xs text-gray-500">Could not load farmers list. Please enter farmer ID manually.</p>
+            <div className="space-y-2">
+              <Label htmlFor="assessmentId">Select Assessment *</Label>
+              {assessmentsLoading ? (
+                <div className="text-sm text-gray-500">Loading submitted assessments...</div>
+              ) : assessments.length === 0 ? (
+                <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <AlertCircle className="h-5 w-5" />
+                    <p>No submitted assessments available. Please wait for an assessor to submit an assessment first.</p>
                   </div>
-                ) : (
+                </div>
+              ) : (
+                <>
                   <Select 
-                    value={formData.farmerId || undefined} 
-                    onValueChange={handleFarmerSelect}
+                    value={formData.assessmentId || undefined} 
+                    onValueChange={(value) => setFormData({...formData, assessmentId: value})}
                     required
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a farmer" />
+                      <SelectValue placeholder="Select a submitted assessment" />
                     </SelectTrigger>
                     <SelectContent>
-                      {farmers.map((farmer: any) => {
-                        const farmerId = farmer._id || farmer.id;
-                        if (!farmerId) return null; // Skip farmers without ID
+                      {assessments.map((assessment: any) => {
+                        const assessmentId = assessment._id || assessment.id;
+                        if (!assessmentId) return null;
                         
-                        const farmerName = farmer.firstName && farmer.lastName
-                          ? `${farmer.firstName} ${farmer.lastName}`
-                          : farmer.name || farmer.email || farmer.phoneNumber || 'Unknown Farmer';
+                        const farmerName = assessment.farmerId?.firstName && assessment.farmerId?.lastName
+                          ? `${assessment.farmerId.firstName} ${assessment.farmerId.lastName}`
+                          : assessment.farmerId?.name || assessment.farmerName || 'Unknown Farmer';
+                        
+                        const farmName = assessment.farmId?.name || assessment.farmName || 'Unknown Farm';
+                        const cropType = assessment.cropType || assessment.farmId?.cropType || 'Unknown';
+                        const riskScore = assessment.riskScore;
                         
                         return (
-                          <SelectItem key={farmerId} value={farmerId}>
-                            {farmerName} {farmer.email ? `(${farmer.email})` : ''}
+                          <SelectItem key={assessmentId} value={assessmentId}>
+                            <div className="flex items-center justify-between w-full">
+                              <span className="font-medium">{farmerName} - {farmName}</span>
+                              {getRiskLevelBadge(riskScore)}
+                            </div>
                           </SelectItem>
                         );
                       })}
                     </SelectContent>
                   </Select>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="farmerName">Farmer Name</Label>
-                <Input
-                  id="farmerName"
-                  value={formData.farmerName}
-                  onChange={(e) => setFormData({...formData, farmerName: e.target.value})}
-                  className={formData.farmerName ? "bg-gray-50" : ""}
-                  placeholder={farmers.length > 0 ? "Will be auto-filled when farmer is selected" : "Enter farmer name (optional)"}
-                />
-              </div>
+                  
+                  {selectedAssessment && (
+                    <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Assessment Details
+                      </h4>
+                      <div className="grid grid-cols-2 gap-2 text-sm text-blue-800">
+                        <div>
+                          <span className="font-medium">Farmer:</span>{' '}
+                          {selectedAssessment.farmerId?.firstName && selectedAssessment.farmerId?.lastName
+                            ? `${selectedAssessment.farmerId.firstName} ${selectedAssessment.farmerId.lastName}`
+                            : selectedAssessment.farmerId?.name || selectedAssessment.farmerName || 'Unknown'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Farm:</span>{' '}
+                          {selectedAssessment.farmId?.name || selectedAssessment.farmName || 'Unknown'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Crop Type:</span>{' '}
+                          {selectedAssessment.cropType || selectedAssessment.farmId?.cropType || 'Unknown'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Risk Score:</span>{' '}
+                          {selectedAssessment.riskScore !== undefined ? selectedAssessment.riskScore : 'N/A'}
+                          {getRiskLevelBadge(selectedAssessment.riskScore)}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="cropType">Crop Type *</Label>
-                <Select value={formData.cropType} onValueChange={(value) => setFormData({...formData, cropType: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select crop type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="maize">Maize</SelectItem>
-                    <SelectItem value="rice">Rice</SelectItem>
-                    <SelectItem value="potatoes">Potatoes</SelectItem>
-                    <SelectItem value="beans">Beans</SelectItem>
-                    <SelectItem value="wheat">Wheat</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="farmSize">Farm Size (hectares)</Label>
-                <Input
-                  id="farmSize"
-                  type="number"
-                  value={formData.farmSize}
-                  onChange={(e) => setFormData({...formData, farmSize: e.target.value})}
-                  placeholder="Enter farm size"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="coverageAmount">Coverage Amount (RWF) *</Label>
-                <Input
-                  id="coverageAmount"
-                  type="number"
-                  value={formData.coverageAmount}
-                  onChange={(e) => setFormData({...formData, coverageAmount: e.target.value})}
-                  placeholder="Enter coverage amount"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="premiumAmount">Premium Amount (RWF) *</Label>
-                <Input
-                  id="premiumAmount"
-                  type="number"
-                  value={formData.premiumAmount}
-                  onChange={(e) => setFormData({...formData, premiumAmount: e.target.value})}
-                  placeholder="Enter premium amount"
-                  required
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="coverageLevel">Coverage Level *</Label>
+              <Select 
+                value={formData.coverageLevel} 
+                onValueChange={(value: "BASIC" | "STANDARD" | "PREMIUM") => 
+                  setFormData({...formData, coverageLevel: value})
+                }
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select coverage level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="BASIC">Basic Coverage</SelectItem>
+                  <SelectItem value="STANDARD">Standard Coverage</SelectItem>
+                  <SelectItem value="PREMIUM">Premium Coverage</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500 mt-1">
+                Coverage level determines the extent of protection and premium rates
+              </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -376,47 +316,15 @@ export default function CreatePolicyPage({ onBack, onSuccess }: CreatePolicyPage
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => setFormData({...formData, location: e.target.value})}
-                  placeholder="Enter location"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="riskLevel">Risk Level</Label>
-                <Select value={formData.riskLevel} onValueChange={(value) => setFormData({...formData, riskLevel: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select risk level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low Risk</SelectItem>
-                    <SelectItem value="medium">Medium Risk</SelectItem>
-                    <SelectItem value="high">High Risk</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="deductible">Deductible (RWF)</Label>
-              <Input
-                id="deductible"
-                type="number"
-                value={formData.deductible}
-                onChange={(e) => setFormData({...formData, deductible: e.target.value})}
-                placeholder="Enter deductible amount"
-              />
-            </div>
-
             <div className="flex justify-end space-x-3 pt-4 border-t">
               <Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || assessments.length === 0} 
+                className="bg-green-600 hover:bg-green-700"
+              >
                 <Save className="h-4 w-4 mr-2" />
                 {isSubmitting ? "Creating..." : "Create Policy"}
               </Button>
@@ -427,4 +335,3 @@ export default function CreatePolicyPage({ onBack, onSuccess }: CreatePolicyPage
     </div>
   );
 }
-

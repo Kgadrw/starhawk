@@ -58,6 +58,8 @@ export default function InsurerDashboard() {
   const [assessorId, setAssessorId] = useState("");
   const [assessmentNotes, setAssessmentNotes] = useState("");
   const [isCreatingAssessment, setIsCreatingAssessment] = useState(false);
+  const [assessors, setAssessors] = useState<any[]>([]);
+  const [assessorsLoading, setAssessorsLoading] = useState(false);
   
   // Submitted Assessments state
   const [submittedAssessments, setSubmittedAssessments] = useState<any[]>([]);
@@ -178,6 +180,77 @@ export default function InsurerDashboard() {
     }
   };
 
+  // Load assessors from existing assessments
+  const loadAssessors = async () => {
+    setAssessorsLoading(true);
+    try {
+      const assessorsMap = new Map<string, any>();
+      
+      // Get assessors from existing assessments
+      try {
+        const assessmentsResponse: any = await assessmentsApiService.getAllAssessments();
+        let assessmentsData: any[] = [];
+        
+        if (assessmentsResponse?.success && Array.isArray(assessmentsResponse.data)) {
+          assessmentsData = assessmentsResponse.data;
+        } else if (assessmentsResponse?.success && assessmentsResponse?.data?.items) {
+          assessmentsData = assessmentsResponse.data.items;
+        } else if (Array.isArray(assessmentsResponse)) {
+          assessmentsData = assessmentsResponse;
+        } else if (Array.isArray(assessmentsResponse?.data)) {
+          assessmentsData = assessmentsResponse.data;
+        }
+        
+        // Extract assessors from assessments
+        assessmentsData.forEach((assessment: any) => {
+          const assessor = assessment.assessorId || assessment.assessor;
+          if (assessor) {
+            // Handle both object and string ID formats
+            let assessorId: string;
+            let assessorData: any;
+            
+            if (typeof assessor === 'string') {
+              assessorId = assessor;
+              assessorData = { _id: assessor, id: assessor };
+            } else {
+              assessorId = assessor._id || assessor.id;
+              assessorData = assessor;
+            }
+            
+            if (assessorId && !assessorsMap.has(assessorId)) {
+              assessorsMap.set(assessorId, {
+                _id: assessorId,
+                id: assessorId,
+                firstName: assessorData.firstName,
+                lastName: assessorData.lastName,
+                name: assessorData.name,
+                email: assessorData.email,
+                phoneNumber: assessorData.phoneNumber
+              });
+            }
+          }
+        });
+      } catch (err) {
+        console.warn('Failed to load assessors from assessments:', err);
+      }
+      
+      const assessorsList = Array.from(assessorsMap.values());
+      setAssessors(assessorsList);
+      console.log('Loaded assessors from assessments:', assessorsList);
+    } catch (err: any) {
+      console.error('Failed to load assessors:', err);
+    } finally {
+      setAssessorsLoading(false);
+    }
+  };
+
+  // Load assessors when dialog opens
+  useEffect(() => {
+    if (createAssessmentDialog.open) {
+      loadAssessors();
+    }
+  }, [createAssessmentDialog.open]);
+
   const handleCreateAssessment = async () => {
     if (!createAssessmentDialog.insuranceRequest || !assessorId) {
       toast({
@@ -191,19 +264,51 @@ export default function InsurerDashboard() {
     setIsCreatingAssessment(true);
     try {
       const insuranceRequest = createAssessmentDialog.insuranceRequest;
-      const farmId = insuranceRequest.farmId?._id || insuranceRequest.farmId || insuranceRequest.farm?._id;
+      
+      // Extract farmId from various possible structures
+      let farmId: string | undefined;
+      if (insuranceRequest.farmId) {
+        if (typeof insuranceRequest.farmId === 'string') {
+          farmId = insuranceRequest.farmId;
+        } else {
+          farmId = insuranceRequest.farmId._id || insuranceRequest.farmId.id;
+        }
+      } else if (insuranceRequest.farm) {
+        farmId = insuranceRequest.farm._id || insuranceRequest.farm.id;
+      }
+      
       const insuranceRequestId = insuranceRequest._id || insuranceRequest.id;
 
+      console.log('Creating assessment with:', {
+        insuranceRequest,
+        farmId,
+        insuranceRequestId,
+        assessorId
+      });
+
       if (!farmId || !insuranceRequestId) {
+        console.error('Missing required data:', {
+          farmId,
+          insuranceRequestId,
+          insuranceRequest: insuranceRequest
+        });
         throw new Error('Missing farm ID or insurance request ID');
       }
 
-      await assessmentsApiService.createAssessment({
+      if (!assessorId) {
+        throw new Error('Please select an assessor');
+      }
+
+      const assessmentData = {
         farmId,
         insuranceRequestId,
         assessorId,
         notes: assessmentNotes || undefined
-      });
+      };
+
+      console.log('Sending assessment creation request:', JSON.stringify(assessmentData, null, 2));
+
+      await assessmentsApiService.createAssessment(assessmentData);
 
       toast({
         title: 'Success',
@@ -213,6 +318,7 @@ export default function InsurerDashboard() {
       setCreateAssessmentDialog({ open: false, insuranceRequest: null });
       setAssessorId("");
       setAssessmentNotes("");
+      setAssessors([]);
       await loadInsuranceRequests();
     } catch (err: any) {
       console.error('Failed to create assessment:', err);
@@ -541,15 +647,15 @@ export default function InsurerDashboard() {
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-4 px-6 font-medium text-gray-700">Farm Name</th>
-                    <th className="text-left py-4 px-6 font-medium text-gray-700">Crop Type</th>
-                    <th className="text-left py-4 px-6 font-medium text-gray-700">Farmer</th>
-                    <th className="text-left py-4 px-6 font-medium text-gray-700">Request Date</th>
-                    <th className="text-left py-4 px-6 font-medium text-gray-700">Notes</th>
-                    <th className="text-left py-4 px-6 font-medium text-gray-700">Actions</th>
+                    <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Farm Name</th>
+                    <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Crop Type</th>
+                    <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Farmer</th>
+                    <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Request Date</th>
+                    <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Notes</th>
+                    <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -563,31 +669,31 @@ export default function InsurerDashboard() {
                           index % 2 === 0 ? "bg-gray-50" : ""
                         }`}
                       >
-                        <td className="py-4 px-6 text-gray-900 font-medium">
+                        <td className="py-1 px-2 text-gray-900 font-medium text-xs">
                           {farm.name || "N/A"}
                         </td>
-                        <td className="py-4 px-6 text-gray-700">
+                        <td className="py-1 px-2 text-gray-700 text-xs">
                           {farm.cropType || farm.crop || "N/A"}
                         </td>
-                        <td className="py-4 px-6 text-gray-700">
+                        <td className="py-1 px-2 text-gray-700 text-xs">
                           {farmer.name || farmer.email || farmer.phoneNumber || "N/A"}
                         </td>
-                        <td className="py-4 px-6 text-gray-700">
+                        <td className="py-1 px-2 text-gray-700 text-xs">
                           {request.createdAt
                             ? new Date(request.createdAt).toLocaleDateString()
                             : "N/A"}
                         </td>
-                        <td className="py-4 px-6 text-gray-700">
-                          <span className="text-sm">{request.notes || "—"}</span>
+                        <td className="py-1 px-2 text-gray-700 text-xs">
+                          <span>{request.notes || "—"}</span>
                         </td>
-                        <td className="py-4 px-6">
+                        <td className="py-1 px-2">
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => setCreateAssessmentDialog({ open: true, insuranceRequest: request })}
-                            className="border-green-600 text-green-600 hover:bg-green-50"
+                            className="border-green-600 text-green-600 hover:bg-green-50 text-xs h-6 px-2"
                           >
-                            <Shield className="h-3 w-3 mr-1" />
+                            <Shield className="h-2.5 w-2.5 mr-0.5" />
                             Create Assessment
                           </Button>
                         </td>
@@ -768,9 +874,15 @@ export default function InsurerDashboard() {
       {renderPage()}
 
       {/* Create Assessment Dialog */}
-      <Dialog open={createAssessmentDialog.open} onOpenChange={(open) => 
-        setCreateAssessmentDialog({ ...createAssessmentDialog, open })
-      }>
+      <Dialog open={createAssessmentDialog.open} onOpenChange={(open) => {
+        if (!open) {
+          // Clear form when dialog closes
+          setAssessorId("");
+          setAssessmentNotes("");
+          setAssessors([]);
+        }
+        setCreateAssessmentDialog({ ...createAssessmentDialog, open });
+      }}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="text-gray-900">Create Assessment</DialogTitle>
@@ -796,15 +908,47 @@ export default function InsurerDashboard() {
               </div>
             )}
             <div>
-              <Label className="text-gray-700">Assessor ID *</Label>
-              <Input
-                value={assessorId}
-                onChange={(e) => setAssessorId(e.target.value)}
-                placeholder="Enter assessor ID"
-                className="mt-2 border-gray-300"
-                required
-              />
-              <p className="text-xs text-gray-500 mt-1">Enter the ID of the assessor to assign</p>
+              <Label className="text-gray-700">Select Assessor *</Label>
+              {assessorsLoading ? (
+                <div className="text-sm text-gray-500 mt-2">Loading assessors...</div>
+              ) : assessors.length === 0 ? (
+                <div className="space-y-2">
+                  <Input
+                    value={assessorId}
+                    onChange={(e) => setAssessorId(e.target.value)}
+                    placeholder="Enter assessor ID manually"
+                    className="mt-2 border-gray-300"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Could not load assessors list. Please enter assessor ID manually.</p>
+                </div>
+              ) : (
+                <Select 
+                  value={assessorId || undefined} 
+                  onValueChange={setAssessorId}
+                  required
+                >
+                  <SelectTrigger className="mt-2 border-gray-300">
+                    <SelectValue placeholder="Select an assessor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assessors.map((assessor: any) => {
+                      const assessorIdValue = assessor._id || assessor.id;
+                      if (!assessorIdValue) return null;
+                      
+                      const assessorName = assessor.firstName && assessor.lastName
+                        ? `${assessor.firstName} ${assessor.lastName}`
+                        : assessor.name || assessor.email || assessor.phoneNumber || 'Unknown Assessor';
+                      
+                      return (
+                        <SelectItem key={assessorIdValue} value={assessorIdValue}>
+                          {assessorName} {assessor.email ? `(${assessor.email})` : ''}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div>
               <Label className="text-gray-700">Notes (Optional)</Label>
@@ -823,6 +967,7 @@ export default function InsurerDashboard() {
                   setCreateAssessmentDialog({ open: false, insuranceRequest: null });
                   setAssessorId("");
                   setAssessmentNotes("");
+                  setAssessors([]);
                 }}
                 className="border-gray-300 text-gray-700 hover:bg-gray-100"
               >

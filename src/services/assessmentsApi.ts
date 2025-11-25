@@ -107,13 +107,50 @@ class AssessmentsApiService {
       }
 
       if (!response.ok) {
+        // Log full error response for debugging
+        console.error('Assessments API Error Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data,
+          url: url,
+          fullResponse: JSON.stringify(data, null, 2)
+        });
+        
         // Provide better error messages for common status codes
         if (response.status === 400) {
-          let errorMessage = data.message || data.error || data.detail || 'Bad request. Please check your input.';
+          let errorMessage = data.message || data.error || data.detail || data.title || 'Bad request. Please check your input.';
           
-          if (data.validationErrors) {
-            const validationMessages: string[] = [];
-            
+          // Try to extract detailed validation errors from various formats
+          const validationMessages: string[] = [];
+          
+          // Format 1: errors array
+          if (data.errors && Array.isArray(data.errors)) {
+            data.errors.forEach((err: any) => {
+              if (err.field && err.message) {
+                validationMessages.push(`${err.field}: ${err.message}`);
+              } else if (err.path && err.message) {
+                validationMessages.push(`${err.path}: ${err.message}`);
+              } else if (typeof err === 'string') {
+                validationMessages.push(err);
+              }
+            });
+          }
+          // Format 2: errors object
+          else if (data.errors && typeof data.errors === 'object' && !Array.isArray(data.errors)) {
+            Object.entries(data.errors).forEach(([field, messages]: [string, any]) => {
+              if (Array.isArray(messages)) {
+                messages.forEach((msg: any) => {
+                  validationMessages.push(`${field}: ${msg.message || msg.msg || msg}`);
+                });
+              } else if (typeof messages === 'object' && messages !== null) {
+                validationMessages.push(`${field}: ${(messages as any).message || JSON.stringify(messages)}`);
+              } else {
+                validationMessages.push(`${field}: ${messages}`);
+              }
+            });
+          }
+          // Format 3: validationErrors
+          else if (data.validationErrors) {
             if (typeof data.validationErrors === 'object') {
               if (data.validationErrors.general && Array.isArray(data.validationErrors.general)) {
                 validationMessages.push(...data.validationErrors.general);
@@ -127,10 +164,13 @@ class AssessmentsApiService {
                 }
               });
             }
-            
-            if (validationMessages.length > 0) {
-              errorMessage = validationMessages.join('. ');
-            }
+          }
+          
+          if (validationMessages.length > 0) {
+            errorMessage += `\n\nValidation Errors:\n${validationMessages.join('\n')}`;
+          } else {
+            // If no specific errors found, show the full data for debugging
+            errorMessage += `\n\nFull error response: ${JSON.stringify(data, null, 2)}`;
           }
           
           throw new Error(errorMessage);
@@ -166,10 +206,18 @@ class AssessmentsApiService {
 
   // Create Assessment (Insurer Only)
   async createAssessment(data: CreateAssessmentRequest) {
-    return this.request('', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    console.log('Creating assessment with data:', JSON.stringify(data, null, 2));
+    try {
+      const response = await this.request('', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      console.log('Assessment created successfully:', response);
+      return response;
+    } catch (error: any) {
+      console.error('Assessment creation failed:', error);
+      throw error;
+    }
   }
 
   // Get All Assessments (Role-Based)

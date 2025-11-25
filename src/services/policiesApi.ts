@@ -90,7 +90,75 @@ class PoliciesApiService {
       }
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || data.detail || `HTTP error! status: ${response.status}`);
+        // Log full error response for debugging
+        console.error('Policies API Error Details:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data,
+          url: url,
+          fullResponse: JSON.stringify(data, null, 2)
+        });
+        
+        // Try to extract detailed validation errors from various possible formats
+        let errorMessage = data.message || data.error || data.detail || data.title || `HTTP error! status: ${response.status}`;
+        
+        // Check for RFC 7807 Problem Details format with nested errors
+        const validationErrors: string[] = [];
+        
+        // Format 1: Array of errors
+        if (data.errors && Array.isArray(data.errors)) {
+          data.errors.forEach((err: any) => {
+            if (err.field && err.message) {
+              validationErrors.push(`${err.field}: ${err.message}`);
+            } else if (err.path && err.message) {
+              validationErrors.push(`${err.path}: ${err.message}`);
+            } else if (typeof err === 'string') {
+              validationErrors.push(err);
+            }
+          });
+        }
+        // Format 2: Object with field keys
+        else if (data.errors && typeof data.errors === 'object' && !Array.isArray(data.errors)) {
+          Object.entries(data.errors).forEach(([field, messages]: [string, any]) => {
+            if (Array.isArray(messages)) {
+              messages.forEach((msg: any) => {
+                validationErrors.push(`${field}: ${msg.message || msg.msg || msg}`);
+              });
+            } else if (typeof messages === 'object' && messages !== null) {
+              validationErrors.push(`${field}: ${(messages as any).message || JSON.stringify(messages)}`);
+            } else {
+              validationErrors.push(`${field}: ${messages}`);
+            }
+          });
+        }
+        // Format 3: Validation errors in different fields (common in Spring Boot)
+        else if (data.validationErrors) {
+          if (Array.isArray(data.validationErrors)) {
+            validationErrors.push(...data.validationErrors.map((e: any) => e.message || e));
+          } else {
+            Object.entries(data.validationErrors).forEach(([field, msg]: [string, any]) => {
+              validationErrors.push(`${field}: ${msg}`);
+            });
+          }
+        }
+        // Format 4: Check for nested error details
+        else if (data.details && typeof data.details === 'object') {
+          Object.entries(data.details).forEach(([key, value]: [string, any]) => {
+            if (typeof value === 'string') {
+              validationErrors.push(`${key}: ${value}`);
+            }
+          });
+        }
+        
+        // Append validation errors to main error message
+        if (validationErrors.length > 0) {
+          errorMessage += `\n\nValidation Errors:\n${validationErrors.join('\n')}`;
+        } else {
+          // If no specific errors found, show the full data for debugging
+          errorMessage += `\n\nFull error response: ${JSON.stringify(data, null, 2)}`;
+        }
+        
+        throw new Error(errorMessage);
       }
 
       return data;

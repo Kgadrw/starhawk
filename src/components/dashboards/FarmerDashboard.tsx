@@ -296,10 +296,10 @@ export default function FarmerDashboard() {
             variant: 'destructive'
           });
         } else {
-          console.log('No farms found. This could mean:');
-          console.log('1. The farmer has no farms assigned');
-          console.log('2. The API is filtering by farmer and this farmer has no farms');
-          console.log('3. There might be a pagination issue');
+        console.log('No farms found. This could mean:');
+        console.log('1. The farmer has no farms assigned');
+        console.log('2. The API is filtering by farmer and this farmer has no farms');
+        console.log('3. There might be a pagination issue');
         }
       }
     } catch (err: any) {
@@ -1964,23 +1964,23 @@ export default function FarmerDashboard() {
             
             {/* Back Button */}
             <div className="mb-4">
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setActivePage("my-fields");
-                  setSelectedFarm(null);
-                }}
-                className="text-gray-900 hover:bg-gray-50"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setActivePage("my-fields");
+              setSelectedFarm(null);
+            }}
+            className="text-gray-900 hover:bg-gray-50"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Fields List
-              </Button>
-            </div>
-            
+          </Button>
+        </div>
+
             {/* Title */}
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">{farm.name || "Unnamed Farm"}</h2>
-              <p className="text-gray-600">Farm Details</p>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{farm.name || "Unnamed Farm"}</h2>
+          <p className="text-gray-600">Farm Details</p>
             </div>
           </div>
         </div>
@@ -2139,17 +2139,17 @@ export default function FarmerDashboard() {
             
             {/* Back Button */}
             <div className="mb-4">
-              <Button
-                variant="ghost"
-                onClick={() => {
+            <Button
+              variant="ghost"
+              onClick={() => {
                   setActivePage("my-fields");
                   setSelectedFarm(null);
-                }}
-                className="text-gray-900 hover:bg-gray-50"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
+              }}
+              className="text-gray-900 hover:bg-gray-50"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Fields List
-              </Button>
+            </Button>
             </div>
             
             {/* Title */}
@@ -2260,7 +2260,7 @@ export default function FarmerDashboard() {
                           <div className="flex items-center gap-2 mb-2">
                             <Droplets className="h-4 w-4 text-blue-600" />
                             <p className="text-xs text-blue-700 font-medium">Avg Rainfall</p>
-                          </div>
+                  </div>
                           <p className="text-2xl font-bold text-blue-900">{avgRainfall.toFixed(1)}mm</p>
                           <p className="text-xs text-blue-600 mt-1">Max: {maxRainfall.toFixed(1)}mm</p>
                         </div>
