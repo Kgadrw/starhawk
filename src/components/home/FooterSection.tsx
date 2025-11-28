@@ -40,7 +40,7 @@ export function FooterSection() {
                 <Satellite className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">STARHAWK</h1>
+                <h1 className="text-xl font-bold text-white">STARHAWK</h1>
                 <p className="text-green-100 text-sm">Agricultural Insurance Platform</p>
               </div>
             </Link>

@@ -19,7 +19,7 @@ export function HomeNavbar() {
   const location = useLocation();
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-200 shadow-sm">
+    <nav className="bg-white/80 backdrop-blur-lg border-b border-gray-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-2.5">
@@ -27,10 +27,10 @@ export function HomeNavbar() {
               <Satellite className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-700 tracking-tight">
+              <h1 className="text-xl text-gray-800 tracking-tight">
                 STARHAWK
               </h1>
-              <p className="text-green-600 text-xs font-medium">Agricultural Insurance</p>
+              <p className="text-green-600 text-xs">Agricultural Insurance</p>
             </div>
           </Link>
 
@@ -40,10 +40,10 @@ export function HomeNavbar() {
                 <NavigationMenuItem>
                   <Link 
                     to="/" 
-                    className={`px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                    className={`px-3 py-2 text-sm transition-colors ${
                       location.pathname === '/' 
-                        ? 'text-green-600 bg-green-50' 
-                        : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
+                        ? 'text-green-600 underline underline-offset-4' 
+                        : 'text-gray-800 hover:text-green-600 hover:bg-gray-50 rounded-lg'
                     }`}
                   >
                     Home
@@ -52,10 +52,10 @@ export function HomeNavbar() {
                 <NavigationMenuItem>
                   <Link 
                     to="/services" 
-                    className={`px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                    className={`px-3 py-2 text-sm font-medium transition-colors ${
                       location.pathname === '/services' 
-                        ? 'text-green-600 bg-green-50' 
-                        : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
+                        ? 'text-green-600 underline underline-offset-4' 
+                        : 'text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-lg'
                     }`}
                   >
                     Services
@@ -64,10 +64,10 @@ export function HomeNavbar() {
                 <NavigationMenuItem>
                   <Link 
                     to="/team" 
-                    className={`px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                    className={`px-3 py-2 text-sm font-medium transition-colors ${
                       location.pathname === '/team' 
-                        ? 'text-green-600 bg-green-50' 
-                        : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
+                        ? 'text-green-600 underline underline-offset-4' 
+                        : 'text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-lg'
                     }`}
                   >
                     Team
@@ -76,10 +76,10 @@ export function HomeNavbar() {
                 <NavigationMenuItem>
                   <Link 
                     to="/contact" 
-                    className={`px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                    className={`px-3 py-2 text-sm font-medium transition-colors ${
                       location.pathname === '/contact' 
-                        ? 'text-green-600 bg-green-50' 
-                        : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
+                        ? 'text-green-600 underline underline-offset-4' 
+                        : 'text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-lg'
                     }`}
                   >
                     Contact
@@ -102,7 +102,7 @@ export function HomeNavbar() {
           <Button
             variant="ghost"
             size="sm"
-            className="lg:hidden text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+            className="lg:hidden text-gray-800 hover:text-gray-900 hover:bg-gray-100"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -114,10 +114,10 @@ export function HomeNavbar() {
             <div className="space-y-2">
               <Link
                 to="/"
-                className={`block px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                className={`block px-3 py-2 text-sm transition-colors ${
                   location.pathname === '/' 
-                    ? 'text-green-600 bg-green-50' 
-                    : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
+                    ? 'text-green-600 underline underline-offset-4' 
+                    : 'text-gray-800 hover:text-green-600 hover:bg-gray-50 rounded-lg'
                 }`}
                 onClick={() => setIsMenuOpen(false)}
               >
@@ -125,10 +125,10 @@ export function HomeNavbar() {
               </Link>
               <Link
                 to="/services"
-                className={`block px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                className={`block px-3 py-2 text-sm font-medium transition-colors ${
                   location.pathname === '/services' 
-                    ? 'text-green-600 bg-green-50' 
-                    : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
+                    ? 'text-green-600 underline underline-offset-4' 
+                    : 'text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-lg'
                 }`}
                 onClick={() => setIsMenuOpen(false)}
               >
@@ -136,10 +136,10 @@ export function HomeNavbar() {
               </Link>
               <Link
                 to="/team"
-                className={`block px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                className={`block px-3 py-2 text-sm font-medium transition-colors ${
                   location.pathname === '/team' 
-                    ? 'text-green-600 bg-green-50' 
-                    : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
+                    ? 'text-green-600 underline underline-offset-4' 
+                    : 'text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-lg'
                 }`}
                 onClick={() => setIsMenuOpen(false)}
               >
@@ -147,10 +147,10 @@ export function HomeNavbar() {
               </Link>
               <Link
                 to="/contact"
-                className={`block px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                className={`block px-3 py-2 text-sm font-medium transition-colors ${
                   location.pathname === '/contact' 
-                    ? 'text-green-600 bg-green-50' 
-                    : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
+                    ? 'text-green-600 underline underline-offset-4' 
+                    : 'text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-lg'
                 }`}
                 onClick={() => setIsMenuOpen(false)}
               >

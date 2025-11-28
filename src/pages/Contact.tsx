@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { HomeNavbar } from "@/components/layout/HomeNavbar";
-import { FooterSection } from "@/components/home/FooterSection";
 import CustomScrollbar from "@/components/ui/CustomScrollbar";
 import { motion } from "framer-motion";
 import { 
@@ -16,9 +15,6 @@ import {
   Clock,
   Send,
   CheckCircle,
-  Users,
-  Briefcase,
-  Globe,
   MessageCircle
 } from "lucide-react";
 
@@ -26,7 +22,6 @@ export default function Contact() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    company: "",
     phone: "",
     subject: "",
     message: "",
@@ -57,57 +52,26 @@ export default function Contact() {
     {
       icon: Phone,
       title: "Phone",
-      details: ["+250 123 456 789", "+250 987 654 321"],
+      details: "+250 123 456 789",
       description: "Call us for immediate assistance"
     },
     {
       icon: Mail,
       title: "Email",
-      details: ["info@starhawk.com", "support@starhawk.com"],
+      details: "info@starhawk.com",
       description: "Send us an email anytime"
     },
     {
       icon: MapPin,
       title: "Address",
-      details: ["KG 7 Ave, Kigali", "Rwanda, East Africa"],
+      details: "KG 7 Ave, Kigali, Rwanda",
       description: "Visit our headquarters"
     },
     {
       icon: Clock,
       title: "Business Hours",
-      details: ["Mon - Fri: 8:00 AM - 6:00 PM", "Sat: 9:00 AM - 4:00 PM"],
+      details: "Mon - Fri: 8:00 AM - 6:00 PM",
       description: "We're here to help"
-    }
-  ];
-
-  const departments = [
-    {
-      name: "Sales & Business Development",
-      email: "sales@starhawk.com",
-      phone: "+250 123 456 789",
-      icon: Briefcase,
-      description: "For new partnerships and business inquiries"
-    },
-    {
-      name: "Technical Support",
-      email: "support@starhawk.com",
-      phone: "+250 123 456 790",
-      icon: MessageCircle,
-      description: "For technical assistance and platform support"
-    },
-    {
-      name: "Customer Success",
-      email: "success@starhawk.com",
-      phone: "+250 123 456 791",
-      icon: Users,
-      description: "For existing customer support and training"
-    },
-    {
-      name: "Media & Press",
-      email: "media@starhawk.com",
-      phone: "+250 123 456 792",
-      icon: Globe,
-      description: "For media inquiries and press releases"
     }
   ];
 
@@ -117,17 +81,17 @@ export default function Contact() {
         <HomeNavbar />
       
         {/* Hero Section */}
-        <section className="relative pt-32 pb-20 bg-gradient-to-br from-green-50 via-white to-emerald-50">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <section className="relative pt-8 pb-8 bg-gradient-to-br from-green-50 via-white to-emerald-50">
+          <div className="max-w-7xl mx-auto px-12 sm:px-16 lg:px-24 text-left">
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-700 mb-4">
-                Contact Our Team
+              <h1 className="text-xl font-bold text-green-600 mb-4">
+                Contact Us
               </h1>
-              <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">
+              <p className="text-base text-gray-600 max-w-3xl leading-relaxed">
                 Ready to transform your agricultural insurance? Send us a message and we'll get back to you within 24 hours.
               </p>
             </motion.div>
@@ -135,7 +99,7 @@ export default function Contact() {
         </section>
 
         {/* Contact Form & Info */}
-        <section className="py-20 bg-white">
+        <section className="py-8 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid gap-8 lg:grid-cols-2">
               {/* Contact Form */}
@@ -145,35 +109,34 @@ export default function Contact() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
               >
-                <Card className="border border-gray-200 shadow-lg">
-                  <CardHeader>
-                    <CardTitle className="text-2xl font-bold text-gray-700">Send us a Message</CardTitle>
-                  </CardHeader>
-                  <CardContent>
+                <Card className="border border-gray-200 shadow-sm">
+                  <CardContent className="p-6">
                     {submitSuccess && (
                       <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                         <div className="flex items-center gap-2">
                           <CheckCircle className="h-5 w-5 text-green-600" />
-                          <span className="text-green-700 font-medium">Message sent successfully!</span>
+                          <span className="text-green-700 font-medium text-sm">Message sent successfully!</span>
                         </div>
                       </div>
                     )}
                     
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <h2 className="text-xl font-bold text-gray-900 mb-6">Send us a Message</h2>
+                    
+                    <form onSubmit={handleSubmit} className="space-y-4">
                       <div className="grid gap-4 md:grid-cols-2">
                         <div>
-                          <Label htmlFor="name" className="text-gray-700">Full Name *</Label>
+                          <Label htmlFor="name" className="text-sm text-gray-700">Full Name *</Label>
                           <Input
                             id="name"
                             value={formData.name}
                             onChange={(e) => handleInputChange("name", e.target.value)}
                             placeholder="Enter your full name"
                             required
-                            className="bg-gray-50 border-gray-300 text-gray-700 mt-2"
+                            className="bg-white border-gray-300 text-gray-700 mt-1"
                           />
                         </div>
                         <div>
-                          <Label htmlFor="email" className="text-gray-700">Email Address *</Label>
+                          <Label htmlFor="email" className="text-sm text-gray-700">Email Address *</Label>
                           <Input
                             id="email"
                             type="email"
@@ -181,15 +144,26 @@ export default function Contact() {
                             onChange={(e) => handleInputChange("email", e.target.value)}
                             placeholder="Enter your email"
                             required
-                            className="bg-gray-50 border-gray-300 text-gray-700 mt-2"
+                            className="bg-white border-gray-300 text-gray-700 mt-1"
                           />
                         </div>
                       </div>
 
                       <div>
-                        <Label htmlFor="inquiryType" className="text-gray-700">Type of Inquiry *</Label>
+                        <Label htmlFor="phone" className="text-sm text-gray-700">Phone Number</Label>
+                        <Input
+                          id="phone"
+                          value={formData.phone}
+                          onChange={(e) => handleInputChange("phone", e.target.value)}
+                          placeholder="Enter your phone number"
+                          className="bg-white border-gray-300 text-gray-700 mt-1"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="inquiryType" className="text-sm text-gray-700">Type of Inquiry *</Label>
                         <Select value={formData.inquiryType} onValueChange={(value) => handleInputChange("inquiryType", value)}>
-                          <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-700 mt-2">
+                          <SelectTrigger className="bg-white border-gray-300 text-gray-700 mt-1">
                             <SelectValue placeholder="Select inquiry type" />
                           </SelectTrigger>
                           <SelectContent>
@@ -204,19 +178,19 @@ export default function Contact() {
                       </div>
 
                       <div>
-                        <Label htmlFor="subject" className="text-gray-700">Subject *</Label>
+                        <Label htmlFor="subject" className="text-sm text-gray-700">Subject *</Label>
                         <Input
                           id="subject"
                           value={formData.subject}
                           onChange={(e) => handleInputChange("subject", e.target.value)}
                           placeholder="Enter message subject"
                           required
-                          className="bg-gray-50 border-gray-300 text-gray-900 mt-2"
+                          className="bg-white border-gray-300 text-gray-700 mt-1"
                         />
                       </div>
 
                       <div>
-                        <Label htmlFor="message" className="text-gray-700">Message *</Label>
+                        <Label htmlFor="message" className="text-sm text-gray-700">Message *</Label>
                         <Textarea
                           id="message"
                           value={formData.message}
@@ -224,20 +198,20 @@ export default function Contact() {
                           placeholder="Enter your message"
                           rows={5}
                           required
-                          className="bg-gray-50 border-gray-300 text-gray-900 mt-2"
+                          className="bg-white border-gray-300 text-gray-700 mt-1"
                         />
                       </div>
 
                       <Button 
                         type="submit" 
                         disabled={isSubmitting}
-                        className="w-full bg-green-600 hover:bg-green-700 text-white rounded-full py-6 font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300"
+                        className="w-full bg-green-600 hover:bg-green-700 text-white rounded-full py-3 font-semibold"
                       >
                         {isSubmitting ? (
                           "Sending Message..."
                         ) : (
                           <>
-                            <Send className="h-5 w-5 mr-2" />
+                            <Send className="h-4 w-4 mr-2" />
                             Send Message
                           </>
                         )}
@@ -253,27 +227,24 @@ export default function Contact() {
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
-                className="space-y-6"
+                className="space-y-4"
               >
-                {/* Quick Contact */}
                 <div>
-                  <h3 className="text-xl font-bold text-gray-700 mb-6">Quick Contact</h3>
-                  <div className="grid gap-4">
+                  <h3 className="text-xl font-bold text-gray-900 mb-4">Get in Touch</h3>
+                  <div className="space-y-3">
                     {contactInfo.map((info, index) => {
                       const Icon = info.icon;
                       return (
-                        <Card key={index} className="border border-gray-200">
+                        <Card key={index} className="border border-gray-200 hover:border-green-300 transition-colors">
                           <CardContent className="p-4">
-                            <div className="flex items-start gap-4">
-                              <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-                                <Icon className="h-6 w-6 text-green-600" />
+                            <div className="flex items-start gap-3">
+                              <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                                <Icon className="h-5 w-5 text-green-600" />
                               </div>
                               <div>
-                                <h4 className="font-semibold text-gray-700 mb-1">{info.title}</h4>
-                                <p className="text-sm text-gray-600 mb-2">{info.description}</p>
-                                {info.details.map((detail, idx) => (
-                                  <p key={idx} className="text-sm text-gray-700">{detail}</p>
-                                ))}
+                                <h4 className="font-semibold text-gray-900 mb-1 text-sm">{info.title}</h4>
+                                <p className="text-sm text-gray-600 mb-1">{info.description}</p>
+                                <p className="text-sm text-gray-700">{info.details}</p>
                               </div>
                             </div>
                           </CardContent>
@@ -283,40 +254,32 @@ export default function Contact() {
                   </div>
                 </div>
 
-                {/* Departments */}
-                <div>
-                  <h3 className="text-xl font-bold text-gray-700 mb-6">Contact by Department</h3>
-                  <div className="grid gap-4">
-                    {departments.map((dept, index) => {
-                      const Icon = dept.icon;
-                      return (
-                        <Card key={index} className="border border-gray-200 hover:border-green-300 transition-colors">
-                          <CardContent className="p-4">
-                            <div className="flex items-start gap-4">
-                              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                                <Icon className="h-5 w-5 text-emerald-600" />
-                              </div>
-                              <div className="flex-1">
-                                <h4 className="font-semibold text-gray-700 mb-1">{dept.name}</h4>
-                                <p className="text-sm text-gray-600 mb-2">{dept.description}</p>
-                                <div className="space-y-1">
-                                  <p className="text-sm text-gray-700">{dept.email}</p>
-                                  <p className="text-sm text-gray-700">{dept.phone}</p>
-                                </div>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                </div>
+                {/* Quick Message Card */}
+                <Card className="border border-green-200 bg-green-50">
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-3">
+                      <MessageCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-1" />
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-2 text-sm">Need Quick Help?</h4>
+                        <p className="text-sm text-gray-600 mb-3">
+                          For urgent matters, call us directly or send an email. We typically respond within 24 hours.
+                        </p>
+                        <div className="flex flex-col gap-2">
+                          <a href="tel:+250123456789" className="text-sm text-green-600 hover:text-green-700 font-medium">
+                            +250 123 456 789
+                          </a>
+                          <a href="mailto:info@starhawk.com" className="text-sm text-green-600 hover:text-green-700 font-medium">
+                            info@starhawk.com
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </motion.div>
             </div>
           </div>
         </section>
-
-        <FooterSection />
       </div>
     </CustomScrollbar>
   );

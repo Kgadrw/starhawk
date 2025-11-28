@@ -40,18 +40,18 @@ const Team = () => {
         <HomeNavbar />
 
         {/* Hero Section */}
-        <section className="relative pt-32 pb-20 bg-gradient-to-br from-green-50 via-white to-emerald-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <section className="relative py-8 bg-gradient-to-br from-green-50 via-white to-emerald-50">
+          <div className="max-w-7xl mx-auto px-12 sm:px-16 lg:px-24 text-left">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-700 mb-6">
+              <h1 className="text-xl font-bold text-green-600 mb-4">
                 Our Expert Team
               </h1>
               
-              <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              <p className="text-base text-gray-600 max-w-3xl leading-relaxed">
                 The talented individuals behind STARHAWK's revolutionary agricultural insurance platform.
                 Our team combines expertise in technology, agriculture, and insurance to deliver 
                 innovative solutions for farmers worldwide.
@@ -61,7 +61,7 @@ const Team = () => {
         </section>
 
         {/* Team Grid */}
-        <section className="py-20 bg-white">
+        <section className="py-8 bg-white">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {teamMembers.map((member, index) => {
@@ -75,7 +75,7 @@ const Team = () => {
                     transition={{ duration: 0.5, delay: index * 0.1 }}
                   >
                     <Card className="border border-gray-200 hover:border-green-300 hover:shadow-lg transition-all duration-300 overflow-hidden group">
-                      <div className="relative h-80 overflow-hidden">
+                      <div className="relative h-96 overflow-hidden">
                         <img 
                           src={member.image} 
                           alt={member.title}
@@ -98,8 +98,8 @@ const Team = () => {
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
                         
                         {/* Text Overlay - Bottom */}
-                        <div className="absolute bottom-0 left-0 right-0 p-6">
-                          <h3 className="text-xl font-bold text-white mb-1">{member.title}</h3>
+                        <div className="absolute bottom-0 left-0 right-0 p-4">
+                          <h3 className="text-base font-bold text-white mb-1">{member.title}</h3>
                           <p className="text-green-300 text-sm font-medium mb-1">{member.subtitle}</p>
                           <p className="text-white/80 text-xs">{member.handle}</p>      
                         </div>

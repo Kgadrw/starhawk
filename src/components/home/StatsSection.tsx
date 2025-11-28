@@ -53,7 +53,7 @@ export function StatsSection() {
               <div className="w-16 h-16 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ease-out">
                 <Users className="h-8 w-8 text-white/90" />
               </div>
-              <h3 className="text-3xl font-bold text-white mb-2">10,000+</h3>
+              <h3 className="text-xl font-bold text-white mb-2">10,000+</h3>
               <p className="text-white/70">Active Farmers</p>
             </motion.div>
             <motion.div 
@@ -66,7 +66,7 @@ export function StatsSection() {
               <div className="w-16 h-16 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ease-out">
                 <Shield className="h-8 w-8 text-white/90" />
               </div>
-              <h3 className="text-3xl font-bold text-white mb-2">99.9%</h3>
+              <h3 className="text-xl font-bold text-white mb-2">99.9%</h3>
               <p className="text-white/70">Uptime Guarantee</p>
             </motion.div>
             <motion.div 
@@ -79,7 +79,7 @@ export function StatsSection() {
               <div className="w-16 h-16 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ease-out">
                 <Target className="h-8 w-8 text-white/90" />
               </div>
-              <h3 className="text-3xl font-bold text-white mb-2">24/7</h3>
+              <h3 className="text-xl font-bold text-white mb-2">24/7</h3>
               <p className="text-white/70">Support Available</p>
             </motion.div>
             <motion.div 
@@ -92,7 +92,7 @@ export function StatsSection() {
               <div className="w-16 h-16 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ease-out">
                 <TrendingUp className="h-8 w-8 text-white/90" />
               </div>
-              <h3 className="text-3xl font-bold text-white mb-2">95%</h3>
+              <h3 className="text-xl font-bold text-white mb-2">95%</h3>
               <p className="text-white/70">Claim Accuracy</p>
             </motion.div>
           </div>

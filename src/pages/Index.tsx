@@ -1,8 +1,6 @@
 import { HomeNavbar } from "@/components/layout/HomeNavbar";
 import { HeroSection } from "@/components/home/HeroSection";
 import { FeaturesSection } from "@/components/home/FeaturesSection";
-import { TestimonialsSection } from "@/components/home/TestimonialsSection";
-import { CTASection } from "@/components/home/CTASection";
 import { FAQSection } from "@/components/home/FAQSection";
 import { FooterSection } from "@/components/home/FooterSection";
 import CustomScrollbar from "@/components/ui/CustomScrollbar";
@@ -15,8 +13,6 @@ const Index = () => {
         <HeroSection />
         <div className="relative z-10">
           <FeaturesSection />
-          <TestimonialsSection />
-          <CTASection />
           <FAQSection />
           <FooterSection />
         </div>

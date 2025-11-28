@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Minus, HelpCircle, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { HOMEPAGE_COLORS, HOMEPAGE_TYPOGRAPHY, HOMEPAGE_SPACING, HOMEPAGE_ALIGNMENT } from "@/constants/homepage";
 
 export function FAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
@@ -59,10 +60,10 @@ export function FAQSection() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl sm:text-5xl font-bold text-gray-700 mb-4">
+          <h2 className="text-xl text-green-600 mb-4">
             Frequently Asked Questions
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-base text-gray-600 max-w-2xl mx-auto">
             Find answers to common questions about our agricultural insurance platform
           </p>
         </motion.div>
@@ -83,7 +84,7 @@ export function FAQSection() {
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
                 className="w-full text-left p-6 flex items-center justify-between group"
               >
-                <span className="text-lg font-semibold text-gray-700 group-hover:text-green-600 transition-colors pr-4">
+                <span className="text-base text-gray-800 group-hover:text-green-600 transition-colors pr-4">
                   {faq.question}
                 </span>
                 <div className="w-10 h-10 rounded-lg bg-green-50 border border-green-200 flex items-center justify-center flex-shrink-0 group-hover:bg-green-100 transition-all duration-300">
@@ -103,7 +104,7 @@ export function FAQSection() {
                     transition={{ duration: 0.3 }}
                   >
                     <CardContent className="px-6 pb-6 pt-0">
-                      <p className="text-gray-600 leading-relaxed">
+                      <p className="text-gray-700 leading-relaxed">
                         {faq.answer}
                       </p>
                     </CardContent>
@@ -116,10 +117,10 @@ export function FAQSection() {
         </div>
 
         <div className="text-center mt-12">
-          <p className="text-gray-600 mb-4">Still have questions?</p>
+          <p className="text-gray-700 mb-4">Still have questions?</p>
           <a 
             href="/contact" 
-            className="inline-flex items-center text-green-600 hover:text-green-700 font-medium transition-colors"
+            className="inline-flex items-center text-green-600 hover:text-green-700 transition-colors"
           >
             Contact our support team
             <ChevronDown className="h-4 w-4 ml-1 rotate-[-90deg]" />
