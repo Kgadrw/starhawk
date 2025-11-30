@@ -283,9 +283,9 @@ export default function DashboardLayout({
         </div>
 
          {/* Page Content */}
-         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto bg-gray-50">
+         <main className="flex-1 py-4 sm:py-6 lg:py-8 overflow-auto bg-gray-50">
           <CustomScrollbar className="h-full">
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               {children}
             </div>
           </CustomScrollbar>

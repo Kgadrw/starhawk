@@ -6,7 +6,7 @@ export function HeroSection() {
   return (
     <section className="relative w-full min-h-[400px] flex">
       {/* Left Content Area - Green Background */}
-      <div className="w-full md:w-1/2 bg-green-600 flex items-center px-8 sm:px-12 lg:px-16 py-8 relative overflow-hidden">
+      <div className="w-full md:w-1/2 bg-green-600 flex items-center px-20 sm:px-24 lg:px-40 py-20 sm:py-28 lg:py-40 relative overflow-hidden">
         {/* Rhombus shape decoration */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-green-500/20 transform rotate-45 translate-x-32 -translate-y-32"></div>
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-green-500/20 transform rotate-45 -translate-x-24 translate-y-24"></div>
