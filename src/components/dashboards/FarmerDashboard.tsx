@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import DashboardLayout from "../layout/DashboardLayout";
 import { getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
 import { getUserProfile } from "@/services/usersAPI";
-import { getFarms, getAllFarms, createFarm, createInsuranceRequest, getFarmById, getWeatherForecast, getHistoricalWeather, getVegetationStats, uploadShapefile } from "@/services/farmsApi";
+import { getFarms, getAllFarms, createFarm, createInsuranceRequest, getFarmById, getWeatherForecast, getHistoricalWeather, getVegetationStats } from "@/services/farmsApi";
 import { getClaims, createClaim } from "@/services/claimsApi";
 import { getPolicies } from "@/services/policiesApi";
 import { useToast } from "@/hooks/use-toast";
@@ -77,19 +77,8 @@ export default function FarmerDashboard() {
   // State for Create Farm Page
   const [isCreating, setIsCreating] = useState(false);
   const [newFieldData, setNewFieldData] = useState({
-    name: "",
-    cropType: "",
-    latitude: "",
-    longitude: "",
-    boundaryCoordinates: ""
+    cropType: ""
   });
-  const [boundaryError, setBoundaryError] = useState<string | null>(null);
-  const [boundaryStats, setBoundaryStats] = useState<{ rings: number; points: number } | null>(null);
-  
-  // State for Shapefile Upload
-  const [shapefile, setShapefile] = useState<File | null>(null);
-  const [isUploadingShapefile, setIsUploadingShapefile] = useState(false);
-  const [uploadMethod, setUploadMethod] = useState<"manual" | "shapefile">("manual");
   
   // State for File Claim Page
   const [policies, setPolicies] = useState<any[]>([]);
@@ -753,16 +742,6 @@ export default function FarmerDashboard() {
   const handleCreateField = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const trimmedName = newFieldData.name.trim();
-    if (!trimmedName) {
-      toast({
-        title: 'Validation Error',
-        description: 'Farm name is required',
-        variant: 'destructive'
-      });
-      return;
-    }
-
     if (!newFieldData.cropType) {
       toast({
         title: 'Validation Error',
@@ -772,71 +751,31 @@ export default function FarmerDashboard() {
       return;
     }
 
-    if (!newFieldData.latitude || !newFieldData.longitude) {
-      toast({
-        title: 'Validation Error',
-        description: 'Latitude and longitude are required',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    const lat = parseFloat(newFieldData.latitude);
-    const lng = parseFloat(newFieldData.longitude);
-
-    if (isNaN(lat) || isNaN(lng)) {
-      toast({
-        title: 'Validation Error',
-        description: 'Latitude and longitude must be numeric values',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    if (lat < -90 || lat > 90) {
-      toast({
-        title: 'Validation Error',
-        description: 'Latitude must be between -90 and 90 degrees',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    if (lng < -180 || lng > 180) {
-      toast({
-        title: 'Validation Error',
-        description: 'Longitude must be between -180 and 180 degrees',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    let boundaryCoordinates: number[][][];
-    try {
-      boundaryCoordinates = normalizeBoundaryCoordinates(newFieldData.boundaryCoordinates);
-      setBoundaryError(null);
-    } catch (err: any) {
-      const message = err.message || 'Boundary coordinates are invalid';
-      setBoundaryError(message);
-      toast({
-        title: 'Invalid Boundary',
-        description: message,
-        variant: 'destructive'
-      });
-      return;
-    }
+    // Use default values for required fields
+    const defaultLat = -1.9441; // Default Rwanda coordinates
+    const defaultLng = 30.0619;
+    const defaultName = `Farm-${Date.now()}`; // Auto-generate farm name
+    const defaultBoundary = [
+      [
+        [defaultLng, defaultLat],
+        [defaultLng + 0.001, defaultLat],
+        [defaultLng + 0.001, defaultLat + 0.001],
+        [defaultLng, defaultLat + 0.001],
+        [defaultLng, defaultLat]
+      ]
+    ];
 
     setIsCreating(true);
     try {
       const farmData: any = {
-        name: trimmedName,
+        name: defaultName,
         location: {
           type: 'Point',
-          coordinates: [lng, lat] // [longitude, latitude]
+          coordinates: [defaultLng, defaultLat] // [longitude, latitude]
         },
         boundary: {
           type: 'Polygon',
-          coordinates: boundaryCoordinates
+          coordinates: defaultBoundary
         },
         cropType: newFieldData.cropType.trim().toUpperCase()
       };
@@ -853,14 +792,8 @@ export default function FarmerDashboard() {
       });
 
       setNewFieldData({
-        name: "",
-        cropType: "",
-        latitude: "",
-        longitude: "",
-        boundaryCoordinates: ""
+        cropType: ""
       });
-      setBoundaryStats(null);
-      setBoundaryError(null);
       await loadFarms();
     } catch (err: any) {
       console.error('Failed to create farm:', err);
@@ -871,74 +804,6 @@ export default function FarmerDashboard() {
       });
     } finally {
       setIsCreating(false);
-    }
-  };
-
-  const handleShapefileUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!shapefile) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please select a shapefile to upload',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    // Validate file type - shapefiles typically come as .zip containing .shp, .shx, .dbf, etc.
-    const validExtensions = ['.zip', '.shp'];
-    const fileName = shapefile.name.toLowerCase();
-    const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
-    
-    if (!hasValidExtension) {
-      toast({
-        title: 'Invalid File Type',
-        description: 'Please upload a shapefile (.zip or .shp format)',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    setIsUploadingShapefile(true);
-    try {
-      console.log('📤 Uploading shapefile:', shapefile.name);
-      
-      const response = await uploadShapefile(shapefile);
-      console.log('✅ Shapefile upload response:', response);
-      
-      // The API returns the created farm data
-      const farmResponse = response.data || response;
-      upsertCreatedFarm(farmResponse);
-      
-      toast({
-        title: 'Success',
-        description: 'Farm created successfully from shapefile!',
-      });
-
-      // Reset form
-      setShapefile(null);
-      setUploadMethod("manual");
-      await loadFarms();
-      
-      // Navigate to my-fields page
-        setActivePage("my-fields");
-    } catch (err: any) {
-      console.error('Failed to upload shapefile:', err);
-      toast({
-        title: 'Error uploading shapefile',
-        description: err.message || 'Failed to upload shapefile',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsUploadingShapefile(false);
-    }
-  };
-
-  const handleShapefileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setShapefile(file);
     }
   };
 
@@ -1300,278 +1165,55 @@ export default function FarmerDashboard() {
           <CardTitle className="text-gray-900">Farm Information</CardTitle>
           </CardHeader>
           <CardContent>
-          {/* Upload Method Selection */}
-          <div className="mb-6 pb-4 border-b border-gray-200">
-            <Label className="text-gray-900 mb-3 block">Upload Method</Label>
-            <div className="flex gap-4">
+          <form onSubmit={handleCreateField} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="cropType" className="text-gray-900">Crop Type *</Label>
+            <Input
+              id="cropType"
+                value={newFieldData.cropType}
+              onChange={(e) => setNewFieldData({ ...newFieldData, cropType: e.target.value })}
+              placeholder="e.g., MAIZE, RICE, BEANS"
+                required
+              className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
+            />
+            <p className="text-xs text-gray-500">
+              Enter crop type (will be converted to uppercase).
+            </p>
+            </div>
+
+          <div className="flex gap-3 pt-2">
               <Button
                 type="button"
-                variant={uploadMethod === "manual" ? "default" : "outline"}
+                variant="outline"
                 onClick={() => {
-                  setUploadMethod("manual");
-                  setShapefile(null);
+                  setActivePage("my-fields");
+                  setNewFieldData({
+                    cropType: ""
+                  });
                 }}
-                className={uploadMethod === "manual" 
-                  ? "bg-green-600 hover:bg-green-700 text-white" 
-                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                }
+              className="flex-1 bg-gray-50 hover:bg-gray-100 border border-gray-300 text-gray-900"
               >
-                Manual Entry
+                Cancel
               </Button>
               <Button
-                type="button"
-                variant={uploadMethod === "shapefile" ? "default" : "outline"}
-                onClick={() => {
-                  setUploadMethod("shapefile");
-                  setNewFieldData({
-                    name: "",
-                    cropType: "",
-                    latitude: "",
-                    longitude: "",
-                    boundaryCoordinates: ""
-                  });
-                  setBoundaryError(null);
-                  setBoundaryStats(null);
-                }}
-                className={uploadMethod === "shapefile" 
-                  ? "bg-green-600 hover:bg-green-700 text-white" 
-                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                }
+                type="submit"
+                disabled={isCreating}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
               >
-                Upload Shapefile
+                {isCreating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Create Farm
+                  </>
+                )}
               </Button>
             </div>
-          </div>
-
-          {uploadMethod === "shapefile" ? (
-            <form onSubmit={handleShapefileUpload} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="shapefile" className="text-gray-900">Shapefile *</Label>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <label
-                      htmlFor="shapefile"
-                      className="flex items-center gap-2 px-4 py-2 border-2 border-dashed rounded-lg cursor-pointer transition-colors border-green-300 bg-green-50 hover:bg-green-100 hover:border-green-400"
-                    >
-                      <FileText className="h-5 w-5 text-green-600" />
-                      <span className="text-sm font-medium text-green-700">
-                        {shapefile ? 'Change File' : 'Select Shapefile'}
-                      </span>
-                    </label>
-                    <input
-                      id="shapefile"
-                      type="file"
-                      accept=".zip,.shp"
-                      onChange={handleShapefileSelect}
-                      className="hidden"
-                      required
-                    />
-                    {shapefile && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
-                        <FileText className="h-4 w-4" />
-                        <span className="max-w-xs truncate">{shapefile.name}</span>
-                        <span className="text-xs text-gray-500">
-                          ({(shapefile.size / 1024 / 1024).toFixed(2)} MB)
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setShapefile(null)}
-                          className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500">
-                  Upload a shapefile (.zip or .shp format). The shapefile should contain the farm boundary and location data.
-                </p>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setActivePage("my-fields");
-                    setShapefile(null);
-                    setUploadMethod("manual");
-                  }}
-                  className="flex-1 bg-gray-50 hover:bg-gray-100 border border-gray-300 text-gray-900"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isUploadingShapefile || !shapefile}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                >
-                  {isUploadingShapefile ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Upload & Create Farm
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          ) : (
-            <form onSubmit={handleCreateField} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="fieldName" className="text-gray-900">Farm Name *</Label>
-                <Input
-                  id="fieldName"
-                  value={newFieldData.name}
-                  onChange={(e) => setNewFieldData({ ...newFieldData, name: e.target.value })}
-                placeholder="e.g., Main Farm"
-                  required
-                className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
-                />
-              <p className="text-xs text-gray-500">
-                Use the same farm name that appears on your insurance paperwork.
-              </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cropType" className="text-gray-900">Crop Type *</Label>
-              <Input
-                id="cropType"
-                  value={newFieldData.cropType}
-                onChange={(e) => setNewFieldData({ ...newFieldData, cropType: e.target.value })}
-                placeholder="e.g., MAIZE, RICE, BEANS"
-                  required
-                className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
-              />
-              <p className="text-xs text-gray-500">
-                Enter crop type (will be converted to uppercase).
-              </p>
-              </div>
-
-            <div className="space-y-3">
-              <div className="border-b border-gray-200 pb-3">
-                <h3 className="text-gray-900 font-semibold text-base mb-1">Location (GeoJSON Point) *</h3>
-                <p className="text-xs text-gray-500">
-                  Enter the coordinates for the farm location.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="latitude" className="text-sm text-gray-700">Latitude *</Label>
-                  <Input
-                    id="latitude"
-                    type="number"
-                    step="any"
-                    value={newFieldData.latitude}
-                    onChange={(e) => setNewFieldData({ ...newFieldData, latitude: e.target.value })}
-                    placeholder="-1.9441"
-                    required
-                    className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
-                  />
-                  <p className="text-xs text-gray-500">
-                    Decimal degrees between -90 and 90.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="longitude" className="text-sm text-gray-700">Longitude *</Label>
-                  <Input
-                    id="longitude"
-                    type="number"
-                    step="any"
-                    value={newFieldData.longitude}
-                    onChange={(e) => setNewFieldData({ ...newFieldData, longitude: e.target.value })}
-                    placeholder="30.0619"
-                    required
-                    className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
-                  />
-                  <p className="text-xs text-gray-500">
-                    Decimal degrees between -180 and 180.
-                  </p>
-                </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-              <Label htmlFor="boundaryCoordinates" className="text-gray-900">
-                Boundary (GeoJSON Polygon) *
-              </Label>
-              <Textarea
-                id="boundaryCoordinates"
-                value={newFieldData.boundaryCoordinates}
-                onChange={(e) => handleBoundaryInputChange(e.target.value)}
-                rows={8}
-                placeholder={`[
-  [
-    [30.0619, -1.9441],
-    [30.0625, -1.9441],
-    [30.0625, -1.9435],
-    [30.0619, -1.9435],
-    [30.0619, -1.9441]
-  ]
-]`}
-                className="bg-gray-50 border-gray-300 text-gray-900 font-mono text-xs"
-                required
-              />
-              {boundaryError && (
-                <p className="text-sm text-red-600">{boundaryError}</p>
-              )}
-              {boundaryStats && (
-                <p className="text-xs text-green-600">
-                  Detected {boundaryStats.rings} ring(s) • {boundaryStats.points} coordinate pairs
-                </p>
-              )}
-              <p className="text-xs text-gray-500">
-                Paste the coordinates array from your GIS tool or the entire GeoJSON Polygon.
-              </p>
-              </div>
-
-            <div className="flex gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setActivePage("my-fields");
-                    setNewFieldData({
-                      name: "",
-                      cropType: "",
-                      latitude: "",
-                      longitude: "",
-                    boundaryCoordinates: ""
-                    });
-                  setBoundaryError(null);
-                  setBoundaryStats(null);
-                  }}
-                className="flex-1 bg-gray-50 hover:bg-gray-100 border border-gray-300 text-gray-900"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isCreating}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                >
-                  {isCreating ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Create Farm
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          )}
+          </form>
           </CardContent>
         </Card>
       </div>
