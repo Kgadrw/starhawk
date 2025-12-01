@@ -17,7 +17,6 @@ export function FooterSection() {
     ],
     support: [
       { name: "Help Center", href: "/help" },
-      { name: "Contact Us", href: "/contact" },
       { name: "Status", href: "/status" },
       { name: "Community", href: "/community" }
     ],

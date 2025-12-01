@@ -30,7 +30,6 @@ import { PolicyCreationEngine } from "./components/policies/PolicyCreationEngine
 import { ContinuousMonitoringSystem } from "./components/monitoring/ContinuousMonitoringSystem";
 import { EmailNotificationSystem } from "./components/notifications/EmailNotificationSystem";
 import Services from "./pages/Services";
-import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import UserDetailsPage from "./pages/UserDetailsPage";
 
@@ -48,7 +47,6 @@ const App = () => {
               <Route path="/" element={<Index />} />
               <Route path="/team" element={<Team />} />
               <Route path="/services" element={<Services />} />
-              <Route path="/contact" element={<Contact />} />
               
               {/* Role Selection and Authentication Routes */}
               <Route path="/role-selection" element={<RoleSelection />} />

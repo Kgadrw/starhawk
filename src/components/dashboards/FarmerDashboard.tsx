@@ -741,7 +741,7 @@ export default function FarmerDashboard() {
 
   const handleCreateField = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!newFieldData.cropType) {
       toast({
         title: 'Validation Error',
@@ -1165,55 +1165,55 @@ export default function FarmerDashboard() {
           <CardTitle className="text-gray-900">Farm Information</CardTitle>
           </CardHeader>
           <CardContent>
-          <form onSubmit={handleCreateField} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="cropType" className="text-gray-900">Crop Type *</Label>
-            <Input
-              id="cropType"
-                value={newFieldData.cropType}
-              onChange={(e) => setNewFieldData({ ...newFieldData, cropType: e.target.value })}
-              placeholder="e.g., MAIZE, RICE, BEANS"
-                required
-              className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
-            />
-            <p className="text-xs text-gray-500">
-              Enter crop type (will be converted to uppercase).
-            </p>
-            </div>
+            <form onSubmit={handleCreateField} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="cropType" className="text-gray-900">Crop Type *</Label>
+              <Input
+                id="cropType"
+                  value={newFieldData.cropType}
+                onChange={(e) => setNewFieldData({ ...newFieldData, cropType: e.target.value })}
+                placeholder="e.g., MAIZE, RICE, BEANS"
+                  required
+                className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
+              />
+              <p className="text-xs text-gray-500">
+                Enter crop type (will be converted to uppercase).
+              </p>
+              </div>
 
-          <div className="flex gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setActivePage("my-fields");
-                  setNewFieldData({
+            <div className="flex gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setActivePage("my-fields");
+                    setNewFieldData({
                     cropType: ""
                   });
-                }}
-              className="flex-1 bg-gray-50 hover:bg-gray-100 border border-gray-300 text-gray-900"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isCreating}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-              >
-                {isCreating ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Create Farm
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
+                  }}
+                className="flex-1 bg-gray-50 hover:bg-gray-100 border border-gray-300 text-gray-900"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isCreating}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {isCreating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Create Farm
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
           </CardContent>
         </Card>
       </div>

@@ -114,7 +114,12 @@ interface WeatherData {
   }>;
 }
 
-export default function RiskAssessmentSystem() {
+interface RiskAssessmentSystemProps {
+  assessments?: AssessmentSummary[];
+  onRefresh?: () => void;
+}
+
+export default function RiskAssessmentSystem({ assessments: propAssessments, onRefresh }: RiskAssessmentSystemProps = {}) {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
@@ -125,20 +130,27 @@ export default function RiskAssessmentSystem() {
   const [activeTab, setActiveTab] = useState("basic-info");
   
   // State for API data
-  const [assessments, setAssessments] = useState<AssessmentSummary[]>([]);
+  const [internalAssessments, setInternalAssessments] = useState<AssessmentSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [farms, setFarms] = useState<any[]>([]);
   const [loadingFarms, setLoadingFarms] = useState(false);
   const [farmers, setFarmers] = useState<Record<string, any>>({});
 
+  // Use prop assessments if provided, otherwise use internal state
+  const assessments = propAssessments || internalAssessments;
+
   // Get logged-in assessor ID
   const assessorId = getUserId() || "";
 
-  // Load assessments from API
+  // Load assessments from API only if not provided via props
   useEffect(() => {
+    if (!propAssessments) {
     loadAssessments();
-  }, []);
+    } else {
+      setLoading(false);
+    }
+  }, [propAssessments]);
 
   // Load farms when an assessment is selected
   useEffect(() => {
@@ -151,16 +163,50 @@ export default function RiskAssessmentSystem() {
     setLoading(true);
     setError(null);
     try {
+      console.log('🔍 RiskAssessmentSystem: Loading assessments');
+      console.log('📍 API Endpoint: GET /api/v1/assessments');
+      console.log('👤 Assessor ID:', assessorId);
+      
       const response: any = await assessmentsApiService.getAllAssessments();
-      const assessmentsData = response.data || response || [];
-      const assessmentsArray = Array.isArray(assessmentsData) ? assessmentsData : (assessmentsData.items || assessmentsData.results || []);
+      console.log('📥 RiskAssessmentSystem API raw response:', response);
+      
+      // Handle different response structures
+      let assessmentsData: any[] = [];
+      if (Array.isArray(response)) {
+        assessmentsData = response;
+      } else if (response && typeof response === 'object') {
+        // Try different possible data locations
+        assessmentsData = response.data || response.assessments || response.items || response.results || [];
+        // If still not an array, check for nested data
+        if (!Array.isArray(assessmentsData) && typeof assessmentsData === 'object') {
+          assessmentsData = assessmentsData.items || assessmentsData.results || [];
+        }
+      }
+      
+      // Ensure we have an array
+      if (!Array.isArray(assessmentsData)) {
+        console.warn('⚠️ Assessment data is not an array:', assessmentsData);
+        assessmentsData = [];
+      }
+      
+      console.log('📊 Extracted assessments data:', assessmentsData);
+      console.log('📊 Total assessments from API:', assessmentsData.length);
       
       // Filter assessments assigned to this assessor
-      const filteredAssessments = assessmentsArray.filter((assessment: any) => {
+      const filteredAssessments = assessmentsData.filter((assessment: any) => {
         if (!assessorId) return false;
         const assessmentAssessorId = assessment.assessorId || assessment.assessor?._id || assessment.assessor?.id;
         return assessmentAssessorId === assessorId || assessmentAssessorId === assessorId.toString();
       });
+      
+      console.log('📊 Assessments assigned to this assessor:', filteredAssessments.length);
+      
+      if (filteredAssessments.length === 0 && assessmentsData.length > 0) {
+        console.warn('⚠️ No assessments assigned to assessor:', assessorId);
+        console.warn('⚠️ Available assessor IDs in data:', 
+          assessmentsData.map(a => a.assessorId || a.assessor?._id || a.assessor?.id)
+        );
+      }
 
       // Map API response to AssessmentSummary interface
       const mappedAssessments: AssessmentSummary[] = await Promise.all(
@@ -224,9 +270,17 @@ export default function RiskAssessmentSystem() {
         })
       );
 
-      setAssessments(mappedAssessments);
+      console.log('✅ RiskAssessmentSystem: Mapped assessments:', mappedAssessments);
+      setInternalAssessments(mappedAssessments);
+      
+      if (mappedAssessments.length > 0) {
+        toast({
+          title: "Assessments Loaded",
+          description: `Successfully loaded ${mappedAssessments.length} assessment(s)`,
+        });
+      }
     } catch (err: any) {
-      console.error('Failed to load assessments:', err);
+      console.error('❌ RiskAssessmentSystem: Failed to load assessments:', err);
       setError(err.message || 'Failed to load assessments');
       toast({
         title: 'Error loading assessments',

@@ -219,30 +219,67 @@ export default function AssessorDashboard() {
     setLoading(true);
     setError(null);
     try {
+      console.log('🔍 Loading assessments for assessor:', assessorId);
+      console.log('📍 API Endpoint: GET /api/v1/assessments');
+      console.log('🔑 Auth Token:', localStorage.getItem('token') ? 'Present ✓' : 'Missing ✗');
+      
       const response: any = await assessmentsApiService.getAllAssessments();
+      console.log('📥 Assessments API raw response:', response);
+      
       // Map API response to AssessmentSummary format
       // Adjust mapping based on actual API response structure
       let assessmentsData: any[] = [];
       if (Array.isArray(response)) {
         assessmentsData = response;
       } else if (response && typeof response === 'object') {
-        const responseObj = response as { data?: any[]; assessments?: any[] };
+        const responseObj = response as { data?: any[]; assessments?: any[]; success?: boolean };
         assessmentsData = responseObj.data || responseObj.assessments || [];
       }
       
-      const mappedAssessments: AssessmentSummary[] = assessmentsData.map((item: any) => ({
-        id: item._id || item.id || '',
-        farmerId: item.farmId || item.farmerId || '',
-        farmerName: item.farmerName || item.farmer?.name || 'Unknown',
-        location: item.location || item.farm?.location || '',
-        type: item.type || 'Risk Assessment',
-        status: item.status || 'Pending',
-        date: item.createdAt ? new Date(item.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-      }));
+      console.log('📊 Extracted assessments data:', assessmentsData);
+      console.log('📊 Number of assessments:', assessmentsData.length);
       
+      if (assessmentsData.length === 0) {
+        console.warn('⚠️ No assessments found. Possible reasons:');
+        console.warn('   1. No assessments created yet');
+        console.warn('   2. No assessments assigned to this assessor');
+        console.warn('   3. Assessor ID mismatch');
+        console.warn('   Current Assessor ID:', assessorId);
+      }
+      
+      const mappedAssessments: AssessmentSummary[] = assessmentsData.map((item: any) => {
+        // Extract farmerId - handle case where farmId/farmerId might be an object
+        let farmerId = '';
+        if (item.farmId) {
+          farmerId = typeof item.farmId === 'object' ? (item.farmId._id || item.farmId.id || '') : item.farmId;
+        } else if (item.farmerId) {
+          farmerId = typeof item.farmerId === 'object' ? (item.farmerId._id || item.farmerId.id || '') : item.farmerId;
+        } else if (item.farm) {
+          farmerId = item.farm._id || item.farm.id || '';
+        }
+        
+        return {
+          id: item._id || item.id || '',
+          farmerId,
+          farmerName: item.farmerName || item.farmer?.name || 'Unknown',
+          location: item.location || item.farm?.location || '',
+          type: item.type || 'Risk Assessment',
+          status: item.status || 'Pending',
+          date: item.createdAt ? new Date(item.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+        };
+      });
+      
+      console.log('✅ Mapped assessments:', mappedAssessments);
       setAssessments(mappedAssessments);
+      
+      if (mappedAssessments.length > 0) {
+        toast({
+          title: "Assessments Loaded",
+          description: `Successfully loaded ${mappedAssessments.length} assessment(s)`,
+        });
+      }
     } catch (err: any) {
-      console.error('Failed to load assessments:', err);
+      console.error('❌ Failed to load assessments:', err);
       // Handle 401 errors more gracefully - check if it's an auth error
       if (err.message && err.message.includes('Authentication required')) {
         setError('Authentication required. Please log in to view assessments.');
@@ -279,10 +316,17 @@ export default function AssessorDashboard() {
         farmsData = response.data || response.farms || response.items || [];
       }
       
+      // Ensure farmsData is always an array
+      if (!Array.isArray(farmsData)) {
+        console.warn('farmsData is not an array, defaulting to empty array:', farmsData);
+        farmsData = [];
+      }
+      
       setFarms(farmsData);
     } catch (err: any) {
       console.error('Failed to load farms:', err);
       setFarmsError(err.message || 'Failed to load farms');
+      setFarms([]); // Set empty array on error
       toast({
         title: "Error",
         description: err.message || 'Failed to load farms',
@@ -302,6 +346,12 @@ export default function AssessorDashboard() {
 
   // Convert farms to fields format for display
   const getFieldsForAssessment = (assessment: AssessmentSummary): Field[] => {
+    // Defensive check: ensure farms is an array
+    if (!Array.isArray(farms)) {
+      console.warn('farms is not an array:', farms);
+      return [];
+    }
+    
     // Filter farms by farmer name or farmerId
     const relevantFarms = farms.filter(farm => 
       farm.farmerName === assessment.farmerName || 
@@ -323,6 +373,21 @@ export default function AssessorDashboard() {
   };
 
   const getFieldDetails = (field: Field): FieldDetail => {
+    // Defensive check: ensure farms is an array
+    if (!Array.isArray(farms)) {
+      console.warn('farms is not an array in getFieldDetails:', farms);
+      return {
+        fieldId: field.id,
+        fieldName: field.fieldName,
+        farmer: field.farmerName,
+        cropType: field.crop,
+        area: field.area,
+        season: field.season,
+        sowingDate: field.sowingDate,
+        location: assessments.find(a => a.farmerName === field.farmerName)?.location || ""
+      };
+    }
+    
     // Find the farm data for this field
     const farmData = farms.find(farm => (farm._id || farm.id) === field.id);
     
@@ -1204,6 +1269,14 @@ export default function AssessorDashboard() {
     const matchesType = typeFilter === "all" || assessment.type === typeFilter;
     
     return matchesSearch && matchesStatus && matchesType;
+  });
+  
+  console.log('🔍 Filter results:', {
+    totalAssessments: assessments.length,
+    filteredAssessments: filteredAssessments.length,
+    searchQuery,
+    statusFilter,
+    typeFilter
   });
 
   // Clear all filters
@@ -2150,7 +2223,7 @@ export default function AssessorDashboard() {
 
     // Handle other pages
     switch (activePage) {
-      case "risk-assessments": return <RiskAssessmentSystem />;
+      case "risk-assessments": return <RiskAssessmentSystem assessments={assessments} onRefresh={loadAssessments} />;
       case "loss-assessments": return <LossAssessmentSystem />;
       case "notifications": return <AssessorNotifications />;
       case "profile-settings": return <AssessorProfileSettings />;

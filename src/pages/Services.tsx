@@ -1,5 +1,6 @@
 import { HomeNavbar } from "@/components/layout/HomeNavbar";
-import { FeaturesSection } from "@/components/home/FeaturesSection";
+import { DashboardSection } from "@/components/home/DashboardSection";
+import { FooterSection } from "@/components/home/FooterSection";
 import CustomScrollbar from "@/components/ui/CustomScrollbar";
 
 export default function Services() {
@@ -7,7 +8,10 @@ export default function Services() {
     <CustomScrollbar>
       <div className="bg-white relative min-h-screen">
         <HomeNavbar />
-        <FeaturesSection />
+        <div className="relative z-10">
+          <DashboardSection />
+          <FooterSection />
+        </div>
       </div>
     </CustomScrollbar>
   );

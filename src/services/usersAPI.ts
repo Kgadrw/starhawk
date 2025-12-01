@@ -252,6 +252,11 @@ class UsersApiService {
       body: JSON.stringify(userData),
     });
   }
+
+  // Get All Assessors
+  async getAssessors() {
+    return this.request<any>('/assessors');
+  }
 }
 
 // Create and export a singleton instance
@@ -305,6 +310,8 @@ export const createUser = (userData: {
   };
   [key: string]: any;
 }) => usersApiService.createUser(userData);
+
+export const getAssessors = () => usersApiService.getAssessors();
 
 export default usersApiService;
 

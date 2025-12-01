@@ -9,7 +9,7 @@ import CreatePolicyPage from "../insurer/CreatePolicyPage";
 import RiskReviewManagement from "../insurer/RiskReviewManagement";
 import RiskAssessmentSystem from "../assessor/RiskAssessmentSystem";
 import { getUserId, getPhoneNumber, getEmail, isAuthenticated, getToken } from "@/services/authAPI";
-import { getUserProfile } from "@/services/usersAPI";
+import { getUserProfile, getAssessors } from "@/services/usersAPI";
 import { getPolicies } from "@/services/policiesApi";
 import { getClaims } from "@/services/claimsApi";
 import { getInsuranceRequests } from "@/services/farmsApi";
@@ -180,65 +180,46 @@ export default function InsurerDashboard() {
     }
   };
 
-  // Load assessors from existing assessments
+  // Load assessors from API
   const loadAssessors = async () => {
     setAssessorsLoading(true);
     try {
-      const assessorsMap = new Map<string, any>();
+      const response: any = await getAssessors();
+      console.log('Assessors API response:', response);
       
-      // Get assessors from existing assessments
-      try {
-        const assessmentsResponse: any = await assessmentsApiService.getAllAssessments();
-        let assessmentsData: any[] = [];
-        
-        if (assessmentsResponse?.success && Array.isArray(assessmentsResponse.data)) {
-          assessmentsData = assessmentsResponse.data;
-        } else if (assessmentsResponse?.success && assessmentsResponse?.data?.items) {
-          assessmentsData = assessmentsResponse.data.items;
-        } else if (Array.isArray(assessmentsResponse)) {
-          assessmentsData = assessmentsResponse;
-        } else if (Array.isArray(assessmentsResponse?.data)) {
-          assessmentsData = assessmentsResponse.data;
-        }
-        
-        // Extract assessors from assessments
-        assessmentsData.forEach((assessment: any) => {
-          const assessor = assessment.assessorId || assessment.assessor;
-          if (assessor) {
-            // Handle both object and string ID formats
-            let assessorId: string;
-            let assessorData: any;
-            
-            if (typeof assessor === 'string') {
-              assessorId = assessor;
-              assessorData = { _id: assessor, id: assessor };
-            } else {
-              assessorId = assessor._id || assessor.id;
-              assessorData = assessor;
-            }
-            
-            if (assessorId && !assessorsMap.has(assessorId)) {
-              assessorsMap.set(assessorId, {
-                _id: assessorId,
-                id: assessorId,
-                firstName: assessorData.firstName,
-                lastName: assessorData.lastName,
-                name: assessorData.name,
-                email: assessorData.email,
-                phoneNumber: assessorData.phoneNumber
-              });
-            }
-          }
-        });
-      } catch (err) {
-        console.warn('Failed to load assessors from assessments:', err);
+      let assessorsList: any[] = [];
+      
+      // Handle different response formats
+      if (response?.success && Array.isArray(response.data)) {
+        assessorsList = response.data;
+      } else if (response?.success && response?.data?.items) {
+        assessorsList = response.data.items;
+      } else if (Array.isArray(response)) {
+        assessorsList = response;
+      } else if (Array.isArray(response?.data)) {
+        assessorsList = response.data;
       }
       
-      const assessorsList = Array.from(assessorsMap.values());
-      setAssessors(assessorsList);
-      console.log('Loaded assessors from assessments:', assessorsList);
+      // Format assessors data
+      const formattedAssessors = assessorsList.map((assessor: any) => ({
+        _id: assessor._id || assessor.id,
+        id: assessor._id || assessor.id,
+        firstName: assessor.firstName,
+        lastName: assessor.lastName,
+        name: assessor.name || `${assessor.firstName || ''} ${assessor.lastName || ''}`.trim(),
+        email: assessor.email,
+        phoneNumber: assessor.phoneNumber
+      }));
+      
+      setAssessors(formattedAssessors);
+      console.log('Loaded assessors:', formattedAssessors);
     } catch (err: any) {
       console.error('Failed to load assessors:', err);
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to load assessors',
+        variant: 'destructive'
+      });
     } finally {
       setAssessorsLoading(false);
     }
@@ -276,34 +257,29 @@ export default function InsurerDashboard() {
       } else if (insuranceRequest.farm) {
         farmId = insuranceRequest.farm._id || insuranceRequest.farm.id;
       }
-      
-      const insuranceRequestId = insuranceRequest._id || insuranceRequest.id;
 
       console.log('Creating assessment with:', {
         insuranceRequest,
         farmId,
-        insuranceRequestId,
         assessorId
       });
 
-      if (!farmId || !insuranceRequestId) {
+      if (!farmId) {
         console.error('Missing required data:', {
           farmId,
-          insuranceRequestId,
           insuranceRequest: insuranceRequest
         });
-        throw new Error('Missing farm ID or insurance request ID');
+        throw new Error('Missing farm ID');
       }
 
       if (!assessorId) {
         throw new Error('Please select an assessor');
       }
 
+      // Only send fields that the API accepts
       const assessmentData = {
         farmId,
-        insuranceRequestId,
-        assessorId,
-        notes: assessmentNotes || undefined
+        assessorId
       };
 
       console.log('Sending assessment creation request:', JSON.stringify(assessmentData, null, 2));

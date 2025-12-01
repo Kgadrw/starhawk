@@ -1,8 +1,6 @@
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Minus, HelpCircle, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { HOMEPAGE_COLORS, HOMEPAGE_TYPOGRAPHY, HOMEPAGE_SPACING, HOMEPAGE_ALIGNMENT } from "@/constants/homepage";
 
 export function FAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
@@ -51,50 +49,46 @@ export function FAQSection() {
   ];
 
   return (
-    <section className="relative bg-white py-20 sm:py-24">
+    <section className="relative bg-white py-20 sm:py-24 mb-12 sm:mb-16 md:mb-20">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* FAQ Title */}
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
+          viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          className="mb-12"
         >
-          <h2 className="text-xl text-green-600 mb-4">
-            Frequently Asked Questions
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900">
+            FAQ
           </h2>
-          <p className="text-base text-gray-600 max-w-2xl mx-auto">
-            Find answers to common questions about our agricultural insurance platform
-          </p>
         </motion.div>
 
-        <div className="space-y-4">
+        {/* FAQ List */}
+        <div className="space-y-0">
           {faqs.map((faq, index) => (
             <motion.div
               key={index}
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: index * 0.05 }}
             >
-              <Card 
-                className="bg-white border border-gray-200 hover:border-green-300 transition-all duration-300 rounded-xl overflow-hidden"
-              >
               <button
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
-                className="w-full text-left p-6 flex items-center justify-between group"
+                className="w-full text-left py-4 flex items-center justify-between group hover:opacity-80 transition-opacity"
               >
-                <span className="text-base text-gray-800 group-hover:text-green-600 transition-colors pr-4">
+                <span className="text-base sm:text-lg text-gray-900 pr-4">
                   {faq.question}
                 </span>
-                <div className="w-10 h-10 rounded-lg bg-green-50 border border-green-200 flex items-center justify-center flex-shrink-0 group-hover:bg-green-100 transition-all duration-300">
-                  {openIndex === index ? (
-                    <Minus className="h-5 w-5 text-green-600" />
-                  ) : (
-                    <Plus className="h-5 w-5 text-green-600" />
-                  )}
-                </div>
+                <ChevronDown 
+                  className={`h-5 w-5 text-gray-900 flex-shrink-0 transition-transform duration-300 ${
+                    openIndex === index ? 'rotate-180' : ''
+                  }`}
+                />
               </button>
+              <div className="border-b border-gray-200"></div>
+              
               <AnimatePresence>
                 {openIndex === index && (
                   <motion.div
@@ -102,29 +96,18 @@ export function FAQSection() {
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.3 }}
+                    className="overflow-hidden"
                   >
-                    <CardContent className="px-6 pb-6 pt-0">
-                      <p className="text-gray-700 leading-relaxed">
+                    <div className="pt-4 pb-6">
+                      <p className="text-base text-gray-600 leading-relaxed">
                         {faq.answer}
                       </p>
-                    </CardContent>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
-            </Card>
             </motion.div>
           ))}
-        </div>
-
-        <div className="text-center mt-12">
-          <p className="text-gray-700 mb-4">Still have questions?</p>
-          <a 
-            href="/contact" 
-            className="inline-flex items-center text-green-600 hover:text-green-700 transition-colors"
-          >
-            Contact our support team
-            <ChevronDown className="h-4 w-4 ml-1 rotate-[-90deg]" />
-          </a>
         </div>
       </div>
     </section>

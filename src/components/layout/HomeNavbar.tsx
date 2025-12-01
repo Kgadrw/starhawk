@@ -22,12 +22,12 @@ export function HomeNavbar() {
     <nav className="bg-white/80 backdrop-blur-lg border-b border-gray-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center gap-2.5">
+          <Link to="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-600 to-emerald-600 flex items-center justify-center">
               <Satellite className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl text-gray-800 tracking-tight">
+              <h1 className="text-xl text-gray-800 tracking-tight font-bold">
                 STARHAWK
               </h1>
               <p className="text-green-600 text-xs">Agricultural Insurance</p>
@@ -71,18 +71,6 @@ export function HomeNavbar() {
                     }`}
                   >
                     Team
-                  </Link>
-                </NavigationMenuItem>
-                <NavigationMenuItem>
-                  <Link 
-                    to="/contact" 
-                    className={`px-3 py-2 text-sm font-medium transition-colors ${
-                      location.pathname === '/contact' 
-                        ? 'text-green-600 underline underline-offset-4' 
-                        : 'text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-lg'
-                    }`}
-                  >
-                    Contact
                   </Link>
                 </NavigationMenuItem>
               </NavigationMenuList>
@@ -144,17 +132,6 @@ export function HomeNavbar() {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Team
-              </Link>
-              <Link
-                to="/contact"
-                className={`block px-3 py-2 text-sm font-medium transition-colors ${
-                  location.pathname === '/contact' 
-                    ? 'text-green-600 underline underline-offset-4' 
-                    : 'text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-lg'
-                }`}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Contact
               </Link>
               <div className="px-3 pt-3 border-t border-gray-200">
                 <Button 
