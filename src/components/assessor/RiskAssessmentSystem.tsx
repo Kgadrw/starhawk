@@ -19,7 +19,6 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   MapPin,
   Search,
-  Filter,
   Plus,
   FileText,
   Shield,
@@ -39,7 +38,7 @@ import {
   CheckCircle,
   Star,
   Map,
-  RefreshCw
+  Eye
 } from "lucide-react";
 
 interface AssessmentSummary {
@@ -122,8 +121,6 @@ interface RiskAssessmentSystemProps {
 export default function RiskAssessmentSystem({ assessments: propAssessments, onRefresh }: RiskAssessmentSystemProps = {}) {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState("all");
   const [selectedAssessment, setSelectedAssessment] = useState<AssessmentSummary | null>(null);
   const [selectedField, setSelectedField] = useState<Field | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "fieldSelection" | "fieldDetail">("list");
@@ -208,67 +205,106 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
         );
       }
 
-      // Map API response to AssessmentSummary interface
-      const mappedAssessments: AssessmentSummary[] = await Promise.all(
-        filteredAssessments.map(async (assessment: any) => {
-          const farmId = assessment.farmId || assessment.farm?._id || assessment.farm?.id;
-          let farmerName = "Unknown Farmer";
-          let location = "Unknown Location";
+      // Helper function to get farmer name directly from assessment API response
+      const getFarmerName = (assessment: any): string => {
+        // Try all possible paths in the assessment response (API should populate farmer data)
+        const farmerName = 
+          assessment.farmerName || 
+          assessment.farmer?.name || 
+          assessment.farm?.farmerName ||
+          assessment.farm?.farmer?.name ||
+          assessment.farm?.farmerId?.name ||
+          (assessment.farmer?.firstName && assessment.farmer?.lastName 
+            ? `${assessment.farmer.firstName} ${assessment.farmer.lastName}`.trim()
+            : '') ||
+          (assessment.farm?.farmerId?.firstName && assessment.farm?.farmerId?.lastName
+            ? `${assessment.farm.farmerId.firstName} ${assessment.farm.farmerId.lastName}`.trim()
+            : '') ||
+          assessment.farmer?.firstName || 
+          assessment.farmer?.lastName ||
+          assessment.farm?.farmerId?.firstName ||
+          assessment.farm?.farmerId?.lastName ||
+          assessment.farm?.farmerId?.email ||
+          assessment.farm?.farmerId?.phoneNumber ||
+          '';
+        
+        return farmerName || 'Unknown Farmer';
+      };
 
-          // Try to get farmer info from assessment data
-          if (assessment.farm) {
-            farmerName = assessment.farm.farmerId?.firstName && assessment.farm.farmerId?.lastName
-              ? `${assessment.farm.farmerId.firstName} ${assessment.farm.farmerId.lastName}`
-              : assessment.farm.farmerId?.email || assessment.farm.farmerId?.phoneNumber || "Unknown Farmer";
-            
+      // Helper function to get location directly from assessment API response
+      const getLocation = (assessment: any): string => {
+        let location = '';
+        
+        // Check direct location field
+        if (assessment.location) {
+          if (typeof assessment.location === 'string') {
+            location = assessment.location;
+          } else if (assessment.location.coordinates && Array.isArray(assessment.location.coordinates)) {
+            // Format coordinates as "lat, lng"
+            location = `${assessment.location.coordinates[1]?.toFixed(4)}, ${assessment.location.coordinates[0]?.toFixed(4)}`;
+          } else if (assessment.location.address) {
+            location = assessment.location.address;
+          }
+        }
+        
+        // Check farm location (API should populate farm data)
+        if (!location && assessment.farm) {
             if (assessment.farm.location) {
               if (typeof assessment.farm.location === 'string') {
                 location = assessment.farm.location;
               } else if (assessment.farm.location.coordinates && Array.isArray(assessment.farm.location.coordinates)) {
+              // Format coordinates as "lat, lng" (coordinates are [lng, lat] in GeoJSON)
                 location = `${assessment.farm.location.coordinates[1]?.toFixed(4)}, ${assessment.farm.location.coordinates[0]?.toFixed(4)}`;
-              }
+            } else if (assessment.farm.location.address) {
+              location = assessment.farm.location.address;
             }
           }
+          if (!location && assessment.farm.address) {
+            location = assessment.farm.address;
+          }
+        }
+        
+        // Check farmId object location (if farmId is populated)
+        if (!location && assessment.farmId && typeof assessment.farmId === 'object') {
+          if (assessment.farmId.location) {
+            if (typeof assessment.farmId.location === 'string') {
+              location = assessment.farmId.location;
+            } else if (assessment.farmId.location.coordinates && Array.isArray(assessment.farmId.location.coordinates)) {
+              location = `${assessment.farmId.location.coordinates[1]?.toFixed(4)}, ${assessment.farmId.location.coordinates[0]?.toFixed(4)}`;
+            } else if (assessment.farmId.location.address) {
+              location = assessment.farmId.location.address;
+            }
+          }
+          if (!location && assessment.farmId.address) {
+            location = assessment.farmId.address;
+          }
+        }
+        
+        return location || 'Location not available';
+      };
 
-          // Try to get farmer info from API if not in assessment
-          if (farmerName === "Unknown Farmer" && farmId) {
-            try {
-              const farmData = await getFarmById(farmId);
-              const farm = farmData.data || farmData;
-              if (farm?.farmerId) {
-                const farmerInfo = typeof farm.farmerId === 'string' 
-                  ? await getUserById(farm.farmerId).catch(() => null)
-                  : farm.farmerId;
-                if (farmerInfo) {
-                  const farmer = farmerInfo.data || farmerInfo;
-                  farmerName = farmer.firstName && farmer.lastName
-                    ? `${farmer.firstName} ${farmer.lastName}`
-                    : farmer.email || farmer.phoneNumber || "Unknown Farmer";
-                }
-              }
-              if (farm?.location && !location) {
-                if (typeof farm.location === 'string') {
-                  location = farm.location;
-                } else if (farm.location.coordinates && Array.isArray(farm.location.coordinates)) {
-                  location = `${farm.location.coordinates[1]?.toFixed(4)}, ${farm.location.coordinates[0]?.toFixed(4)}`;
-                }
-              }
-            } catch (err) {
-              console.error('Failed to load farm data:', err);
-            }
-          }
+      // Map API response to AssessmentSummary interface - extract directly from response
+      const mappedAssessments: AssessmentSummary[] = filteredAssessments.map((assessment: any) => {
+        // Extract farmerId
+        const farmerId = 
+          assessment.farm?.farmerId?._id || 
+          assessment.farm?.farmerId?.id ||
+          (typeof assessment.farm?.farmerId === 'string' ? assessment.farm?.farmerId : '') ||
+          assessment.farmerId?._id ||
+          assessment.farmerId?.id ||
+          (typeof assessment.farmerId === 'string' ? assessment.farmerId : '') ||
+          '';
 
           return {
             id: assessment._id || assessment.id || `RISK-${assessment.assessmentId || 'UNKNOWN'}`,
-            farmerId: assessment.farm?.farmerId?._id || assessment.farm?.farmerId || assessment.farmId || "",
-            farmerName,
-            location,
+          farmerId,
+          farmerName: getFarmerName(assessment),
+          location: getLocation(assessment),
             type: assessment.type || "Risk Assessment",
             status: assessment.status || "Pending",
             date: assessment.createdAt || assessment.assessmentDate || assessment.date || new Date().toISOString().split('T')[0]
           };
-        })
-      );
+      });
 
       console.log('✅ RiskAssessmentSystem: Mapped assessments:', mappedAssessments);
       setInternalAssessments(mappedAssessments);
@@ -353,11 +389,6 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
     });
   };
 
-  // Clear all filters
-  const clearFilters = () => {
-    setStatusFilter("all");
-    setSearchQuery("");
-  };
 
   const handleAssessmentClick = (assessment: AssessmentSummary) => {
     setSelectedAssessment(assessment);
@@ -450,34 +481,41 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-4 px-6 font-medium text-gray-700">Field ID</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-700">Farmer</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-700">Crop</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-700">Area (ha)</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-700">Season</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-700">Status</th>
+                    <tr className="bg-gray-50 border-b-2 border-gray-200">
+                      <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Farmer</th>
+                      <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Crop</th>
+                      <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Area (ha)</th>
+                      <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Season</th>
+                      <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Status</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="bg-white divide-y divide-gray-200">
                     {fields.map((field, index) => (
                       <tr
                         key={field.id}
                         onClick={() => handleFieldClick(field)}
-                        className={`border-b border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer ${
-                          index % 2 === 0 ? "bg-gray-50" : ""
-                        }`}
+                        className="hover:bg-gray-50/50 transition-all duration-150 cursor-pointer border-b border-gray-100"
                       >
-                        <td className="py-4 px-6 text-gray-700">{field.id}</td>
-                        <td className="py-4 px-6 text-gray-700">{field.farmerName}</td>
-                        <td className="py-4 px-6 text-gray-700">{field.crop}</td>
-                        <td className="py-4 px-6 text-gray-700">{field.area} ha</td>
-                        <td className="py-4 px-6 text-gray-700">{field.season}</td>
-                        <td className="py-4 px-6">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        <td className="py-4 px-6 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{field.farmerName}</div>
+                        </td>
+                        <td className="py-4 px-6 whitespace-nowrap">
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Leaf className="h-4 w-4 text-teal-500 flex-shrink-0" />
+                            <span>{field.crop}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6 whitespace-nowrap">
+                          <div className="text-sm text-gray-600">{Math.round(field.area)} ha</div>
+                        </td>
+                        <td className="py-4 px-6 whitespace-nowrap">
+                          <div className="text-sm text-gray-600">{field.season}</div>
+                        </td>
+                        <td className="py-4 px-6 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
                             field.status === "Processed" || field.status === "Active"
-                              ? "bg-green-100 text-green-700 border border-green-200"
-                              : "bg-yellow-100 text-yellow-700 border border-yellow-200"
+                              ? "bg-green-500 text-white border-green-600"
+                              : "bg-yellow-500 text-white border-yellow-600"
                           }`}>
                             {field.status}
                           </span>
@@ -1374,24 +1412,40 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
     );
   };
 
+  // Get status color based on status value
+  const getStatusColor = (status: string) => {
+    const statusLower = status.toLowerCase();
+    switch (statusLower) {
+      case "approved":
+      case "completed":
+        return "bg-green-500 text-white border-green-600";
+      case "pending":
+        return "bg-yellow-500 text-white border-yellow-600";
+      case "submitted":
+        return "bg-blue-500 text-white border-blue-600";
+      case "under review":
+      case "processing":
+        return "bg-orange-500 text-white border-orange-600";
+      case "rejected":
+        return "bg-red-500 text-white border-red-600";
+      default:
+        return "bg-gray-500 text-white border-gray-600";
+    }
+  };
+
   const renderDashboard = () => {
-    // Filter assessments
+    // Filter assessments by search query
     const filteredAssessments = assessments.filter(assessment => {
-      const matchesSearch = searchQuery === "" ||
+      return searchQuery === "" ||
         assessment.farmerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         assessment.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         assessment.location.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesStatus = statusFilter === "all" || assessment.status.toLowerCase() === statusFilter.toLowerCase();
-      
-      return matchesSearch && matchesStatus;
     });
 
     return (
       <div className="space-y-6">
         {/* Action Bar */}
-        <div className="flex items-center justify-end gap-4">
-          <div className="flex gap-2">
+        <div className="flex items-center justify-end">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
               <Input
@@ -1400,61 +1454,6 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={`${dashboardTheme.input} pl-10 w-64 border-gray-300`}
               />
-            </div>
-            <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className={`${dashboardTheme.card} text-gray-900 hover:bg-gray-100 border border-gray-300`}>
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filter
-                </Button>
-              </DialogTrigger>
-              <DialogContent className={`${dashboardTheme.card} border-gray-800`}>
-                <DialogHeader>
-                  <DialogTitle className="text-gray-900">Filter Risk Assessments</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 mt-4">
-                  <div>
-                    <Label htmlFor="status-filter" className="text-gray-700">Status</Label>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger id="status-filter" className={`${dashboardTheme.select} mt-1`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className={dashboardTheme.card}>
-                        <SelectItem value="all">All Statuses</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="submitted">Submitted</SelectItem>
-                        <SelectItem value="under review">Under Review</SelectItem>
-                        <SelectItem value="approved">Approved</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex justify-between pt-4">
-                    <Button 
-                      variant="outline" 
-                      onClick={clearFilters}
-                      className="border-gray-300 text-gray-900 hover:bg-gray-100"
-                    >
-                      Clear Filters
-                    </Button>
-                    <Button 
-                      onClick={() => setFilterDialogOpen(false)}
-                      className="bg-teal-500 hover:bg-teal-600 text-white"
-                    >
-                      Apply Filters
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-            <Button 
-              onClick={loadAssessments}
-              variant="outline"
-              className="border-gray-300 text-gray-700 hover:bg-gray-100"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
           </div>
         </div>
 
@@ -1505,44 +1504,44 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-4 px-6 font-medium text-gray-700">Assessment ID</th>
-                        <th className="text-left py-4 px-6 font-medium text-gray-700">Farmer Name</th>
-                        <th className="text-left py-4 px-6 font-medium text-gray-700">Location</th>
-                        <th className="text-left py-4 px-6 font-medium text-gray-700">Status</th>
-                        <th className="text-left py-4 px-6 font-medium text-gray-700">Date</th>
+                      <tr className="bg-gray-50 border-b-2 border-gray-200">
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Farmer Name</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Location</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Type</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Status</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Date</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="bg-white divide-y divide-gray-200">
                       {filteredAssessments.map((assessment, index) => (
                         <tr
                           key={assessment.id}
                           onClick={() => handleAssessmentClick(assessment)}
-                          className={`border-b border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer ${
-                            index % 2 === 0 ? "bg-gray-50" : ""
-                          }`}
+                          className="hover:bg-gray-50/50 transition-all duration-150 cursor-pointer border-b border-gray-100"
                         >
-                          <td className="py-4 px-6 text-gray-700">{assessment.id}</td>
-                          <td className="py-4 px-6 text-gray-700">{assessment.farmerName}</td>
-                          <td className="py-4 px-6 text-gray-700">
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4 text-gray-600" />
-                              {assessment.location}
+                          <td className="py-4 px-6 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{assessment.farmerName}</div>
+                          </td>
+                          <td className="py-4 px-6 whitespace-nowrap">
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <MapPin className="h-4 w-4 text-teal-500 flex-shrink-0" />
+                              <span className="truncate max-w-[200px]">{assessment.location}</span>
                             </div>
                           </td>
-                          <td className="py-4 px-6">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
-                              assessment.status.toLowerCase() === 'approved' || assessment.status.toLowerCase() === 'submitted'
-                                ? "bg-green-100 text-green-700 border border-green-200"
-                                : assessment.status.toLowerCase() === 'rejected'
-                                ? "bg-red-100 text-red-700 border border-red-200"
-                                : "bg-yellow-100 text-yellow-700 border border-yellow-200"
-                            }`}>
+                          <td className="py-4 px-6 whitespace-nowrap">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                              {assessment.type}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(assessment.status)}`}>
                               {assessment.status}
                             </span>
                           </td>
-                          <td className="py-4 px-6 text-gray-700">
+                          <td className="py-4 px-6 whitespace-nowrap">
+                            <div className="text-sm text-gray-600">
                             {new Date(assessment.date).toLocaleDateString()}
+                            </div>
                           </td>
                         </tr>
                       ))}

@@ -14,6 +14,7 @@ import { getUserProfile } from "@/services/usersAPI";
 import { getFarms, getAllFarms, createFarm, createInsuranceRequest, getFarmById, getWeatherForecast, getHistoricalWeather, getVegetationStats } from "@/services/farmsApi";
 import { getClaims, createClaim } from "@/services/claimsApi";
 import { getPolicies } from "@/services/policiesApi";
+import assessmentsApiService from "@/services/assessmentsApi";
 import { useToast } from "@/hooks/use-toast";
 import { 
   User, 
@@ -38,7 +39,9 @@ import {
   Thermometer,
   Wind,
   X,
-  Sun
+  Sun,
+  MapPin,
+  Leaf
 } from "lucide-react";
 import { 
   LineChart, 
@@ -73,6 +76,10 @@ export default function FarmerDashboard() {
   const [claims, setClaims] = useState<any[]>([]);
   const [claimsLoading, setClaimsLoading] = useState(false);
   const [claimsError, setClaimsError] = useState<string | null>(null);
+  
+  // State for Loss Reports (Assessments)
+  const [lossReports, setLossReports] = useState<any[]>([]);
+  const [lossReportsLoading, setLossReportsLoading] = useState(false);
   
   // State for Create Farm Page
   const [isCreating, setIsCreating] = useState(false);
@@ -329,6 +336,44 @@ export default function FarmerDashboard() {
       });
     } finally {
       setClaimsLoading(false);
+    }
+  };
+
+  const loadLossReports = async () => {
+    setLossReportsLoading(true);
+    try {
+      const response: any = await assessmentsApiService.getAllAssessments();
+      let assessmentsData: any[] = [];
+      
+      if (Array.isArray(response)) {
+        assessmentsData = response;
+      } else if (response && typeof response === 'object') {
+        assessmentsData = response.data || response.assessments || [];
+      }
+      
+      // Filter for claim assessments for this farmer
+      const farmerLossReports = assessmentsData.filter((assessment: any) => {
+        // Check if it's a claim assessment
+        const isClaimAssessment = assessment.type === "Claim Assessment" || assessment.type === "claim-assessment";
+        
+        // Check if it belongs to this farmer
+        const assessmentFarmerId = 
+          assessment.farmerId?._id || 
+          assessment.farmerId || 
+          assessment.farm?.farmerId?._id || 
+          assessment.farm?.farmerId ||
+          assessment.farm?.farmer?._id ||
+          assessment.farm?.farmer;
+        
+        return isClaimAssessment && (assessmentFarmerId === farmerId || assessmentFarmerId === farmerId.toString());
+      });
+      
+      setLossReports(farmerLossReports);
+    } catch (err: any) {
+      console.error('Failed to load loss reports:', err);
+      setLossReports([]);
+    } finally {
+      setLossReportsLoading(false);
     }
   };
 
@@ -904,6 +949,204 @@ export default function FarmerDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Recent Farms Table */}
+      {farms.length > 0 && (
+        <Card className={`${dashboardTheme.card}`}>
+          <CardHeader>
+            <CardTitle className="text-gray-900">Recent Farms</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50 border-b-2 border-gray-200">
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Farm Name</th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Crop Type</th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Area (ha)</th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {farms.slice(0, 5).map((farm, index) => {
+                    const farmId = farm._id || farm.id;
+                    return (
+                      <tr
+                        key={farmId || index}
+                        onClick={() => loadFarmDetails(farmId)}
+                        className="hover:bg-gray-50/50 transition-all duration-150 cursor-pointer border-b border-gray-100"
+                      >
+                        <td className="py-4 px-6 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{farm.name || "Unnamed Farm"}</div>
+                        </td>
+                        <td className="py-4 px-6 whitespace-nowrap">
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Leaf className="h-4 w-4 text-teal-500 flex-shrink-0" />
+                            <span>{farm.cropType || farm.crop || "N/A"}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6 whitespace-nowrap">
+                          <div className="text-sm text-gray-600">
+                            {farm.area ? `${Math.round(farm.area)} ha` : farm.size ? `${Math.round(farm.size)} ha` : "N/A"}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
+                            farm.status === 'INSURED' || farm.status === 'insured'
+                              ? "bg-green-500 text-white border-green-600"
+                              : farm.status === 'REGISTERED' || farm.status === 'registered'
+                              ? "bg-blue-500 text-white border-blue-600"
+                              : "bg-gray-500 text-white border-gray-600"
+                          }`}>
+                            {farm.status || "REGISTERED"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent Claims Table */}
+      {claims.length > 0 && (
+        <Card className={`${dashboardTheme.card}`}>
+          <CardHeader>
+            <CardTitle className="text-gray-900">Recent Claims</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50 border-b-2 border-gray-200">
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Claim ID</th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Loss Type</th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Status</th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {claims.slice(0, 5).map((claim, index) => (
+                    <tr
+                      key={claim._id || claim.id || index}
+                      className="hover:bg-gray-50/50 transition-all duration-150 border-b border-gray-100"
+                    >
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{claim.claimNumber || claim._id || claim.id || `CLAIM-${index + 1}`}</div>
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="text-sm text-gray-600">
+                          {claim.lossEventType || claim.damageType || claim.lossType || "N/A"}
+                        </div>
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
+                          claim.status === 'APPROVED' || claim.status === 'approved'
+                            ? "bg-green-500 text-white border-green-600"
+                            : claim.status === 'PENDING' || claim.status === 'pending'
+                            ? "bg-yellow-500 text-white border-yellow-600"
+                            : claim.status === 'REJECTED' || claim.status === 'rejected'
+                            ? "bg-red-500 text-white border-red-600"
+                            : "bg-gray-500 text-white border-gray-600"
+                        }`}>
+                          {claim.status || "PENDING"}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="text-sm text-gray-600">
+                          {claim.createdAt ? new Date(claim.createdAt).toLocaleDateString() : claim.date || "N/A"}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loss Reports Table */}
+      {lossReports.length > 0 && (
+        <Card className={`${dashboardTheme.card}`}>
+          <CardHeader>
+            <CardTitle className="text-gray-900">Loss Reports</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50 border-b-2 border-gray-200">
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Location</th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Status</th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {lossReports.slice(0, 5).map((report, index) => {
+                    // Extract location from report
+                    const location = 
+                      report.location || 
+                      report.farm?.location || 
+                      (report.farm?.location?.coordinates 
+                        ? `${report.farm.location.coordinates[1]?.toFixed(4)}, ${report.farm.location.coordinates[0]?.toFixed(4)}`
+                        : '') ||
+                      "Location not available";
+                    
+                    // Get status color
+                    const getStatusColor = (status: string) => {
+                      const statusLower = status.toLowerCase();
+                      switch (statusLower) {
+                        case "approved":
+                        case "completed":
+                          return "bg-green-500 text-white border-green-600";
+                        case "pending":
+                          return "bg-yellow-500 text-white border-yellow-600";
+                        case "submitted":
+                          return "bg-blue-500 text-white border-blue-600";
+                        case "under review":
+                        case "processing":
+                          return "bg-orange-500 text-white border-orange-600";
+                        case "rejected":
+                          return "bg-red-500 text-white border-red-600";
+                        default:
+                          return "bg-gray-500 text-white border-gray-600";
+                      }
+                    };
+                    
+                    return (
+                      <tr
+                        key={report._id || report.id || index}
+                        className="hover:bg-gray-50/50 transition-all duration-150 border-b border-gray-100"
+                      >
+                        <td className="py-4 px-6 whitespace-nowrap">
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <MapPin className="h-4 w-4 text-teal-500 flex-shrink-0" />
+                            <span className="truncate max-w-[200px]">{location}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(report.status || 'Pending')}`}>
+                            {report.status || "Pending"}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 whitespace-nowrap">
+                          <div className="text-sm text-gray-600">
+                            {report.createdAt ? new Date(report.createdAt).toLocaleDateString() : report.date || "N/A"}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
   };
@@ -980,18 +1223,18 @@ export default function FarmerDashboard() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-xs">
+                <table className="w-full">
                   <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Farm Name</th>
-                      <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Crop Type</th>
-                      <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Area (ha)</th>
-                      <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Location</th>
-                      <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Status</th>
-                      <th className="text-left py-1.5 px-2 font-medium text-gray-700 text-xs">Actions</th>
+                    <tr className="bg-gray-50 border-b-2 border-gray-200">
+                      <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Farm Name</th>
+                      <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Crop Type</th>
+                      <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Area (ha)</th>
+                      <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Location</th>
+                      <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Status</th>
+                      <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="bg-white divide-y divide-gray-200">
                     {farms.map((farm, index) => {
                       const farmId = farm._id || farm.id;
                       const isInsured = farm.status === 'INSURED' || farm.status === 'insured';
@@ -1000,39 +1243,47 @@ export default function FarmerDashboard() {
                       return (
                         <tr 
                           key={farmId || index} 
-                          className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${
-                            index % 2 === 0 ? "bg-gray-50" : ""
-                          }`}
+                          onClick={() => loadFarmDetails(farmId)}
+                          className="hover:bg-gray-50/50 transition-all duration-150 border-b border-gray-100 cursor-pointer"
                         >
-                          <td className="py-1 px-2 text-gray-900 font-medium text-xs">{farm.name || "Unnamed Farm"}</td>
-                          <td className="py-1 px-2 text-gray-700 text-xs">
-                            {farm.cropType || farm.crop || "N/A"}
+                          <td className="py-4 px-6 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{farm.name || "Unnamed Farm"}</div>
                           </td>
-                          <td className="py-1 px-2 text-gray-700 text-xs">
-                            {farm.area ? `${farm.area} ha` : farm.size ? `${farm.size} ha` : "N/A"}
+                          <td className="py-4 px-6 whitespace-nowrap">
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <Crop className="h-4 w-4 text-teal-500 flex-shrink-0" />
+                              <span>{farm.cropType || farm.crop || "N/A"}</span>
+                            </div>
                           </td>
-                          <td className="py-1 px-2 text-gray-700 text-xs">
+                          <td className="py-4 px-6 whitespace-nowrap">
+                            <div className="text-sm text-gray-600">
+                              {farm.area ? `${Math.round(farm.area)} ha` : farm.size ? `${Math.round(farm.size)} ha` : "N/A"}
+                            </div>
+                          </td>
+                          <td className="py-4 px-6 whitespace-nowrap">
+                            <div className="text-sm text-gray-600">
                             {farm.location?.coordinates && Array.isArray(farm.location.coordinates) && farm.location.coordinates.length >= 2
                               ? `${farm.location.coordinates[1]?.toFixed(4)}, ${farm.location.coordinates[0]?.toFixed(4)}`
                               : farm.coordinates && Array.isArray(farm.coordinates) && farm.coordinates.length >= 2
                               ? `${farm.coordinates[1]?.toFixed(4)}, ${farm.coordinates[0]?.toFixed(4)}`
                               : farm.location || "N/A"}
+                            </div>
                           </td>
-                          <td className="py-1 px-2">
-                            <Badge className={`text-xs py-0 px-1.5 ${
+                          <td className="py-4 px-6 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
                               farm.status === 'PENDING' || farm.status === 'pending' 
-                                ? "bg-yellow-100 text-yellow-700 border border-yellow-200"
+                                ? "bg-yellow-500 text-white border-yellow-600"
                                 : farm.status === 'INSURED' || farm.status === 'insured'
-                                ? "bg-green-100 text-green-700 border border-green-200"
+                                ? "bg-green-500 text-white border-green-600"
                                 : farm.status === 'REGISTERED' || farm.status === 'registered'
-                                ? "bg-blue-100 text-blue-700 border border-blue-200"
-                                : "bg-gray-100 text-gray-700 border border-gray-200"
+                                ? "bg-blue-500 text-white border-blue-600"
+                                : "bg-gray-500 text-white border-gray-600"
                             }`}>
                               {farm.status || "REGISTERED"}
-                            </Badge>
+                            </span>
                           </td>
-                          <td className="py-1 px-2">
-                            <div className="flex gap-1 flex-wrap">
+                          <td className="py-4 px-6 whitespace-nowrap">
+                            <div className="flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
                               {isRegistered && (
                                 <Button
                                   size="sm"
@@ -1042,21 +1293,12 @@ export default function FarmerDashboard() {
                                     farmId: farmId,
                                     farmName: farm.name || "Unnamed Farm"
                                   })}
-                                  className="border-green-600 text-green-600 hover:bg-green-50 text-xs h-6 px-2"
+                                  className="border-green-600 text-green-600 hover:bg-green-50 h-8 px-3 text-xs font-medium rounded-md"
                                 >
-                                  <Shield className="h-2.5 w-2.5 mr-0.5" />
+                                  <Shield className="h-3.5 w-3.5 mr-1.5" />
                                   Insurance
                                 </Button>
                               )}
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => loadFarmDetails(farmId)}
-                                className="border-gray-300 text-gray-700 hover:bg-gray-50 text-xs h-6 px-2"
-                              >
-                                <Eye className="h-2.5 w-2.5 mr-0.5" />
-                                View
-                              </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -1065,9 +1307,9 @@ export default function FarmerDashboard() {
                                   loadFarmAnalytics(farmId);
                                   setActivePage("farm-analytics");
                                 }}
-                                className="border-blue-600 text-blue-600 hover:bg-blue-50 text-xs h-6 px-2"
+                                className="border-blue-600 text-blue-600 hover:bg-blue-50 h-8 px-3 text-xs font-medium rounded-md"
                               >
-                                <TrendingUp className="h-2.5 w-2.5 mr-0.5" />
+                                <TrendingUp className="h-3.5 w-3.5 mr-1.5" />
                                 Analytics
                               </Button>
                             </div>

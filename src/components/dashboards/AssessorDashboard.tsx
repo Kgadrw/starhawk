@@ -18,7 +18,7 @@ import meteosourceApiService from "@/services/meteosourceApi";
 import assessmentsApiService from "@/services/assessmentsApi";
 import farmsApiService, { getFarms, getFarmById, getWeatherForecast, getHistoricalWeather, getVegetationStats, uploadShapefile, uploadKML, createFarm, createInsuranceRequest, updateFarm } from "@/services/farmsApi";
 import { getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
-import { getUserProfile } from "@/services/usersAPI";
+import { getUserProfile, getUserById } from "@/services/usersAPI";
 import { useToast } from "@/hooks/use-toast";
 import { 
   FileText, 
@@ -247,22 +247,149 @@ export default function AssessorDashboard() {
         console.warn('   Current Assessor ID:', assessorId);
       }
       
-      const mappedAssessments: AssessmentSummary[] = assessmentsData.map((item: any) => {
+      // Helper function to get farmer name directly from assessment API response
+      const getFarmerName = (item: any): string => {
+        // Try all possible paths in the assessment response (API should populate farmer data)
+        const farmerName = 
+          item.farmerName || 
+          item.farmer?.name || 
+          item.farm?.farmerName ||
+          item.farm?.farmer?.name ||
+          item.farm?.farmerId?.name ||
+          (item.farmer?.firstName && item.farmer?.lastName 
+            ? `${item.farmer.firstName} ${item.farmer.lastName}`.trim()
+            : '') ||
+          (item.farm?.farmerId?.firstName && item.farm?.farmerId?.lastName
+            ? `${item.farm.farmerId.firstName} ${item.farm.farmerId.lastName}`.trim()
+            : '') ||
+          item.farmer?.firstName || 
+          item.farmer?.lastName ||
+          item.farm?.farmerId?.firstName ||
+          item.farm?.farmerId?.lastName ||
+          '';
+        
+        if (!farmerName) {
+          console.warn('⚠️ Could not find farmer name in assessment response:', {
+            assessmentId: item._id || item.id,
+            hasFarmer: !!item.farmer,
+            hasFarm: !!item.farm,
+            availableFields: Object.keys(item),
+            farmFields: item.farm ? Object.keys(item.farm) : 'no farm object',
+            farmerFields: item.farmer ? Object.keys(item.farmer) : 'no farmer object'
+          });
+        }
+        
+        return farmerName || 'Unknown Farmer';
+      };
+      
+      // Map assessments - extract data directly from API response (no async calls needed)
+      const mappedAssessments = assessmentsData.map((item: any) => {
         // Extract farmerId - handle case where farmId/farmerId might be an object
         let farmerId = '';
-        if (item.farmId) {
-          farmerId = typeof item.farmId === 'object' ? (item.farmId._id || item.farmId.id || '') : item.farmId;
-        } else if (item.farmerId) {
-          farmerId = typeof item.farmerId === 'object' ? (item.farmerId._id || item.farmerId.id || '') : item.farmerId;
-        } else if (item.farm) {
-          farmerId = item.farm._id || item.farm.id || '';
+        
+        // Priority 1: Direct farmerId field
+        if (item.farmerId) {
+          if (typeof item.farmerId === 'object') {
+            farmerId = item.farmerId._id || item.farmerId.id || '';
+          } else {
+            farmerId = item.farmerId;
+          }
         }
+        // Priority 2: From farm object
+        else if (item.farm) {
+          if (item.farm.farmerId) {
+            farmerId = typeof item.farm.farmerId === 'object' 
+              ? (item.farm.farmerId._id || item.farm.farmerId.id || '') 
+              : item.farm.farmerId;
+          } else if (item.farm.farmer) {
+            farmerId = typeof item.farm.farmer === 'object'
+              ? (item.farm.farmer._id || item.farm.farmer.id || '')
+              : item.farm.farmer;
+          }
+        }
+        // Priority 3: From farmId field (might be a farm reference)
+        else if (item.farmId) {
+          if (typeof item.farmId === 'object') {
+            // Check if farmId object has farmerId
+            if (item.farmId.farmerId) {
+              farmerId = typeof item.farmId.farmerId === 'object' 
+                ? (item.farmId.farmerId._id || item.farmId.farmerId.id || '') 
+                : item.farmId.farmerId;
+            } else {
+              // farmId might be the farm itself, try to get farmerId from it
+              farmerId = item.farmId._id || item.farmId.id || '';
+            }
+          } else {
+            // farmId is a string ID, we'll need to fetch the farm to get farmerId
+            // For now, we'll try to use it as farmerId if no other option
+            farmerId = item.farmId;
+          }
+        }
+        
+        console.log(`🔍 Extracted farmerId for assessment ${item._id || item.id}: ${farmerId || 'NOT FOUND'}`);
+        
+        // Get farmer name directly from assessment API response
+        const farmerName = getFarmerName(item);
+        
+        // Helper function to extract location directly from assessment API response
+        const getLocation = (item: any): string => {
+          let location = '';
+          
+          // Check direct location field
+          if (item.location) {
+            if (typeof item.location === 'string') {
+              location = item.location;
+            } else if (item.location.coordinates && Array.isArray(item.location.coordinates)) {
+              // Format coordinates as "lat, lng"
+              location = `${item.location.coordinates[1]?.toFixed(4)}, ${item.location.coordinates[0]?.toFixed(4)}`;
+            } else if (item.location.address) {
+              location = item.location.address;
+            }
+          }
+          
+          // Check farm location (API should populate farm data)
+          if (!location && item.farm) {
+            if (item.farm.location) {
+              if (typeof item.farm.location === 'string') {
+                location = item.farm.location;
+              } else if (item.farm.location.coordinates && Array.isArray(item.farm.location.coordinates)) {
+                // Format coordinates as "lat, lng" (coordinates are [lng, lat] in GeoJSON)
+                location = `${item.farm.location.coordinates[1]?.toFixed(4)}, ${item.farm.location.coordinates[0]?.toFixed(4)}`;
+              } else if (item.farm.location.address) {
+                location = item.farm.location.address;
+              }
+            }
+            if (!location && item.farm.address) {
+              location = item.farm.address;
+            }
+          }
+          
+          // Check farmId object location (if farmId is populated)
+          if (!location && item.farmId && typeof item.farmId === 'object') {
+            if (item.farmId.location) {
+              if (typeof item.farmId.location === 'string') {
+                location = item.farmId.location;
+              } else if (item.farmId.location.coordinates && Array.isArray(item.farmId.location.coordinates)) {
+                location = `${item.farmId.location.coordinates[1]?.toFixed(4)}, ${item.farmId.location.coordinates[0]?.toFixed(4)}`;
+              } else if (item.farmId.location.address) {
+                location = item.farmId.location.address;
+              }
+            }
+            if (!location && item.farmId.address) {
+              location = item.farmId.address;
+            }
+          }
+          
+          return location || 'Location not available';
+        };
+        
+        const location = getLocation(item);
         
         return {
           id: item._id || item.id || '',
           farmerId,
-          farmerName: item.farmerName || item.farmer?.name || 'Unknown',
-          location: item.location || item.farm?.location || '',
+          farmerName,
+          location,
           type: item.type || 'Risk Assessment',
           status: item.status || 'Pending',
           date: item.createdAt ? new Date(item.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
@@ -1013,7 +1140,6 @@ export default function AssessorDashboard() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-gray-900 font-medium">Map View</p>
-                            <p className="text-xs text-gray-900/60">Field ID: {fieldDetails.fieldId}</p>
                           </div>
                           <div className="flex items-center gap-4">
                             <p className="text-sm text-gray-900/80">Layer: 🌱 Plant Health (NDVI)</p>
@@ -1199,7 +1325,6 @@ export default function AssessorDashboard() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-gray-900 font-medium">Map View</p>
-                            <p className="text-xs text-gray-900/60">Field ID: {fieldDetails.fieldId}</p>
                           </div>
                         </div>
                       </CardHeader>
@@ -1252,6 +1377,27 @@ export default function AssessorDashboard() {
         </Card>
       </div>
     );
+  };
+
+  // Get status color based on status value
+  const getStatusColor = (status: string) => {
+    const statusLower = status.toLowerCase();
+    switch (statusLower) {
+      case "approved":
+      case "completed":
+        return "bg-green-500 text-white border-green-600";
+      case "pending":
+        return "bg-yellow-500 text-white border-yellow-600";
+      case "submitted":
+        return "bg-blue-500 text-white border-blue-600";
+      case "under review":
+      case "processing":
+        return "bg-orange-500 text-white border-orange-600";
+      case "rejected":
+        return "bg-red-500 text-white border-red-600";
+      default:
+        return "bg-gray-500 text-white border-gray-600";
+    }
   };
 
   // Filter assessments based on current filters
@@ -1547,7 +1693,6 @@ export default function AssessorDashboard() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-4 px-6 font-medium text-gray-900/80">Field ID</th>
                     <th className="text-left py-4 px-6 font-medium text-gray-900/80">Farmer</th>
                     <th className="text-left py-4 px-6 font-medium text-gray-900/80">Crop</th>
                     <th className="text-left py-4 px-6 font-medium text-gray-900/80">Area (ha)</th>
@@ -1564,7 +1709,6 @@ export default function AssessorDashboard() {
                         index % 2 === 0 ? "bg-gray-50/30" : ""
                       }`}
                     >
-                      <td className="py-4 px-6 text-gray-900">{field.id}</td>
                       <td className="py-4 px-6 text-gray-900">{field.farmerName}</td>
                       <td className="py-4 px-6 text-gray-900">
                         <div className="flex items-center gap-2">
@@ -1572,7 +1716,7 @@ export default function AssessorDashboard() {
                           {field.crop}
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-gray-900">{field.area} ha</td>
+                      <td className="py-4 px-6 text-gray-900">{Math.round(field.area)} ha</td>
                       <td className="py-4 px-6 text-gray-900">{field.season}</td>
                       <td className="py-4 px-6">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -1640,7 +1784,7 @@ export default function AssessorDashboard() {
         {/* Header */}
         <div>
           <h1 className="text-4xl font-bold text-gray-900">
-            Field Detail View: <span className="text-gray-700">{fieldDetails.fieldId}</span>
+            Field Detail View
           </h1>
           <p className="text-gray-900/70 mt-2">
             <span className="text-gray-700">{fieldDetails.farmer}</span> - <span className="text-gray-700">{fieldDetails.cropType}</span>
@@ -1689,10 +1833,6 @@ export default function AssessorDashboard() {
                   <CardTitle className="text-gray-900">Field Information</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                    <span className="text-gray-600">Field ID</span>
-                    <span className="text-gray-700 font-medium">{fieldDetails.fieldId}</span>
-                  </div>
                   <div className="flex justify-between items-center border-b border-gray-200 pb-3">
                     <span className="text-gray-600">Field Name</span>
                     <span className="text-gray-700 font-medium">{fieldDetails.fieldName}</span>
@@ -1775,48 +1915,64 @@ export default function AssessorDashboard() {
   const renderDashboard = () => (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-900/80">Total Assessments</CardTitle>
-            <FileText className="h-5 w-5 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{totalAssessments}</div>
-            <p className="text-xs text-gray-900/60 mt-1">All assessments</p>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="hover:border-blue-300 transition-all duration-300 bg-white border border-gray-200 rounded-xl shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-1">Total Assessments</p>
+                <p className="text-3xl font-bold text-gray-900">{totalAssessments}</p>
+                <p className="text-xs text-gray-500 mt-1">All assessments</p>
+              </div>
+              <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center">
+                <FileText className="h-7 w-7 text-blue-600" />
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-900/80">Risk Assessments</CardTitle>
-            <Shield className="h-5 w-5 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{totalRiskAssessments}</div>
-            <p className="text-xs text-gray-900/60 mt-1">Risk evaluations</p>
+        <Card className="hover:border-green-300 transition-all duration-300 bg-white border border-gray-200 rounded-xl shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-1">Risk Assessment</p>
+                <p className="text-3xl font-bold text-gray-900">{totalRiskAssessments}</p>
+                <p className="text-xs text-gray-500 mt-1">Risk evaluations</p>
+              </div>
+              <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center">
+                <Shield className="h-7 w-7 text-green-600" />
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-900/80">Claim Assessments</CardTitle>
-            <FileText className="h-5 w-5 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{totalClaimAssessments}</div>
-            <p className="text-xs text-gray-900/60 mt-1">Claims processed</p>
+        <Card className="hover:border-teal-300 transition-all duration-300 bg-white border border-gray-200 rounded-xl shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-1">Claim Assessments</p>
+                <p className="text-3xl font-bold text-gray-900">{totalClaimAssessments}</p>
+                <p className="text-xs text-gray-500 mt-1">Claims processed</p>
+              </div>
+              <div className="w-14 h-14 bg-teal-100 rounded-xl flex items-center justify-center">
+                <FileText className="h-7 w-7 text-teal-600" />
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className={`${dashboardTheme.card} border-l-4 border-l-purple-500`}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-900/80">Pending Reviews</CardTitle>
-            <Calendar className="h-5 w-5 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{pendingAssessments}</div>
-            <p className="text-xs text-gray-900/60 mt-1">Awaiting action</p>
+        <Card className="hover:border-purple-300 transition-all duration-300 bg-white border border-gray-200 rounded-xl shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-1">Pending Reviews</p>
+                <p className="text-3xl font-bold text-gray-900">{pendingAssessments}</p>
+                <p className="text-xs text-gray-500 mt-1">Awaiting action</p>
+              </div>
+              <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center">
+                <Calendar className="h-7 w-7 text-purple-600" />
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -1845,17 +2001,7 @@ export default function AssessorDashboard() {
       )}
 
       {/* Action Bar */}
-      <div className="flex items-center justify-between">
-        <Button
-          onClick={loadAssessments}
-          disabled={loading}
-          variant="outline"
-          className="border-gray-300 text-gray-900 hover:bg-gray-800"
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-        <div className="flex gap-2">
+      <div className="flex items-center justify-end">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-900/60" />
             <Input
@@ -1864,66 +2010,6 @@ export default function AssessorDashboard() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className={`${dashboardTheme.input} pl-10 w-64 border-gray-300`}
             />
-          </div>
-          <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className={`${dashboardTheme.card} text-gray-900 hover:bg-gray-800 border border-gray-300`}>
-                <Filter className="h-4 w-4 mr-2" />
-                Filter
-              </Button>
-            </DialogTrigger>
-            <DialogContent className={`${dashboardTheme.card} border-gray-200`}>
-              <DialogHeader>
-                <DialogTitle className="text-gray-900">Filter Assessments</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 mt-4">
-                <div>
-                  <Label htmlFor="status-filter" className="text-gray-900/80">Status</Label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger id="status-filter" className={`${dashboardTheme.select} mt-1`}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className={dashboardTheme.card}>
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="Pending">Pending</SelectItem>
-                      <SelectItem value="Submitted">Submitted</SelectItem>
-                      <SelectItem value="Under Review">Under Review</SelectItem>
-                      <SelectItem value="Approved">Approved</SelectItem>
-                      <SelectItem value="Rejected">Rejected</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="type-filter" className="text-gray-900/80">Type</Label>
-                  <Select value={typeFilter} onValueChange={setTypeFilter}>
-                    <SelectTrigger id="type-filter" className={`${dashboardTheme.select} mt-1`}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className={dashboardTheme.card}>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="Risk Assessment">Risk Assessment</SelectItem>
-                      <SelectItem value="Claim Assessment">Claim Assessment</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex justify-between pt-4">
-                  <Button 
-                    variant="outline" 
-                    onClick={clearFilters}
-                    className="border-gray-300 text-gray-900 hover:bg-gray-100"
-                  >
-                    Clear Filters
-                  </Button>
-                  <Button 
-                    onClick={() => setFilterDialogOpen(false)}
-                    className="bg-teal-500 hover:bg-teal-600 text-white"
-                  >
-                    Apply Filters
-                  </Button>
-                </div>
-          </div>
-            </DialogContent>
-          </Dialog>
         </div>
       </div>
 
@@ -1958,47 +2044,49 @@ export default function AssessorDashboard() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-4 px-6 font-medium text-gray-900/80">Farmer ID</th>
-                    <th className="text-left py-4 px-6 font-medium text-gray-900/80">Farmer Name</th>
-                    <th className="text-left py-4 px-6 font-medium text-gray-900/80">Location</th>
-                    <th className="text-left py-4 px-6 font-medium text-gray-900/80">Type</th>
-                    <th className="text-left py-4 px-6 font-medium text-gray-900/80">Status</th>
-                    <th className="text-left py-4 px-6 font-medium text-gray-900/80">Date</th>
-                    <th className="text-left py-4 px-6 font-medium text-gray-900/80">Actions</th>
+                  <tr className="bg-gray-50 border-b-2 border-gray-200">
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Farmer Name</th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Location</th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Type</th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Status</th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Date</th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="bg-white divide-y divide-gray-200">
                   {filteredAssessments.map((assessment, index) => (
                     <tr
                       key={assessment.id}
                       onClick={() => handleAssessmentClick(assessment)}
-                      className={`border-b border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer ${
-                        index % 2 === 0 ? "bg-gray-50/30" : ""
-                      }`}
+                      className="hover:bg-gray-50/50 transition-all duration-150 cursor-pointer border-b border-gray-100"
                     >
-                      <td className="py-4 px-6 text-gray-900">{assessment.farmerId}</td>
-                      <td className="py-4 px-6 text-gray-900">{assessment.farmerName}</td>
-                      <td className="py-4 px-6 text-gray-900/80">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-teal-500" />
-                          {assessment.location}
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{assessment.farmerName}</div>
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <MapPin className="h-4 w-4 text-teal-500 flex-shrink-0" />
+                          <span className="truncate max-w-[200px]">{assessment.location}</span>
                         </div>
                       </td>
-                      <td className="py-4 px-6">
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-600 border border-blue-500/30">
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
                           {assessment.type}
                         </span>
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(assessment.status)}`}>
+                            {assessment.status}
+                          </span>
                         <div onClick={(e) => e.stopPropagation()}>
                           <Select 
                             value={assessment.status} 
                             onValueChange={(value) => handleStatusChange(assessment.id, value)}
                             disabled={updatingAssessment === assessment.id}
                           >
-                            <SelectTrigger className={`${dashboardTheme.select} border-yellow-500/30 bg-yellow-500/20 text-yellow-400 h-auto py-1 px-3 w-32`}>
-                              <SelectValue />
+                              <SelectTrigger className={`${dashboardTheme.select} border-gray-300 bg-white text-gray-900 h-7 py-0 px-2 w-auto hover:bg-gray-50`}>
+                                <Edit className="h-3.5 w-3.5" />
                             </SelectTrigger>
                             <SelectContent className={dashboardTheme.card}>
                               <SelectItem value="Pending">Pending</SelectItem>
@@ -2009,11 +2097,14 @@ export default function AssessorDashboard() {
                               <SelectItem value="Processing">Processing</SelectItem>
                             </SelectContent>
                           </Select>
+                          </div>
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-gray-900/80">{assessment.date}</td>
-                      <td className="py-4 px-6">
-                        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="text-sm text-gray-600">{assessment.date}</div>
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                           {assessment.status !== "Submitted" && (
                             <>
                               <Button
@@ -2021,7 +2112,8 @@ export default function AssessorDashboard() {
                                 disabled={updatingAssessment === assessment.id}
                                 size="sm"
                                 variant="outline"
-                                className="border-gray-300 text-gray-900 hover:bg-gray-100"
+                                className="border-gray-300 text-gray-700 hover:bg-gray-50 h-8 w-8 p-0 rounded-md"
+                                title="Calculate Risk"
                               >
                                 <Shield className="h-4 w-4" />
                               </Button>
@@ -2029,7 +2121,8 @@ export default function AssessorDashboard() {
                                 onClick={() => handleSubmitAssessment(assessment.id)}
                                 disabled={updatingAssessment === assessment.id}
                                 size="sm"
-                                className="bg-teal-500 hover:bg-teal-600 text-white"
+                                className="bg-teal-500 hover:bg-teal-600 text-white h-8 w-8 p-0 rounded-md shadow-sm hover:shadow"
+                                title="Submit Assessment"
                               >
                                 <CheckCircle className="h-4 w-4" />
                               </Button>
@@ -2233,7 +2326,7 @@ export default function AssessorDashboard() {
 
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: BarChart3 },
-    { id: "risk-assessments", label: "Risk Assessments", icon: Shield },
+    { id: "risk-assessments", label: "Risk Assessment", icon: Shield },
     { id: "loss-assessments", label: "Loss Assessment", icon: AlertCircle },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "profile-settings", label: "Profile Settings", icon: User }
