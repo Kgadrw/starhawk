@@ -72,14 +72,11 @@ export default function FarmerDashboard() {
   const [farmsLoading, setFarmsLoading] = useState(false);
   const [farmsError, setFarmsError] = useState<string | null>(null);
   
-  // State for Loss Reports page
+  // State for Reports page
   const [claims, setClaims] = useState<any[]>([]);
-  const [claimsLoading, setClaimsLoading] = useState(false);
-  const [claimsError, setClaimsError] = useState<string | null>(null);
-  
-  // State for Loss Reports (Assessments)
-  const [lossReports, setLossReports] = useState<any[]>([]);
-  const [lossReportsLoading, setLossReportsLoading] = useState(false);
+  const [riskAssessments, setRiskAssessments] = useState<any[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
+  const [reportsError, setReportsError] = useState<string | null>(null);
   
   // State for Create Farm Page
   const [isCreating, setIsCreating] = useState(false);
@@ -145,7 +142,7 @@ export default function FarmerDashboard() {
       } else if (activePage === "create-farm") {
         loadFarms();
       } else if (activePage === "loss-reports") {
-        loadClaims();
+        loadAllReports();
       } else if (activePage === "file-claim") {
         loadPolicies();
       } else if (activePage === "farm-details" && selectedFarm) {
@@ -312,69 +309,67 @@ export default function FarmerDashboard() {
     }
   };
   
-  const loadClaims = async () => {
-    setClaimsLoading(true);
-    setClaimsError(null);
+  const loadAllReports = async () => {
+    setReportsLoading(true);
+    setReportsError(null);
     try {
-      const response: any = await getClaims(1, 100);
-      const claimsData = response.data || response || [];
-      const claimsArray = Array.isArray(claimsData) ? claimsData : (claimsData.items || claimsData.results || []);
+      // Load claims and assessments in parallel
+      const [claimsResponse, assessmentsResponse] = await Promise.allSettled([
+        getClaims(1, 100),
+        assessmentsApiService.getAllAssessments()
+      ]);
       
-      // Filter claims by the logged-in farmer
-      const farmerClaims = claimsArray.filter((claim: any) => {
-        const claimFarmerId = claim.farmerId?._id || claim.farmerId || claim.farmer?._id || claim.farmer;
-        return claimFarmerId === farmerId || claimFarmerId === farmerId.toString();
-      });
+      // Process claims
+      let claimsArray: any[] = [];
+      if (claimsResponse.status === 'fulfilled') {
+        const claimsData = claimsResponse.value.data || claimsResponse.value || [];
+        const allClaims = Array.isArray(claimsData) ? claimsData : (claimsData.items || claimsData.results || []);
+        
+        // Filter claims by the logged-in farmer
+        claimsArray = allClaims.filter((claim: any) => {
+          const claimFarmerId = claim.farmerId?._id || claim.farmerId || claim.farmer?._id || claim.farmer;
+          return claimFarmerId === farmerId || claimFarmerId === farmerId.toString();
+        });
+      }
       
-      setClaims(farmerClaims);
+      // Process assessments
+      let assessmentsArray: any[] = [];
+      if (assessmentsResponse.status === 'fulfilled') {
+        const response = assessmentsResponse.value;
+        let assessmentsData: any[] = [];
+        
+        if (Array.isArray(response)) {
+          assessmentsData = response;
+        } else if (response && typeof response === 'object') {
+          assessmentsData = response.data || response.assessments || [];
+        }
+        
+        // Filter assessments for this farmer (both risk and claim assessments)
+        assessmentsArray = assessmentsData.filter((assessment: any) => {
+          const assessmentFarmerId = 
+            assessment.farmerId?._id || 
+            assessment.farmerId || 
+            assessment.farm?.farmerId?._id || 
+            assessment.farm?.farmerId ||
+            assessment.farm?.farmer?._id ||
+            assessment.farm?.farmer;
+          
+          return assessmentFarmerId === farmerId || assessmentFarmerId === farmerId.toString();
+        });
+      }
+      
+      setClaims(claimsArray);
+      setRiskAssessments(assessmentsArray);
     } catch (err: any) {
-      console.error('Failed to load claims:', err);
-      setClaimsError(err.message || 'Failed to load claims');
+      console.error('Failed to load reports:', err);
+      setReportsError(err.message || 'Failed to load reports');
       toast({
-        title: 'Error loading claims',
-        description: err.message || 'Failed to load claims',
+        title: 'Error loading reports',
+        description: err.message || 'Failed to load reports',
         variant: 'destructive'
       });
     } finally {
-      setClaimsLoading(false);
-    }
-  };
-
-  const loadLossReports = async () => {
-    setLossReportsLoading(true);
-    try {
-      const response: any = await assessmentsApiService.getAllAssessments();
-      let assessmentsData: any[] = [];
-      
-      if (Array.isArray(response)) {
-        assessmentsData = response;
-      } else if (response && typeof response === 'object') {
-        assessmentsData = response.data || response.assessments || [];
-      }
-      
-      // Filter for claim assessments for this farmer
-      const farmerLossReports = assessmentsData.filter((assessment: any) => {
-        // Check if it's a claim assessment
-        const isClaimAssessment = assessment.type === "Claim Assessment" || assessment.type === "claim-assessment";
-        
-        // Check if it belongs to this farmer
-        const assessmentFarmerId = 
-          assessment.farmerId?._id || 
-          assessment.farmerId || 
-          assessment.farm?.farmerId?._id || 
-          assessment.farm?.farmerId ||
-          assessment.farm?.farmer?._id ||
-          assessment.farm?.farmer;
-        
-        return isClaimAssessment && (assessmentFarmerId === farmerId || assessmentFarmerId === farmerId.toString());
-      });
-      
-      setLossReports(farmerLossReports);
-    } catch (err: any) {
-      console.error('Failed to load loss reports:', err);
-      setLossReports([]);
-    } finally {
-      setLossReportsLoading(false);
+      setReportsLoading(false);
     }
   };
 
@@ -772,7 +767,7 @@ export default function FarmerDashboard() {
       
       // Navigate to loss reports to see the new claim
       setActivePage("loss-reports");
-      loadClaims();
+      loadAllReports();
     } catch (err: any) {
       console.error('Failed to file claim:', err);
       toast({
@@ -886,12 +881,19 @@ export default function FarmerDashboard() {
       : farmerName;
 
     return (
-    <div className="space-y-4">
+    <div className="min-h-screen bg-gray-50 pt-6 pb-8">
       {/* Header */}
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-600 mt-1">Welcome back, {displayName}</p>
+      <div className="max-w-7xl mx-auto px-6 mb-6">
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+            <p className="text-sm text-gray-500 mt-1">Welcome back, {displayName}</p>
+          </div>
+        </div>
       </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6">
 
       {/* Stats Cards */}
       <div className="grid gap-6 md:grid-cols-4">
@@ -1149,15 +1151,19 @@ export default function FarmerDashboard() {
           </CardContent>
         </Card>
       )}
+        </div>
+      </div>
     </div>
   );
-  };
+};
 
 
   const renderMyFields = () => (
-    <div className="space-y-4">
+    <div className="min-h-screen bg-gray-50 pt-6 pb-8">
       {/* Header */}
-      <div className="mb-4 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-6 mb-6">
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
+          <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Farms</h1>
           <p className="text-sm text-gray-600 mt-1">Manage and view your registered farms</p>
@@ -1180,8 +1186,12 @@ export default function FarmerDashboard() {
             Create Farm
           </Button>
         </div>
+          </div>
+        </div>
       </div>
 
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6">
       {farmsLoading && (
         <Card className={`${dashboardTheme.card}`}>
           <CardContent className="p-12">
@@ -1382,14 +1392,16 @@ export default function FarmerDashboard() {
           </div>
         </DialogContent>
       </Dialog>
-
+      </div>
     </div>
   );
 
   const renderCreateFarm = () => (
-      <div className="space-y-4">
-        {/* Header */}
-        <div className="mb-4">
+    <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+      {/* Header */}
+      <div className="max-w-7xl mx-auto px-6 mb-6">
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
+          <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             onClick={() => setActivePage("my-fields")}
@@ -1398,13 +1410,19 @@ export default function FarmerDashboard() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to My Farms
           </Button>
-          <h1 className="text-2xl font-bold text-gray-900">Register New Farm</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Submit the official farm record required by Starhawk&apos;s backend APIs.
-          </p>
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">Register New Farm</h1>
+              <p className="text-sm text-gray-500 mt-1">
+                Submit the official farm record required by Starhawk&apos;s backend APIs.
+              </p>
+            </div>
+          </div>
         </div>
+      </div>
 
-        <Card className={`${dashboardTheme.card}`}>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6">
+        <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader>
           <CardTitle className="text-gray-900">Farm Information</CardTitle>
           </CardHeader>
@@ -1479,14 +1497,20 @@ export default function FarmerDashboard() {
     );
 
   const renderFileClaim = () => (
-    <div className="space-y-4">
+    <div className="min-h-screen bg-gray-50 pt-6 pb-8">
       {/* Header */}
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">File a Claim</h1>
-        <p className="text-sm text-gray-600 mt-1">Report crop damage and request compensation</p>
+      <div className="max-w-7xl mx-auto px-6 mb-6">
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">File a Claim</h1>
+            <p className="text-sm text-gray-500 mt-1">Report crop damage and request compensation</p>
+          </div>
+        </div>
       </div>
 
-      <Card className={`${dashboardTheme.card}`}>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6">
+      <Card className="bg-white border border-gray-200 shadow-sm">
         <CardHeader>
           <CardTitle className="text-gray-900">Claim Information</CardTitle>
         </CardHeader>
@@ -1708,125 +1732,211 @@ export default function FarmerDashboard() {
   );
 
   const renderLossReports = () => (
-    <div className="space-y-4">
+    <div className="min-h-screen bg-gray-50 pt-6 pb-8">
       {/* Header */}
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Loss Reports</h1>
-          <p className="text-sm text-gray-600 mt-1">View and track your claim reports</p>
+      <div className="max-w-7xl mx-auto px-6 mb-6">
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">Reports</h1>
+              <p className="text-sm text-gray-500 mt-1">View all your claim and risk assessment reports</p>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={loadAllReports}
+              disabled={reportsLoading}
+              className="border-gray-200 hover:bg-gray-50 text-xs h-9"
+            >
+              <BarChart3 className={`h-4 w-4 mr-2 ${reportsLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
-        <Button 
-          variant="outline" 
-          onClick={loadClaims}
-          disabled={claimsLoading}
-          className="border-gray-300 text-gray-900 hover:bg-gray-100"
-        >
-          <BarChart3 className={`h-4 w-4 mr-2 ${claimsLoading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
       </div>
 
-      {claimsLoading && (
-        <Card className={`${dashboardTheme.card}`}>
-          <CardContent className="p-12">
-            <div className="flex items-center justify-center">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
-                <p className="text-gray-500">Loading loss reports...</p>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 space-y-6">
+        {reportsLoading && (
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardContent className="p-12">
+              <div className="flex items-center justify-center">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-3"></div>
+                  <p className="text-sm text-gray-600">Loading reports...</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        )}
 
-      {claimsError && !claimsLoading && (
-        <Card className={`${dashboardTheme.card}`}>
-          <CardContent className="p-6">
-            <div className="text-center text-red-600">
-              <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
-              <p>{claimsError}</p>
-              <Button 
-                onClick={loadClaims} 
-                className="mt-4 bg-green-600 hover:bg-green-700 text-gray-900"
-              >
-                Retry
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+        {reportsError && !reportsLoading && (
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardContent className="p-6">
+              <div className="text-center text-red-600">
+                <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
+                <p className="text-sm">{reportsError}</p>
+                <Button 
+                  onClick={loadAllReports} 
+                  className="mt-4 bg-green-600 hover:bg-green-700 text-white text-xs h-8"
+                >
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-      {!claimsLoading && !claimsError && (
-        <Card className={`${dashboardTheme.card}`}>
-          <CardHeader>
-            <CardTitle className="text-gray-900">Claim Reports</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {claims.length === 0 ? (
-              <div className="text-center py-12">
-                <FileText className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-500 text-lg mb-2">No loss reports found</p>
-                <p className="text-gray-400 text-sm">Your claim reports will appear here</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-1.5 px-2 font-medium text-gray-600 text-xs">Claim ID</th>
-                      <th className="text-left py-1.5 px-2 font-medium text-gray-600 text-xs">Crop</th>
-                      <th className="text-left py-1.5 px-2 font-medium text-gray-600 text-xs">Date</th>
-                      <th className="text-left py-1.5 px-2 font-medium text-gray-600 text-xs">Damage Type</th>
-                      <th className="text-left py-1.5 px-2 font-medium text-gray-600 text-xs">Amount</th>
-                      <th className="text-left py-1.5 px-2 font-medium text-gray-600 text-xs">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {claims.map((claim, index) => (
-                      <tr 
-                        key={claim._id || claim.id || index} 
-                        className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${
-                          index % 2 === 0 ? "bg-gray-50" : ""
-                        }`}
-                      >
-                        <td className="py-1 px-2 text-gray-900 font-medium text-xs">{claim.claimNumber || claim._id || claim.id || "N/A"}</td>
-                        <td className="py-1 px-2 text-gray-900 text-xs">{claim.cropType || claim.crop || "N/A"}</td>
-                        <td className="py-1 px-2 text-gray-900 text-xs">
-                          {claim.createdAt || claim.submittedAt || claim.date 
-                            ? new Date(claim.createdAt || claim.submittedAt || claim.date).toLocaleDateString()
-                            : "N/A"}
-                        </td>
-                        <td className="py-1 px-2 text-gray-900 text-xs">{claim.lossEventType || claim.damageType || "N/A"}</td>
-                        <td className="py-1 px-2 text-gray-900 text-xs">
-                          {claim.amount || claim.claimAmount 
-                            ? `${(claim.amount || claim.claimAmount).toLocaleString()} RWF`
-                            : "N/A"}
-                        </td>
-                        <td className="py-1 px-2">
-                          <Badge className={`text-xs py-0 px-1.5 ${getStatusColor(claim.status?.toLowerCase() || "pending")}`}>
-                            {getStatusIcon(claim.status?.toLowerCase() || "pending")}
-                            <span className="ml-1 capitalize">{claim.status?.replace('_', ' ') || "Pending"}</span>
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+        {!reportsLoading && !reportsError && (
+          <>
+            {/* Claim Reports */}
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader className="border-b border-gray-200 bg-gray-50">
+                <CardTitle className="text-base font-semibold text-gray-900">Claim Reports</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {claims.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+                    <p className="text-sm font-medium text-gray-900 mb-1">No claim reports found</p>
+                    <p className="text-xs text-gray-500">Your claim reports will appear here</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-200">
+                          <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Claim ID</th>
+                          <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Crop</th>
+                          <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Date</th>
+                          <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Damage Type</th>
+                          <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Amount</th>
+                          <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-100">
+                        {claims.map((claim) => (
+                          <tr 
+                            key={claim._id || claim.id} 
+                            className="hover:bg-green-50/30 transition-colors"
+                          >
+                            <td className="py-3.5 px-6 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">{claim.claimNumber || claim._id || claim.id || "N/A"}</div>
+                            </td>
+                            <td className="py-3.5 px-6 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{claim.cropType || claim.crop || "N/A"}</div>
+                            </td>
+                            <td className="py-3.5 px-6 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">
+                                {claim.createdAt || claim.submittedAt || claim.date 
+                                  ? new Date(claim.createdAt || claim.submittedAt || claim.date).toLocaleDateString()
+                                  : "N/A"}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-6 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{claim.lossEventType || claim.damageType || "N/A"}</div>
+                            </td>
+                            <td className="py-3.5 px-6 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">
+                                {claim.amount || claim.claimAmount 
+                                  ? `${(claim.amount || claim.claimAmount).toLocaleString()} RWF`
+                                  : "N/A"}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-6 whitespace-nowrap">
+                              <Badge className={`text-xs py-1 px-2.5 ${getStatusColor(claim.status?.toLowerCase() || "pending")}`}>
+                                {getStatusIcon(claim.status?.toLowerCase() || "pending")}
+                                <span className="ml-1 capitalize">{claim.status?.replace('_', ' ') || "Pending"}</span>
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Risk Assessment Reports */}
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader className="border-b border-gray-200 bg-gray-50">
+                <CardTitle className="text-base font-semibold text-gray-900">Risk Assessment Reports</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {riskAssessments.length === 0 ? (
+                  <div className="text-center py-12">
+                    <BarChart3 className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+                    <p className="text-sm font-medium text-gray-900 mb-1">No risk assessment reports found</p>
+                    <p className="text-xs text-gray-500">Your risk assessment reports will appear here</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-200">
+                          <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Assessment ID</th>
+                          <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Type</th>
+                          <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Date</th>
+                          <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Risk Score</th>
+                          <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-100">
+                        {riskAssessments.map((assessment) => (
+                          <tr 
+                            key={assessment._id || assessment.id} 
+                            className="hover:bg-green-50/30 transition-colors"
+                          >
+                            <td className="py-3.5 px-6 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">{assessment._id || assessment.id || "N/A"}</div>
+                            </td>
+                            <td className="py-3.5 px-6 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{assessment.type || "Risk Assessment"}</div>
+                            </td>
+                            <td className="py-3.5 px-6 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">
+                                {assessment.createdAt || assessment.assessmentDate || assessment.date 
+                                  ? new Date(assessment.createdAt || assessment.assessmentDate || assessment.date).toLocaleDateString()
+                                  : "N/A"}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-6 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">
+                                {assessment.riskScore !== undefined ? `${assessment.riskScore}/100` : "N/A"}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-6 whitespace-nowrap">
+                              <Badge className={`text-xs py-1 px-2.5 ${getStatusColor(assessment.status?.toLowerCase() || "pending")}`}>
+                                {getStatusIcon(assessment.status?.toLowerCase() || "pending")}
+                                <span className="ml-1 capitalize">{assessment.status?.replace('_', ' ') || "Pending"}</span>
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
+      </div>
     </div>
   );
 
   const renderFarmDetails = () => {
     if (!selectedFarm) {
       return (
-        <div className="space-y-6">
+        <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+          <div className="max-w-7xl mx-auto px-6">
           <Button
             variant="ghost"
-            onClick={() => setActivePage("my-fields")}
+            onClick={() => {
+              setSelectedFarm(null);
+              setActivePage("my-fields");
+            }}
             className="text-gray-900 hover:bg-gray-50"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -1845,23 +1955,32 @@ export default function FarmerDashboard() {
     const coordinates = farm.location?.coordinates || farm.coordinates || [];
 
     return (
-      <div className="space-y-4">
+      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
         {/* Header */}
-        <div className="mb-4">
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setActivePage("my-fields");
-              setSelectedFarm(null);
-            }}
-            className="text-gray-600 hover:text-gray-700 mb-2"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to My Fields
-          </Button>
-          <h1 className="text-2xl font-bold text-gray-900">Farm Details</h1>
-          <p className="text-sm text-gray-600 mt-1">{farm.name || "Farm Information"}</p>
+        <div className="max-w-7xl mx-auto px-6 mb-6">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setSelectedFarm(null);
+                  setActivePage("my-fields");
+                }}
+                className="text-gray-600 hover:text-gray-700 p-0 h-auto"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900">Farm Details</h1>
+                <p className="text-sm text-gray-500 mt-1">{farm.name || "Farm Information"}</p>
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-6">
 
         <div className="flex items-center justify-between">
           <div className="flex-1">
@@ -1869,8 +1988,8 @@ export default function FarmerDashboard() {
             <div className="flex items-center gap-2 text-sm mb-4">
               <button
                 onClick={() => {
-                  setActivePage("my-fields");
                   setSelectedFarm(null);
+                  setActivePage("my-fields");
                 }}
                 className="text-gray-600 hover:text-gray-700 font-medium"
               >
@@ -2007,10 +2126,14 @@ export default function FarmerDashboard() {
   const renderFarmAnalytics = () => {
     if (!selectedFarm) {
       return (
-        <div className="space-y-6">
+        <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+          <div className="max-w-7xl mx-auto px-6">
           <Button
             variant="ghost"
-            onClick={() => setActivePage("my-fields")}
+            onClick={() => {
+              setSelectedFarm(null);
+              setActivePage("my-fields");
+            }}
             className="text-gray-900 hover:bg-gray-50"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -2028,64 +2151,36 @@ export default function FarmerDashboard() {
     const { weatherForecast, historicalWeather, vegetationStats, loading } = farmAnalytics;
 
     return (
-      <div className="space-y-4">
+      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
         {/* Header */}
-        <div className="mb-4">
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setActivePage("my-fields");
-              setSelectedFarm(null);
-            }}
-            className="text-gray-600 hover:text-gray-700 mb-2"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to My Fields
-          </Button>
-          <h1 className="text-2xl font-bold text-gray-900">Farm Analytics</h1>
-          <p className="text-sm text-gray-600 mt-1">{selectedFarm.name || "Weather forecasts, historical data, and vegetation indices"}</p>
+        <div className="max-w-7xl mx-auto px-6 mb-6">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setSelectedFarm(null);
+                  setActivePage("my-fields");
+                }}
+                className="text-gray-600 hover:text-gray-700 p-0 h-auto"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900">Farm Analytics</h1>
+                <p className="text-sm text-gray-500 mt-1">{selectedFarm.name || "Weather forecasts, historical data, and vegetation indices"}</p>
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-6">
 
         <div className="flex items-center justify-between">
           <div className="flex-1">
             {/* Breadcrumb Navigation */}
-            <div className="flex items-center gap-2 text-sm mb-4 hidden">
-              <button
-                onClick={() => {
-                  setActivePage("my-fields");
-                  setSelectedFarm(null);
-                }}
-                className="text-gray-600 hover:text-gray-700 font-medium"
-              >
-                My Fields
-              </button>
-              <span className="text-gray-400">/</span>
-              <button
-                onClick={() => {
-                  setActivePage("farm-details");
-                }}
-                className="text-gray-600 hover:text-gray-700 font-medium"
-              >
-                {selectedFarm.name || "Farm Details"}
-              </button>
-              <span className="text-gray-400">/</span>
-              <span className="text-gray-900 font-medium">Analytics</span>
-            </div>
-            
-            {/* Back Button */}
-            <div className="mb-4">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                  setActivePage("my-fields");
-                  setSelectedFarm(null);
-              }}
-              className="text-gray-900 hover:bg-gray-50"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Fields List
-            </Button>
-            </div>
             
             {/* Title */}
             <h2 className="text-2xl font-bold text-gray-900">
@@ -2469,18 +2564,24 @@ export default function FarmerDashboard() {
   };
 
   const renderProfileSettings = () => (
-    <div className="space-y-4">
+    <div className="min-h-screen bg-gray-50 pt-6 pb-8">
       {/* Header */}
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
-        <p className="text-sm text-gray-600 mt-1">Manage your account settings and preferences</p>
+      <div className="max-w-7xl mx-auto px-6 mb-6">
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Profile Settings</h1>
+            <p className="text-sm text-gray-500 mt-1">Manage your account settings and preferences</p>
+          </div>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Personal Information</CardTitle>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6">
+      <Card className="bg-white border border-gray-200 shadow-sm">
+        <CardHeader className="border-b border-gray-200 bg-gray-50">
+          <CardTitle className="text-base font-semibold text-gray-900">Personal Information</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="fullName">Full Name</Label>
@@ -2508,11 +2609,12 @@ export default function FarmerDashboard() {
             <Input id="location" placeholder="Province, District, Sector, Cell, Village" />
           </div>
 
-          <Button className="bg-green-600 hover:bg-green-700">
+          <Button className="bg-green-600 hover:bg-green-700 text-white text-xs h-9">
             Update Profile
           </Button>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 
@@ -2534,7 +2636,7 @@ export default function FarmerDashboard() {
     { id: "dashboard", label: "Dashboard", icon: BarChart3 },
     { id: "my-fields", label: "My Farms", icon: Crop },
     { id: "file-claim", label: "File Claim", icon: AlertTriangle },
-    { id: "loss-reports", label: "Loss Reports", icon: FileText },
+    { id: "loss-reports", label: "Reports", icon: FileText },
     { id: "profile", label: "Profile", icon: User }
   ];
 
