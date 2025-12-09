@@ -521,25 +521,22 @@ export default function ClaimReviewPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button 
-            variant="outline" 
-            onClick={() => window.history.back()}
-            className="flex items-center"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Claims
-          </Button>
-          <div>
-            <h2 className="text-2xl font-bold text-white">Claim Review</h2>
-            <p className="text-gray-700">Review and make decisions on insurance claims</p>
-          </div>
-        </div>
+      <div className="mb-4">
+        <Button 
+          variant="ghost" 
+          onClick={() => window.history.back()}
+          className="text-gray-600 hover:text-gray-700 mb-2"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Claims
+        </Button>
+        <h1 className="text-2xl font-bold text-gray-900">Claim Review</h1>
+        <p className="text-sm text-gray-600 mt-1">Review and make decisions on insurance claims</p>
+      </div>
         
-        <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-2">
           {loading ? (
             <div className="text-gray-500">Loading claims...</div>
           ) : (
@@ -562,7 +559,6 @@ export default function ClaimReviewPage() {
               </SelectContent>
             </Select>
           )}
-        </div>
       </div>
 
       {/* Loading State */}

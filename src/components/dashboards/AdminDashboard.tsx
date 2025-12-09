@@ -836,7 +836,12 @@ export const AdminDashboard = () => {
 
   // Dashboard Overview
   const renderDashboard = () => (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-sm text-gray-600 mt-1">System overview and key metrics</p>
+      </div>
       {/* Error State */}
       {statsError && !statsLoading && (
         <Card className={`${dashboardTheme.card} border-l-4 border-l-red-500`}>
@@ -1470,11 +1475,12 @@ export const AdminDashboard = () => {
 
   // User Management Page
   const renderUserManagement = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
-          <p className="text-gray-900/60">Manage all platform users and permissions</p>
+          <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
+          <p className="text-sm text-gray-600 mt-1">Manage all platform users and permissions</p>
         </div>
         <div className="flex gap-2">
           <Button 
@@ -2678,11 +2684,12 @@ export const AdminDashboard = () => {
 
   // Financial Management Page
   const renderFinancialManagement = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Financial Management & Monetization</h2>
-          <p className="text-gray-900/60">Track platform revenue and commission earnings</p>
+          <h1 className="text-2xl font-bold text-gray-900">Financial Management</h1>
+          <p className="text-sm text-gray-600 mt-1">Track platform revenue and commission earnings</p>
         </div>
         <div className="flex gap-2">
           <Button 
@@ -2976,12 +2983,11 @@ export const AdminDashboard = () => {
 
   // System Configuration Page
   const renderSystemConfig = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">System Configuration</h2>
-          <p className="text-gray-900/60">Configure platform settings and preferences</p>
-        </div>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-gray-900">System Configuration</h1>
+        <p className="text-sm text-gray-600 mt-1">Configure platform settings and preferences</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -3093,11 +3099,12 @@ export const AdminDashboard = () => {
 
   // Activity Logs Page
   const renderActivityLogs = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">System Activity Logs</h2>
-          <p className="text-gray-900/60">Monitor all system activities and user actions</p>
+          <h1 className="text-2xl font-bold text-gray-900">Activity Logs</h1>
+          <p className="text-sm text-gray-600 mt-1">Monitor all system activities and user actions</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-100">
@@ -3196,11 +3203,12 @@ export const AdminDashboard = () => {
 
   // Analytics Page
   const renderAnalytics = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Platform Analytics</h2>
-          <p className="text-gray-900/60">Deep insights into platform performance and usage</p>
+          <h1 className="text-2xl font-bold text-gray-900">Platform Analytics</h1>
+          <p className="text-sm text-gray-600 mt-1">Deep insights into platform performance and usage</p>
         </div>
         <div className="flex gap-2">
           <Button 
@@ -3650,11 +3658,12 @@ export const AdminDashboard = () => {
 
   // Database Management Page
   const renderDatabase = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Database Management</h2>
-          <p className="text-gray-900/60">Manage database operations and backups</p>
+          <h1 className="text-2xl font-bold text-gray-900">Database Management</h1>
+          <p className="text-sm text-gray-600 mt-1">Manage database operations and backups</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-100">
@@ -3933,11 +3942,12 @@ export const AdminDashboard = () => {
 
   // Security Management Page
   const renderSecurity = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Security & Access Control</h2>
-          <p className="text-gray-900/60">Manage platform security and user permissions</p>
+          <h1 className="text-2xl font-bold text-gray-900">Security & Access Control</h1>
+          <p className="text-sm text-gray-600 mt-1">Manage platform security and user permissions</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-100">
@@ -4248,11 +4258,12 @@ export const AdminDashboard = () => {
     };
 
     return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
         <div>
-            <h2 className="text-2xl font-bold text-gray-700">Admin Settings</h2>
-            <p className="text-gray-600">Configure your admin preferences</p>
+            <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+            <p className="text-sm text-gray-600 mt-1">Configure your admin preferences</p>
         </div>
           <Button
             onClick={loadAdminProfile}
@@ -4559,11 +4570,12 @@ export const AdminDashboard = () => {
 
   // Commission Management Page
   const renderCommission = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Commission Management</h2>
-          <p className="text-gray-900/60">Track and manage commission rates and earnings</p>
+          <h1 className="text-2xl font-bold text-gray-900">Commission Management</h1>
+          <p className="text-sm text-gray-600 mt-1">Track and manage commission rates and earnings</p>
         </div>
         <div className="flex gap-2">
           <Button 
@@ -5090,11 +5102,12 @@ export const AdminDashboard = () => {
     };
 
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Policies Management</h2>
-            <p className="text-gray-900/60">Manage all insurance policies</p>
+            <h1 className="text-2xl font-bold text-gray-900">Policies Management</h1>
+            <p className="text-sm text-gray-600 mt-1">Manage all insurance policies</p>
           </div>
           <div className="flex gap-2">
             <Button 
@@ -5501,11 +5514,12 @@ export const AdminDashboard = () => {
     };
 
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Claims Management</h2>
-            <p className="text-gray-900/60">Manage all insurance claims</p>
+            <h1 className="text-2xl font-bold text-gray-900">Claims Management</h1>
+            <p className="text-sm text-gray-600 mt-1">Manage all insurance claims</p>
           </div>
           <div className="flex gap-2">
             <Button 
@@ -5982,11 +5996,12 @@ export const AdminDashboard = () => {
     });
 
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="mb-4 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Assessments Management</h1>
-            <p className="text-gray-900/60 mt-1">Manage and create assessments for farms</p>
+            <h1 className="text-2xl font-bold text-gray-900">Assessments Management</h1>
+            <p className="text-sm text-gray-600 mt-1">Manage and create assessments for farms</p>
           </div>
           <Button
             onClick={() => setShowAssessmentDialog(true)}

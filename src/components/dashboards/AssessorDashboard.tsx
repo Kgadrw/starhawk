@@ -11,6 +11,7 @@ import AssessorNotifications from "../assessor/AssessorNotifications";
 import AssessorProfileSettings from "../assessor/AssessorProfileSettings";
 import RiskAssessmentSystem from "../assessor/RiskAssessmentSystem";
 import LossAssessmentSystem from "../assessor/LossAssessmentSystem";
+import LeafletMap from "../common/LeafletMap";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
@@ -54,7 +55,9 @@ import {
   Star,
   Map,
   ArrowLeft,
-  RefreshCw
+  RefreshCw,
+  Users,
+  Sprout
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -147,7 +150,8 @@ export default function AssessorDashboard() {
   const assessorEmail = getEmail() || "";
   // Use email or phone number as display name, or fallback to "Assessor"
   const assessorName = assessorEmail || assessorPhone || "Assessor";
-  const [activeView, setActiveView] = useState("assessments");
+  const [activeView, setActiveView] = useState<"farmers" | "fields" | "farmerFields">("farmers");
+  const [selectedFarmer, setSelectedFarmer] = useState<{farmerId: string; farmerName: string; location: string} | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -189,10 +193,46 @@ export default function AssessorDashboard() {
   const totalRiskAssessments = assessments.filter(a => a.type === "Risk Assessment").length;
   const totalClaimAssessments = assessments.filter(a => a.type === "Claim Assessment").length;
   const pendingAssessments = assessments.filter(a => a.status === "Pending").length;
+  
+  // Compute metrics for Field Management-style dashboard
+  const uniqueFarmerIds = new Set(assessments.map(a => a.farmerId).filter(Boolean));
+  const totalFarmers = uniqueFarmerIds.size || 0;
+  const totalFields = Array.isArray(farms) ? farms.length : 0;
+  const totalArea = Array.isArray(farms) 
+    ? farms.reduce((sum, farm) => sum + (farm.area || 0), 0) 
+    : 0;
+  const activeAssessments = assessments.filter(a => 
+    a.status === "Pending" || a.status === "Processing" || a.status === "Under Review"
+  ).length;
+  
+  // Get unique farmers with their data for the table
+  const farmerData = Array.from(uniqueFarmerIds).map(farmerId => {
+    const farmerAssessments = assessments.filter(a => a.farmerId === farmerId);
+    const farmerName = farmerAssessments[0]?.farmerName || "Unknown Farmer";
+    const location = farmerAssessments[0]?.location || "Unknown Location";
+    const farmerFarms = Array.isArray(farms) 
+      ? farms.filter(farm => 
+          farm.farmerId === farmerId || 
+          farm.farmer?._id === farmerId ||
+          farm.farmer?.id === farmerId
+        )
+      : [];
+    const farmerTotalFields = farmerFarms.length;
+    const farmerTotalArea = farmerFarms.reduce((sum, farm) => sum + (farm.area || 0), 0);
+    
+    return {
+      farmerId: `F-${String(farmerId).slice(-3).padStart(3, '0')}`,
+      farmerName,
+      location,
+      totalFields: farmerTotalFields,
+      totalArea: farmerTotalArea
+    };
+  });
 
-  // Fetch assessments from API
+  // Fetch assessments and farms from API
   useEffect(() => {
     loadAssessments();
+    loadFarms();
   }, []);
 
   // Load profile when dashboard is shown
@@ -963,12 +1003,27 @@ export default function AssessorDashboard() {
     const [flightDate, setFlightDate] = useState<string>("2025-10-22");
     const [manualDate, setManualDate] = useState<string>("2025-10-28");
     const [assessorNotes, setAssessorNotes] = useState<string>("Weed clusters in north. Pest minimal.");
+    const [mapTileLayer, setMapTileLayer] = useState<"osm" | "satellite" | "terrain">("satellite");
+    const [selectedIndex, setSelectedIndex] = useState<string>("ndvi");
     
     // Manual input metrics state
     const [stressDetected, setStressDetected] = useState<number[]>([17.6]);
     const [soilMoisture, setSoilMoisture] = useState<number[]>([58]);
     const [weedArea, setWeedArea] = useState<number[]>([7.3]);
     const [pestArea, setPestArea] = useState<number[]>([4.4]);
+    
+    // Parse location coordinates if available
+    const parseCoordinates = (location: string): [number, number] => {
+      if (location.includes(',')) {
+        const parts = location.split(',');
+        const lat = parseFloat(parts[0]?.trim() || "-1.9441");
+        const lng = parseFloat(parts[1]?.trim() || "30.0619");
+        return [lat, lng];
+      }
+      return [-1.9441, 30.0619]; // Default: Kigali, Rwanda
+    };
+    
+    const mapCenter = parseCoordinates(fieldDetails.location);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -1137,35 +1192,53 @@ export default function AssessorDashboard() {
                     <Label className="text-gray-900 mb-4 block">Field Visualization</Label>
                     <Card className={`${dashboardTheme.card} border border-gray-200`}>
                       <CardHeader>
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between flex-wrap gap-4">
                           <div>
                             <p className="text-gray-900 font-medium">Map View</p>
                           </div>
                           <div className="flex items-center gap-4">
-                            <p className="text-sm text-gray-900/80">Layer: 🌱 Plant Health (NDVI)</p>
-                            <Select defaultValue="ndvi">
-                              <SelectTrigger className={`${dashboardTheme.select} w-64`}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className={dashboardTheme.card}>
-                                <SelectItem value="ndvi">
-                                  🌱 Plant Health (NDVI) ⭐
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
+                            <div className="flex items-center gap-2">
+                              <Label className="text-sm text-gray-700">Layer:</Label>
+                              <Select value={mapTileLayer} onValueChange={(value) => setMapTileLayer(value as "osm" | "satellite" | "terrain")}>
+                                <SelectTrigger className={`${dashboardTheme.select} w-32`}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className={dashboardTheme.card}>
+                                  <SelectItem value="satellite">Satellite</SelectItem>
+                                  <SelectItem value="osm">Street</SelectItem>
+                                  <SelectItem value="terrain">Terrain</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Label className="text-sm text-gray-700">Index:</Label>
+                              <Select value={selectedIndex} onValueChange={setSelectedIndex}>
+                                <SelectTrigger className={`${dashboardTheme.select} w-48`}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className={dashboardTheme.card}>
+                                  <SelectItem value="ndvi">🌱 NDVI</SelectItem>
+                                  <SelectItem value="evi">🌿 EVI</SelectItem>
+                                  <SelectItem value="savi">🌾 SAVI</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <div className="h-[400px] bg-white rounded-lg border border-gray-200 flex items-center justify-center relative">
-                          <div className="text-center">
-                            <Map className="h-16 w-16 mx-auto mb-4 text-gray-900/30" />
-                            <p className="text-gray-900/60 text-lg">Field Visualization Map</p>
-                            <p className="text-gray-900/40 text-sm mt-2">NDVI Data Visualization</p>
-                          </div>
+                        <div className="relative">
+                          <LeafletMap
+                            center={mapCenter}
+                            zoom={15}
+                            height="400px"
+                            tileLayer={mapTileLayer}
+                            showControls={true}
+                            className="w-full rounded-lg"
+                          />
                           {/* Legend */}
-                          <div className="absolute bottom-4 left-4 bg-white/90 border border-gray-200 rounded-lg p-4">
-                            <p className="text-gray-900 font-medium mb-3">Legend</p>
+                          <div className="absolute bottom-4 left-4 bg-white/90 border border-gray-200 rounded-lg p-4 z-[1000]">
+                            <p className="text-gray-900 font-medium mb-3">Vegetation Health Index</p>
                             <div className="space-y-2">
                               <div className="flex items-center gap-2">
                                 <div className="w-4 h-4 bg-green-500 rounded"></div>
@@ -1329,12 +1402,15 @@ export default function AssessorDashboard() {
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <div className="h-[400px] bg-white rounded-lg border border-gray-200 flex items-center justify-center relative">
-                          <div className="text-center">
-                            <Map className="h-16 w-16 mx-auto mb-4 text-gray-900/30" />
-                            <p className="text-gray-900/60 text-lg">Field Reference Map</p>
-                            <p className="text-gray-900/40 text-sm mt-2">Physical Assessment Location</p>
-                          </div>
+                        <div className="border border-gray-200 rounded-lg overflow-hidden">
+                          <LeafletMap
+                            center={mapCenter}
+                            zoom={15}
+                            height="400px"
+                            tileLayer="satellite"
+                            showControls={true}
+                            className="w-full"
+                          />
                         </div>
                       </CardContent>
                     </Card>
@@ -1416,6 +1492,24 @@ export default function AssessorDashboard() {
     
     return matchesSearch && matchesStatus && matchesType;
   });
+  
+  // Filter farmers/fields based on search
+  const filteredFarmerData = farmerData.filter(farmer => {
+    const matchesSearch = searchQuery === "" ||
+      farmer.farmerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      farmer.farmerId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      farmer.location.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  });
+  
+  // Filter fields based on search
+  const filteredFields = Array.isArray(farms) ? farms.filter(farm => {
+    const matchesSearch = searchQuery === "" ||
+      (farm.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (farm.farmerName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (farm.cropType || '').toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  }) : [];
   
   console.log('🔍 Filter results:', {
     totalAssessments: assessments.length,
@@ -1662,9 +1756,186 @@ export default function AssessorDashboard() {
     setSelectedField(null);
   };
 
+  const handleFarmerClick = (farmer: {farmerId: string; farmerName: string; location: string}) => {
+    setSelectedFarmer(farmer);
+    setActiveView("farmerFields");
+  };
+
+  const handleBackToFarmers = () => {
+    setActiveView("farmers");
+    setSelectedFarmer(null);
+  };
+
   const handleBackToFields = () => {
     setViewMode("fieldSelection");
     setSelectedField(null);
+  };
+
+  // Get fields for selected farmer
+  const getFarmerFields = () => {
+    if (!selectedFarmer) return [];
+    
+    // Find the original farmer ID from assessments
+    const assessmentForFarmer = assessments.find(a => a.farmerName === selectedFarmer.farmerName);
+    const originalFarmerId = assessmentForFarmer?.farmerId || selectedFarmer.farmerId.replace('F-', '');
+    
+    const farmerFarms = Array.isArray(farms) 
+      ? farms.filter(farm => {
+          const farmFarmerId = farm.farmerId || farm.farmer?._id || farm.farmer?.id || '';
+          return farmFarmerId === originalFarmerId ||
+                 farmFarmerId === selectedFarmer.farmerId ||
+                 farm.farmerName === selectedFarmer.farmerName;
+        })
+      : [];
+    
+    return farmerFarms.map((farm: any, index: number) => {
+      const fieldId = farm._id || farm.id;
+      const isProcessed = farm.status === 'Processed' || farm.status === 'processed' || (farm.boundary && farm.boundary.coordinates);
+      
+      return {
+        id: fieldId || `temp-${index}`,
+        fieldId: fieldId ? `FLD-${String(fieldId).slice(-3).padStart(3, '0')}` : "Not processed",
+        farmerName: farm.farmerName || selectedFarmer.farmerName,
+        crop: farm.cropType || farm.crop || "Unknown",
+        area: farm.area || 0,
+        season: farm.season || (index % 2 === 0 ? "A" : "B"),
+        status: isProcessed ? "Processed" : "Processing Needed",
+        rawFarm: farm
+      };
+    });
+  };
+
+  // Render Farmer Fields View
+  const renderFarmerFields = () => {
+    if (!selectedFarmer) return null;
+    const fields = getFarmerFields();
+    
+    return (
+      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+        <div className="max-w-7xl mx-auto px-6 space-y-4">
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 text-sm">
+            <button 
+              onClick={handleBackToFarmers}
+              className="text-gray-600 hover:text-gray-700"
+            >
+              All Farmers
+            </button>
+            <span className="text-gray-900/60">/</span>
+            <span className="text-gray-900">{selectedFarmer.farmerName}</span>
+          </div>
+
+          {/* Table */}
+          <Card className="bg-white border border-gray-200 shadow-sm">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50 border-b-2 border-gray-200">
+                    <th className="text-left py-2.5 px-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Field ID</th>
+                    <th className="text-left py-2.5 px-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Farmer</th>
+                    <th className="text-left py-2.5 px-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Crop</th>
+                    <th className="text-left py-2.5 px-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Area (ha)</th>
+                    <th className="text-left py-2.5 px-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Season</th>
+                    <th className="text-left py-2.5 px-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Status</th>
+                    <th className="text-left py-2.5 px-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {fields.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-sm text-gray-600">
+                        No fields found for this farmer
+                      </td>
+                    </tr>
+                  ) : (
+                    fields.map((field, index) => (
+                      <tr
+                        key={field.id}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="py-2.5 px-4 whitespace-nowrap">
+                          <div className={`text-sm font-medium ${
+                            field.fieldId === "Not processed" 
+                              ? "text-gray-400" 
+                              : "text-gray-900"
+                          }`}>
+                            {field.fieldId}
+                          </div>
+                        </td>
+                        <td className="py-2.5 px-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{field.farmerName}</div>
+                        </td>
+                        <td className="py-2.5 px-4 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                            <Sprout className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
+                            <span>{field.crop}</span>
+                          </div>
+                        </td>
+                        <td className="py-2.5 px-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{field.area.toFixed(1)} ha</div>
+                        </td>
+                        <td className="py-2.5 px-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{field.season}</div>
+                        </td>
+                        <td className="py-2.5 px-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${
+                            field.status === "Processed"
+                              ? "bg-green-50 text-green-700 border-green-200"
+                              : "bg-orange-50 text-orange-700 border-orange-200"
+                          }`}>
+                            {field.status}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-4 whitespace-nowrap">
+                          {field.status === "Processed" ? (
+                            <Button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const farmField: Field = {
+                                  id: field.rawFarm._id || field.rawFarm.id,
+                                  farmerName: field.farmerName,
+                                  crop: field.crop,
+                                  area: field.area,
+                                  season: field.season,
+                                  status: field.status,
+                                  fieldName: field.rawFarm.name || "Field",
+                                  sowingDate: field.rawFarm.sowingDate || ""
+                                };
+                                handleFieldClick(farmField);
+                              }}
+                              size="sm"
+                              className="bg-gray-800 hover:bg-gray-900 text-white h-8"
+                            >
+                              <Eye className="h-3.5 w-3.5 mr-1.5" />
+                              View Data
+                            </Button>
+                          ) : (
+                            <Button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedFarmerForProcessing(field.farmerName);
+                                setShowDrawField(true);
+                              }}
+                              size="sm"
+                              className="bg-gray-800 hover:bg-gray-900 text-white h-8"
+                            >
+                              <Edit className="h-3.5 w-3.5 mr-1.5" />
+                              Process
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+        </div>
+      </div>
+    );
   };
 
   // Field Selection View
@@ -1673,7 +1944,8 @@ export default function AssessorDashboard() {
     const fields = getFieldsForAssessment(selectedAssessment);
     
     return (
-      <div className="space-y-6">
+      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+        <div className="max-w-7xl mx-auto px-6 space-y-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm">
           <button 
@@ -1753,6 +2025,7 @@ export default function AssessorDashboard() {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
     );
   };
@@ -1763,7 +2036,8 @@ export default function AssessorDashboard() {
     const fieldDetails = getFieldDetails(selectedField);
 
     return (
-      <div className="space-y-6">
+      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+        <div className="max-w-7xl mx-auto px-6 space-y-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm">
           <button 
@@ -1878,11 +2152,25 @@ export default function AssessorDashboard() {
                 <CardHeader>
                   <CardTitle className="text-gray-900">Field Map</CardTitle>
                 </CardHeader>
-                <CardContent className="h-[500px] flex items-center justify-center bg-white rounded-lg border border-gray-200">
-                  <div className="text-center">
-                    <MapPin className="h-16 w-16 mx-auto mb-4 text-gray-900/30" />
-                    <p className="text-gray-900/60 text-lg">Map Integration</p>
-                    <p className="text-gray-900/40 text-sm mt-2">Field boundary visualization</p>
+                <CardContent className="p-0">
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <LeafletMap
+                      center={(() => {
+                        // Parse location coordinates if available
+                        if (fieldDetails.location.includes(',')) {
+                          const parts = fieldDetails.location.split(',');
+                          const lat = parseFloat(parts[0]?.trim() || "-1.9441");
+                          const lng = parseFloat(parts[1]?.trim() || "30.0619");
+                          return [lat, lng];
+                        }
+                        return [-1.9441, 30.0619]; // Default: Kigali, Rwanda
+                      })()}
+                      zoom={15}
+                      height="500px"
+                      tileLayer="satellite"
+                      showControls={true}
+                      className="w-full"
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -1908,91 +2196,157 @@ export default function AssessorDashboard() {
             </Card>
           </TabsContent>
         </Tabs>
+        </div>
       </div>
     );
   };
 
   const renderDashboard = () => (
-    <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="hover:border-blue-300 transition-all duration-300 bg-white border border-gray-200 rounded-xl shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Total Assessments</p>
-                <p className="text-3xl font-bold text-gray-900">{totalAssessments}</p>
-                <p className="text-xs text-gray-500 mt-1">All assessments</p>
-              </div>
-              <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center">
-                <FileText className="h-7 w-7 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:border-green-300 transition-all duration-300 bg-white border border-gray-200 rounded-xl shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Risk Assessment</p>
-                <p className="text-3xl font-bold text-gray-900">{totalRiskAssessments}</p>
-                <p className="text-xs text-gray-500 mt-1">Risk evaluations</p>
-              </div>
-              <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center">
-                <Shield className="h-7 w-7 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:border-teal-300 transition-all duration-300 bg-white border border-gray-200 rounded-xl shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Claim Assessments</p>
-                <p className="text-3xl font-bold text-gray-900">{totalClaimAssessments}</p>
-                <p className="text-xs text-gray-500 mt-1">Claims processed</p>
-              </div>
-              <div className="w-14 h-14 bg-teal-100 rounded-xl flex items-center justify-center">
-                <FileText className="h-7 w-7 text-teal-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:border-purple-300 transition-all duration-300 bg-white border border-gray-200 rounded-xl shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Pending Reviews</p>
-                <p className="text-3xl font-bold text-gray-900">{pendingAssessments}</p>
-                <p className="text-xs text-gray-500 mt-1">Awaiting action</p>
-              </div>
-              <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center">
-                <Calendar className="h-7 w-7 text-purple-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+      {/* Clean Header */}
+      <div className="max-w-7xl mx-auto px-6 mb-6">
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+            <p className="text-sm text-gray-500 mt-1">Manage farmers and their field assessments</p>
+          </div>
+        </div>
       </div>
 
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6">
+        {/* Summary Cards - Clean Modern Style */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-xs text-gray-500 mb-1">Total Farmers</p>
+                  <p className="text-xl font-semibold text-gray-900">{totalFarmers}</p>
+                  <p className="text-xs text-green-600 mt-1">All registered</p>
+                </div>
+                <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+                  <Users className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-xs text-gray-500 mb-1">Total Fields</p>
+                  <p className="text-xl font-semibold text-gray-900">{totalFields}</p>
+                  <p className="text-xs text-green-600 mt-1">Across all farmers</p>
+                </div>
+                <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+                  <Sprout className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-xs text-gray-500 mb-1">Total Area</p>
+                  <p className="text-xl font-semibold text-gray-900">{totalArea.toFixed(1)} ha</p>
+                  <p className="text-xs text-green-600 mt-1">Cultivated area</p>
+                </div>
+                <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+                  <MapPin className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-xs text-gray-500 mb-1">Active Assessments</p>
+                  <p className="text-xl font-semibold text-gray-900">{activeAssessments}</p>
+                  <p className="text-xs text-green-600 mt-1">In progress</p>
+                </div>
+                <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+                  <Calendar className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Action Bar */}
+        <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setActiveView("farmers")}
+              size="sm"
+              className={activeView === "farmers" 
+                ? "bg-green-600 hover:bg-green-700 text-white h-9" 
+                : "bg-gray-200 hover:bg-gray-300 text-gray-700 h-9"}
+            >
+              View Farmers
+            </Button>
+            <Button
+              onClick={() => setActiveView("fields")}
+              size="sm"
+              className={activeView === "fields" 
+                ? "bg-green-600 hover:bg-green-700 text-white h-9" 
+                : "bg-gray-200 hover:bg-gray-300 text-gray-700 h-9"}
+            >
+              View All Fields
+            </Button>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+              <Input
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 h-9 w-56 text-sm bg-white border-gray-300"
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setFilterDialogOpen(true)}
+              className="bg-white border-gray-300 h-9"
+            >
+              <Filter className="h-3.5 w-3.5 mr-1.5" />
+              Filter
+            </Button>
+            <Button
+              onClick={() => setShowDrawField(true)}
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 text-white h-9"
+            >
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              Add Field
+            </Button>
+          </div>
+        </div>
+
       {/* Error Message */}
-      {error && (
-        <Card className={`${dashboardTheme.card} border-l-4 border-l-red-500`}>
-          <CardContent className="p-4">
+      {(error || farmsError) && (
+        <Card className="bg-white border-l-4 border-l-red-500">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-red-400" />
-                <p className="text-red-400">{error}</p>
+                <AlertCircle className="h-4 w-4 text-red-500" />
+                <p className="text-sm text-red-500">{error || farmsError}</p>
               </div>
               <Button
-                onClick={loadAssessments}
+                onClick={() => { loadAssessments(); loadFarms(); }}
                 variant="outline"
                 size="sm"
-                className="border-gray-300 text-gray-900 hover:bg-gray-100"
+                className="border-gray-300 h-8"
               >
-                <RefreshCw className="h-4 w-4 mr-2" />
+                <RefreshCw className="h-3 w-3 mr-1.5" />
                 Retry
               </Button>
             </div>
@@ -2000,144 +2354,138 @@ export default function AssessorDashboard() {
         </Card>
       )}
 
-      {/* Action Bar */}
-      <div className="flex items-center justify-end">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-900/60" />
-            <Input
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className={`${dashboardTheme.input} pl-10 w-64 border-gray-300`}
-            />
-        </div>
+        {/* Data Table */}
+        <Card className="bg-white border border-gray-200 shadow-sm">
+          <CardHeader className="border-b border-gray-200 bg-white px-6 py-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-semibold text-gray-900">
+                {activeView === "farmers" ? "Farmers Management" : "Fields Management"}
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 text-white border-green-600 h-8 px-3 text-xs"
+              >
+                <Download className="h-3.5 w-3.5 mr-1.5" />
+                Export
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {loading || farmsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-3"></div>
+                  <p className="text-sm text-gray-600">Loading data...</p>
+                </div>
+              </div>
+            ) : activeView === "farmerFields" ? (
+              renderFarmerFields()
+            ) : activeView === "farmers" ? (
+              filteredFarmerData.length === 0 ? (
+                <div className="p-12 text-center">
+                  <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-sm font-medium text-gray-900 mb-1">No farmers found</p>
+                  <p className="text-xs text-gray-500">Try adjusting your search criteria</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Farmer ID</th>
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Farmer Name</th>
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Location</th>
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Total Fields</th>
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Total Area (ha)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-100">
+                      {filteredFarmerData.map((farmer, index) => (
+                        <tr
+                          key={farmer.farmerId}
+                          onClick={() => handleFarmerClick(farmer)}
+                          className="hover:bg-green-50/30 transition-colors cursor-pointer"
+                        >
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900 bg-green-50 px-2 py-1 rounded inline-block">{farmer.farmerId}</div>
+                          </td>
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{farmer.farmerName}</div>
+                          </td>
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <MapPin className="h-4 w-4 text-gray-400" />
+                              <span>{farmer.location}</span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{farmer.totalFields}</div>
+                          </td>
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{farmer.totalArea.toFixed(1)}</div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            ) : (
+              filteredFields.length === 0 ? (
+                <div className="p-12 text-center">
+                  <Sprout className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-sm font-medium text-gray-900 mb-1">No fields found</p>
+                  <p className="text-xs text-gray-500">Try adjusting your search criteria</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Field Name</th>
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Farmer Name</th>
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Crop Type</th>
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Area (ha)</th>
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-100">
+                      {filteredFields.map((field, index) => (
+                        <tr
+                          key={field._id || field.id || index}
+                          className="hover:bg-green-50/30 transition-colors"
+                        >
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{field.name || "Unnamed Field"}</div>
+                          </td>
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{field.farmerName || "Unknown"}</div>
+                          </td>
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <Sprout className="h-4 w-4 text-gray-400" />
+                              <span>{field.cropType || "N/A"}</span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{(field.area || 0).toFixed(1)}</div>
+                          </td>
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                              {field.status || "Active"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            )}
+          </CardContent>
+        </Card>
       </div>
-
-      {/* Data Table */}
-      <Card className={`${dashboardTheme.card}`}>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
-                <p className="text-gray-900/60">Loading assessments...</p>
-              </div>
-            </div>
-          ) : filteredAssessments.length === 0 ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <FileText className="h-12 w-12 mx-auto mb-4 text-gray-900/40" />
-                <p className="text-gray-900/60">No assessments found</p>
-                {!error && (
-                  <Button
-                    onClick={loadAssessments}
-                    variant="outline"
-                    className="mt-4 border-gray-300 text-gray-900 hover:bg-gray-800"
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Refresh
-                  </Button>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-50 border-b-2 border-gray-200">
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Farmer Name</th>
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Location</th>
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Type</th>
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Status</th>
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Date</th>
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredAssessments.map((assessment, index) => (
-                    <tr
-                      key={assessment.id}
-                      onClick={() => handleAssessmentClick(assessment)}
-                      className="hover:bg-gray-50/50 transition-all duration-150 cursor-pointer border-b border-gray-100"
-                    >
-                      <td className="py-4 px-6 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{assessment.farmerName}</div>
-                      </td>
-                      <td className="py-4 px-6 whitespace-nowrap">
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <MapPin className="h-4 w-4 text-teal-500 flex-shrink-0" />
-                          <span className="truncate max-w-[200px]">{assessment.location}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6 whitespace-nowrap">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                          {assessment.type}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(assessment.status)}`}>
-                            {assessment.status}
-                          </span>
-                        <div onClick={(e) => e.stopPropagation()}>
-                          <Select 
-                            value={assessment.status} 
-                            onValueChange={(value) => handleStatusChange(assessment.id, value)}
-                            disabled={updatingAssessment === assessment.id}
-                          >
-                              <SelectTrigger className={`${dashboardTheme.select} border-gray-300 bg-white text-gray-900 h-7 py-0 px-2 w-auto hover:bg-gray-50`}>
-                                <Edit className="h-3.5 w-3.5" />
-                            </SelectTrigger>
-                            <SelectContent className={dashboardTheme.card}>
-                              <SelectItem value="Pending">Pending</SelectItem>
-                              <SelectItem value="Submitted">Submitted</SelectItem>
-                              <SelectItem value="Under Review">Under Review</SelectItem>
-                              <SelectItem value="Approved">Approved</SelectItem>
-                              <SelectItem value="Rejected">Rejected</SelectItem>
-                              <SelectItem value="Processing">Processing</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6 whitespace-nowrap">
-                        <div className="text-sm text-gray-600">{assessment.date}</div>
-                      </td>
-                      <td className="py-4 px-6 whitespace-nowrap">
-                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                          {assessment.status !== "Submitted" && (
-                            <>
-                              <Button
-                                onClick={() => handleCalculateRisk(assessment.id)}
-                                disabled={updatingAssessment === assessment.id}
-                                size="sm"
-                                variant="outline"
-                                className="border-gray-300 text-gray-700 hover:bg-gray-50 h-8 w-8 p-0 rounded-md"
-                                title="Calculate Risk"
-                              >
-                                <Shield className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                onClick={() => handleSubmitAssessment(assessment.id)}
-                                disabled={updatingAssessment === assessment.id}
-                                size="sm"
-                                className="bg-teal-500 hover:bg-teal-600 text-white h-8 w-8 p-0 rounded-md shadow-sm hover:shadow"
-                                title="Submit Assessment"
-                              >
-                                <CheckCircle className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Draw Field Dialog */}
       <Dialog open={showDrawField} onOpenChange={setShowDrawField}>
@@ -2213,21 +2561,30 @@ export default function AssessorDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Map Section */}
                 <div className="md:col-span-2">
-                  <div className="h-[500px] bg-white rounded-lg border border-gray-200 flex items-center justify-center relative">
-                    <div className="text-center">
-                      <Map className="h-16 w-16 mx-auto mb-4 text-gray-900/30" />
-                      <p className="text-gray-900/60 text-lg">Map View</p>
-                      <p className="text-gray-900/40 text-sm mt-2">Draw polygon with polygon tool</p>
-                      {!calculatedArea && (
-                        <Button
-                          onClick={handlePolygonComplete}
-                          className="bg-teal-500 hover:bg-teal-600 text-white mt-4"
-                        >
-                          Complete Polygon
-                        </Button>
-                      )}
-                    </div>
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <LeafletMap
+                      center={[-1.9441, 30.0619]}
+                      zoom={13}
+                      height="500px"
+                      tileLayer="satellite"
+                      showControls={true}
+                      className="w-full"
+                      onMapClick={(lat, lng) => {
+                        // Handle map click for drawing polygon
+                        console.log('Map clicked:', lat, lng);
+                      }}
+                    />
                   </div>
+                  {!calculatedArea && (
+                    <div className="mt-4 text-center">
+                      <Button
+                        onClick={handlePolygonComplete}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        Complete Polygon
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Field Metadata */}
@@ -2277,7 +2634,7 @@ export default function AssessorDashboard() {
             </Button>
             <Button
               onClick={handleSyncField}
-              className="bg-teal-600 hover:bg-teal-700 text-gray-900"
+              className="bg-green-600 hover:bg-green-700 text-white"
               disabled={fieldMethod === "draw" ? !calculatedArea : uploadedFiles.length === 0}
             >
               <RefreshCw className="h-4 w-4 mr-2" />

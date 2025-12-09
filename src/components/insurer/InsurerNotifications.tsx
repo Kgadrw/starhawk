@@ -72,18 +72,11 @@ export default function InsurerNotifications() {
   const unreadCount = notifications.filter(n => n.status === "unread").length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-700">Notifications</h2>
-          <p className="text-gray-600">Stay updated with system activities and alerts</p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="bg-blue-50 text-blue-700">
-            {unreadCount} unread
-          </Badge>
-        </div>
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
+        <p className="text-sm text-gray-600 mt-1">Stay updated with system activities and alerts</p>
       </div>
 
       {/* Filters */}

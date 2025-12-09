@@ -84,7 +84,8 @@ export default function FarmerDashboard() {
   // State for Create Farm Page
   const [isCreating, setIsCreating] = useState(false);
   const [newFieldData, setNewFieldData] = useState({
-    cropType: ""
+    cropType: "",
+    sowingDate: ""
   });
   
   // State for File Claim Page
@@ -822,7 +823,8 @@ export default function FarmerDashboard() {
           type: 'Polygon',
           coordinates: defaultBoundary
         },
-        cropType: newFieldData.cropType.trim().toUpperCase()
+        cropType: newFieldData.cropType.trim().toUpperCase(),
+        sowingDate: newFieldData.sowingDate || undefined
       };
 
       console.log('📤 Preparing to create farm with data:', JSON.stringify(farmData, null, 2));
@@ -837,7 +839,8 @@ export default function FarmerDashboard() {
       });
 
       setNewFieldData({
-        cropType: ""
+        cropType: "",
+        sowingDate: ""
       });
       await loadFarms();
     } catch (err: any) {
@@ -883,12 +886,11 @@ export default function FarmerDashboard() {
       : farmerName;
 
     return (
-    <div className="space-y-6">
-      {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6 shadow-sm">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Welcome back, {displayName}
-        </h1>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-sm text-gray-600 mt-1">Welcome back, {displayName}</p>
       </div>
 
       {/* Stats Cards */}
@@ -1153,11 +1155,12 @@ export default function FarmerDashboard() {
 
 
   const renderMyFields = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">My Farms</h2>
-          <p className="text-gray-600">Manage and view your registered farms</p>
+          <h1 className="text-2xl font-bold text-gray-900">My Farms</h1>
+          <p className="text-sm text-gray-600 mt-1">Manage and view your registered farms</p>
         </div>
         <div className="flex gap-3">
           <Button 
@@ -1384,22 +1387,21 @@ export default function FarmerDashboard() {
   );
 
   const renderCreateFarm = () => (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <Button
-              variant="ghost"
-              onClick={() => setActivePage("my-fields")}
-              className="text-gray-900 hover:bg-gray-50 mb-4"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to My Farms
-            </Button>
-          <h2 className="text-2xl font-bold text-gray-900">Register New Farm</h2>
-          <p className="text-gray-600">
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="mb-4">
+          <Button
+            variant="ghost"
+            onClick={() => setActivePage("my-fields")}
+            className="text-gray-600 hover:text-gray-700 mb-2"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to My Farms
+          </Button>
+          <h1 className="text-2xl font-bold text-gray-900">Register New Farm</h1>
+          <p className="text-sm text-gray-600 mt-1">
             Submit the official farm record required by Starhawk&apos;s backend APIs.
           </p>
-          </div>
         </div>
 
         <Card className={`${dashboardTheme.card}`}>
@@ -1423,6 +1425,20 @@ export default function FarmerDashboard() {
               </p>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="sowingDate" className="text-gray-900">Sowing Date</Label>
+                <Input
+                  id="sowingDate"
+                  type="date"
+                  value={newFieldData.sowingDate}
+                  onChange={(e) => setNewFieldData({ ...newFieldData, sowingDate: e.target.value })}
+                  className="bg-gray-50 border-gray-300 text-gray-900"
+                />
+                <p className="text-xs text-gray-500">
+                  Select the date when crops were sown.
+                </p>
+              </div>
+
             <div className="flex gap-3 pt-2">
                 <Button
                   type="button"
@@ -1430,7 +1446,8 @@ export default function FarmerDashboard() {
                   onClick={() => {
                     setActivePage("my-fields");
                     setNewFieldData({
-                    cropType: ""
+                    cropType: "",
+                    sowingDate: ""
                   });
                   }}
                 className="flex-1 bg-gray-50 hover:bg-gray-100 border border-gray-300 text-gray-900"
@@ -1462,12 +1479,11 @@ export default function FarmerDashboard() {
     );
 
   const renderFileClaim = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">File a Claim</h2>
-          <p className="text-gray-600">Report crop damage and request compensation</p>
-        </div>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-gray-900">File a Claim</h1>
+        <p className="text-sm text-gray-600 mt-1">Report crop damage and request compensation</p>
       </div>
 
       <Card className={`${dashboardTheme.card}`}>
@@ -1692,11 +1708,12 @@ export default function FarmerDashboard() {
   );
 
   const renderLossReports = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Loss Reports</h2>
-          <p className="text-gray-600">View and track your claim reports</p>
+          <h1 className="text-2xl font-bold text-gray-900">Loss Reports</h1>
+          <p className="text-sm text-gray-600 mt-1">View and track your claim reports</p>
         </div>
         <Button 
           variant="outline" 
@@ -1828,7 +1845,24 @@ export default function FarmerDashboard() {
     const coordinates = farm.location?.coordinates || farm.coordinates || [];
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="mb-4">
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setActivePage("my-fields");
+              setSelectedFarm(null);
+            }}
+            className="text-gray-600 hover:text-gray-700 mb-2"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to My Fields
+          </Button>
+          <h1 className="text-2xl font-bold text-gray-900">Farm Details</h1>
+          <p className="text-sm text-gray-600 mt-1">{farm.name || "Farm Information"}</p>
+        </div>
+
         <div className="flex items-center justify-between">
           <div className="flex-1">
             {/* Breadcrumb Navigation */}
@@ -1847,7 +1881,7 @@ export default function FarmerDashboard() {
             </div>
             
             {/* Back Button */}
-            <div className="mb-4">
+            <div className="mb-4 hidden">
           <Button
             variant="ghost"
             onClick={() => {
@@ -1994,11 +2028,28 @@ export default function FarmerDashboard() {
     const { weatherForecast, historicalWeather, vegetationStats, loading } = farmAnalytics;
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="mb-4">
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setActivePage("my-fields");
+              setSelectedFarm(null);
+            }}
+            className="text-gray-600 hover:text-gray-700 mb-2"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to My Fields
+          </Button>
+          <h1 className="text-2xl font-bold text-gray-900">Farm Analytics</h1>
+          <p className="text-sm text-gray-600 mt-1">{selectedFarm.name || "Weather forecasts, historical data, and vegetation indices"}</p>
+        </div>
+
         <div className="flex items-center justify-between">
           <div className="flex-1">
             {/* Breadcrumb Navigation */}
-            <div className="flex items-center gap-2 text-sm mb-4">
+            <div className="flex items-center gap-2 text-sm mb-4 hidden">
               <button
                 onClick={() => {
                   setActivePage("my-fields");
@@ -2418,12 +2469,11 @@ export default function FarmerDashboard() {
   };
 
   const renderProfileSettings = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Profile Settings</h2>
-        <Button variant="outline" onClick={() => setActivePage("dashboard")}>
-          Back to Dashboard
-        </Button>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
+        <p className="text-sm text-gray-600 mt-1">Manage your account settings and preferences</p>
       </div>
 
       <Card>

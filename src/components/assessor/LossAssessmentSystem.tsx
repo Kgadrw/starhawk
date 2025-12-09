@@ -20,7 +20,8 @@ import {
   Plus,
   RefreshCw,
   X,
-  Send
+  Send,
+  ArrowLeft
 } from "lucide-react";
 import { getClaims, getClaimById, updateClaimAssessment, submitAssessment } from "@/services/claimsApi";
 import { getUserId } from "@/services/authAPI";
@@ -353,141 +354,174 @@ export default function LossAssessmentSystem() {
   };
 
   const renderList = () => (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-4xl font-bold text-gray-900">Loss Assessment</h1>
-        <p className="text-gray-600 mt-2">Document and evaluate crop loss events</p>
-      </div>
-
-      {/* Search and Filter Bar */}
-      <div className="flex items-center justify-end gap-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-          <Input
-            placeholder="Search fields..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={`${dashboardTheme.input} pl-10 w-64 border-gray-300`}
-          />
+    <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+      {/* Clean Header */}
+      <div className="max-w-7xl mx-auto px-6 mb-6">
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Loss Assessment</h1>
+            <p className="text-sm text-gray-500 mt-1">Document and evaluate crop loss events</p>
+          </div>
         </div>
-        <Button 
-          onClick={loadLossAssessments}
-          variant="outline"
-          className="border-gray-300 text-gray-700 hover:bg-gray-100"
-          disabled={loading}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
       </div>
 
-      {/* Loading State */}
-      {loading && (
-        <Card className={`${dashboardTheme.card}`}>
-          <CardContent className="p-12">
-            <div className="flex items-center justify-center">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading loss assessments...</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6">
+        {/* Search and Filter Bar */}
+        <div className="flex items-center justify-end gap-4 mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search fields..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-gray-50 border-gray-200 text-sm w-64"
+            />
+          </div>
+          <Button 
+            onClick={loadLossAssessments}
+            variant="outline"
+            size="sm"
+            className="border-gray-200 hover:bg-gray-50 text-xs"
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
 
-      {/* Error State */}
-      {error && !loading && (
-        <Card className={`${dashboardTheme.card}`}>
-          <CardContent className="p-6">
-            <div className="text-center text-red-400">
-              <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
-              <p>{error}</p>
-              <Button 
-                onClick={loadLossAssessments} 
-                className="mt-4 bg-teal-500 hover:bg-teal-600 text-gray-900"
-              >
-                Retry
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Data Table */}
-      {!loading && !error && (
-        <Card className={`${dashboardTheme.card}`}>
-          <CardContent className="p-0">
-            {filteredAssessments.length === 0 ? (
-              <div className="p-12 text-center">
-                <p className="text-gray-600">No loss assessments found.</p>
-                {assessments.length === 0 && !assessorId && (
-                  <p className="text-gray-500 text-sm mt-2">Please log in to view loss assessments.</p>
-                )}
+        {/* Loading State */}
+        {loading && (
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardContent className="p-12">
+              <div className="flex items-center justify-center">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-3"></div>
+                  <p className="text-sm text-gray-600">Loading loss assessments...</p>
+                </div>
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-4 px-6 font-medium text-gray-700">Assessment ID</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-700">Farmer</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-700">Field ID</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-700">Crop</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-700">Cause</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-700">Severity</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-700">Affected Area</th>
-                      <th className="text-left py-4 px-6 font-medium text-gray-700">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredAssessments.map((assessment, index) => (
-                      <tr
-                        key={assessment.id}
-                        onClick={() => handleAssessmentClick(assessment)}
-                        className={`border-b border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer ${
-                          index % 2 === 0 ? "bg-gray-50" : ""
-                        }`}
-                      >
-                        <td className="py-4 px-6 text-gray-900">{assessment.id}</td>
-                        <td className="py-4 px-6 text-gray-900">{assessment.farmerName}</td>
-                        <td className="py-4 px-6 text-gray-900">{assessment.fieldId}</td>
-                        <td className="py-4 px-6 text-gray-900">{assessment.crop}</td>
-                        <td className="py-4 px-6 text-gray-900">{assessment.cause}</td>
-                        <td className="py-4 px-6">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
-                            assessment.severity === "Severe"
-                              ? "bg-red-100 text-red-700 border border-red-200"
-                              : assessment.severity === "Moderate"
-                              ? "bg-orange-100 text-orange-700 border border-orange-200"
-                              : "bg-yellow-100 text-yellow-700 border border-yellow-200"
-                          }`}>
-                            {assessment.severity}
-                          </span>
-                        </td>
-                        <td className="py-4 px-6 text-gray-900">
-                          {assessment.affectedArea} ({assessment.affectedPercentage}%)
-                        </td>
-                        <td className="py-4 px-6">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
-                            assessment.status?.toLowerCase() === "approved"
-                              ? "bg-green-100 text-green-700 border border-green-200"
-                              : assessment.status?.toLowerCase() === "under review" || assessment.status?.toLowerCase() === "review"
-                              ? "bg-blue-100 text-blue-700 border border-blue-200"
-                              : "bg-yellow-100 text-yellow-700 border border-yellow-200"
-                          }`}>
-                            {assessment.status}
-                          </span>
-                        </td>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardContent className="p-6">
+              <div className="text-center text-red-600">
+                <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
+                <p className="text-sm">{error}</p>
+                <Button 
+                  onClick={loadLossAssessments} 
+                  className="mt-4 bg-green-600 hover:bg-green-700 text-white text-xs h-8"
+                >
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Data Table */}
+        {!loading && !error && (
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardHeader className="border-b border-gray-200 bg-gray-50">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-semibold text-gray-900">Loss Assessments</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs border-gray-200 hover:bg-gray-50"
+                >
+                  Export
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {filteredAssessments.length === 0 ? (
+                <div className="p-12 text-center">
+                  <AlertTriangle className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-sm font-medium text-gray-900 mb-1">No loss assessments found</p>
+                  <p className="text-xs text-gray-500">
+                    {assessments.length === 0 && !assessorId 
+                      ? "Please log in to view loss assessments."
+                      : "Try adjusting your search criteria"}
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Assessment ID</th>
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Farmer</th>
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Field ID</th>
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Crop</th>
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Cause</th>
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Severity</th>
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Affected Area</th>
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Status</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-100">
+                      {filteredAssessments.map((assessment) => (
+                        <tr
+                          key={assessment.id}
+                          onClick={() => handleAssessmentClick(assessment)}
+                          className="hover:bg-green-50/30 transition-colors cursor-pointer"
+                        >
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{assessment.id}</div>
+                          </td>
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{assessment.farmerName}</div>
+                          </td>
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{assessment.fieldId}</div>
+                          </td>
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{assessment.crop}</div>
+                          </td>
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{assessment.cause}</div>
+                          </td>
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-medium ${
+                              assessment.severity === "Severe"
+                                ? "bg-red-50 text-red-700 border border-red-200"
+                                : assessment.severity === "Moderate"
+                                ? "bg-orange-50 text-orange-700 border border-orange-200"
+                                : "bg-yellow-50 text-yellow-700 border border-yellow-200"
+                            }`}>
+                              {assessment.severity}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {assessment.affectedArea} ({assessment.affectedPercentage}%)
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-medium ${
+                              assessment.status?.toLowerCase() === "approved"
+                                ? "bg-green-50 text-green-700 border border-green-200"
+                                : assessment.status?.toLowerCase() === "under review" || assessment.status?.toLowerCase() === "review"
+                                ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                : "bg-yellow-50 text-yellow-700 border border-yellow-200"
+                            }`}>
+                              {assessment.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 
@@ -515,16 +549,29 @@ export default function LossAssessmentSystem() {
     };
 
     return (
-      <div className="space-y-6">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm">
-          <button 
-            onClick={handleBackToList}
-            className="text-teal-400 hover:text-teal-300"
-          >
-            Loss Assessments
-          </button>
+      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+        {/* Clean Header */}
+        <div className="max-w-7xl mx-auto px-6 mb-6">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                onClick={handleBackToList}
+                className="text-gray-600 hover:text-gray-700 p-0 h-auto"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900">Loss Assessment Details</h1>
+                <p className="text-sm text-gray-500 mt-1">Review and assess crop loss for {selectedAssessment.farmerName}</p>
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-6">
 
         {/* Tabs for different sections */}
         <Tabs defaultValue="details" className="space-y-6">
@@ -815,16 +862,28 @@ export default function LossAssessmentSystem() {
                 <CardTitle className="text-gray-900">Map Visualization</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="bg-gray-50 rounded-lg border border-gray-800 h-[500px] flex items-center justify-center relative">
-                  <div className="text-center">
-                    <MapPin className="h-16 w-16 mx-auto mb-4 text-gray-900/30" />
-                    <p className="text-gray-900/60 text-lg font-medium">Map View</p>
-                    <p className="text-gray-900/40 text-sm mt-2">Field: {selectedAssessment.fieldId}</p>
-                    <p className="text-gray-900/40 text-sm">Damage Overlay</p>
-                  </div>
+                <div className="relative border border-gray-200 rounded-lg overflow-hidden">
+                  <LeafletMap
+                    center={(() => {
+                      // Try to parse location from assessment
+                      const location = selectedAssessment.location || "";
+                      if (location.includes(',')) {
+                        const parts = location.split(',');
+                        const lat = parseFloat(parts[0]?.trim() || "-1.9441");
+                        const lng = parseFloat(parts[1]?.trim() || "30.0619");
+                        return [lat, lng];
+                      }
+                      return [-1.9441, 30.0619]; // Default: Kigali, Rwanda
+                    })()}
+                    zoom={15}
+                    height="500px"
+                    tileLayer="satellite"
+                    showControls={true}
+                    className="w-full"
+                  />
                   {/* Legend */}
-                  <div className="absolute bottom-4 right-4 bg-gray-100 border border-gray-800 rounded-lg p-3">
-                    <p className="text-gray-900/80 text-sm font-medium mb-2">Legend</p>
+                  <div className="absolute bottom-4 right-4 bg-white/90 border border-gray-200 rounded-lg p-3 z-[1000]">
+                    <p className="text-gray-900 font-medium mb-2 text-sm">Legend</p>
                     <div className="flex items-center gap-2 mb-1">
                       <div className="w-4 h-4 bg-orange-500 rounded"></div>
                       <span className="text-gray-900/70 text-xs">Affected Area</span>
@@ -903,6 +962,7 @@ export default function LossAssessmentSystem() {
             </Card>
           </TabsContent>
         </Tabs>
+        </div>
       </div>
     );
   };

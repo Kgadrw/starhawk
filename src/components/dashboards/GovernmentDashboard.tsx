@@ -175,7 +175,12 @@ export const GovernmentDashboard = () => {
 
   // Dashboard Overview
   const renderDashboard = () => (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-gray-900">National Overview</h1>
+        <p className="text-sm text-gray-600 mt-1">Comprehensive view of agricultural insurance system</p>
+      </div>
       {/* Header Stats */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
@@ -455,11 +460,12 @@ export const GovernmentDashboard = () => {
 
   // Farmer Registry Page
   const renderFarmerRegistry = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Farmer Registry & Demographics</h2>
-          <p className="text-gray-900/60">Complete registry of all farmers in the system</p>
+          <h1 className="text-2xl font-bold text-gray-900">Farmer Registry</h1>
+          <p className="text-sm text-gray-600 mt-1">Complete registry of all farmers in the system</p>
         </div>
         <Button className="bg-indigo-600 hover:bg-indigo-700">
           <Download className="h-4 w-4 mr-2" />
@@ -564,11 +570,12 @@ export const GovernmentDashboard = () => {
 
   // Policy Analytics Page
   const renderPolicyAnalytics = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Policy Analytics</h2>
-          <p className="text-gray-900/60">Comprehensive policy data across all insurers</p>
+          <h1 className="text-2xl font-bold text-gray-900">Policy Analytics</h1>
+          <p className="text-sm text-gray-600 mt-1">Comprehensive policy data across all insurers</p>
         </div>
         <Button className="bg-indigo-600 hover:bg-indigo-700">
           <Download className="h-4 w-4 mr-2" />
@@ -689,11 +696,12 @@ export const GovernmentDashboard = () => {
 
   // Claims Monitoring Page
   const renderClaimsMonitoring = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Claims Monitoring</h2>
-          <p className="text-gray-900/60">Track all claims and detect fraud patterns</p>
+          <h1 className="text-2xl font-bold text-gray-900">Claims Monitoring</h1>
+          <p className="text-sm text-gray-600 mt-1">Track all claims and detect fraud patterns</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-800">
@@ -849,11 +857,12 @@ export const GovernmentDashboard = () => {
 
   // Insurer Performance Page
   const renderInsurerPerformance = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Insurer Performance & Compliance</h2>
-          <p className="text-gray-900/60">Monitor all insurance companies' performance</p>
+          <h1 className="text-2xl font-bold text-gray-900">Insurer Performance</h1>
+          <p className="text-sm text-gray-600 mt-1">Monitor all insurance companies' performance</p>
         </div>
         <Button className="bg-indigo-600 hover:bg-indigo-700">
           <Download className="h-4 w-4 mr-2" />
@@ -1022,12 +1031,11 @@ export const GovernmentDashboard = () => {
 
   // Assessor Performance Page
   const renderAssessorPerformance = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Assessor Performance Monitoring</h2>
-          <p className="text-gray-900/60">Track field assessor productivity and quality</p>
-        </div>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-gray-900">Assessor Performance</h1>
+        <p className="text-sm text-gray-600 mt-1">Track field assessor productivity and quality</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-4">
@@ -1119,11 +1127,12 @@ export const GovernmentDashboard = () => {
 
   // Risk & Weather Page
   const renderRiskWeather = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Risk Assessment & Weather Monitoring</h2>
-          <p className="text-gray-900/60">Climate risk analysis and weather forecasting</p>
+          <h1 className="text-2xl font-bold text-gray-900">Risk & Weather</h1>
+          <p className="text-sm text-gray-600 mt-1">Climate risk analysis and weather forecasting</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-800">
@@ -1360,11 +1369,12 @@ export const GovernmentDashboard = () => {
 
   // Financial Flows Page
   const renderFinancialFlows = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Financial Flows & Subsidy Management</h2>
-          <p className="text-gray-900/60">Track all financial transactions and government subsidies</p>
+          <h1 className="text-2xl font-bold text-gray-900">Financial Flows</h1>
+          <p className="text-sm text-gray-600 mt-1">Track all financial transactions and government subsidies</p>
         </div>
         <Button className="bg-indigo-600 hover:bg-indigo-700">
           <Download className="h-4 w-4 mr-2" />
@@ -1590,11 +1600,12 @@ export const GovernmentDashboard = () => {
 
   // Notifications Page
   const renderNotifications = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">System Notifications & Alerts</h2>
-          <p className="text-gray-900/60">Important updates and system alerts</p>
+          <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
+          <p className="text-sm text-gray-600 mt-1">Important updates and system alerts</p>
         </div>
         <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-800">
           <CheckCircle className="h-4 w-4 mr-2" />
@@ -1692,12 +1703,11 @@ export const GovernmentDashboard = () => {
 
   // Settings Page
   const renderSettings = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Government Dashboard Settings</h2>
-          <p className="text-gray-900/60">Configure your preferences and system settings</p>
-        </div>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+        <p className="text-sm text-gray-600 mt-1">Configure your preferences and system settings</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

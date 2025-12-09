@@ -510,7 +510,12 @@ export default function InsurerDashboard() {
   );
 
   const renderDashboard = () => (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-sm text-gray-600 mt-1">Overview of claims, policies, and assessments</p>
+      </div>
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={FileText} title="Total Claims" value={claimsSummary.total} />
         <StatCard icon={AlertTriangle} title="Pending" value={claimsSummary.pending} />
@@ -583,11 +588,12 @@ export default function InsurerDashboard() {
 
 
   const renderInsuranceRequests = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Insurance Requests</h2>
-          <p className="text-gray-600">Review and create assessments for pending insurance requests</p>
+          <h1 className="text-2xl font-bold text-gray-900">Insurance Requests</h1>
+          <p className="text-sm text-gray-600 mt-1">Review and create assessments for pending insurance requests</p>
         </div>
         <Button
           variant="outline"
@@ -686,11 +692,12 @@ export default function InsurerDashboard() {
   );
 
   const renderSubmittedAssessments = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Submitted Assessments</h2>
-          <p className="text-gray-600">Review submitted assessments and create policies</p>
+          <h1 className="text-2xl font-bold text-gray-900">Submitted Assessments</h1>
+          <p className="text-sm text-gray-600 mt-1">Review submitted assessments and create policies</p>
         </div>
         <Button
           variant="outline"

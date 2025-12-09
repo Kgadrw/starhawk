@@ -340,32 +340,26 @@ export default function AssessorNotifications() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">Notifications</h2>
-        <p className="text-gray-600 mt-1">Stay updated with your assessment assignments and tasks</p>
+    <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+      {/* Clean Header */}
+      <div className="max-w-7xl mx-auto px-6 mb-6">
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">Notifications</h1>
+              <p className="text-sm text-gray-500 mt-1">Stay updated with your assessment assignments and tasks</p>
+            </div>
+            <Badge className="bg-green-50 text-green-700 border border-green-200">
+              {unreadCount} unread
+            </Badge>
+          </div>
+        </div>
       </div>
 
-      {/* Unread Count and Refresh */}
-      <div className="flex items-center justify-between">
-        <Badge className="bg-gray-100 text-gray-700 border border-gray-300">
-          {unreadCount} unread
-        </Badge>
-        <Button 
-          onClick={loadNotifications}
-          variant="outline"
-          size="sm"
-          className="border-gray-300 text-gray-700 hover:bg-gray-100"
-          disabled={loading}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="space-y-4">
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6">
+        {/* Search and Filters */}
+        <div className="space-y-4 mb-6">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
           <Input
@@ -375,138 +369,149 @@ export default function AssessorNotifications() {
             className="pl-10 bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
           />
         </div>
-        <div className="flex gap-3">
-          <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger className="w-40 bg-gray-50 border-gray-300 text-gray-900">
-              <SelectValue placeholder="All Types" />
-            </SelectTrigger>
-            <SelectContent className="bg-white border-gray-300">
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="new_assignment">New Assignment</SelectItem>
-              <SelectItem value="assessment_reminder">Assessment Reminder</SelectItem>
-              <SelectItem value="claim_assignment">Claim Assignment</SelectItem>
-              <SelectItem value="assessment_approved">Assessment Approved</SelectItem>
-              <SelectItem value="training_reminder">Training Reminder</SelectItem>
-              <SelectItem value="equipment_update">Equipment Update</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-40 bg-gray-50 border-gray-300 text-gray-900">
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent className="bg-white border-gray-300">
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="unread">Unread</SelectItem>
-              <SelectItem value="read">Read</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Loading State */}
-      {loading && (
-        <Card className={dashboardTheme.card}>
-          <CardContent className="p-12">
-            <div className="flex items-center justify-center">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading notifications...</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Error State */}
-      {error && !loading && (
-        <Card className={dashboardTheme.card}>
-          <CardContent className="p-6">
-            <div className="text-center text-red-600">
-              <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
-              <p>{error}</p>
-              <Button 
-                onClick={loadNotifications} 
-                className="mt-4 bg-teal-500 hover:bg-teal-600 text-white"
-              >
-                Retry
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Notifications List */}
-      {!loading && !error && (
-        <div className="space-y-4">
-          {filteredNotifications.length === 0 ? (
-            <Card className={dashboardTheme.card}>
-              <CardContent className="p-12 text-center">
-                <Bell className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications found</h3>
-                <p className="text-gray-600">
-                  {notifications.length === 0 
-                    ? "You have no notifications yet. Notifications will appear here when you receive new assignments."
-                    : "Try adjusting your search or filter criteria."}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            filteredNotifications.map((notification) => (
-            <Card 
-              key={notification.id} 
-              className={`${dashboardTheme.card} transition-all duration-200 cursor-pointer hover:bg-gray-50 ${
-                notification.status === "unread" ? "border-l-4 border-l-green-500 bg-green-50/50" : ""
-              }`}
-              onClick={() => handleNotificationClick(notification)}
+          <div className="flex gap-3">
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="w-40 bg-gray-50 border-gray-200 text-gray-900 text-xs h-9">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-gray-200">
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="new_assignment">New Assignment</SelectItem>
+                <SelectItem value="assessment_reminder">Assessment Reminder</SelectItem>
+                <SelectItem value="claim_assignment">Claim Assignment</SelectItem>
+                <SelectItem value="assessment_approved">Assessment Approved</SelectItem>
+                <SelectItem value="training_reminder">Training Reminder</SelectItem>
+                <SelectItem value="equipment_update">Equipment Update</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-40 bg-gray-50 border-gray-200 text-gray-900 text-xs h-9">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-gray-200">
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="unread">Unread</SelectItem>
+                <SelectItem value="read">Read</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button 
+              onClick={loadNotifications}
+              variant="outline"
+              size="sm"
+              className="border-gray-200 hover:bg-gray-50 text-xs h-9 ml-auto"
+              disabled={loading}
             >
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <div className={`flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center ${
-                    notification.status === "unread" ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-600"
-                  }`}>
-                    {getNotificationIcon(notification.type)}
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <h3 className="text-base font-semibold text-gray-900 leading-tight">
-                        {notification.title}
-                      </h3>
-                      <Badge className={`${getPriorityColor(notification.priority)} text-xs`}>
-                        {notification.priority}
-                      </Badge>
-                    </div>
-                    
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                      {notification.message}
-                    </p>
-                    
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {new Date(notification.timestamp).toLocaleString()}
-                      </div>
-                      {notification.farmerName && (
-                        <div className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          {notification.farmerName}
-                        </div>
-                      )}
-                      {notification.location && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {notification.location}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-          )}
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
-      )}
+
+        {/* Loading State */}
+        {loading && (
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardContent className="p-12">
+              <div className="flex items-center justify-center">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-3"></div>
+                  <p className="text-sm text-gray-600">Loading notifications...</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardContent className="p-6">
+              <div className="text-center text-red-600">
+                <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
+                <p className="text-sm">{error}</p>
+                <Button 
+                  onClick={loadNotifications} 
+                  className="mt-4 bg-green-600 hover:bg-green-700 text-white text-xs h-8"
+                >
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Notifications List */}
+        {!loading && !error && (
+          <div className="space-y-3">
+            {filteredNotifications.length === 0 ? (
+              <Card className="bg-white border border-gray-200 shadow-sm">
+                <CardContent className="p-12 text-center">
+                  <Bell className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-sm font-medium text-gray-900 mb-1">No notifications found</h3>
+                  <p className="text-xs text-gray-500">
+                    {notifications.length === 0 
+                      ? "You have no notifications yet. Notifications will appear here when you receive new assignments."
+                      : "Try adjusting your search or filter criteria."}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              filteredNotifications.map((notification) => (
+              <Card 
+                key={notification.id} 
+                className={`bg-white border border-gray-200 shadow-sm transition-all duration-200 cursor-pointer hover:bg-green-50/30 ${
+                  notification.status === "unread" ? "border-l-4 border-l-green-500 bg-green-50/50" : ""
+                }`}
+                onClick={() => handleNotificationClick(notification)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
+                      notification.status === "unread" ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-600"
+                    }`}>
+                      {getNotificationIcon(notification.type)}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <h3 className="text-sm font-semibold text-gray-900 leading-tight">
+                          {notification.title}
+                        </h3>
+                        <Badge className={`${getPriorityColor(notification.priority)} text-xs`}>
+                          {notification.priority}
+                        </Badge>
+                      </div>
+                      
+                      <p className="text-xs text-gray-600 mb-2 line-clamp-2">
+                        {notification.message}
+                      </p>
+                      
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {new Date(notification.timestamp).toLocaleString()}
+                        </div>
+                        {notification.farmerName && (
+                          <div className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {notification.farmerName}
+                          </div>
+                        )}
+                        {notification.location && (
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {notification.location}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Notification Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>

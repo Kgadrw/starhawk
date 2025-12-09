@@ -140,13 +140,11 @@ export default function RiskReviewManagement() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-700">Risk Assessment Reviews</h1>
-          <p className="text-gray-600 mt-1">Review and approve risk assessments for farmers</p>
-        </div>
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-gray-900">Risk Assessment Reviews</h1>
+        <p className="text-sm text-gray-600 mt-1">Review and approve risk assessments for farmers</p>
       </div>
 
       {/* Filters */}

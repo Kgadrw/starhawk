@@ -275,11 +275,11 @@ export default function AssessorProfileSettings() {
 
   const renderProfileTab = () => (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-gray-900">Personal Information</CardTitle>
+      <Card className="bg-white border border-gray-200 shadow-sm">
+        <CardHeader className="border-b border-gray-200 bg-gray-50">
+          <CardTitle className="text-base font-semibold text-gray-900">Personal Information</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="fullName">Full Name</Label>
@@ -339,10 +339,10 @@ export default function AssessorProfileSettings() {
 
   const renderWorkTab = () => (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="border-b border-white/10">
-          <CardTitle className="flex items-center text-white">
-            <Map className="h-5 w-5 mr-2 text-gray-300" />
+      <Card className="bg-white border border-gray-200 shadow-sm">
+        <CardHeader className="border-b border-gray-200 bg-gray-50">
+          <CardTitle className="flex items-center text-gray-900 text-base font-semibold">
+            <Map className="h-5 w-5 mr-2 text-gray-600" />
             Work Preferences
           </CardTitle>
         </CardHeader>
@@ -412,7 +412,7 @@ export default function AssessorProfileSettings() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-white">Available Equipment</Label>
+            <Label className="text-gray-900">Available Equipment</Label>
             <div className="flex flex-wrap gap-3">
               {["GPS Device", "Camera", "Soil Testing Kit", "Drone", "Weather Station", "Tablet"].map((equipment) => (
                 <label key={equipment} className="flex items-center cursor-pointer group">
@@ -432,16 +432,16 @@ export default function AssessorProfileSettings() {
                         }));
                       }
                     }}
-                    className="mr-2 w-4 h-4 text-gray-500 border-gray-600 rounded focus:ring-gray-500 bg-gray-800/50 cursor-pointer group-hover:border-gray-400 transition-colors" 
+                    className="mr-2 w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500 bg-white cursor-pointer group-hover:border-gray-400 transition-colors" 
                   />
-                  <span className="text-sm text-white/80 group-hover:text-white transition-colors">{equipment}</span>
+                  <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">{equipment}</span>
                 </label>
               ))}
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-white">Languages</Label>
+            <Label className="text-gray-900">Languages</Label>
             <div className="flex flex-wrap gap-3">
               {["Kinyarwanda", "English", "French", "Swahili"].map((language) => (
                 <label key={language} className="flex items-center cursor-pointer group">
@@ -461,9 +461,9 @@ export default function AssessorProfileSettings() {
                         }));
                       }
                     }}
-                    className="mr-2 w-4 h-4 text-gray-500 border-gray-600 rounded focus:ring-gray-500 bg-gray-800/50 cursor-pointer group-hover:border-gray-400 transition-colors" 
+                    className="mr-2 w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500 bg-white cursor-pointer group-hover:border-gray-400 transition-colors" 
                   />
-                  <span className="text-sm text-white/80 group-hover:text-white transition-colors">{language}</span>
+                  <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">{language}</span>
                 </label>
               ))}
             </div>
@@ -475,11 +475,11 @@ export default function AssessorProfileSettings() {
 
   const renderSecurityTab = () => (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-gray-900">Change Password</CardTitle>
+      <Card className="bg-white border border-gray-200 shadow-sm">
+        <CardHeader className="border-b border-gray-200 bg-gray-50">
+          <CardTitle className="text-base font-semibold text-gray-900">Change Password</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           <div className="space-y-2">
             <Label htmlFor="currentPassword">Current Password</Label>
             <div className="relative">
@@ -558,7 +558,7 @@ export default function AssessorProfileSettings() {
             </div>
           </div>
 
-          <Button className="bg-green-600 hover:bg-green-700 text-white">
+          <Button className="bg-green-600 hover:bg-green-700 text-white text-xs h-9">
             Update Password
           </Button>
         </CardContent>
@@ -568,21 +568,21 @@ export default function AssessorProfileSettings() {
 
   const renderNotificationsTab = () => (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="border-b border-white/10">
-          <CardTitle className="flex items-center text-white">
-            <Bell className="h-5 w-5 mr-2 text-gray-300" />
+      <Card className="bg-white border border-gray-200 shadow-sm">
+        <CardHeader className="border-b border-gray-200 bg-gray-50">
+          <CardTitle className="flex items-center text-gray-900 text-base font-semibold">
+            <Bell className="h-5 w-5 mr-2 text-gray-600" />
             Notification Preferences
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6 pt-6">
           <div>
-            <h4 className="font-medium text-white mb-3">Communication Channels</h4>
+            <h4 className="font-medium text-gray-900 mb-3">Communication Channels</h4>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-white">Email Notifications</p>
-                  <p className="text-sm text-white/70">Receive notifications via email</p>
+                  <p className="font-medium text-gray-900">Email Notifications</p>
+                  <p className="text-xs text-gray-500">Receive notifications via email</p>
                 </div>
                 <Switch
                   checked={notificationSettings.emailNotifications}
@@ -591,8 +591,8 @@ export default function AssessorProfileSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-white">SMS Notifications</p>
-                  <p className="text-sm text-white/70">Receive notifications via SMS</p>
+                  <p className="font-medium text-gray-900">SMS Notifications</p>
+                  <p className="text-xs text-gray-500">Receive notifications via SMS</p>
                 </div>
                 <Switch
                   checked={notificationSettings.smsNotifications}
@@ -601,8 +601,8 @@ export default function AssessorProfileSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-white">Push Notifications</p>
-                  <p className="text-sm text-white/70">Receive browser push notifications</p>
+                  <p className="font-medium text-gray-900">Push Notifications</p>
+                  <p className="text-xs text-gray-500">Receive browser push notifications</p>
                 </div>
                 <Switch
                   checked={notificationSettings.pushNotifications}
@@ -615,12 +615,12 @@ export default function AssessorProfileSettings() {
           <Separator />
 
           <div>
-            <h4 className="font-medium text-white mb-3">Assessment Alerts</h4>
+            <h4 className="font-medium text-gray-900 mb-3">Assessment Alerts</h4>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-white">New Assignment Alerts</p>
-                  <p className="text-sm text-white/70">New assessment assignments</p>
+                  <p className="font-medium text-gray-900">New Assignment Alerts</p>
+                  <p className="text-xs text-gray-500">New assessment assignments</p>
                 </div>
                 <Switch
                   checked={notificationSettings.assignmentAlerts}
@@ -629,8 +629,8 @@ export default function AssessorProfileSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-white">Due Date Reminders</p>
-                  <p className="text-sm text-white/70">Assessment due date reminders</p>
+                  <p className="font-medium text-gray-900">Due Date Reminders</p>
+                  <p className="text-xs text-gray-500">Assessment due date reminders</p>
                 </div>
                 <Switch
                   checked={notificationSettings.dueDateReminders}
@@ -639,8 +639,8 @@ export default function AssessorProfileSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-white">Weather Alerts</p>
-                  <p className="text-sm text-white/70">Weather conditions for field work</p>
+                  <p className="font-medium text-gray-900">Weather Alerts</p>
+                  <p className="text-xs text-gray-500">Weather conditions for field work</p>
                 </div>
                 <Switch
                   checked={notificationSettings.weatherAlerts}
@@ -653,12 +653,12 @@ export default function AssessorProfileSettings() {
           <Separator />
 
           <div>
-            <h4 className="font-medium text-white mb-3">Professional Development</h4>
+            <h4 className="font-medium text-gray-900 mb-3">Professional Development</h4>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-white">Training Alerts</p>
-                  <p className="text-sm text-white/70">Training session reminders</p>
+                  <p className="font-medium text-gray-900">Training Alerts</p>
+                  <p className="text-xs text-gray-500">Training session reminders</p>
                 </div>
                 <Switch
                   checked={notificationSettings.trainingAlerts}
@@ -667,8 +667,8 @@ export default function AssessorProfileSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-white">Equipment Alerts</p>
-                  <p className="text-sm text-white/70">Equipment maintenance reminders</p>
+                  <p className="font-medium text-gray-900">Equipment Alerts</p>
+                  <p className="text-xs text-gray-500">Equipment maintenance reminders</p>
                 </div>
                 <Switch
                   checked={notificationSettings.equipmentAlerts}
@@ -677,8 +677,8 @@ export default function AssessorProfileSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-white">Performance Reports</p>
-                  <p className="text-sm text-white/70">Monthly performance summaries</p>
+                  <p className="font-medium text-gray-900">Performance Reports</p>
+                  <p className="text-xs text-gray-500">Monthly performance summaries</p>
                 </div>
                 <Switch
                   checked={notificationSettings.performanceReports}
@@ -694,73 +694,82 @@ export default function AssessorProfileSettings() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <Card>
-          <CardContent className="p-12">
-            <div className="flex items-center justify-center">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading profile...</p>
+      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+        <div className="max-w-7xl mx-auto px-6">
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardContent className="p-12">
+              <div className="flex items-center justify-center">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-3"></div>
+                  <p className="text-sm text-gray-600">Loading profile...</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Profile Settings</h2>
-          <p className="text-gray-600">Manage your account settings</p>
+    <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+      {/* Clean Header */}
+      <div className="max-w-7xl mx-auto px-6 mb-6">
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Profile Settings</h1>
+            <p className="text-sm text-gray-500 mt-1">Manage your account settings and preferences</p>
+          </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          {[
-            { id: "profile", label: "Profile", icon: User },
-            { id: "security", label: "Security", icon: Shield }
-          ].map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === tab.id
-                    ? "border-blue-500 text-gray-900"
-                    : "border-transparent text-gray-600 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <Icon className="h-4 w-4 mr-2" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </nav>
-      </div>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6">
+        {/* Tabs */}
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm mb-6">
+          <div className="border-b border-gray-200 px-6">
+            <nav className="-mb-px flex space-x-8">
+              {[
+                { id: "profile", label: "Profile", icon: User },
+                { id: "security", label: "Security", icon: Shield }
+              ].map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center py-4 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === tab.id
+                        ? "border-green-500 text-gray-900"
+                        : "border-transparent text-gray-600 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 mr-2" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
 
-      {/* Tab Content */}
-      <div className="pt-6">
-        {activeTab === "profile" && renderProfileTab()}
-        {activeTab === "security" && renderSecurityTab()}
-      </div>
+          {/* Tab Content */}
+          <div className="p-6">
+            {activeTab === "profile" && renderProfileTab()}
+            {activeTab === "security" && renderSecurityTab()}
+          </div>
 
-      {/* Save Button */}
-      <div className="flex justify-end pt-6 border-t border-gray-200">
-        <Button 
-          className="bg-green-600 hover:bg-green-700 text-white min-w-[120px]"
-          onClick={handleSaveChanges}
-          disabled={saving || loading}
-        >
-          <Save className={`h-4 w-4 mr-2 ${saving ? 'animate-spin' : ''}`} />
-          {saving ? 'Saving...' : 'Save Changes'}
-        </Button>
+          {/* Save Button */}
+          <div className="flex justify-end px-6 pb-6 pt-4 border-t border-gray-200">
+            <Button 
+              className="bg-green-600 hover:bg-green-700 text-white min-w-[120px] text-xs h-9"
+              onClick={handleSaveChanges}
+              disabled={saving || loading}
+            >
+              <Save className={`h-4 w-4 mr-2 ${saving ? 'animate-spin' : ''}`} />
+              {saving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

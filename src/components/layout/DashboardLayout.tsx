@@ -154,7 +154,7 @@ export default function DashboardLayout({
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-4 left-4 z-50 w-64 bg-gradient-to-br ${getSidebarTheme()} backdrop-blur-xl border rounded-3xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-br ${getSidebarTheme()} backdrop-blur-xl border-r transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="flex flex-col h-full">
@@ -201,20 +201,20 @@ export default function DashboardLayout({
                                 onPageChange(item.id);
                                 setSidebarOpen(false);
                               }}
-                              className={`w-full flex items-center justify-between px-4 py-4 text-sm font-medium rounded-xl transition-all duration-300 ease-in-out ${
+                              className={`w-full flex items-center justify-between px-4 py-4 text-sm font-medium transition-all duration-300 ease-in-out ${
                                 isActive
-                                  ? `bg-green-50 text-green-700 shadow-sm border border-green-200`
+                                  ? `bg-blue-50 text-blue-700 shadow-sm border-l-4 border-l-blue-500`
                                   : `text-gray-700 hover:bg-gray-100 hover:text-gray-900 ${colors.hover}`
                               }`}
                             >
                   <div className="flex items-center space-x-3">
-                    <Icon className={`h-5 w-5 ${isActive ? 'text-green-600' : 'text-gray-600'}`} />
+                    <Icon className={`h-5 w-5 ${isActive ? 'text-blue-600' : 'text-gray-600'}`} />
                     <span>{item.label}</span>
                   </div>
                               {item.badge && item.badge > 0 && (
                                 <Badge variant="secondary" className={`text-xs ${
                                   isActive 
-                                    ? 'bg-green-600 text-white' 
+                                    ? 'bg-blue-600 text-white' 
                                     : userType === 'farmer' ? 'bg-green-100 text-green-700' :
                                       userType === 'assessor' ? 'bg-orange-100 text-orange-700' :
                                       userType === 'insurer' ? 'bg-blue-100 text-blue-700' :
@@ -269,7 +269,7 @@ export default function DashboardLayout({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-72 bg-gray-50">
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-64 bg-gray-50">
         {/* Mobile Menu Button */}
         <div className="lg:hidden fixed top-4 left-4 z-40">
           <Button
@@ -283,11 +283,9 @@ export default function DashboardLayout({
         </div>
 
          {/* Page Content */}
-         <main className="flex-1 py-4 sm:py-6 lg:py-8 overflow-auto bg-gray-50">
+         <main className="flex-1 overflow-auto bg-gray-50">
           <CustomScrollbar className="h-full">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              {children}
-            </div>
+            {children}
           </CustomScrollbar>
         </main>
       </div>

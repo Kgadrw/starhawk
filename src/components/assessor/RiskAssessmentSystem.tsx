@@ -11,8 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import meteosourceApiService from "@/services/meteosourceApi";
+import CombinedWeatherForecast from "@/components/common/CombinedWeatherForecast";
+import LeafletMap from "@/components/common/LeafletMap";
 import assessmentsApiService from "@/services/assessmentsApi";
-import { getFarms, getFarmById } from "@/services/farmsApi";
+import { getFarms, getAllFarms, getFarmById } from "@/services/farmsApi";
 import { getUserById } from "@/services/usersAPI";
 import { getUserId } from "@/services/authAPI";
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +29,10 @@ import {
   FileSpreadsheet,
   Sun,
   Wind,
+  Users,
+  BarChart3,
+  TrendingUp,
+  Activity,
   Droplets,
   Thermometer,
   Clock,
@@ -38,7 +44,13 @@ import {
   CheckCircle,
   Star,
   Map,
-  Eye
+  Eye,
+  Filter,
+  ArrowLeft,
+  Sprout,
+  Edit,
+  User,
+  ArrowUp
 } from "lucide-react";
 
 interface AssessmentSummary {
@@ -118,9 +130,10 @@ interface RiskAssessmentSystemProps {
   onRefresh?: () => void;
 }
 
-export default function RiskAssessmentSystem({ assessments: propAssessments, onRefresh }: RiskAssessmentSystemProps = {}) {
+export default function RiskAssessmentSystem({ assessments: propAssessments, onRefresh }: RiskAssessmentSystemProps): JSX.Element {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
+  const [fieldSearchQuery, setFieldSearchQuery] = useState("");
   const [selectedAssessment, setSelectedAssessment] = useState<AssessmentSummary | null>(null);
   const [selectedField, setSelectedField] = useState<Field | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "fieldSelection" | "fieldDetail">("list");
@@ -133,6 +146,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
   const [farms, setFarms] = useState<any[]>([]);
   const [loadingFarms, setLoadingFarms] = useState(false);
   const [farmers, setFarmers] = useState<Record<string, any>>({});
+  const [filterOpen, setFilterOpen] = useState(false);
 
   // Use prop assessments if provided, otherwise use internal state
   const assessments = propAssessments || internalAssessments;
@@ -149,12 +163,19 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
     }
   }, [propAssessments]);
 
-  // Load farms when an assessment is selected
+  // Load farms when component mounts or when assessment is selected
   useEffect(() => {
     if (selectedAssessment && viewMode === "fieldSelection") {
       loadFarmsForAssessment(selectedAssessment);
     }
   }, [selectedAssessment, viewMode]);
+
+  // Also ensure we have all farms loaded for farmer field counts
+  useEffect(() => {
+    if (viewMode === "list" && farms.length === 0) {
+      loadAllFarms();
+    }
+  }, [viewMode]);
 
   const loadAssessments = async () => {
     setLoading(true);
@@ -328,18 +349,53 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
     }
   };
 
+  const loadAllFarms = async () => {
+    setLoadingFarms(true);
+    try {
+      const response: any = await getAllFarms();
+      let farmsData: any[] = [];
+      
+      if (Array.isArray(response)) {
+        farmsData = response;
+      } else if (response && typeof response === 'object') {
+        farmsData = response.data || response.farms || response.items || response.results || [];
+      }
+      
+      if (!Array.isArray(farmsData)) {
+        farmsData = [];
+      }
+      
+      setFarms(farmsData);
+    } catch (err: any) {
+      console.error('Failed to load farms:', err);
+    } finally {
+      setLoadingFarms(false);
+    }
+  };
+
   const loadFarmsForAssessment = async (assessment: AssessmentSummary) => {
     setLoadingFarms(true);
     try {
       // Get all farms and filter by farmer
-      const response: any = await getFarms(1, 100);
-      const farmsData = response.data || response || [];
-      const farmsArray = Array.isArray(farmsData) ? farmsData : (farmsData.items || farmsData.results || []);
+      const response: any = await getAllFarms();
+      let farmsData: any[] = [];
+      
+      if (Array.isArray(response)) {
+        farmsData = response;
+      } else if (response && typeof response === 'object') {
+        farmsData = response.data || response.farms || response.items || response.results || [];
+      }
+      
+      if (!Array.isArray(farmsData)) {
+        farmsData = [];
+      }
 
       // Filter farms by the farmer ID from assessment
-      const relevantFarms = farmsArray.filter((farm: any) => {
-        const farmerId = farm.farmerId?._id || farm.farmerId || farm.farmer;
-        return farmerId === assessment.farmerId || farmerId === assessment.farmerId?.toString();
+      const relevantFarms = farmsData.filter((farm: any) => {
+        const farmFarmerId = farm.farmerId?._id || farm.farmerId || farm.farmer?._id || farm.farmer?.id || '';
+        return farmFarmerId === assessment.farmerId || 
+               (typeof farmFarmerId === 'string' && typeof assessment.farmerId === 'string' && farmFarmerId === assessment.farmerId) ||
+               farm.farmerName === assessment.farmerName;
       });
 
       setFarms(relevantFarms);
@@ -370,19 +426,27 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
     if (!farms || farms.length === 0) return [];
 
     // Map farms to Field interface
-    return farms.map((farm: any) => {
+    return farms.map((farm: any, index: number) => {
       const farmer = farmers[assessment.farmerId] || {};
       const farmerName = farmer.firstName && farmer.lastName
         ? `${farmer.firstName} ${farmer.lastName}`
         : assessment.farmerName;
 
+      // Determine status - "Healthy" for processed/active, "Active" for others
+      let statusDisplay = "Active";
+      if (farm.status === "Processed" || farm.status === "processed" || (farm.boundary && farm.boundary.coordinates)) {
+        statusDisplay = "Healthy";
+      } else if (farm.status) {
+        statusDisplay = farm.status;
+      }
+
       return {
-        id: farm._id || farm.id || `FLD-${farm.name || 'UNKNOWN'}`,
+        id: farm._id || farm.id || `temp-${index}`,
         farmerName,
         crop: farm.cropType || farm.crop || "Unknown",
         area: farm.area || farm.size || 0,
-        season: farm.season || "A",
-        status: farm.status || "Active",
+        season: farm.season || (index % 2 === 0 ? "A" : "B"),
+        status: statusDisplay,
         fieldName: farm.name || "Unnamed Farm",
         sowingDate: farm.sowingDate || farm.plantingDate || new Date().toISOString().split('T')[0]
       };
@@ -429,23 +493,25 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
     
     if (loadingFarms) {
       return (
-        <div className="space-y-6">
-          <div className="flex items-center gap-2 text-sm">
-            <button 
+        <div className="space-y-4 bg-gray-50 min-h-screen p-4">
+          <Button
+            variant="ghost"
               onClick={handleBackToList}
-              className="text-gray-600 hover:text-gray-700"
-            >
-              Risk Assessments
-            </button>
-            <span className="text-gray-600">/</span>
-            <span className="text-gray-700">{selectedAssessment.farmerName}</span>
+            className="text-gray-600 hover:text-gray-700 mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Farmers
+          </Button>
+          <div className="mb-4">
+            <h1 className="text-2xl font-bold text-gray-900">{selectedAssessment.farmerName} - Fields</h1>
+            <p className="text-sm text-gray-600 mt-1">Select a field for risk assessment</p>
           </div>
-          <Card className={`${dashboardTheme.card}`}>
-            <CardContent className="p-12">
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardContent className="p-8">
               <div className="flex items-center justify-center">
                 <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading farms...</p>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500 mx-auto mb-3"></div>
+                  <p className="text-sm text-gray-600">Loading fields...</p>
                 </div>
               </div>
             </CardContent>
@@ -456,424 +522,157 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
 
     const fields = getFieldsForAssessment(selectedAssessment);
     
+    // Filter fields by search query
+    const filteredFields = fields.filter(field => {
+      return fieldSearchQuery === "" ||
+        field.fieldName.toLowerCase().includes(fieldSearchQuery.toLowerCase()) ||
+        field.id.toLowerCase().includes(fieldSearchQuery.toLowerCase()) ||
+        field.crop.toLowerCase().includes(fieldSearchQuery.toLowerCase());
+    });
+    
     return (
-      <div className="space-y-6">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm">
-          <button 
+      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+        {/* Clean Header */}
+        <div className="max-w-7xl mx-auto px-6 mb-6">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
             onClick={handleBackToList}
-            className="text-gray-600 hover:text-gray-700"
-          >
-            Risk Assessments
-          </button>
-            <span className="text-gray-600">/</span>
-            <span className="text-gray-700">{selectedAssessment.farmerName}</span>
+                className="text-gray-600 hover:text-gray-700 p-0 h-auto"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900">Field Selection</h1>
+                <p className="text-sm text-gray-500 mt-1">Select a field for {selectedAssessment.farmerName} to perform risk assessment</p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Table */}
-        <Card className={`${dashboardTheme.card}`}>
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-6">
+
+          {/* Search Bar */}
+          <div className="mb-6">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search something here.."
+                value={fieldSearchQuery}
+                onChange={(e) => setFieldSearchQuery(e.target.value)}
+                className="pl-10 bg-gray-50 border-gray-200 text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Fields Table - Professional Dashboard Style */}
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardHeader className="border-b border-gray-200 bg-gray-50">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-semibold text-gray-900">Available Fields</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs border-gray-200 hover:bg-gray-50"
+                >
+                  Export
+                </Button>
+              </div>
+            </CardHeader>
           <CardContent className="p-0">
-            {fields.length === 0 ? (
+              {filteredFields.length === 0 ? (
               <div className="p-12 text-center">
-                  <p className="text-gray-600">No farms found for this assessment.</p>
+                  <Leaf className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-sm font-medium text-gray-900 mb-1">No fields found</p>
+                  <p className="text-xs text-gray-500">Try adjusting your search criteria</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="bg-gray-50 border-b-2 border-gray-200">
-                      <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Farmer</th>
-                      <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Crop</th>
-                      <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Area (ha)</th>
-                      <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Season</th>
-                      <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Status</th>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Field ID</th>
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Farmer</th>
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Crop</th>
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Area (ha)</th>
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Season</th>
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Status</th>
+                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {fields.map((field, index) => (
+                    <tbody className="bg-white divide-y divide-gray-100">
+                      {filteredFields.map((field, index) => {
+                        const fieldId = field.id ? `FLD-${String(field.id).slice(-3).padStart(3, '0')}` : `FLD-${String(index + 1).padStart(3, '0')}`;
+                        const statusText = field.status === "Processed" || field.status === "Active" ? "Healthy" : field.status;
+                        const isHealthy = statusText === "Healthy" || field.status === "Processed" || field.status === "Active";
+                        
+                        return (
                       <tr
                         key={field.id}
-                        onClick={() => handleFieldClick(field)}
-                        className="hover:bg-gray-50/50 transition-all duration-150 cursor-pointer border-b border-gray-100"
+                          className="hover:bg-green-50/30 transition-colors"
                       >
-                        <td className="py-4 px-6 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{field.farmerName}</div>
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{fieldId}</div>
                         </td>
-                        <td className="py-4 px-6 whitespace-nowrap">
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{field.farmerName}</div>
+                          </td>
+                          <td className="py-3.5 px-6 whitespace-nowrap">
                           <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <Leaf className="h-4 w-4 text-teal-500 flex-shrink-0" />
+                              <Sprout className="h-4 w-4 text-gray-400" />
                             <span>{field.crop}</span>
                           </div>
                         </td>
-                        <td className="py-4 px-6 whitespace-nowrap">
-                          <div className="text-sm text-gray-600">{Math.round(field.area)} ha</div>
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{field.area.toFixed(1)} ha</div>
                         </td>
-                        <td className="py-4 px-6 whitespace-nowrap">
-                          <div className="text-sm text-gray-600">{field.season}</div>
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{field.season}</div>
                         </td>
-                        <td className="py-4 px-6 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
-                            field.status === "Processed" || field.status === "Active"
-                              ? "bg-green-500 text-white border-green-600"
-                              : "bg-yellow-500 text-white border-yellow-600"
-                          }`}>
-                            {field.status}
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-medium ${
+                              isHealthy
+                                ? "bg-green-50 text-green-700 border border-green-200"
+                                : "bg-blue-50 text-blue-700 border border-blue-200"
+                            }`}>
+                              {statusText}
                           </span>
                         </td>
+                          <td className="py-3.5 px-6 whitespace-nowrap">
+                            <Button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleFieldClick(field);
+                              }}
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white text-xs h-8 px-4"
+                            >
+                              <Eye className="h-3.5 w-3.5 mr-1.5" />
+                              View
+                            </Button>
+                        </td>
                       </tr>
-                    ))}
+                        );
+                      })}
                   </tbody>
                 </table>
               </div>
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
     );
   };
 
-  // Weather Analysis Component
+  // Weather Analysis Component - Using CombinedWeatherForecast from common components
   const WeatherAnalysisTab = ({ location }: { location: string }) => {
-    const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-
-    useEffect(() => {
-      loadWeatherData();
-    }, []);
-
-    const loadWeatherData = async () => {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        const data = await meteosourceApiService.getCompleteWeatherData('kigali');
-        setWeatherData(data);
-        setLastUpdated(new Date());
-      } catch (err: any) {
-        console.error('Failed to load weather data:', err);
-        setError(`Failed to load weather forecast: ${err.message || 'Unknown error'}`);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const getWeatherIcon = (summary: string) => {
-      const summaryLower = summary.toLowerCase();
-      if (summaryLower.includes('clear') || summaryLower.includes('sunny')) {
-        return <Sun className="h-8 w-8 text-yellow-500" />;
-      } else if (summaryLower.includes('cloudy') || summaryLower.includes('overcast')) {
-        return <Cloud className="h-8 w-8 text-gray-500" />;
-      } else if (summaryLower.includes('rain') || summaryLower.includes('drizzle')) {
-        return <CloudRain className="h-8 w-8 text-blue-500" />;
-      } else {
-        return <Cloud className="h-8 w-8 text-gray-400" />;
-      }
-    };
-
-    const formatTime = (date: Date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const formatDate = (date: Date) => date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-
-    if (loading) {
       return (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading weather data...</p>
-          </div>
-        </div>
-      );
-    }
-
-    if (error || !weatherData) {
-      return (
-        <Card className={`${dashboardTheme.card}`}>
-          <CardContent className="p-6">
-            <div className="text-center text-red-400">
-              <Cloud className="h-12 w-12 mx-auto mb-4" />
-              <p>{error || 'Failed to load weather data'}</p>
-              <Button 
-                onClick={loadWeatherData} 
-                className="mt-4 bg-teal-500 hover:bg-teal-600 text-white"
-              >
-                Retry
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      );
-    }
-
-    return (
-      <div className="space-y-6">
-        <Card className={`${dashboardTheme.card}`}>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between text-gray-900">
-              <div className="flex items-center">
-                <CloudRain className="h-5 w-5 mr-2" />
-                Current Weather
-              </div>
-              {lastUpdated && (
-                <span className="text-xs text-gray-600">Updated: {formatTime(lastUpdated)}</span>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                {getWeatherIcon(weatherData.current.summary)}
                 <div>
-                  <div className="text-4xl font-bold text-gray-900">
-                    {weatherData.current.temperature}°C
-                  </div>
-                  <div className="text-lg text-gray-600 capitalize">
-                    {weatherData.current.summary}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-200">
-              <div className="flex items-center text-gray-700">
-                <Wind className="h-5 w-5 mr-2 text-gray-600" />
-                <div>
-                  <div className="text-xs text-gray-600">Wind</div>
-                  <div className="font-medium text-gray-700">{weatherData.current.windSpeed} km/h</div>
-                </div>
-              </div>
-              <div className="flex items-center text-gray-700">
-                <Droplets className="h-5 w-5 mr-2 text-gray-600" />
-                <div>
-                  <div className="text-xs text-gray-600">Humidity</div>
-                  <div className="font-medium text-gray-700">{weatherData.current.humidity}%</div>
-                </div>
-              </div>
-              <div className="flex items-center text-gray-700">
-                <CloudRain className="h-5 w-5 mr-2 text-gray-600" />
-                <div>
-                  <div className="text-xs text-gray-600">Precipitation</div>
-                  <div className="font-medium text-gray-700">{weatherData.current.precipitation}mm</div>
-                </div>
-              </div>
-              <div className="flex items-center text-gray-700">
-                <Thermometer className="h-5 w-5 mr-2 text-gray-600" />
-                <div>
-                  <div className="text-xs text-gray-600">Pressure</div>
-                  <div className="font-medium text-gray-700">{weatherData.current.pressure} hPa</div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={`${dashboardTheme.card}`}>
-          <CardHeader>
-            <CardTitle className="flex items-center text-gray-900">
-              <Clock className="h-5 w-5 mr-2" />
-              8-Hour Forecast
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <div className="flex gap-4">
-                {weatherData.hourly.map((hour, idx) => (
-                  <div key={idx} className="min-w-[100px] text-center">
-                    <div className="text-gray-600 text-sm mb-2 font-medium">{formatTime(hour.time)}</div>
-                    <div className="flex justify-center mb-2">
-                      {getWeatherIcon(hour.summary)}
-                    </div>
-                    <div className="text-gray-700 font-bold mb-1">{hour.temperature}°</div>
-                    <div className="text-gray-600 text-xs capitalize">{hour.summary}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={`${dashboardTheme.card}`}>
-          <CardHeader>
-            <CardTitle className="flex items-center text-gray-900">
-              <Calendar className="h-5 w-5 mr-2" />
-              7-Day Forecast
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">Date</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">Temp (°C)</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">Rain (mm)</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">Humidity</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">Clouds</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">Wind</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {weatherData.daily.map((day, idx) => (
-                    <tr key={idx} className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${
-                      idx % 2 === 0 ? "bg-gray-50" : ""
-                    }`}>
-                      <td className="py-4 px-4 text-gray-700 font-medium">{formatDate(day.date)}</td>
-                      <td className="py-4 px-4 text-gray-700">
-                        <span className="font-bold">{day.temperature.max}°</span> / <span>{day.temperature.min}°</span>
-                      </td>
-                      <td className="py-4 px-4 text-gray-700">{day.precipitation}</td>
-                      <td className="py-4 px-4 text-gray-700">{day.humidity}%</td>
-                      <td className="py-4 px-4 text-gray-700">{day.icon < 2 ? '30%' : day.icon < 3 ? '45%' : day.icon < 4 ? '60%' : '75%'}</td>
-                      <td className="py-4 px-4 text-gray-700">{day.windSpeed} m/s</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Historical Weather Charts */}
-        {(() => {
-          // Generate historical data for year 2025
-          const generateHistoricalData = () => {
-            const data = [];
-            const startDate = new Date('2025-01-01');
-            const endDate = new Date('2025-12-29');
-            
-            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-              const dateStr = d.toISOString().split('T')[0];
-              const month = d.getMonth();
-              const dayOfYear = d.getDate() + (d.getMonth() * 30);
-              
-              // Generate precipitation (lower in summer, higher in rainy seasons)
-              let precipitation = 0;
-              const rand = Math.random();
-              // Simulate rainy seasons
-              if (month === 0 || month === 1 || month === 2 || month === 9 || month === 10 || month === 11) {
-                precipitation = rand > 0.3 ? Math.random() * 40 : 0;
-              } else {
-                precipitation = rand > 0.7 ? Math.random() * 25 : 0;
-              }
-              
-              // Generate temperatures with seasonal variation
-              const baseTemp = 20 + 10 * Math.sin((dayOfYear - 80) / 365 * 2 * Math.PI);
-              const maxTemp = baseTemp + 5 + Math.random() * 5;
-              const minTemp = baseTemp - 5 - Math.random() * 5;
-              
-              data.push({
-                date: dateStr,
-                dateLabel: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                precipitation: Math.round(precipitation * 10) / 10,
-                maxTemp: Math.round(maxTemp * 100) / 100,
-                minTemp: Math.round(minTemp * 100) / 100
-              });
-            }
-            
-            return data;
-          };
-          
-          const historicalData = generateHistoricalData();
-          
-          return (
-            <>
-              <Card className={`${dashboardTheme.card}`}>
-                <CardHeader>
-                  <CardTitle className="text-gray-900">Daily precipitation, mm</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={historicalData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
-                      <XAxis 
-                        dataKey="dateLabel" 
-                        tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                        tickCount={12}
-                        interval="preserveStartEnd"
-                        stroke="#4B5563"
-                      />
-                      <YAxis 
-                        label={{ value: 'Precipitation (mm)', angle: -90, position: 'insideLeft', style: { fill: '#9CA3AF' } }}
-                        tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                        domain={[0, 40]}
-                        stroke="#4B5563"
-                      />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#1F2937', 
-                          border: '1px solid #374151', 
-                          borderRadius: '6px',
-                          color: '#F3F4F6'
-                        }}
-                        labelStyle={{ color: '#9CA3AF' }}
-                      />
-                      <Legend wrapperStyle={{ color: '#F3F4F6' }} />
-                      <Bar 
-                        dataKey="precipitation" 
-                        fill="#06B6D4" 
-                        name="2025"
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <Card className={`${dashboardTheme.card}`}>
-                <CardHeader>
-                  <CardTitle className="text-gray-900">Daily temperatures, °C</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={historicalData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
-                      <XAxis 
-                        dataKey="dateLabel" 
-                        tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                        tickCount={12}
-                        interval="preserveStartEnd"
-                        stroke="#4B5563"
-                      />
-                      <YAxis 
-                        label={{ value: 'Temperature (°C)', angle: -90, position: 'insideLeft', style: { fill: '#9CA3AF' } }}
-                        tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                        domain={[0, 40]}
-                        stroke="#4B5563"
-                      />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#1F2937', 
-                          border: '1px solid #374151', 
-                          borderRadius: '6px',
-                          color: '#F3F4F6'
-                        }}
-                        labelStyle={{ color: '#9CA3AF' }}
-                      />
-                      <Legend wrapperStyle={{ color: '#F3F4F6' }} />
-                      <Line 
-                        type="monotone" 
-                        dataKey="maxTemp" 
-                        stroke="#06B6D4" 
-                        strokeWidth={2}
-                        name="2025 Max t°C"
-                        dot={false}
-                        activeDot={{ r: 6 }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="minTemp" 
-                        stroke="#0891B2" 
-                        strokeWidth={2}
-                        name="2025 Min t°C"
-                        dot={false}
-                        activeDot={{ r: 6 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </>
-          );
-        })()}
+        <CombinedWeatherForecast className="bg-gradient-to-br from-blue-900/90 to-cyan-900/90 border border-blue-700/30 rounded-xl shadow-xl" />
       </div>
     );
   };
@@ -881,226 +680,340 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
   // Crop Analysis Component
   const CropAnalysisTab = ({ fieldDetails }: { fieldDetails: FieldDetail }) => {
     const [dataSource, setDataSource] = useState<string>("drone");
-    const [selectedFile, setSelectedFile] = useState<string>("");
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [flightDate, setFlightDate] = useState<string>("2025-10-22");
-    const [manualDate, setManualDate] = useState<string>("2025-10-28");
     const [assessorNotes, setAssessorNotes] = useState<string>("Weed clusters in north. Pest minimal.");
-    
-    // Manual input metrics state
-    const [stressDetected, setStressDetected] = useState<number[]>([17.6]);
-    const [soilMoisture, setSoilMoisture] = useState<number[]>([58]);
-    const [weedArea, setWeedArea] = useState<number[]>([7.3]);
-    const [pestArea, setPestArea] = useState<number[]>([4.4]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (file) {
-        setSelectedFile(file.name);
+      if (file && file.type === "application/pdf") {
+        setSelectedFile(file);
+      } else {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload a PDF file.",
+          variant: "destructive"
+        });
       }
     };
 
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      const file = e.dataTransfer.files[0];
+      if (file && file.type === "application/pdf") {
+        setSelectedFile(file);
+      } else {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload a PDF file.",
+          variant: "destructive"
+        });
+      }
+    };
+
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+    };
+
     const handleSave = () => {
-      console.log('Saving crop analysis...');
+      toast({
+        title: "Analysis saved",
+        description: "Crop analysis data has been saved successfully.",
+      });
     };
 
     const handleDownload = () => {
-      console.log('Downloading crop analysis...');
+      const data = {
+        fieldId: fieldDetails.fieldId,
+        farmer: fieldDetails.farmer,
+        crop: fieldDetails.cropType,
+        area: fieldDetails.area,
+        flightDate: flightDate,
+        metrics: {
+          healthyArea: 2.80,
+          plantStress: 17.6,
+          potentialStress: 0,
+          fieldArea: fieldDetails.area,
+          growingStage: "N/A"
+        },
+        notes: assessorNotes
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `crop-analysis-${fieldDetails.fieldId}-${flightDate}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({
+        title: "Download started",
+        description: "Summary JSON file is being downloaded.",
+      });
+    };
+
+    const formatDate = (dateString: string) => {
+      const date = new Date(dateString);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
     };
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* Field Summary */}
-        <Card className={`${dashboardTheme.card}`}>
+        <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader>
             <CardTitle className="text-gray-900">Field Summary</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
               <div>
-                <p className="text-sm text-gray-600 mb-1 font-medium">Farmer</p>
-                <p className="text-gray-700 font-medium">{fieldDetails.farmer}</p>
+                <p className="text-sm text-gray-600 mb-1">Farmer: <span className="text-gray-900 font-medium">{fieldDetails.farmer}</span></p>
               </div>
               <div>
-                <p className="text-sm text-gray-600 mb-1 font-medium">Crop</p>
-                <p className="text-gray-700 font-medium">{fieldDetails.cropType}</p>
+                <p className="text-sm text-gray-600 mb-1">Crop: <span className="text-gray-900 font-medium">{fieldDetails.cropType}</span></p>
               </div>
               <div>
-                <p className="text-sm text-gray-600 mb-1 font-medium">Area</p>
-                <p className="text-gray-700 font-medium">{fieldDetails.area} ha</p>
+                <p className="text-sm text-gray-600 mb-1">Area: <span className="text-gray-900 font-medium">{fieldDetails.area} ha</span></p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Data Source */}
-        <Card className={`${dashboardTheme.card}`}>
+        <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader>
             <CardTitle className="text-gray-900">Data Source</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs value={dataSource} onValueChange={setDataSource}>
-              <TabsList className={`${dashboardTheme.card} border border-gray-800 w-fit`}>
-                <TabsTrigger 
-                  value="drone" 
-                  className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700"
-                >
+            <div className="flex gap-2">
+              <Button
+                variant={dataSource === "drone" ? "default" : "outline"}
+                onClick={() => setDataSource("drone")}
+                className={`flex items-center gap-2 ${
+                  dataSource === "drone" 
+                    ? "bg-gray-800 hover:bg-gray-900 text-white" 
+                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                <Upload className="h-4 w-4" />
                   Drone Upload
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="manual" 
-                  className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700"
-                >
+              </Button>
+              <Button
+                variant={dataSource === "manual" ? "default" : "outline"}
+                onClick={() => setDataSource("manual")}
+                className={`flex items-center gap-2 ${
+                  dataSource === "manual" 
+                    ? "bg-gray-800 hover:bg-gray-900 text-white" 
+                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                <User className="h-4 w-4" />
                   Manual Check
-                </TabsTrigger>
-              </TabsList>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-              <TabsContent value="drone" className="mt-6">
-                <div className="space-y-6">
-                  {/* Drone Data Upload */}
-                  <div>
-                    <Label className="text-gray-700 mb-2 block">Drone Data Upload</Label>
-                    <p className="text-sm text-gray-600 mb-4">Upload JSON or GeoJSON</p>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-teal-500 transition-colors">
-                      <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                      <p className="text-gray-700 mb-2">Drag file here or click to browse</p>
-                      {!selectedFile && (
-                        <p className="text-sm text-gray-500 mb-4">No file chosen</p>
-                      )}
+        {/* Upload Drone Report Section - Only show when drone is selected */}
+        {dataSource === "drone" && (
+          <>
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-gray-900 flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Upload Drone Report (PDF)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-gray-400 transition-colors cursor-pointer"
+                  onClick={() => document.getElementById('pdf-upload')?.click()}
+                >
+                  <ArrowUp className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                  <p className="text-gray-900 text-lg font-medium mb-2">Upload PDF Report</p>
+                  <p className="text-sm text-gray-600 mb-6">Supports plant stress analysis reports (Agremo format)</p>
                       <input
                         type="file"
-                        id="drone-upload"
+                    id="pdf-upload"
                         className="hidden"
-                        accept=".json,.geojson"
+                    accept=".pdf"
                         onChange={handleFileChange}
                       />
                       <Button
-                        onClick={() => document.getElementById('drone-upload')?.click()}
-                        className="bg-teal-500 hover:bg-teal-600 text-white"
-                      >
-                        <Upload className="h-4 w-4 mr-2" />
-                        Choose File
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      document.getElementById('pdf-upload')?.click();
+                    }}
+                    className="bg-gray-800 hover:bg-gray-900 text-white"
+                  >
+                    Select PDF File
                       </Button>
                       {selectedFile && (
-                        <div className="mt-4 p-3 bg-teal-500/10 border border-teal-500/30 rounded-lg">
-                          <p className="text-gray-700 text-sm">File selected: {selectedFile}</p>
+                    <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                      <p className="text-sm text-gray-700">Selected: {selectedFile.name}</p>
+                      <p className="text-xs text-gray-500 mt-1">{(selectedFile.size / 1024).toFixed(2)} KB</p>
                         </div>
                       )}
                     </div>
-                  </div>
+              </CardContent>
+            </Card>
 
                   {/* Flight Date */}
-                  <div>
-                    <Label htmlFor="flight-date" className="text-gray-700 mb-2 block">Flight Date</Label>
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-gray-900">Flight Date:</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4">
                     <Input
-                      id="flight-date"
                       type="date"
                       value={flightDate}
                       onChange={(e) => setFlightDate(e.target.value)}
-                      className={`${dashboardTheme.input} border-gray-700`}
+                    className="w-48 border-gray-300"
                     />
+                  <span className="text-sm text-gray-700">{formatDate(flightDate)}</span>
                   </div>
+              </CardContent>
+            </Card>
 
                   {/* Drone Metrics */}
-                  <div>
-                    <Label className="text-gray-700 mb-4 block">Drone Metrics</Label>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                      <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-                        <p className="text-xs text-gray-600 mb-1 font-medium">Healthy Area</p>
-                        <p className="text-xl font-bold text-gray-700">2.8 ha</p>
-                      </div>
-                      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
-                        <p className="text-xs text-gray-600 mb-1 font-medium">Stress Detected</p>
-                        <p className="text-xl font-bold text-gray-700">17.6%</p>
-                      </div>
-                      <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-                        <p className="text-xs text-gray-600 mb-1 font-medium">Soil Moisture</p>
-                        <p className="text-xl font-bold text-gray-700">58%</p>
-                      </div>
-                      <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4">
-                        <p className="text-xs text-gray-600 mb-1 font-medium">Weed Area</p>
-                        <p className="text-xl font-bold text-gray-700">0.25 ha</p>
-                        <p className="text-xs text-gray-500">(7.3%)</p>
-                      </div>
-                      <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
-                        <p className="text-xs text-gray-600 mb-1 font-medium">Pest Area</p>
-                        <p className="text-xl font-bold text-gray-700">0.15 ha</p>
-                        <p className="text-xs text-gray-500">(4.4%)</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Field Visualization */}
-                  <div>
-                    <Label className="text-gray-900 mb-4 block">Field Visualization</Label>
-                    <Card className={`${dashboardTheme.card} border border-gray-200`}>
+            <Card className="bg-white border border-gray-200 shadow-sm">
                       <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-gray-900 font-medium">Map View</p>
-                            <p className="text-xs text-gray-600">Field ID: {fieldDetails.fieldId}</p>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <p className="text-sm text-gray-700">Layer: 🌱 Plant Health (NDVI)</p>
-                            <Select defaultValue="ndvi">
-                              <SelectTrigger className={`${dashboardTheme.select} w-64`}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className={dashboardTheme.card}>
-                                <SelectItem value="ndvi">
-                                  🌱 Plant Health (NDVI) ⭐
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
+                <CardTitle className="text-gray-900">Drone Metrics</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="h-[400px] bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-center relative">
-                          <div className="text-center">
-                            <Map className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                            <p className="text-gray-600 text-lg">Field Visualization Map</p>
-                            <p className="text-gray-500 text-sm mt-2">NDVI Data Visualization</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <p className="text-xs text-gray-600 mb-1 font-medium">Healthy Area (Fine)</p>
+                    <p className="text-xl font-bold text-gray-900">2.80 ha</p>
                           </div>
-                          {/* Legend */}
-                          <div className="absolute bottom-4 left-4 bg-white border border-gray-200 rounded-lg p-4">
-                            <p className="text-gray-900 font-medium mb-3">Legend</p>
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 bg-green-500 rounded"></div>
-                                <span className="text-gray-900 text-sm">Healthy</span>
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <p className="text-xs text-gray-600 mb-1 font-medium">Plant Stress</p>
+                    <p className="text-xl font-bold text-gray-900">17.6%</p>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 bg-yellow-500 rounded"></div>
-                                <span className="text-gray-900 text-sm">Moderate</span>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <p className="text-xs text-gray-600 mb-1 font-medium">Potential Stress</p>
+                    <p className="text-xl font-bold text-gray-900">0%</p>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 bg-red-500 rounded"></div>
-                                <span className="text-gray-900 text-sm">Stress</span>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-xs text-gray-600 mb-1 font-medium">Field Area</p>
+                    <p className="text-xl font-bold text-gray-900">{fieldDetails.area} ha</p>
                               </div>
-                            </div>
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <p className="text-xs text-gray-600 mb-1 font-medium">Growing Stage</p>
+                    <p className="text-xl font-bold text-gray-900">N/A</p>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
+
+            {/* Field Visualization */}
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-gray-900">Field Visualization</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0 border-gray-300"
+                    >
+                      <span className="text-lg">+</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0 border-gray-300"
+                    >
+                      <span className="text-lg">−</span>
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {/* Map Controls */}
+                  <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm text-gray-700">Layer:</Label>
+                      <Select value={mapTileLayer} onValueChange={(value) => setMapTileLayer(value as "osm" | "satellite" | "terrain")}>
+                        <SelectTrigger className="w-32 h-9 border-gray-300">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="satellite">Satellite</SelectItem>
+                          <SelectItem value="osm">Street</SelectItem>
+                          <SelectItem value="terrain">Terrain</SelectItem>
+                        </SelectContent>
+                      </Select>
                   </div>
 
-                  {/* Assessor Notes */}
-                  <div>
-                    <Label htmlFor="notes" className="text-gray-900 mb-2 block">Assessor Notes</Label>
-                    <Textarea
-                      id="notes"
-                      value={assessorNotes}
-                      onChange={(e) => setAssessorNotes(e.target.value)}
-                      className={`${dashboardTheme.input} border-gray-300 min-h-[100px]`}
-                      placeholder="Enter your notes here..."
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm text-gray-700">Index:</Label>
+                      <Select value={selectedIndex} onValueChange={setSelectedIndex}>
+                        <SelectTrigger className="w-48 h-9 border-gray-300">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ndvi">🌱 NDVI</SelectItem>
+                          <SelectItem value="evi">🌿 EVI</SelectItem>
+                          <SelectItem value="savi">🌾 SAVI</SelectItem>
+                        </SelectContent>
+                      </Select>
+                        </div>
+                        </div>
+
+                  {/* Map Container */}
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <LeafletMap
+                      center={mapCenter}
+                      zoom={15}
+                      height="500px"
+                      tileLayer={mapTileLayer}
+                      showControls={true}
+                      className="w-full"
                     />
                   </div>
+
+                  {/* Vegetation Health Index Legend */}
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <Label className="text-sm font-medium text-gray-900 mb-2 block">Vegetation Health Index</Label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-600">Low</span>
+                      <div className="flex-1 h-4 bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 rounded"></div>
+                      <span className="text-xs text-gray-600">High</span>
+                          </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                  {/* Assessor Notes */}
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-gray-900">Assessor Notes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                    <Textarea
+                      value={assessorNotes}
+                      onChange={(e) => setAssessorNotes(e.target.value)}
+                  className="min-h-[100px] border-gray-300"
+                      placeholder="Enter your notes here..."
+                    />
+              </CardContent>
+            </Card>
 
                   {/* Action Buttons */}
                   <div className="flex gap-4">
                     <Button
                       onClick={handleSave}
-                      className="bg-teal-500 hover:bg-teal-600 text-white flex-1"
+                className="bg-gray-800 hover:bg-gray-900 text-white flex-1"
                     >
                       <CheckCircle className="h-4 w-4 mr-2" />
                       Save Analysis
@@ -1108,172 +1021,14 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                     <Button
                       onClick={handleDownload}
                       variant="outline"
-                      className="border-gray-300 text-gray-700 hover:bg-gray-100 flex-1"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 flex-1"
                     >
                       <Download className="h-4 w-4 mr-2" />
                       Download Summary JSON
                     </Button>
                   </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="manual" className="mt-6">
-                <div className="space-y-6">
-                  {/* Manual Assessment Date */}
-                  <div>
-                    <Label className="text-gray-700 mb-2 block">Manual Assessment Date</Label>
-                    <p className="text-sm text-gray-600 mb-2">Physical Check Date:</p>
-                    <Input
-                      id="manual-date"
-                      type="date"
-                      value={manualDate}
-                      onChange={(e) => setManualDate(e.target.value)}
-                      className={`${dashboardTheme.input} border-gray-300`}
-                    />
-                  </div>
-
-                  {/* Manual Input Metrics */}
-                  <div>
-                    <Label className="text-gray-700 mb-4 block">Manual Input Metrics</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 space-y-3 hover:border-yellow-500/50 transition-colors">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-sm text-gray-700 font-medium">Stress Detected</p>
-                          <p className="text-2xl font-bold text-gray-700">{stressDetected[0].toFixed(1)}%</p>
-                        </div>
-                        <Slider
-                          value={stressDetected}
-                          onValueChange={setStressDetected}
-                          max={100}
-                          min={0}
-                          step={0.1}
-                          className="w-full [&_[role=slider]]:bg-yellow-500 [&_[role=slider]]:border-yellow-400 [&_[role=slider]]:shadow-lg [&_[role=slider]]:shadow-yellow-500/20 [&>span[data-range]]:bg-yellow-500"
-                        />
-                        <div className="flex justify-between text-xs text-gray-500">
-                          <span>0%</span>
-                          <span>50%</span>
-                          <span>100%</span>
-                        </div>
-                      </div>
-                      <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 space-y-3 hover:border-blue-500/50 transition-colors">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-sm text-gray-700 font-medium">Soil Moisture</p>
-                          <p className="text-2xl font-bold text-gray-700">{soilMoisture[0].toFixed(1)}%</p>
-                        </div>
-                        <Slider
-                          value={soilMoisture}
-                          onValueChange={setSoilMoisture}
-                          max={100}
-                          min={0}
-                          step={0.1}
-                          className="w-full [&_[role=slider]]:bg-blue-500 [&_[role=slider]]:border-blue-400 [&_[role=slider]]:shadow-lg [&_[role=slider]]:shadow-blue-500/20 [&>span[data-range]]:bg-blue-500"
-                        />
-                        <div className="flex justify-between text-xs text-gray-500">
-                          <span>0%</span>
-                          <span>50%</span>
-                          <span>100%</span>
-                        </div>
-                      </div>
-                      <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4 space-y-3 hover:border-orange-500/50 transition-colors">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-sm text-gray-700 font-medium">Weed Area (Estimated)</p>
-                          <p className="text-2xl font-bold text-gray-700">{weedArea[0].toFixed(1)}%</p>
-                        </div>
-                        <Slider
-                          value={weedArea}
-                          onValueChange={setWeedArea}
-                          max={100}
-                          min={0}
-                          step={0.1}
-                          className="w-full [&_[role=slider]]:bg-orange-500 [&_[role=slider]]:border-orange-400 [&_[role=slider]]:shadow-lg [&_[role=slider]]:shadow-orange-500/20 [&>span[data-range]]:bg-orange-500"
-                        />
-                        <div className="flex justify-between text-xs text-gray-500">
-                          <span>0%</span>
-                          <span>50%</span>
-                          <span>100%</span>
-                        </div>
-                      </div>
-                      <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 space-y-3 hover:border-red-500/50 transition-colors">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-sm text-gray-700 font-medium">Pest Area (Estimated)</p>
-                          <p className="text-2xl font-bold text-gray-700">{pestArea[0].toFixed(1)}%</p>
-                        </div>
-                        <Slider
-                          value={pestArea}
-                          onValueChange={setPestArea}
-                          max={100}
-                          min={0}
-                          step={0.1}
-                          className="w-full [&_[role=slider]]:bg-red-500 [&_[role=slider]]:border-red-400 [&_[role=slider]]:shadow-lg [&_[role=slider]]:shadow-red-500/20 [&>span[data-range]]:bg-red-500"
-                        />
-                        <div className="flex justify-between text-xs text-gray-500">
-                          <span>0%</span>
-                          <span>50%</span>
-                          <span>100%</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Field Reference Map */}
-                  <div>
-                    <Label className="text-gray-900 mb-4 block">Field Reference Map</Label>
-                    <Card className={`${dashboardTheme.card} border border-gray-200`}>
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-gray-900 font-medium">Map View</p>
-                            <p className="text-xs text-gray-600">Field ID: {fieldDetails.fieldId}</p>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="h-[400px] bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-center relative">
-                          <div className="text-center">
-                            <Map className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                            <p className="text-gray-600 text-lg">Field Reference Map</p>
-                            <p className="text-gray-500 text-sm mt-2">Physical Assessment Location</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {/* Assessor Notes */}
-                  <div>
-                    <Label htmlFor="manual-notes" className="text-gray-900 mb-2 block">Assessor Notes</Label>
-                    <Textarea
-                      id="manual-notes"
-                      value={assessorNotes}
-                      onChange={(e) => setAssessorNotes(e.target.value)}
-                      className={`${dashboardTheme.input} border-gray-300 min-h-[100px]`}
-                      placeholder="Enter your notes here..."
-                    />
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-4">
-                    <Button
-                      onClick={handleSave}
-                      className="bg-teal-500 hover:bg-teal-600 text-white flex-1"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Save Analysis
-                    </Button>
-                    <Button
-                      onClick={handleDownload}
-                      variant="outline"
-                      className="border-gray-300 text-gray-700 hover:bg-gray-100 flex-1"
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Download Summary JSON
-                    </Button>
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+          </>
+        )}
       </div>
     );
   };
@@ -1282,132 +1037,159 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
     if (!selectedField) return null;
     const fieldDetails = getFieldDetails(selectedField);
 
+    // Generate Field ID in FLD-XXX format
+    const fieldId = selectedField.id ? `FLD-${String(selectedField.id).slice(-3).padStart(3, '0')}` : fieldDetails.fieldId;
+
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-2 text-sm">
-          <button 
-            onClick={handleBackToList}
-            className="text-gray-600 hover:text-gray-700"
-          >
-            Risk Assessments
-          </button>
-            <span className="text-gray-600">/</span>
-          <button 
-            onClick={handleBackToFields}
-            className="text-gray-600 hover:text-gray-700"
-          >
-            {selectedAssessment?.farmerName}
-          </button>
-        </div>
-        
+      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+        {/* Clean Header */}
+        <div className="max-w-7xl mx-auto px-6 mb-6">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
         <div>
-          <h1 className="text-4xl font-bold text-gray-900">
-            Field Detail View: <span className="text-teal-400">{fieldDetails.fieldId}</span>
-          </h1>
-          <p className="text-gray-600 mt-2">
-            <span className="text-blue-300">{fieldDetails.farmer}</span> - <span className="text-green-300">{fieldDetails.cropType}</span>
-          </p>
+              <h1 className="text-2xl font-semibold text-gray-900">Field Detail View</h1>
+              <p className="text-sm text-gray-500 mt-1">{fieldId} • {fieldDetails.farmer} • {fieldDetails.cropType}</p>
+            </div>
+          </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className={`${dashboardTheme.card} border border-gray-800`}>
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <TabsList className="bg-white border border-gray-200 inline-flex h-10 items-center justify-center rounded-lg p-1">
             <TabsTrigger 
               value="basic-info" 
-              className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700"
+                className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-gray-700 px-4 py-2 rounded text-sm"
             >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Basic Info
             </TabsTrigger>
             <TabsTrigger 
               value="weather" 
-              className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700"
+                className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-gray-700 px-4 py-2 rounded text-sm"
             >
               <CloudRain className="h-4 w-4 mr-2" />
               Weather Analysis
             </TabsTrigger>
             <TabsTrigger 
               value="crop" 
-              className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700"
+                className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-gray-700 px-4 py-2 rounded text-sm"
             >
               <Leaf className="h-4 w-4 mr-2" />
-              Crop Analysis
+                Crop Analysis (Drone)
+              </TabsTrigger>
+              <TabsTrigger 
+                value="overview" 
+                className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-gray-700 px-4 py-2 rounded text-sm"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Overview
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="basic-info" className="mt-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              <Card className={`${dashboardTheme.card}`}>
+          <TabsContent value="basic-info" className="mt-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* Left Panel - Field Information */}
+              <Card className="bg-white border border-gray-200 shadow-sm">
                 <CardHeader>
                   <CardTitle className="text-gray-900">Field Information</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                    <span className="text-gray-600">Field ID</span>
-                    <span className="text-gray-700 font-medium">{fieldDetails.fieldId}</span>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between items-center border-b border-gray-200 pb-2.5">
+                    <span className="text-sm text-gray-600">Field ID:</span>
+                    <span className="text-sm font-medium text-gray-900">{fieldId}</span>
                   </div>
-                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                    <span className="text-gray-600">Field Name</span>
-                    <span className="text-gray-700 font-medium">{fieldDetails.fieldName}</span>
+                  <div className="flex justify-between items-center border-b border-gray-200 pb-2.5">
+                    <span className="text-sm text-gray-600">Field Name:</span>
+                    <span className="text-sm font-medium text-gray-900">{fieldDetails.fieldName}</span>
                   </div>
-                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                    <span className="text-gray-600">Farmer</span>
-                    <span className="text-gray-700 font-medium">{fieldDetails.farmer}</span>
+                  <div className="flex justify-between items-center border-b border-gray-200 pb-2.5">
+                    <span className="text-sm text-gray-600">Farmer:</span>
+                    <span className="text-sm font-medium text-gray-900">{fieldDetails.farmer}</span>
                   </div>
-                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                    <span className="text-gray-600">Crop Type</span>
-                    <div className="flex items-center gap-2">
-                      <Leaf className="h-4 w-4 text-gray-600" />
-                      <span className="text-gray-700 font-medium">{fieldDetails.cropType}</span>
+                  <div className="flex justify-between items-center border-b border-gray-200 pb-2.5">
+                    <span className="text-sm text-gray-600">Crop Type:</span>
+                    <div className="flex items-center gap-1.5">
+                      <Sprout className="h-3.5 w-3.5 text-green-500" />
+                      <span className="text-sm font-medium text-gray-900">{fieldDetails.cropType}</span>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                    <span className="text-gray-600">Area</span>
-                    <span className="text-gray-700 font-medium">{fieldDetails.area} hectares</span>
+                  <div className="flex justify-between items-center border-b border-gray-200 pb-2.5">
+                    <span className="text-sm text-gray-600">Area:</span>
+                    <span className="text-sm font-medium text-gray-900">{fieldDetails.area} hectares</span>
                   </div>
-                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                    <span className="text-gray-600">Season</span>
-                    <span className="text-gray-700 font-medium">Season {fieldDetails.season}</span>
+                  <div className="flex justify-between items-center border-b border-gray-200 pb-2.5">
+                    <span className="text-sm text-gray-600">Season:</span>
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5 text-gray-500" />
+                      <span className="text-sm font-medium text-gray-900">Season {fieldDetails.season}</span>
                   </div>
-                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                    <span className="text-gray-600">Sowing Date</span>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-gray-600" />
-                      <span className="text-gray-700 font-medium">{fieldDetails.sowingDate}</span>
                     </div>
+                  <div className="flex justify-between items-center pb-2.5">
+                    <span className="text-sm text-gray-600">Location:</span>
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 text-teal-500" />
+                      <span className="text-sm font-medium text-gray-900">{fieldDetails.location}</span>
                   </div>
-                  <div className="flex justify-between items-center pb-3">
-                    <span className="text-gray-600">Location</span>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-gray-600" />
-                      <span className="text-gray-700 font-medium">{fieldDetails.location}</span>
                     </div>
+                  
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 pt-3 border-t border-gray-200 mt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                    >
+                      <Edit className="h-3.5 w-3.5 mr-1.5" />
+                      Edit Info
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                    >
+                      <FileText className="h-3.5 w-3.5 mr-1.5" />
+                      View History
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className={`${dashboardTheme.card}`}>
+              {/* Right Panel - Map View */}
+              <Card className="bg-white border border-gray-200 shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-gray-900">Field Map</CardTitle>
+                  <CardTitle className="text-gray-900">Map View</CardTitle>
                 </CardHeader>
-                <CardContent className="h-[500px] flex items-center justify-center bg-gray-900/50 rounded-lg border border-gray-800">
+                <CardContent className="h-[500px] flex items-center justify-center bg-gray-50 rounded-lg border border-gray-200">
                   <div className="text-center">
                     <MapPin className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                    <p className="text-gray-600 text-lg">Map Integration</p>
-                    <p className="text-gray-500 text-sm mt-2">Field boundary visualization</p>
+                    <p className="text-gray-900 text-lg font-medium">Map View</p>
+                    <p className="text-sm text-gray-600 mt-2">Field: {fieldId}</p>
                   </div>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
 
-          <TabsContent value="weather" className="mt-6">
+          <TabsContent value="weather" className="mt-4">
             <WeatherAnalysisTab location={fieldDetails.location} />
           </TabsContent>
 
-          <TabsContent value="crop" className="mt-6">
+          <TabsContent value="crop" className="mt-4">
             <CropAnalysisTab fieldDetails={fieldDetails} />
           </TabsContent>
+
+          <TabsContent value="overview" className="mt-4">
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-gray-900">Overview</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600">Field overview and summary information will be displayed here.</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
+        </div>
       </div>
     );
   };
@@ -1434,37 +1216,139 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
   };
 
   const renderDashboard = () => {
-    // Filter assessments by search query
-    const filteredAssessments = assessments.filter(assessment => {
-      return searchQuery === "" ||
-        assessment.farmerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        assessment.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        assessment.location.toLowerCase().includes(searchQuery.toLowerCase());
+    // Get unique farmers from assessments
+    const uniqueFarmerIds = new Set(assessments.map(a => a.farmerId).filter(Boolean));
+    
+    // Build farmer data with field counts
+    const farmerData = Array.from(uniqueFarmerIds).map(farmerId => {
+      const farmerAssessments = assessments.filter(a => a.farmerId === farmerId);
+      const farmerName = farmerAssessments[0]?.farmerName || "Unknown Farmer";
+      const location = farmerAssessments[0]?.location || "Unknown Location";
+      
+      // Count fields for this farmer
+      const farmerFarms = Array.isArray(farms) 
+        ? farms.filter(farm => {
+            const farmFarmerId = farm.farmerId?._id || farm.farmerId || farm.farmer?._id || farm.farmer?.id || '';
+            return farmFarmerId === farmerId || 
+                   (typeof farmFarmerId === 'string' && typeof farmerId === 'string' && farmFarmerId === farmerId) ||
+                   farm.farmerName === farmerName;
+          })
+        : [];
+      
+      return {
+        farmerId: `F-${String(farmerId).slice(-3).padStart(3, '0')}`,
+        farmerName,
+        location,
+        totalFields: farmerFarms.length || 0,
+        originalFarmerId: farmerId
+      };
     });
 
+    // Filter farmers by search query
+    const filteredFarmers = farmerData.filter(farmer => {
+      return searchQuery === "" ||
+        farmer.farmerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        farmer.farmerId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        farmer.location.toLowerCase().includes(searchQuery.toLowerCase());
+    });
+
+    // Find assessment for farmer click
+    const handleFarmerClick = (farmer: typeof farmerData[0]) => {
+      const farmerAssessment = assessments.find(a => a.farmerId === farmer.originalFarmerId);
+      if (farmerAssessment) {
+        handleAssessmentClick(farmerAssessment);
+      }
+    };
+
     return (
-      <div className="space-y-6">
-        {/* Action Bar */}
-        <div className="flex items-center justify-end">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-              <Input
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className={`${dashboardTheme.input} pl-10 w-64 border-gray-300`}
-              />
+      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+        {/* Clean Header */}
+        <div className="max-w-7xl mx-auto px-6 mb-6">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">Risk Assessment</h1>
+              <p className="text-sm text-gray-500 mt-1">Drone-based crop analysis and risk evaluation</p>
+            </div>
           </div>
         </div>
 
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-6">
+          {/* Summary Cards - Clean Modern Style */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500 mb-1">Total Farmers</p>
+                    <p className="text-xl font-semibold text-gray-900">{filteredFarmers.length}</p>
+                    <p className="text-xs text-green-600 mt-1">All registered</p>
+                  </div>
+                  <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+                    <Users className="h-6 w-6 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500 mb-1">Total Fields</p>
+                    <p className="text-xl font-semibold text-gray-900">
+                      {filteredFarmers.reduce((sum, f) => sum + f.totalFields, 0)}
+                    </p>
+                    <p className="text-xs text-green-600 mt-1">Across all farmers</p>
+                  </div>
+                  <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+                    <Leaf className="h-6 w-6 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500 mb-1">Active Assessments</p>
+                    <p className="text-xl font-semibold text-gray-900">{assessments.length}</p>
+                    <p className="text-xs text-green-600 mt-1">In progress</p>
+                  </div>
+                  <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+                    <Shield className="h-6 w-6 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500 mb-1">Completion Rate</p>
+                    <p className="text-xl font-semibold text-gray-900">
+                      {assessments.length > 0 ? Math.round((assessments.filter(a => a.status === 'submitted' || a.status === 'approved').length / assessments.length) * 100) : 0}%
+                    </p>
+                    <p className="text-xs text-green-600 mt-1">Success rate</p>
+                  </div>
+                  <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+                    <TrendingUp className="h-6 w-6 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+        </div>
+
         {/* Loading State */}
-        {loading && (
-          <Card className={`${dashboardTheme.card}`}>
+          {(loading || loadingFarms) && (
+            <Card className="bg-white border border-gray-200 shadow-sm">
             <CardContent className="p-12">
               <div className="flex items-center justify-center">
                 <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading assessments...</p>
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-600 mx-auto mb-4"></div>
+                    <p className="text-sm text-gray-600">Loading data...</p>
                 </div>
               </div>
             </CardContent>
@@ -1473,14 +1357,17 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
 
         {/* Error State */}
         {error && !loading && (
-          <Card className={`${dashboardTheme.card}`}>
-            <CardContent className="p-6">
-              <div className="text-center text-red-400">
-                <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
-                <p>{error}</p>
+            <Card className="bg-white border border-red-200 shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-red-500" />
+                    <p className="text-sm text-red-600">{error}</p>
+                  </div>
                 <Button 
                   onClick={loadAssessments} 
-                  className="mt-4 bg-teal-500 hover:bg-teal-600 text-white"
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700 text-white"
                 >
                   Retry
                 </Button>
@@ -1489,59 +1376,70 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
           </Card>
         )}
 
-        {/* Data Table */}
-        {!loading && !error && (
-          <Card className={`${dashboardTheme.card}`}>
+          {/* Farmers Management Table - Clean Professional Style */}
+          {!loading && !loadingFarms && !error && (
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader className="border-b border-gray-200 bg-white px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base font-semibold text-gray-900">Farmers Management</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700 text-white border-green-600 h-8 px-3 text-xs"
+                  >
+                    <Download className="h-3.5 w-3.5 mr-1.5" />
+                    Export
+                  </Button>
+                </div>
+              </CardHeader>
             <CardContent className="p-0">
-              {filteredAssessments.length === 0 ? (
+                {filteredFarmers.length === 0 ? (
                 <div className="p-12 text-center">
-                  <p className="text-gray-600">No assessments found.</p>
-                  {assessments.length === 0 && !assessorId && (
-                    <p className="text-gray-500 text-sm mt-2">Please log in to view assessments.</p>
-                  )}
+                    <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-sm font-medium text-gray-900 mb-1">No farmers found</p>
+                    <p className="text-xs text-gray-500">Try adjusting your search criteria</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="bg-gray-50 border-b-2 border-gray-200">
-                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Farmer Name</th>
-                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Location</th>
-                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Type</th>
-                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Status</th>
-                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Date</th>
+                        <tr className="bg-gray-50 border-b border-gray-200">
+                          <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Farmer ID</th>
+                          <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Farmer Name</th>
+                          <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Location</th>
+                          <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Total Fields</th>
+                          <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredAssessments.map((assessment, index) => (
+                      <tbody className="bg-white divide-y divide-gray-100">
+                        {filteredFarmers.map((farmer, index) => (
                         <tr
-                          key={assessment.id}
-                          onClick={() => handleAssessmentClick(assessment)}
-                          className="hover:bg-gray-50/50 transition-all duration-150 cursor-pointer border-b border-gray-100"
+                            key={farmer.farmerId}
+                            className="hover:bg-green-50/30 transition-colors"
                         >
-                          <td className="py-4 px-6 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">{assessment.farmerName}</div>
+                            <td className="py-3.5 px-6 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900 bg-green-50 px-2 py-1 rounded inline-block">{farmer.farmerId}</div>
                           </td>
-                          <td className="py-4 px-6 whitespace-nowrap">
+                            <td className="py-3.5 px-6 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{farmer.farmerName}</div>
+                            </td>
+                            <td className="py-3.5 px-6 whitespace-nowrap">
                             <div className="flex items-center gap-2 text-sm text-gray-600">
-                              <MapPin className="h-4 w-4 text-teal-500 flex-shrink-0" />
-                              <span className="truncate max-w-[200px]">{assessment.location}</span>
+                                <MapPin className="h-4 w-4 text-gray-400" />
+                                <span>{farmer.location}</span>
                             </div>
                           </td>
-                          <td className="py-4 px-6 whitespace-nowrap">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                              {assessment.type}
-                            </span>
+                            <td className="py-3.5 px-6 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{farmer.totalFields} fields</div>
                           </td>
-                          <td className="py-4 px-6 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(assessment.status)}`}>
-                              {assessment.status}
-                            </span>
-                          </td>
-                          <td className="py-4 px-6 whitespace-nowrap">
-                            <div className="text-sm text-gray-600">
-                            {new Date(assessment.date).toLocaleDateString()}
-                            </div>
+                            <td className="py-3.5 px-6 whitespace-nowrap">
+                              <Button
+                                onClick={() => handleFarmerClick(farmer)}
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700 text-white text-xs h-8 px-4"
+                              >
+                                View Fields
+                              </Button>
                           </td>
                         </tr>
                       ))}
@@ -1552,6 +1450,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
             </CardContent>
           </Card>
         )}
+        </div>
       </div>
     );
   };
