@@ -12,6 +12,7 @@ import DashboardLayout from "../layout/DashboardLayout";
 import { getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
 import { getUserProfile } from "@/services/usersAPI";
 import { getFarms, getAllFarms, createFarm, createInsuranceRequest, getFarmById, getWeatherForecast, getHistoricalWeather, getVegetationStats } from "@/services/farmsApi";
+import { API_BASE_URL, getAuthToken } from "@/config/api";
 import { getClaims, createClaim } from "@/services/claimsApi";
 import { getPolicies } from "@/services/policiesApi";
 import assessmentsApiService from "@/services/assessmentsApi";
@@ -882,9 +883,30 @@ export default function FarmerDashboard() {
 
       console.log('📤 Preparing to create farm with data:', JSON.stringify(farmData, null, 2));
 
-      const response = await createFarm(farmData);
-      console.log('✅ Farm creation API response:', response);
-      upsertCreatedFarm(response);
+      // Use the register endpoint
+      const token = getAuthToken();
+      const registerUrl = `${API_BASE_URL}/farms/register`;
+      
+      const response = await fetch(registerUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify(farmData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: `HTTP error! status: ${response.status}` }));
+        throw new Error(errorData.message || errorData.error || `Failed to register farm: ${response.status}`);
+      }
+
+      const responseData = await response.json();
+      console.log('✅ Farm registration API response:', responseData);
+      
+      // Handle response - it might be in response.data or directly in response
+      const createdFarm = responseData.data || responseData;
+      upsertCreatedFarm(createdFarm);
       
       toast({
         title: 'Success',
