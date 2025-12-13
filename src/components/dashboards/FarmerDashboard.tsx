@@ -851,34 +851,12 @@ export default function FarmerDashboard() {
       return;
     }
 
-    // Use default values for required fields
-    const defaultLat = -1.9441; // Default Rwanda coordinates
-    const defaultLng = 30.0619;
-    const defaultName = `Farm-${Date.now()}`; // Auto-generate farm name
-    const defaultBoundary = [
-      [
-        [defaultLng, defaultLat],
-        [defaultLng + 0.001, defaultLat],
-        [defaultLng + 0.001, defaultLat + 0.001],
-        [defaultLng, defaultLat + 0.001],
-        [defaultLng, defaultLat]
-      ]
-    ];
-
     setIsCreating(true);
     try {
+      // Only send cropType and sowingDate
       const farmData: any = {
-        name: defaultName,
-        location: {
-          type: 'Point',
-          coordinates: [defaultLng, defaultLat] // [longitude, latitude]
-        },
-        boundary: {
-          type: 'Polygon',
-          coordinates: defaultBoundary
-        },
         cropType: newFieldData.cropType.trim().toUpperCase(),
-        sowingDate: newFieldData.sowingDate || undefined
+        ...(newFieldData.sowingDate && { sowingDate: newFieldData.sowingDate })
       };
 
       console.log('📤 Preparing to create farm with data:', JSON.stringify(farmData, null, 2));
