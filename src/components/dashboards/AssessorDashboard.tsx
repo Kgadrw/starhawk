@@ -20,6 +20,7 @@ import assessmentsApiService from "@/services/assessmentsApi";
 import farmsApiService, { getFarms, getFarmById, getWeatherForecast, getHistoricalWeather, getVegetationStats, uploadShapefile, uploadKML, createFarm, createInsuranceRequest, updateFarm } from "@/services/farmsApi";
 import { getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
 import { getUserProfile, getUserById } from "@/services/usersAPI";
+import { API_BASE_URL, getAuthToken } from "@/config/api";
 import { useToast } from "@/hooks/use-toast";
 import { 
   FileText, 
@@ -178,6 +179,11 @@ export default function AssessorDashboard() {
   const [farmsLoading, setFarmsLoading] = useState(false);
   const [farmsError, setFarmsError] = useState<string | null>(null);
   const [selectedFarm, setSelectedFarm] = useState<any | null>(null);
+  
+  // Farmers list state
+  const [farmers, setFarmers] = useState<any[]>([]);
+  const [farmersLoading, setFarmersLoading] = useState(false);
+  const [farmersError, setFarmersError] = useState<string | null>(null);
   const [weatherForecast, setWeatherForecast] = useState<any | null>(null);
   const [historicalWeather, setHistoricalWeather] = useState<any | null>(null);
   const [vegetationStats, setVegetationStats] = useState<any | null>(null);
@@ -193,7 +199,7 @@ export default function AssessorDashboard() {
   const totalRiskAssessments = assessments.filter(a => a.type === "Risk Assessment").length;
   const totalClaimAssessments = assessments.filter(a => a.type === "Claim Assessment").length;
   const pendingAssessments = assessments.filter(a => a.status === "Pending").length;
-  
+
   // Compute metrics for Field Management-style dashboard
   const uniqueFarmerIds = new Set(assessments.map(a => a.farmerId).filter(Boolean));
   const totalFarmers = uniqueFarmerIds.size || 0;
@@ -239,6 +245,8 @@ export default function AssessorDashboard() {
   useEffect(() => {
     if (activePage === "dashboard" && assessorId) {
       loadAssessorProfile();
+    } else if (activePage === "farmers" && assessorId) {
+      loadFarmers();
     }
   }, [activePage, assessorId]);
 
@@ -252,6 +260,46 @@ export default function AssessorDashboard() {
       console.error('Failed to load assessor profile:', err);
     } finally {
       setProfileLoading(false);
+    }
+  };
+
+  const loadFarmers = async () => {
+    setFarmersLoading(true);
+    setFarmersError(null);
+    try {
+      const token = getAuthToken();
+      const farmersUrl = `${API_BASE_URL}/assessments/farmers/list`;
+      
+      const response = await fetch(farmersUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: `HTTP error! status: ${response.status}` }));
+        throw new Error(errorData.message || errorData.error || `Failed to load farmers: ${response.status}`);
+      }
+
+      const responseData = await response.json();
+      console.log('✅ Farmers list API response:', responseData);
+      
+      // Handle response - it might be in response.data or directly in response
+      const farmersList = responseData.data || responseData.items || responseData || [];
+      setFarmers(Array.isArray(farmersList) ? farmersList : []);
+    } catch (err: any) {
+      console.error('Failed to load farmers:', err);
+      setFarmersError(err.message || 'Failed to load farmers');
+      toast({
+        title: 'Error loading farmers',
+        description: err.message || 'Failed to load farmers',
+        variant: 'destructive'
+      });
+      setFarmers([]);
+    } finally {
+      setFarmersLoading(false);
     }
   };
 
@@ -1201,14 +1249,14 @@ export default function AssessorDashboard() {
                               <Label className="text-sm text-gray-700">Layer:</Label>
                               <Select value={mapTileLayer} onValueChange={(value) => setMapTileLayer(value as "osm" | "satellite" | "terrain")}>
                                 <SelectTrigger className={`${dashboardTheme.select} w-32`}>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent className={dashboardTheme.card}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className={dashboardTheme.card}>
                                   <SelectItem value="satellite">Satellite</SelectItem>
                                   <SelectItem value="osm">Street</SelectItem>
                                   <SelectItem value="terrain">Terrain</SelectItem>
-                                </SelectContent>
-                              </Select>
+                              </SelectContent>
+                            </Select>
                             </div>
                             <div className="flex items-center gap-2">
                               <Label className="text-sm text-gray-700">Index:</Label>
@@ -2229,8 +2277,8 @@ export default function AssessorDashboard() {
                   <Users className="h-6 w-6 text-green-600" />
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </CardContent>
+        </Card>
 
           <Card className="bg-white border border-gray-200 shadow-sm hover:shadow transition-shadow">
             <CardContent className="p-4">
@@ -2244,8 +2292,8 @@ export default function AssessorDashboard() {
                   <Sprout className="h-6 w-6 text-green-600" />
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </CardContent>
+        </Card>
 
           <Card className="bg-white border border-gray-200 shadow-sm hover:shadow transition-shadow">
             <CardContent className="p-4">
@@ -2259,29 +2307,29 @@ export default function AssessorDashboard() {
                   <MapPin className="h-6 w-6 text-green-600" />
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </CardContent>
+        </Card>
 
           <Card className="bg-white border border-gray-200 shadow-sm hover:shadow transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <p className="text-xs text-gray-500 mb-1">Active Assessments</p>
                   <p className="text-xl font-semibold text-gray-900">{activeAssessments}</p>
                   <p className="text-xs text-green-600 mt-1">In progress</p>
-                </div>
+              </div>
                 <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
                   <Calendar className="h-6 w-6 text-green-600" />
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
         </div>
 
-        {/* Action Bar */}
+      {/* Action Bar */}
         <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
           <div className="flex items-center gap-2">
-            <Button
+        <Button
               onClick={() => setActiveView("farmers")}
               size="sm"
               className={activeView === "farmers" 
@@ -2289,7 +2337,7 @@ export default function AssessorDashboard() {
                 : "bg-gray-200 hover:bg-gray-300 text-gray-700 h-9"}
             >
               View Farmers
-            </Button>
+        </Button>
             <Button
               onClick={() => setActiveView("fields")}
               size="sm"
@@ -2302,34 +2350,34 @@ export default function AssessorDashboard() {
           </div>
           
           <div className="flex items-center gap-2">
-            <div className="relative">
+          <div className="relative">
               <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-              <Input
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+            <Input
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8 h-9 w-56 text-sm bg-white border-gray-300"
-              />
-            </div>
-            <Button
-              variant="outline"
+            />
+          </div>
+                  <Button 
+                    variant="outline" 
               size="sm"
               onClick={() => setFilterDialogOpen(true)}
               className="bg-white border-gray-300 h-9"
-            >
+                  >
               <Filter className="h-3.5 w-3.5 mr-1.5" />
               Filter
-            </Button>
-            <Button
+                  </Button>
+                  <Button 
               onClick={() => setShowDrawField(true)}
               size="sm"
               className="bg-green-600 hover:bg-green-700 text-white h-9"
-            >
+                  >
               <Plus className="h-3.5 w-3.5 mr-1.5" />
               Add Field
-            </Button>
+                  </Button>
+                </div>
           </div>
-        </div>
 
       {/* Error Message */}
       {(error || farmsError) && (
@@ -2339,7 +2387,7 @@ export default function AssessorDashboard() {
               <div className="flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 text-red-500" />
                 <p className="text-sm text-red-500">{error || farmsError}</p>
-              </div>
+        </div>
               <Button
                 onClick={() => { loadAssessments(); loadFarms(); }}
                 variant="outline"
@@ -2349,27 +2397,27 @@ export default function AssessorDashboard() {
                 <RefreshCw className="h-3 w-3 mr-1.5" />
                 Retry
               </Button>
-            </div>
+      </div>
           </CardContent>
         </Card>
       )}
 
-        {/* Data Table */}
+      {/* Data Table */}
         <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader className="border-b border-gray-200 bg-white px-6 py-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-semibold text-gray-900">
                 {activeView === "farmers" ? "Farmers Management" : "Fields Management"}
               </CardTitle>
-              <Button
-                variant="outline"
+                  <Button
+                    variant="outline"
                 size="sm"
                 className="bg-green-600 hover:bg-green-700 text-white border-green-600 h-8 px-3 text-xs"
-              >
+                  >
                 <Download className="h-3.5 w-3.5 mr-1.5" />
                 Export
-              </Button>
-            </div>
+                  </Button>
+              </div>
           </CardHeader>
           <CardContent className="p-0">
             {loading || farmsLoading ? (
@@ -2387,19 +2435,19 @@ export default function AssessorDashboard() {
                   <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                   <p className="text-sm font-medium text-gray-900 mb-1">No farmers found</p>
                   <p className="text-xs text-gray-500">Try adjusting your search criteria</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
                       <tr className="bg-gray-50 border-b border-gray-200">
                         <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Farmer ID</th>
                         <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Farmer Name</th>
                         <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Location</th>
                         <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Total Fields</th>
                         <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Total Area (ha)</th>
-                      </tr>
-                    </thead>
+                  </tr>
+                </thead>
                     <tbody className="bg-white divide-y divide-gray-100">
                       {filteredFarmerData.map((farmer, index) => (
                         <tr
@@ -2409,16 +2457,16 @@ export default function AssessorDashboard() {
                         >
                           <td className="py-3.5 px-6 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900 bg-green-50 px-2 py-1 rounded inline-block">{farmer.farmerId}</div>
-                          </td>
+                      </td>
                           <td className="py-3.5 px-6 whitespace-nowrap">
                             <div className="text-sm text-gray-900">{farmer.farmerName}</div>
-                          </td>
+                      </td>
                           <td className="py-3.5 px-6 whitespace-nowrap">
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                               <MapPin className="h-4 w-4 text-gray-400" />
                               <span>{farmer.location}</span>
-                            </div>
-                          </td>
+                        </div>
+                      </td>
                           <td className="py-3.5 px-6 whitespace-nowrap">
                             <div className="text-sm text-gray-900">{farmer.totalFields}</div>
                           </td>
@@ -2466,8 +2514,8 @@ export default function AssessorDashboard() {
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                               <Sprout className="h-4 w-4 text-gray-400" />
                               <span>{field.cropType || "N/A"}</span>
-                            </div>
-                          </td>
+                        </div>
+                      </td>
                           <td className="py-3.5 px-6 whitespace-nowrap">
                             <div className="text-sm text-gray-900">{(field.area || 0).toFixed(1)}</div>
                           </td>
@@ -2476,15 +2524,15 @@ export default function AssessorDashboard() {
                               {field.status || "Active"}
                             </span>
                           </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
               )
-            )}
-          </CardContent>
-        </Card>
+          )}
+        </CardContent>
+      </Card>
       </div>
 
       {/* Draw Field Dialog */}
@@ -2575,16 +2623,16 @@ export default function AssessorDashboard() {
                       }}
                     />
                   </div>
-                  {!calculatedArea && (
+                      {!calculatedArea && (
                     <div className="mt-4 text-center">
-                      <Button
-                        onClick={handlePolygonComplete}
+                        <Button
+                          onClick={handlePolygonComplete}
                         className="bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        Complete Polygon
-                      </Button>
+                        >
+                          Complete Polygon
+                        </Button>
                     </div>
-                  )}
+                      )}
                 </div>
 
                 {/* Field Metadata */}
@@ -2675,16 +2723,151 @@ export default function AssessorDashboard() {
     switch (activePage) {
       case "risk-assessments": return <RiskAssessmentSystem assessments={assessments} onRefresh={loadAssessments} />;
       case "loss-assessments": return <LossAssessmentSystem />;
+      case "farmers": return renderFarmersList();
       case "notifications": return <AssessorNotifications />;
       case "profile-settings": return <AssessorProfileSettings />;
       default: return renderDashboard();
     }
   };
 
+  const renderFarmersList = () => {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+        {/* Header */}
+        <div className="max-w-7xl mx-auto px-6 mb-6">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900">Farmers List</h1>
+                <p className="text-sm text-gray-500 mt-1">View and manage farmers</p>
+              </div>
+              <Button
+                onClick={loadFarmers}
+                disabled={farmersLoading}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${farmersLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-6">
+          {farmersLoading && (
+            <Card className={`${dashboardTheme.card}`}>
+              <CardContent className="p-12">
+                <div className="flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading farmers...</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {farmersError && !farmersLoading && (
+            <Card className={`${dashboardTheme.card}`}>
+              <CardContent className="p-6">
+                <div className="text-center text-red-600">
+                  <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
+                  <p>{farmersError}</p>
+                  <Button 
+                    onClick={loadFarmers} 
+                    className="mt-4 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    Retry
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {!farmersLoading && !farmersError && (
+            <Card className={`${dashboardTheme.card}`}>
+              <CardHeader>
+                <CardTitle className="text-gray-900">Farmers</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {farmers.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Users className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                    <p className="text-gray-600 text-lg mb-2">No farmers found</p>
+                    <p className="text-gray-500 text-sm">There are no farmers available at the moment</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gray-50 border-b-2 border-gray-200">
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Name</th>
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Email</th>
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Phone</th>
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">National ID</th>
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Location</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {farmers.map((farmer, index) => {
+                          const farmerName = 
+                            farmer.name || 
+                            (farmer.firstName && farmer.lastName ? `${farmer.firstName} ${farmer.lastName}`.trim() : '') ||
+                            farmer.firstName || 
+                            farmer.lastName || 
+                            "Unknown";
+                          
+                          const location = 
+                            farmer.location || 
+                            (farmer.province && farmer.district ? `${farmer.province}, ${farmer.district}` : '') ||
+                            farmer.province ||
+                            farmer.district ||
+                            "N/A";
+
+                          return (
+                            <tr
+                              key={farmer._id || farmer.id || index}
+                              className="hover:bg-gray-50/50 transition-all duration-150 border-b border-gray-100"
+                            >
+                              <td className="py-4 px-6 whitespace-nowrap">
+                                <div className="text-sm font-medium text-gray-900">{farmerName}</div>
+                              </td>
+                              <td className="py-4 px-6 whitespace-nowrap">
+                                <div className="text-sm text-gray-600">{farmer.email || "N/A"}</div>
+                              </td>
+                              <td className="py-4 px-6 whitespace-nowrap">
+                                <div className="text-sm text-gray-600">{farmer.phoneNumber || farmer.phone || "N/A"}</div>
+                              </td>
+                              <td className="py-4 px-6 whitespace-nowrap">
+                                <div className="text-sm text-gray-600">{farmer.nationalId || "N/A"}</div>
+                              </td>
+                              <td className="py-4 px-6 whitespace-nowrap">
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                  <MapPin className="h-4 w-4 text-teal-500 flex-shrink-0" />
+                                  <span className="truncate max-w-[200px]">{location}</span>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: BarChart3 },
     { id: "risk-assessments", label: "Risk Assessment", icon: Shield },
     { id: "loss-assessments", label: "Loss Assessment", icon: AlertCircle },
+    { id: "farmers", label: "Farmers", icon: Users },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "profile-settings", label: "Profile Settings", icon: User }
   ];
