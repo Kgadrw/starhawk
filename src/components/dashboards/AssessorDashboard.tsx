@@ -58,7 +58,9 @@ import {
   ArrowLeft,
   RefreshCw,
   Users,
-  Sprout
+  Sprout,
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -184,6 +186,9 @@ export default function AssessorDashboard() {
   const [farmers, setFarmers] = useState<any[]>([]);
   const [farmersLoading, setFarmersLoading] = useState(false);
   const [farmersError, setFarmersError] = useState<string | null>(null);
+  const [expandedFarmers, setExpandedFarmers] = useState<Set<string>>(new Set());
+  const [farmerFields, setFarmerFields] = useState<Record<string, any[]>>({});
+  const [loadingFields, setLoadingFields] = useState<Record<string, boolean>>({});
   const [weatherForecast, setWeatherForecast] = useState<any | null>(null);
   const [historicalWeather, setHistoricalWeather] = useState<any | null>(null);
   const [vegetationStats, setVegetationStats] = useState<any | null>(null);
@@ -201,8 +206,9 @@ export default function AssessorDashboard() {
   const pendingAssessments = assessments.filter(a => a.status === "Pending").length;
 
   // Compute metrics for Field Management-style dashboard
+  // Use actual farmers list if available, otherwise fall back to unique farmer IDs from assessments
   const uniqueFarmerIds = new Set(assessments.map(a => a.farmerId).filter(Boolean));
-  const totalFarmers = uniqueFarmerIds.size || 0;
+  const totalFarmers = farmers.length > 0 ? farmers.length : uniqueFarmerIds.size || 0;
   const totalFields = Array.isArray(farms) ? farms.length : 0;
   const totalArea = Array.isArray(farms) 
     ? farms.reduce((sum, farm) => sum + (farm.area || 0), 0) 
@@ -212,28 +218,61 @@ export default function AssessorDashboard() {
   ).length;
   
   // Get unique farmers with their data for the table
-  const farmerData = Array.from(uniqueFarmerIds).map(farmerId => {
-    const farmerAssessments = assessments.filter(a => a.farmerId === farmerId);
-    const farmerName = farmerAssessments[0]?.farmerName || "Unknown Farmer";
-    const location = farmerAssessments[0]?.location || "Unknown Location";
-    const farmerFarms = Array.isArray(farms) 
-      ? farms.filter(farm => 
-          farm.farmerId === farmerId || 
-          farm.farmer?._id === farmerId ||
-          farm.farmer?.id === farmerId
-        )
-      : [];
-    const farmerTotalFields = farmerFarms.length;
-    const farmerTotalArea = farmerFarms.reduce((sum, farm) => sum + (farm.area || 0), 0);
-    
-    return {
-      farmerId: `F-${String(farmerId).slice(-3).padStart(3, '0')}`,
-      farmerName,
-      location,
-      totalFields: farmerTotalFields,
-      totalArea: farmerTotalArea
-    };
-  });
+  // Use actual farmers list if available, otherwise use unique farmer IDs from assessments
+  const farmerData = farmers.length > 0 
+    ? farmers.map(farmer => {
+        const farmerId = farmer._id || farmer.id || '';
+        const farmerName = 
+          farmer.name || 
+          (farmer.firstName && farmer.lastName ? `${farmer.firstName} ${farmer.lastName}`.trim() : '') ||
+          farmer.firstName || 
+          farmer.lastName || 
+          "Unknown Farmer";
+        const location = 
+          farmer.location || 
+          (farmer.province && farmer.district ? `${farmer.province}, ${farmer.district}` : '') ||
+          farmer.province ||
+          farmer.district ||
+          "Unknown Location";
+        const farmerFarms = Array.isArray(farms) 
+          ? farms.filter(farm => {
+              const farmFarmerId = farm.farmerId?._id || farm.farmerId || farm.farmer?._id || farm.farmer?.id || farm.farmer;
+              return farmFarmerId === farmerId || farmFarmerId?.toString() === farmerId.toString();
+            })
+          : [];
+        const farmerTotalFields = farmerFarms.length;
+        const farmerTotalArea = farmerFarms.reduce((sum, farm) => sum + (farm.area || 0), 0);
+        
+        return {
+          farmerId: `F-${String(farmerId).slice(-3).padStart(3, '0')}`,
+          farmerName,
+          location,
+          totalFields: farmerTotalFields,
+          totalArea: farmerTotalArea
+        };
+      })
+    : Array.from(uniqueFarmerIds).map(farmerId => {
+        const farmerAssessments = assessments.filter(a => a.farmerId === farmerId);
+        const farmerName = farmerAssessments[0]?.farmerName || "Unknown Farmer";
+        const location = farmerAssessments[0]?.location || "Unknown Location";
+        const farmerFarms = Array.isArray(farms) 
+          ? farms.filter(farm => 
+              farm.farmerId === farmerId || 
+              farm.farmer?._id === farmerId ||
+              farm.farmer?.id === farmerId
+            )
+          : [];
+        const farmerTotalFields = farmerFarms.length;
+        const farmerTotalArea = farmerFarms.reduce((sum, farm) => sum + (farm.area || 0), 0);
+        
+        return {
+          farmerId: `F-${String(farmerId).slice(-3).padStart(3, '0')}`,
+          farmerName,
+          location,
+          totalFields: farmerTotalFields,
+          totalArea: farmerTotalArea
+        };
+      });
 
   // Fetch assessments and farms from API
   useEffect(() => {
@@ -241,10 +280,12 @@ export default function AssessorDashboard() {
     loadFarms();
   }, []);
 
-  // Load profile when dashboard is shown
+  // Load profile, farmers, and farms when dashboard is shown
   useEffect(() => {
     if (activePage === "dashboard" && assessorId) {
       loadAssessorProfile();
+      loadFarmers();
+      loadFarms();
     } else if (activePage === "farmers" && assessorId) {
       loadFarmers();
     }
@@ -268,15 +309,34 @@ export default function AssessorDashboard() {
     setFarmersError(null);
     try {
       const token = getAuthToken();
-      const farmersUrl = `${API_BASE_URL}/assessments/farmers/list`;
       
-      const response = await fetch(farmersUrl, {
+      // Try the assessments/farmers/list endpoint first
+      let farmersUrl = `${API_BASE_URL}/assessments/farmers/list`;
+      let response = await fetch(farmersUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           ...(token && { Authorization: `Bearer ${token}` })
         }
       });
+
+      // If that fails, try getting all users and filtering by role
+      if (!response.ok) {
+        console.log(`⚠️ Assessments farmers endpoint returned ${response.status}, trying users endpoint...`);
+        try {
+          farmersUrl = `${API_BASE_URL}/users`;
+          response = await fetch(farmersUrl, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token && { Authorization: `Bearer ${token}` })
+            }
+          });
+        } catch (fallbackErr) {
+          console.error('Fallback to users endpoint also failed:', fallbackErr);
+          throw new Error(`Failed to load farmers: ${response.status}`);
+        }
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: `HTTP error! status: ${response.status}` }));
@@ -287,8 +347,23 @@ export default function AssessorDashboard() {
       console.log('✅ Farmers list API response:', responseData);
       
       // Handle response - it might be in response.data or directly in response
-      const farmersList = responseData.data || responseData.items || responseData || [];
-      setFarmers(Array.isArray(farmersList) ? farmersList : []);
+      let farmersList = responseData.data || responseData.items || responseData || [];
+      
+      // If we got all users, filter by role "farmer"
+      if (Array.isArray(farmersList) && farmersList.length > 0 && farmersList[0].role) {
+        farmersList = farmersList.filter((user: any) => 
+          user.role?.toLowerCase() === 'farmer' || 
+          user.role?.toLowerCase() === 'farmers'
+        );
+      }
+      
+      const farmersArray = Array.isArray(farmersList) ? farmersList : [];
+      console.log(`✅ Loaded ${farmersArray.length} farmers`);
+      setFarmers(farmersArray);
+      
+      // Reset expanded state and fields when reloading
+      setExpandedFarmers(new Set());
+      setFarmerFields({});
     } catch (err: any) {
       console.error('Failed to load farmers:', err);
       setFarmersError(err.message || 'Failed to load farmers');
@@ -301,6 +376,73 @@ export default function AssessorDashboard() {
     } finally {
       setFarmersLoading(false);
     }
+  };
+
+  const loadFarmerFields = async (farmerId: string) => {
+    // If fields are already loaded, don't reload
+    if (farmerFields[farmerId]) {
+      return;
+    }
+
+    setLoadingFields(prev => ({ ...prev, [farmerId]: true }));
+    try {
+      const token = getAuthToken();
+      // Fetch all farms and filter by farmer ID
+      const farmsUrl = `${API_BASE_URL}/farms?page=0&size=1000`;
+      
+      const response = await fetch(farmsUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to load farms: ${response.status}`);
+      }
+
+      const responseData = await response.json();
+      let allFarms: any[] = [];
+      
+      if (responseData.data?.items) {
+        allFarms = responseData.data.items;
+      } else if (Array.isArray(responseData.data)) {
+        allFarms = responseData.data;
+      } else if (Array.isArray(responseData)) {
+        allFarms = responseData;
+      } else if (responseData.items) {
+        allFarms = responseData.items;
+      }
+
+      // Filter farms by farmer ID
+      const farmerFarms = allFarms.filter((farm: any) => {
+        const farmFarmerId = farm.farmerId?._id || farm.farmerId || farm.farmer?._id || farm.farmer;
+        // Convert both to strings for comparison to handle different ID formats
+        const farmFarmerIdStr = farmFarmerId?.toString() || '';
+        const targetFarmerIdStr = farmerId.toString();
+        return farmFarmerIdStr === targetFarmerIdStr;
+      });
+
+      setFarmerFields(prev => ({ ...prev, [farmerId]: farmerFarms }));
+    } catch (err: any) {
+      console.error(`Failed to load fields for farmer ${farmerId}:`, err);
+      setFarmerFields(prev => ({ ...prev, [farmerId]: [] }));
+    } finally {
+      setLoadingFields(prev => ({ ...prev, [farmerId]: false }));
+    }
+  };
+
+  const toggleFarmerExpansion = (farmerId: string) => {
+    const newExpanded = new Set(expandedFarmers);
+    if (newExpanded.has(farmerId)) {
+      newExpanded.delete(farmerId);
+    } else {
+      newExpanded.add(farmerId);
+      // Load fields when expanding
+      loadFarmerFields(farmerId);
+    }
+    setExpandedFarmers(newExpanded);
   };
 
   const loadAssessments = async () => {
@@ -2523,7 +2665,7 @@ export default function AssessorDashboard() {
                             <span className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-200">
                               {field.status || "Active"}
                             </span>
-                          </td>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -2802,6 +2944,7 @@ export default function AssessorDashboard() {
                     <table className="w-full">
                       <thead>
                         <tr className="bg-gray-50 border-b-2 border-gray-200">
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider w-10"></th>
                           <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Name</th>
                           <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Email</th>
                           <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Phone</th>
@@ -2811,6 +2954,11 @@ export default function AssessorDashboard() {
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {farmers.map((farmer, index) => {
+                          const farmerId = farmer._id || farmer.id || index.toString();
+                          const isExpanded = expandedFarmers.has(farmerId);
+                          const farmerFieldsList = farmerFields[farmerId] || [];
+                          const isLoadingFields = loadingFields[farmerId] || false;
+                          
                           const farmerName = 
                             farmer.name || 
                             (farmer.firstName && farmer.lastName ? `${farmer.firstName} ${farmer.lastName}`.trim() : '') ||
@@ -2826,29 +2974,115 @@ export default function AssessorDashboard() {
                             "N/A";
 
                           return (
-                            <tr
-                              key={farmer._id || farmer.id || index}
-                              className="hover:bg-gray-50/50 transition-all duration-150 border-b border-gray-100"
-                            >
-                              <td className="py-4 px-6 whitespace-nowrap">
-                                <div className="text-sm font-medium text-gray-900">{farmerName}</div>
-                              </td>
-                              <td className="py-4 px-6 whitespace-nowrap">
-                                <div className="text-sm text-gray-600">{farmer.email || "N/A"}</div>
-                              </td>
-                              <td className="py-4 px-6 whitespace-nowrap">
-                                <div className="text-sm text-gray-600">{farmer.phoneNumber || farmer.phone || "N/A"}</div>
-                              </td>
-                              <td className="py-4 px-6 whitespace-nowrap">
-                                <div className="text-sm text-gray-600">{farmer.nationalId || "N/A"}</div>
-                              </td>
-                              <td className="py-4 px-6 whitespace-nowrap">
-                                <div className="flex items-center gap-2 text-sm text-gray-600">
-                                  <MapPin className="h-4 w-4 text-teal-500 flex-shrink-0" />
-                                  <span className="truncate max-w-[200px]">{location}</span>
-                                </div>
-                              </td>
-                            </tr>
+                            <>
+                              <tr
+                                key={farmerId}
+                                className="hover:bg-gray-50/50 transition-all duration-150 border-b border-gray-100"
+                              >
+                                <td className="py-4 px-6 whitespace-nowrap">
+                                  <button
+                                    onClick={() => toggleFarmerExpansion(farmerId)}
+                                    className="flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 transition-colors"
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronDown className="h-4 w-4 text-gray-600" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4 text-gray-600" />
+                                    )}
+                                  </button>
+                                </td>
+                                <td className="py-4 px-6 whitespace-nowrap">
+                                  <div className="text-sm font-medium text-gray-900">{farmerName}</div>
+                                </td>
+                                <td className="py-4 px-6 whitespace-nowrap">
+                                  <div className="text-sm text-gray-600">{farmer.email || "N/A"}</div>
+                                </td>
+                                <td className="py-4 px-6 whitespace-nowrap">
+                                  <div className="text-sm text-gray-600">{farmer.phoneNumber || farmer.phone || "N/A"}</div>
+                                </td>
+                                <td className="py-4 px-6 whitespace-nowrap">
+                                  <div className="text-sm text-gray-600">{farmer.nationalId || "N/A"}</div>
+                                </td>
+                                <td className="py-4 px-6 whitespace-nowrap">
+                                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                                    <MapPin className="h-4 w-4 text-teal-500 flex-shrink-0" />
+                                    <span className="truncate max-w-[200px]">{location}</span>
+                                  </div>
+                                </td>
+                              </tr>
+                              {isExpanded && (
+                                <tr key={`${farmerId}-fields`} className="bg-gray-50">
+                                  <td colSpan={6} className="py-4 px-6">
+                                    {isLoadingFields ? (
+                                      <div className="flex items-center justify-center py-4">
+                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500 mr-3"></div>
+                                        <span className="text-sm text-gray-600">Loading fields...</span>
+                                      </div>
+                                    ) : farmerFieldsList.length === 0 ? (
+                                      <div className="text-center py-4">
+                                        <p className="text-sm text-gray-500">No fields found for this farmer</p>
+                                      </div>
+                                    ) : (
+                                      <div className="pl-8">
+                                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Fields ({farmerFieldsList.length})</h4>
+                                        <div className="overflow-x-auto">
+                                          <table className="w-full">
+                                            <thead>
+                                              <tr className="bg-gray-100 border-b border-gray-300">
+                                                <th className="text-left py-2 px-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Field Name</th>
+                                                <th className="text-left py-2 px-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Crop Type</th>
+                                                <th className="text-left py-2 px-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Area (ha)</th>
+                                                <th className="text-left py-2 px-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Sowing Date</th>
+                                                <th className="text-left py-2 px-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Status</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody className="bg-white divide-y divide-gray-200">
+                                              {farmerFieldsList.map((field, fieldIndex) => (
+                                                <tr
+                                                  key={field._id || field.id || fieldIndex}
+                                                  className="hover:bg-gray-50/50 transition-all duration-150"
+                                                >
+                                                  <td className="py-2 px-4 whitespace-nowrap">
+                                                    <div className="text-xs font-medium text-gray-900">{field.name || "Unnamed Field"}</div>
+                                                  </td>
+                                                  <td className="py-2 px-4 whitespace-nowrap">
+                                                    <div className="flex items-center gap-1 text-xs text-gray-600">
+                                                      <Leaf className="h-3 w-3 text-teal-500 flex-shrink-0" />
+                                                      <span>{field.cropType || field.crop || "N/A"}</span>
+                                                    </div>
+                                                  </td>
+                                                  <td className="py-2 px-4 whitespace-nowrap">
+                                                    <div className="text-xs text-gray-600">
+                                                      {field.area ? `${Math.round(field.area)} ha` : field.size ? `${Math.round(field.size)} ha` : "N/A"}
+                                                    </div>
+                                                  </td>
+                                                  <td className="py-2 px-4 whitespace-nowrap">
+                                                    <div className="text-xs text-gray-600">
+                                                      {field.sowingDate ? new Date(field.sowingDate).toLocaleDateString() : "N/A"}
+                                                    </div>
+                                                  </td>
+                                                  <td className="py-2 px-4 whitespace-nowrap">
+                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${
+                                                      field.status === 'INSURED' || field.status === 'insured'
+                                                        ? "bg-green-500 text-white border-green-600"
+                                                        : field.status === 'REGISTERED' || field.status === 'registered'
+                                                        ? "bg-blue-500 text-white border-blue-600"
+                                                        : "bg-gray-500 text-white border-gray-600"
+                                                    }`}>
+                                                      {field.status || "REGISTERED"}
+                                                    </span>
+                                                  </td>
+                                                </tr>
+                                              ))}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </td>
+                                </tr>
+                              )}
+                            </>
                           );
                         })}
                       </tbody>
