@@ -1992,7 +1992,9 @@ export default function FarmerDashboard() {
           <div className="max-w-7xl mx-auto px-6">
           <Button
             variant="ghost"
-            onClick={() => {
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
               setSelectedFarm(null);
               setActivePage("my-fields");
             }}
@@ -2022,7 +2024,9 @@ export default function FarmerDashboard() {
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   setSelectedFarm(null);
                   setActivePage("my-fields");
                 }}
@@ -2047,7 +2051,9 @@ export default function FarmerDashboard() {
             {/* Breadcrumb Navigation */}
             <div className="flex items-center gap-2 text-sm mb-4">
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   setSelectedFarm(null);
                   setActivePage("my-fields");
                 }}
@@ -2063,9 +2069,11 @@ export default function FarmerDashboard() {
             <div className="mb-4 hidden">
           <Button
             variant="ghost"
-            onClick={() => {
-              setActivePage("my-fields");
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
               setSelectedFarm(null);
+              setActivePage("my-fields");
             }}
             className="text-gray-900 hover:bg-gray-50"
           >
@@ -2191,7 +2199,9 @@ export default function FarmerDashboard() {
           <div className="max-w-7xl mx-auto px-6">
           <Button
             variant="ghost"
-            onClick={() => {
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
               setSelectedFarm(null);
               setActivePage("my-fields");
             }}
@@ -2220,7 +2230,9 @@ export default function FarmerDashboard() {
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   setSelectedFarm(null);
                   setActivePage("my-fields");
                 }}
