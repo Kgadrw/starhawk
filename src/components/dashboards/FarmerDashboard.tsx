@@ -78,6 +78,9 @@ export default function FarmerDashboard() {
   const [reportsLoading, setReportsLoading] = useState(false);
   const [reportsError, setReportsError] = useState<string | null>(null);
   
+  // State for Loss Reports (Assessments)
+  const [lossReports, setLossReports] = useState<any[]>([]);
+  
   // State for Create Farm Page
   const [isCreating, setIsCreating] = useState(false);
   const [newFieldData, setNewFieldData] = useState({
@@ -136,6 +139,7 @@ export default function FarmerDashboard() {
       if (activePage === "dashboard") {
         loadFarms();
         loadClaims();
+        loadLossReports();
         loadFarmerProfile();
       } else if (activePage === "my-fields") {
         loadFarms();
@@ -370,6 +374,60 @@ export default function FarmerDashboard() {
       });
     } finally {
       setReportsLoading(false);
+    }
+  };
+
+  const loadClaims = async () => {
+    try {
+      const response: any = await getClaims(1, 100);
+      const claimsData = response.data || response || [];
+      const claimsArray = Array.isArray(claimsData) ? claimsData : (claimsData.items || claimsData.results || []);
+      
+      // Filter claims by the logged-in farmer
+      const farmerClaims = claimsArray.filter((claim: any) => {
+        const claimFarmerId = claim.farmerId?._id || claim.farmerId || claim.farmer?._id || claim.farmer;
+        return claimFarmerId === farmerId || claimFarmerId === farmerId.toString();
+      });
+      
+      setClaims(farmerClaims);
+    } catch (err: any) {
+      console.error('Failed to load claims:', err);
+      setClaims([]);
+    }
+  };
+
+  const loadLossReports = async () => {
+    try {
+      const response: any = await assessmentsApiService.getAllAssessments();
+      let assessmentsData: any[] = [];
+      
+      if (Array.isArray(response)) {
+        assessmentsData = response;
+      } else if (response && typeof response === 'object') {
+        assessmentsData = response.data || response.assessments || [];
+      }
+      
+      // Filter for claim assessments for this farmer
+      const farmerLossReports = assessmentsData.filter((assessment: any) => {
+        // Check if it's a claim assessment
+        const isClaimAssessment = assessment.type === "Claim Assessment" || assessment.type === "claim-assessment";
+        
+        // Check if it belongs to this farmer
+        const assessmentFarmerId = 
+          assessment.farmerId?._id || 
+          assessment.farmerId || 
+          assessment.farm?.farmerId?._id || 
+          assessment.farm?.farmerId ||
+          assessment.farm?.farmer?._id ||
+          assessment.farm?.farmer;
+        
+        return isClaimAssessment && (assessmentFarmerId === farmerId || assessmentFarmerId === farmerId.toString());
+      });
+      
+      setLossReports(farmerLossReports);
+    } catch (err: any) {
+      console.error('Failed to load loss reports:', err);
+      setLossReports([]);
     }
   };
 
@@ -1151,11 +1209,10 @@ export default function FarmerDashboard() {
           </CardContent>
         </Card>
       )}
-        </div>
       </div>
     </div>
-  );
-};
+    );
+  };
 
 
   const renderMyFields = () => (
@@ -1494,7 +1551,8 @@ export default function FarmerDashboard() {
           </CardContent>
         </Card>
       </div>
-    );
+    </div>
+  );
 
   const renderFileClaim = () => (
     <div className="min-h-screen bg-gray-50 pt-6 pb-8">
@@ -1728,6 +1786,7 @@ export default function FarmerDashboard() {
           </form>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 
@@ -1947,6 +2006,7 @@ export default function FarmerDashboard() {
               <p className="text-gray-600">No farm selected</p>
             </CardContent>
           </Card>
+          </div>
         </div>
       );
     }
@@ -2119,6 +2179,7 @@ export default function FarmerDashboard() {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
     );
   };
@@ -2144,6 +2205,7 @@ export default function FarmerDashboard() {
               <p className="text-gray-600">No farm selected</p>
             </CardContent>
           </Card>
+          </div>
         </div>
       );
     }
@@ -2558,7 +2620,8 @@ export default function FarmerDashboard() {
               </CardContent>
             </Card>
           </>
-        )}
+                )}
+        </div>
       </div>
     );
   };

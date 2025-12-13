@@ -29,29 +29,29 @@ export function HeroSection() {
         
         {/* Content Overlay - Positioned on the left */}
         <div className="relative z-10 w-full h-full flex items-start justify-start px-6 sm:px-8 lg:px-16 pt-8 sm:pt-12 md:pt-16 lg:pt-20 pb-8 sm:pb-12 md:pb-16 lg:pb-20">
-          <motion.div
+        <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
+          transition={{ duration: 0.6 }}
             className="max-w-lg"
-          >
+        >
             {/* Heading - White text for better contrast */}
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-6 leading-tight">
               Transforming Agriculture with <span className="text-green-400">AI-Powered Solutions</span> for Farmers
-            </h1>
-            
+          </h1>
+          
             {/* Paragraph - White text */}
             <p className="text-base sm:text-lg text-white mb-8 leading-relaxed">
-              STARHAWK has a role at every step of the agricultural insurance journey. When it comes to farming, we monitor it, assess it, insure it, and protect it. Find out how we're transforming agriculture with innovative technology.
-            </p>
-            
+            STARHAWK has a role at every step of the agricultural insurance journey. When it comes to farming, we monitor it, assess it, insure it, and protect it. Find out how we're transforming agriculture with innovative technology.
+          </p>
+          
             {/* Button - White/light oval/pill shape */}
             <button 
               className="bg-white hover:bg-gray-100 text-gray-900 rounded-full px-12 py-4 text-base font-medium transition-colors"
-            >
-              Our Services
+          >
+            Our Services
             </button>
-          </motion.div>
+        </motion.div>
         </div>
       </div>
     </section>
