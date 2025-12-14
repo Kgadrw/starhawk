@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../layout/DashboardLayout";
 import { isAdmin, logout as authLogout, getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
-import { getAllUsers, deactivateUser, updateUser, getUserById, createUser, getUserProfile, updateUserProfile } from "@/services/usersAPI";
+import { getAllUsers, deactivateUser, updateUser, getUserById, createUser, getUserProfile, updateUserProfile, getAssessors } from "@/services/usersAPI";
 import { getSystemStatistics, getPolicyOverview, getClaimStatistics } from "@/services/adminApi";
 import { createPolicy, createPolicyFromAssessment, getPolicies, getPolicyById, updatePolicy, deletePolicy } from "@/services/policiesApi";
 import { createClaim, getClaims, getClaimById, updateClaim, deleteClaim } from "@/services/claimsApi";
@@ -5550,17 +5550,16 @@ export const AdminDashboard = () => {
   // Load assessors for assessment creation
   const loadAssessors = async () => {
     try {
-      const allUsers = await getAllUsers();
+      // Use dedicated assessors endpoint
+      const assessorsResponse = await getAssessors();
       let assessorUsers: any[] = [];
       
-      if (Array.isArray(allUsers)) {
-        assessorUsers = allUsers.filter((user: any) => user.role === 'ASSESSOR' || user.role === 'Assessor');
-      } else if (allUsers && typeof allUsers === 'object') {
-        // Handle case where users might be in data property
-        const usersData = allUsers.data || allUsers.users || [];
-        if (Array.isArray(usersData)) {
-          assessorUsers = usersData.filter((user: any) => user.role === 'ASSESSOR' || user.role === 'Assessor');
-        }
+      // Handle different response structures
+      if (Array.isArray(assessorsResponse)) {
+        assessorUsers = assessorsResponse;
+      } else if (assessorsResponse && typeof assessorsResponse === 'object') {
+        // Handle paginated response or wrapped response
+        assessorUsers = assessorsResponse.items || assessorsResponse.data || assessorsResponse.assessors || [];
       }
       
       // Ensure assessorUsers is always an array
@@ -5569,28 +5568,36 @@ export const AdminDashboard = () => {
       }
       
       setAssessors(assessorUsers);
+      console.log('✅ Loaded assessors:', assessorUsers.length);
       
-      // Also load insurers for assignment
-      let insurerUsers: any[] = [];
-      if (Array.isArray(allUsers)) {
-        insurerUsers = allUsers.filter((user: any) => user.role === 'INSURER' || user.role === 'Insurer');
-      } else if (allUsers && typeof allUsers === 'object') {
-        const usersData = allUsers.data || allUsers.users || [];
-        if (Array.isArray(usersData)) {
-          insurerUsers = usersData.filter((user: any) => user.role === 'INSURER' || user.role === 'Insurer');
+      // Also load insurers for assignment (fallback to getAllUsers for insurers)
+      try {
+        const allUsers = await getAllUsers();
+        let insurerUsers: any[] = [];
+        if (Array.isArray(allUsers)) {
+          insurerUsers = allUsers.filter((user: any) => user.role === 'INSURER' || user.role === 'Insurer');
+        } else if (allUsers && typeof allUsers === 'object') {
+          const usersData = allUsers.data || allUsers.users || [];
+          if (Array.isArray(usersData)) {
+            insurerUsers = usersData.filter((user: any) => user.role === 'INSURER' || user.role === 'Insurer');
+          }
         }
+        if (!Array.isArray(insurerUsers)) {
+          insurerUsers = [];
+        }
+        setInsurers(insurerUsers);
+        console.log('✅ Loaded insurers:', insurerUsers.length);
+      } catch (insurerErr) {
+        console.error('Failed to load insurers:', insurerErr);
+        setInsurers([]);
       }
-      if (!Array.isArray(insurerUsers)) {
-        insurerUsers = [];
-      }
-      setInsurers(insurerUsers);
     } catch (err: any) {
-      console.error('Failed to load assessors:', err);
+      console.error('❌ Failed to load assessors:', err);
       setAssessors([]); // Set to empty array on error
       setInsurers([]);
       toast({
         title: "Warning",
-        description: "Could not load assessors. You may not be able to create assessments.",
+        description: "Could not load assessors. Please try refreshing the page.",
         variant: "default",
       });
     }
@@ -6293,7 +6300,8 @@ export const AdminDashboard = () => {
                     {!Array.isArray(insurers) || insurers.length === 0 ? (
                       <SelectItem value="none" disabled>No insurers available</SelectItem>
                     ) : (
-                      insurers.map((insurer) => {
+                      insurers.map((insurer, insurerIndex) => {
+                        const insurerValue = insurer._id || insurer.id || `insurer-${insurerIndex}`;
                         const insurerName = (() => {
                           if (insurer.firstName && insurer.lastName) {
                             return `${insurer.firstName} ${insurer.lastName}`;
@@ -6306,7 +6314,6 @@ export const AdminDashboard = () => {
                           return 'Unknown Insurer';
                         })();
                         const contactInfo = insurer.email || insurer.phoneNumber || '';
-                        const insurerValue = insurer._id || insurer.id || `insurer-${index}`;
                         return (
                           <SelectItem key={insurerValue} value={insurerValue}>
                             {insurerName}{contactInfo ? ` (${contactInfo})` : ''}

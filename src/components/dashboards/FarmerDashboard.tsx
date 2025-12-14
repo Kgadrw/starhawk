@@ -17,7 +17,6 @@ import { API_BASE_URL, getAuthToken } from "@/config/api";
 import { getClaims, createClaim } from "@/services/claimsApi";
 import { getPolicies } from "@/services/policiesApi";
 import assessmentsApiService from "@/services/assessmentsApi";
-import { getAssessors } from "@/services/usersAPI";
 import { useToast } from "@/hooks/use-toast";
 import { 
   User, 
