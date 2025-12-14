@@ -17,7 +17,9 @@ import {
   Home,
   User,
   Shield,
-  Building2
+  Building2,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 
 interface DashboardLayoutProps {
@@ -47,12 +49,28 @@ export default function DashboardLayout({
   onLogout
 }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    // Load collapsed state from localStorage
+    const saved = localStorage.getItem('sidebarCollapsed');
+    return saved === 'true';
+  });
   const navigate = useNavigate();
 
   // Remove dark mode - use light theme
   useEffect(() => {
     document.documentElement.classList.remove('dark');
   }, []);
+
+  // Save collapsed state to localStorage
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+    // Dispatch custom event for same-tab listeners
+    window.dispatchEvent(new Event('sidebarToggle'));
+  };
 
   const handleLogout = () => {
     // Clear any stored authentication data
@@ -103,32 +121,11 @@ export default function DashboardLayout({
   };
 
   const getNavigationColors = () => {
-    switch (userType) {
-      case "farmer": return {
-        active: "bg-green-50 text-green-700",
-        hover: "hover:text-green-600"
-      };
-      case "assessor": return {
-        active: "bg-orange-50 text-orange-700",
-        hover: "hover:text-orange-600"
-      };
-      case "insurer": return {
-        active: "bg-blue-50 text-blue-700",
-        hover: "hover:text-blue-600"
-      };
-      case "admin": return {
-        active: "bg-purple-50 text-purple-700",
-        hover: "hover:text-purple-600"
-      };
-      case "government": return {
-        active: "bg-indigo-50 text-indigo-700",
-        hover: "hover:text-indigo-600"
-      };
-      default: return {
-        active: "bg-gray-50 text-gray-700",
-        hover: "hover:text-gray-600"
-      };
-    }
+    // Use green for all user types
+    return {
+      active: "bg-green-50 text-green-700",
+      hover: "hover:text-green-600"
+    };
   };
 
   const getUserLabel = () => {
@@ -154,24 +151,73 @@ export default function DashboardLayout({
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-br ${getSidebarTheme()} backdrop-blur-xl border-r transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+      <div className={`fixed inset-y-0 left-0 z-50 bg-gradient-to-br ${getSidebarTheme()} backdrop-blur-xl border-r transform transition-all duration-300 ease-in-out lg:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
+      } ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'} w-64`}>
         <div className="flex flex-col h-full">
-          {/* Mobile Close Button */}
-          <div className="flex justify-end p-4 lg:hidden">
+          {/* Mobile Close Button & Desktop Toggle */}
+          <div className={`flex items-center border-b border-gray-200 ${sidebarCollapsed ? 'justify-center p-4' : 'justify-between p-4'}`}>
+            {!sidebarCollapsed && (
+              <div className="flex-1 min-w-0 lg:block hidden">
+                <div className="flex items-center space-x-3 p-3 rounded-xl">
+                  <div className={`w-10 h-10 ${getUserColor()} rounded-full flex items-center justify-center flex-shrink-0`}>
+                    <div className="text-white">
+                      {getUserIcon()}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{userName}</p>
+                    <p className="text-xs text-gray-600 truncate">{getUserLabel()}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            {sidebarCollapsed && (
+              <div className="flex items-center justify-center gap-2 w-full lg:block hidden">
+                <div className={`w-10 h-10 ${getUserColor()} rounded-full flex items-center justify-center`}>
+                  <div className="text-white">
+                    {getUserIcon()}
+                  </div>
+                </div>
+                {/* Desktop Toggle Button - Next to icon when collapsed */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="hover:bg-gray-100 text-gray-700 p-1 h-auto"
+                  onClick={toggleSidebar}
+                  title="Expand sidebar"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            {!sidebarCollapsed && (
+              <div className="flex items-center gap-2 lg:block hidden">
+                {/* Desktop Toggle Button - Right side when expanded */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="hover:bg-gray-100 text-gray-700"
+                  onClick={toggleSidebar}
+                  title="Collapse sidebar"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            {/* Mobile Close Button */}
             <Button
               variant="ghost"
               size="sm"
-              className="hover:bg-gray-100 text-gray-700"
+              className="hover:bg-gray-100 text-gray-700 lg:hidden"
               onClick={() => setSidebarOpen(false)}
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
 
-          {/* User Info */}
-          <div className="p-4 border-b border-gray-200">
+          {/* User Info - Mobile Only */}
+          <div className="p-4 border-b border-gray-200 lg:hidden">
             <div className="flex items-center space-x-3 p-3 rounded-xl">
               <div className={`w-10 h-10 ${getUserColor()} rounded-full flex items-center justify-center`}>
                 <div className="text-white">
@@ -187,48 +233,59 @@ export default function DashboardLayout({
 
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-            <CustomScrollbar className="h-full">
+          <nav 
+            className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          >
+            <div className="h-full">
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const isActive = activePage === item.id;
               const colors = getNavigationColors();
               
               return (
-                            <button
-                              key={item.id}
-                              onClick={() => {
-                                onPageChange(item.id);
-                                setSidebarOpen(false);
-                              }}
-                              className={`w-full flex items-center justify-between px-4 py-4 text-sm font-medium transition-all duration-300 ease-in-out ${
-                                isActive
-                                  ? `bg-blue-50 text-blue-700 shadow-sm border-l-4 border-l-blue-500`
-                                  : `text-gray-700 hover:bg-gray-100 hover:text-gray-900 ${colors.hover}`
-                              }`}
-                            >
-                  <div className="flex items-center space-x-3">
-                    <Icon className={`h-5 w-5 ${isActive ? 'text-blue-600' : 'text-gray-600'}`} />
-                    <span>{item.label}</span>
-                  </div>
-                              {item.badge && item.badge > 0 && (
-                                <Badge variant="secondary" className={`text-xs ${
-                                  isActive 
-                                    ? 'bg-blue-600 text-white' 
-                                    : userType === 'farmer' ? 'bg-green-100 text-green-700' :
-                                      userType === 'assessor' ? 'bg-orange-100 text-orange-700' :
-                                      userType === 'insurer' ? 'bg-blue-100 text-blue-700' :
-                                      userType === 'admin' ? 'bg-purple-100 text-purple-700' :
-                                      userType === 'government' ? 'bg-indigo-100 text-indigo-700' :
-                                      'bg-gray-100 text-gray-700'
-                                }`}>
-                                  {item.badge}
-                                </Badge>
-                              )}
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    onPageChange(item.id);
+                    setSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'justify-between px-4'} py-4 text-sm font-medium transition-all duration-300 ease-in-out group relative ${
+                    isActive
+                      ? `bg-green-50 text-green-700 shadow-sm ${sidebarCollapsed ? 'border-l-2' : 'border-l-4'} border-l-green-500`
+                      : `text-gray-700 hover:bg-green-50 hover:text-green-700 ${colors.hover}`
+                  }`}
+                  title={sidebarCollapsed ? item.label : undefined}
+                >
+                  {sidebarCollapsed ? (
+                    // Collapsed: Only icon
+                    <div className="flex items-center justify-center relative">
+                      <Icon className={`h-5 w-5 ${isActive ? 'text-green-600' : 'text-gray-600'}`} />
+                      {item.badge && item.badge > 0 && (
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                      )}
+                    </div>
+                  ) : (
+                    // Expanded: Icon + label + badge
+                    <>
+                      <div className="flex items-center space-x-3">
+                        <Icon className={`h-5 w-5 flex-shrink-0 ${isActive ? 'text-green-600' : 'text-gray-600'}`} />
+                        <span>{item.label}</span>
+                      </div>
+                      {item.badge && item.badge > 0 && (
+                        <Badge variant="secondary" className={`text-xs ${
+                          isActive 
+                            ? 'bg-green-600 text-white' 
+                            : 'bg-green-100 text-green-700'
+                        }`}>
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </>
+                  )}
                 </button>
               );
             })}
-            </CustomScrollbar>
+            </div>
           </nav>
 
           {/* Sidebar Footer */}
@@ -239,10 +296,11 @@ export default function DashboardLayout({
                 <AlertDialogTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="w-full justify-center hover:text-red-600 transition-all duration-300 text-gray-700"
+                    className={`w-full ${sidebarCollapsed ? 'justify-center px-2' : 'justify-center'} hover:text-red-600 transition-all duration-300 text-gray-700`}
+                    title={sidebarCollapsed ? "Logout" : undefined}
                   >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    <span>Logout</span>
+                    <LogOut className="h-4 w-4 flex-shrink-0" />
+                    {!sidebarCollapsed && <span className="ml-2">Logout</span>}
                   </Button>
                 </AlertDialogTrigger>
               <AlertDialogContent>
@@ -269,7 +327,9 @@ export default function DashboardLayout({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-64 bg-gray-50">
+      <div className={`flex-1 flex flex-col min-w-0 bg-gray-50 transition-all duration-300 ${
+        sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'
+      }`}>
         {/* Mobile Menu Button */}
         <div className="lg:hidden fixed top-4 left-4 z-40">
           <Button
@@ -283,7 +343,7 @@ export default function DashboardLayout({
         </div>
 
          {/* Page Content */}
-         <main className="flex-1 overflow-auto bg-gray-50">
+         <main className="flex-1 overflow-auto bg-gray-50 lg:pl-6">
           <CustomScrollbar className="h-full">
             {children}
           </CustomScrollbar>

@@ -356,14 +356,6 @@ export default function LossAssessmentSystem() {
   const renderList = () => (
     <div className="min-h-screen bg-gray-50 pt-6 pb-8">
       {/* Clean Header */}
-      <div className="max-w-7xl mx-auto px-6 mb-6">
-        <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Loss Assessment</h1>
-            <p className="text-sm text-gray-500 mt-1">Document and evaluate crop loss events</p>
-          </div>
-        </div>
-      </div>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6">

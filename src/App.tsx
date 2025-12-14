@@ -9,11 +9,6 @@ import Team from "./pages/Team";
 import { LoginPage } from "./pages/LoginPage";
 import RoleSelection from "./pages/RoleSelection";
 import FarmerRegistration from "./pages/FarmerRegistration";
-import FarmerLogin from "./pages/FarmerLogin";
-import AssessorLogin from "./pages/AssessorLogin";
-import InsurerLogin from "./pages/InsurerLogin";
-import AdminLogin from "./pages/AdminLogin";
-import GovernmentLogin from "./pages/GovernmentLogin";
 import FarmerDashboard from "./components/dashboards/FarmerDashboard";
 import AssessorDashboard from "./components/dashboards/AssessorDashboard";
 import InsurerDashboard from "./components/dashboards/InsurerDashboard";
@@ -51,11 +46,6 @@ const App = () => {
               {/* Role Selection and Authentication Routes */}
               <Route path="/role-selection" element={<RoleSelection />} />
               <Route path="/farmer-register" element={<FarmerRegistration />} />
-              <Route path="/farmer-login" element={<FarmerLogin />} />
-              <Route path="/assessor-login" element={<AssessorLogin />} />
-              <Route path="/insurer-login" element={<InsurerLogin />} />
-              <Route path="/admin-login" element={<AdminLogin />} />
-              <Route path="/government-login" element={<GovernmentLogin />} />
               
               {/* Dashboard Routes */}
               <Route path="/farmer-dashboard" element={<FarmerDashboard />} />

@@ -14,9 +14,10 @@ import meteosourceApiService from "@/services/meteosourceApi";
 import CombinedWeatherForecast from "@/components/common/CombinedWeatherForecast";
 import LeafletMap from "@/components/common/LeafletMap";
 import assessmentsApiService from "@/services/assessmentsApi";
-import { getFarms, getAllFarms, getFarmById } from "@/services/farmsApi";
+import { getFarms, getAllFarms, getFarmById, getWeatherForecast, getHistoricalWeather, getAccumulatedWeather, getVegetationStats, getNDVITimeSeries, getFieldTrend } from "@/services/farmsApi";
 import { getUserById } from "@/services/usersAPI";
 import { getUserId } from "@/services/authAPI";
+import { API_BASE_URL, getAuthToken } from "@/config/api";
 import { useToast } from "@/hooks/use-toast";
 import { 
   MapPin,
@@ -50,7 +51,8 @@ import {
   Sprout,
   Edit,
   User,
-  ArrowUp
+  ArrowUp,
+  Loader2
 } from "lucide-react";
 
 interface AssessmentSummary {
@@ -146,6 +148,11 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
   const [farms, setFarms] = useState<any[]>([]);
   const [loadingFarms, setLoadingFarms] = useState(false);
   const [farmers, setFarmers] = useState<Record<string, any>>({});
+  const [farmersList, setFarmersList] = useState<any[]>([]);
+  const [loadingFarmers, setLoadingFarmers] = useState(false);
+  const [selectedFarmerForDetail, setSelectedFarmerForDetail] = useState<any | null>(null);
+  const [selectedFarmForDetail, setSelectedFarmForDetail] = useState<any | null>(null);
+  const [dashboardViewMode, setDashboardViewMode] = useState<"list" | "fieldDetail">("list");
   const [filterOpen, setFilterOpen] = useState(false);
 
   // Use prop assessments if provided, otherwise use internal state
@@ -176,6 +183,11 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
       loadAllFarms();
     }
   }, [viewMode]);
+
+  // Load farmers when component mounts or when assessments are loaded
+  useEffect(() => {
+    loadFarmersList();
+  }, []);
 
   const loadAssessments = async () => {
     setLoading(true);
@@ -352,22 +364,111 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
   const loadAllFarms = async () => {
     setLoadingFarms(true);
     try {
-      const response: any = await getAllFarms();
-      let farmsData: any[] = [];
+      // Try different pagination strategies to handle API inconsistencies
+      let response: any = null;
+      let farmsArray: any[] = [];
       
-      if (Array.isArray(response)) {
-        farmsData = response;
-      } else if (response && typeof response === 'object') {
-        farmsData = response.data || response.farms || response.items || response.results || [];
+      // Strategy 1: Try page 1 first (API seems to use 1-based indexing based on response)
+      console.log('RiskAssessmentSystem: Trying page 1...');
+      response = await getFarms(1, 100);
+      console.log('Farms API Response (page 1):', response);
+      
+      // Extract farms from response
+      if (response?.success && response?.data?.items) {
+        farmsArray = Array.isArray(response.data.items) ? response.data.items : [];
+        console.log('Extracted farms from response.data.items (page 1):', farmsArray);
+      } else if (Array.isArray(response)) {
+        farmsArray = response;
+      } else if (Array.isArray(response?.data)) {
+        farmsArray = response.data;
+      } else if (Array.isArray(response?.items)) {
+        farmsArray = response.items;
+      } else if (Array.isArray(response?.results)) {
+        farmsArray = response.results;
+      } else if (Array.isArray(response?.farms)) {
+        farmsArray = response.farms;
       }
       
-      if (!Array.isArray(farmsData)) {
-        farmsData = [];
+      // Strategy 2: If page 1 returned empty items but totalItems > 0, try page 0 (0-based indexing)
+      if (farmsArray.length === 0 && response?.data?.totalItems > 0) {
+        console.log('Page 1 returned empty items but totalItems > 0, trying page 0...');
+        response = await getFarms(0, 100);
+        console.log('Farms API Response (page 0):', response);
+        
+        if (response?.success && response?.data?.items) {
+          farmsArray = Array.isArray(response.data.items) ? response.data.items : [];
+          console.log('Extracted farms from page 0:', farmsArray);
+        } else if (Array.isArray(response)) {
+          farmsArray = response;
+        } else if (Array.isArray(response?.data)) {
+          farmsArray = response.data;
+        }
       }
       
-      setFarms(farmsData);
+      // Strategy 3: Try with larger page size if still empty
+      if (farmsArray.length === 0 && response?.data?.totalItems > 0) {
+        console.log('Trying with larger page size (500)...');
+        response = await getFarms(0, 500);
+        console.log('Farms API Response (page 0, size 500):', response);
+        
+        if (response?.success && response?.data?.items) {
+          farmsArray = Array.isArray(response.data.items) ? response.data.items : [];
+          console.log('Extracted farms with larger size:', farmsArray);
+        }
+      }
+      
+      // Strategy 4: Try without pagination parameters
+      if (farmsArray.length === 0 && response?.data?.totalItems > 0) {
+        console.log('Trying to fetch all farms without pagination...');
+        try {
+          const noPaginationResponse: any = await getAllFarms();
+          console.log('Response without pagination:', noPaginationResponse);
+          
+          if (noPaginationResponse?.success && noPaginationResponse?.data?.items) {
+            farmsArray = Array.isArray(noPaginationResponse.data.items) ? noPaginationResponse.data.items : [];
+          } else if (Array.isArray(noPaginationResponse)) {
+            farmsArray = noPaginationResponse;
+          } else if (Array.isArray(noPaginationResponse?.data)) {
+            farmsArray = noPaginationResponse.data;
+          } else if (Array.isArray(noPaginationResponse?.items)) {
+            farmsArray = noPaginationResponse.items;
+          }
+          
+          if (farmsArray.length > 0) {
+            console.log('Successfully fetched farms without pagination:', farmsArray);
+          }
+        } catch (err) {
+          console.warn('Failed to fetch without pagination:', err);
+        }
+      }
+      
+      // Strategy 5: Check if data structure has farms at a different location
+      if (farmsArray.length === 0 && response?.data?.totalItems > 0) {
+        console.warn(`⚠️ API reports ${response.data.totalItems} total items but returned empty array.`);
+        
+        // Check if data structure has farms at a different location
+        if (response?.data && typeof response.data === 'object') {
+          // Check all possible locations for farm data
+          const possibleKeys = ['farms', 'results', 'content', 'data'];
+          for (const key of possibleKeys) {
+            if (Array.isArray(response.data[key])) {
+              farmsArray = response.data[key];
+              console.log(`Found farms array at response.data.${key}:`, farmsArray);
+              break;
+            }
+          }
+        }
+      }
+      
+      console.log('Final extracted farms array:', farmsArray);
+      setFarms(farmsArray);
     } catch (err: any) {
       console.error('Failed to load farms:', err);
+      toast({
+        title: 'Error loading farms',
+        description: err.message || 'Failed to load farms',
+        variant: 'destructive'
+      });
     } finally {
       setLoadingFarms(false);
     }
@@ -419,6 +520,138 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
       });
     } finally {
       setLoadingFarms(false);
+    }
+  };
+
+  // Load farmers list from API (same logic as AssessorDashboard)
+  const loadFarmersList = async () => {
+    setLoadingFarmers(true);
+    try {
+      const token = getAuthToken();
+      
+      // Try the assessments/farmers/list endpoint first
+      let farmersUrl = `${API_BASE_URL}/assessments/farmers/list`;
+      let response = await fetch(farmersUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
+        }
+      });
+
+      // If that fails, try getting all users and filtering by role
+      if (!response.ok) {
+        console.log(`⚠️ RiskAssessment: Assessments farmers endpoint returned ${response.status}, trying users endpoint...`);
+        try {
+          farmersUrl = `${API_BASE_URL}/users`;
+          response = await fetch(farmersUrl, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token && { Authorization: `Bearer ${token}` })
+            }
+          });
+        } catch (fallbackErr) {
+          console.error('RiskAssessment: Fallback to users endpoint also failed:', fallbackErr);
+          throw new Error(`Failed to load farmers: ${response.status}`);
+        }
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: `HTTP error! status: ${response.status}` }));
+        throw new Error(errorData.message || errorData.error || `Failed to load farmers: ${response.status}`);
+      }
+
+      const responseData = await response.json();
+      console.log('✅ RiskAssessment: Farmers list API response:', responseData);
+      console.log('📋 RiskAssessment: Full response structure:', JSON.stringify(responseData, null, 2));
+      
+      // Handle response - it might be in response.data or directly in response
+      let farmersList = responseData.data || responseData.items || responseData || [];
+      
+      // If we got all users, filter by role "farmer"
+      if (Array.isArray(farmersList) && farmersList.length > 0 && farmersList[0].role) {
+        farmersList = farmersList.filter((user: any) => 
+          user.role?.toLowerCase() === 'farmer' || 
+          user.role?.toLowerCase() === 'farmers'
+        );
+      }
+      
+      const farmersArray = Array.isArray(farmersList) ? farmersList : [];
+      console.log(`✅ RiskAssessment: Loaded ${farmersArray.length} farmers`);
+      
+      // Extract fields from each farmer if they exist in the response
+      farmersArray.forEach((farmer: any, index: number) => {
+        const farmerId = farmer._id || farmer.id;
+        if (farmerId) {
+          // Log the structure of the first farmer for debugging
+          if (index === 0) {
+            console.log('🔍 RiskAssessment: Sample farmer structure:', {
+              _id: farmer._id,
+              id: farmer.id,
+              name: farmer.name,
+              hasFarms: !!farmer.farms,
+              hasFields: !!farmer.fields,
+              hasFarm: !!farmer.farm,
+              farmerKeys: Object.keys(farmer)
+            });
+          }
+          
+          // Check for fields in various possible locations
+          let fields: any[] = [];
+          
+          // Try different field locations
+          if (farmer.farms && Array.isArray(farmer.farms)) {
+            fields = farmer.farms;
+          } else if (farmer.fields && Array.isArray(farmer.fields)) {
+            fields = farmer.fields;
+          } else if (farmer.farm) {
+            // Could be single object or array
+            fields = Array.isArray(farmer.farm) ? farmer.farm : [farmer.farm];
+          } else if (farmer.farmList && Array.isArray(farmer.farmList)) {
+            fields = farmer.farmList;
+          } else if (farmer.farmDetails && Array.isArray(farmer.farmDetails)) {
+            fields = farmer.farmDetails;
+          }
+          
+          // Also check nested structures
+          if (fields.length === 0 && farmer.profile) {
+            if (farmer.profile.farms && Array.isArray(farmer.profile.farms)) {
+              fields = farmer.profile.farms;
+            } else if (farmer.profile.fields && Array.isArray(farmer.profile.fields)) {
+              fields = farmer.profile.fields;
+            }
+          }
+          
+          if (fields && fields.length > 0) {
+            // Store fields in the farmer object for later use
+            farmer._fields = fields;
+            console.log(`  📦 RiskAssessment: Farmer ${farmerId} (${farmer.name || 'Unnamed'}) has ${fields.length} fields from API`);
+            if (index === 0) {
+              console.log('  📋 RiskAssessment: Sample field structure:', {
+                name: fields[0].name,
+                cropType: fields[0].cropType,
+                area: fields[0].area,
+                fieldKeys: Object.keys(fields[0] || {})
+              });
+            }
+          } else {
+            console.log(`  ⚠️ RiskAssessment: Farmer ${farmerId} (${farmer.name || 'Unnamed'}) has no fields in API response`);
+          }
+        }
+      });
+      
+      setFarmersList(farmersArray);
+    } catch (err: any) {
+      console.error('RiskAssessment: Failed to load farmers:', err);
+      toast({
+        title: 'Error loading farmers',
+        description: err.message || 'Failed to load farmers',
+        variant: 'destructive'
+      });
+      setFarmersList([]);
+    } finally {
+      setLoadingFarmers(false);
     }
   };
 
@@ -669,7 +902,46 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
   };
 
   // Weather Analysis Component - Using CombinedWeatherForecast from common components
-  const WeatherAnalysisTab = ({ location }: { location: string }) => {
+  const WeatherAnalysisTab = ({ location, farmId }: { location: string; farmId?: string }) => {
+    const [weatherData, setWeatherData] = useState<any>(null);
+    const [weatherLoading, setWeatherLoading] = useState(false);
+    const [weatherError, setWeatherError] = useState<string | null>(null);
+
+    useEffect(() => {
+      const loadWeather = async () => {
+        if (!farmId) {
+          // If no farmId, just show the component without API data
+          return;
+        }
+        
+        setWeatherLoading(true);
+        setWeatherError(null);
+        try {
+          const today = new Date();
+          const endDate = new Date();
+          endDate.setDate(today.getDate() + 7);
+          
+          const startDateStr = today.toISOString().split('T')[0];
+          const endDateStr = endDate.toISOString().split('T')[0];
+          
+          // Load forecast and historical weather using Farmer Dashboard APIs
+          const [forecast, historical] = await Promise.all([
+            getWeatherForecast(farmId, startDateStr, endDateStr).catch(() => null),
+            getHistoricalWeather(farmId, startDateStr, endDateStr).catch(() => null)
+          ]);
+
+          setWeatherData({ forecast, historical });
+      } catch (err: any) {
+        console.error('Failed to load weather data:', err);
+          setWeatherError(err.message || 'Failed to load weather data');
+      } finally {
+          setWeatherLoading(false);
+        }
+      };
+
+      loadWeather();
+    }, [farmId]);
+
       return (
                 <div>
         <CombinedWeatherForecast className="bg-gradient-to-br from-blue-900/90 to-cyan-900/90 border border-blue-700/30 rounded-xl shadow-xl" />
@@ -678,11 +950,21 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
   };
 
   // Crop Analysis Component
-  const CropAnalysisTab = ({ fieldDetails }: { fieldDetails: FieldDetail }) => {
+  const CropAnalysisTab = ({ fieldDetails, assessmentId }: { fieldDetails: FieldDetail; assessmentId?: string }) => {
     const [dataSource, setDataSource] = useState<string>("drone");
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [uploadingPDF, setUploadingPDF] = useState(false);
     const [flightDate, setFlightDate] = useState<string>("2025-10-22");
     const [assessorNotes, setAssessorNotes] = useState<string>("Weed clusters in north. Pest minimal.");
+    const [comprehensiveNotes, setComprehensiveNotes] = useState<string>("");
+    const [savingNotes, setSavingNotes] = useState(false);
+    const [generatingReport, setGeneratingReport] = useState(false);
+    const [riskScore, setRiskScore] = useState<number | null>(null);
+    const [mapTileLayer, setMapTileLayer] = useState<"osm" | "satellite" | "terrain">("satellite");
+    const [selectedIndex, setSelectedIndex] = useState<string>("ndvi");
+    
+    // Default map center (Kigali, Rwanda coordinates)
+    const mapCenter: [number, number] = [-1.9441, 30.0619];
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -713,6 +995,174 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
 
     const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
+    };
+
+    // Load assessment data on mount
+    useEffect(() => {
+      const loadAssessmentData = async () => {
+        if (!assessmentId) return;
+        
+        try {
+          const assessment = await assessmentsApiService.getAssessmentById(assessmentId);
+          const assessmentData = assessment.data || assessment;
+          
+          if (assessmentData.comprehensiveNotes) {
+            setComprehensiveNotes(assessmentData.comprehensiveNotes);
+          }
+          if (assessmentData.riskScore !== null && assessmentData.riskScore !== undefined) {
+            setRiskScore(assessmentData.riskScore);
+          }
+        } catch (err: any) {
+          console.error('Failed to load assessment data:', err);
+        }
+      };
+      
+      loadAssessmentData();
+    }, [assessmentId]);
+
+    // Handle upload drone PDF
+    const handleUploadDronePDF = async () => {
+      if (!selectedFile || !assessmentId) {
+        toast({
+          title: "Validation Error",
+          description: "Please select a PDF file and ensure assessment is loaded.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setUploadingPDF(true);
+      try {
+        await assessmentsApiService.uploadDronePDF(assessmentId, selectedFile);
+        toast({
+          title: "Success",
+          description: "Drone PDF uploaded successfully.",
+        });
+        setSelectedFile(null);
+      } catch (err: any) {
+        console.error('Failed to upload drone PDF:', err);
+        toast({
+          title: "Upload Failed",
+          description: err.message || 'Failed to upload drone PDF',
+          variant: "destructive",
+        });
+      } finally {
+        setUploadingPDF(false);
+      }
+    };
+
+    // Handle save comprehensive notes
+    const handleSaveNotes = async () => {
+      if (!assessmentId) {
+        toast({
+          title: "Error",
+          description: "Assessment ID not available.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSavingNotes(true);
+      try {
+        await assessmentsApiService.updateAssessment(assessmentId, {
+          comprehensiveNotes: comprehensiveNotes,
+        });
+        toast({
+          title: "Success",
+          description: "Comprehensive notes saved successfully.",
+        });
+      } catch (err: any) {
+        console.error('Failed to save notes:', err);
+        toast({
+          title: "Save Failed",
+          description: err.message || 'Failed to save comprehensive notes',
+          variant: "destructive",
+        });
+      } finally {
+        setSavingNotes(false);
+      }
+    };
+
+    // Handle calculate risk score
+    const handleCalculateRiskScore = async () => {
+      if (!assessmentId) {
+        toast({
+          title: "Error",
+          description: "Assessment ID not available.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      try {
+        const score = await assessmentsApiService.calculateRiskScore(assessmentId);
+        const riskScoreValue = typeof score === 'number' ? score : (score.data || score.riskScore || score);
+        setRiskScore(riskScoreValue);
+        toast({
+          title: "Success",
+          description: `Risk score calculated: ${riskScoreValue}`,
+        });
+      } catch (err: any) {
+        console.error('Failed to calculate risk score:', err);
+        toast({
+          title: "Calculation Failed",
+          description: err.message || 'Failed to calculate risk score',
+          variant: "destructive",
+        });
+      }
+    };
+
+    // Handle generate report
+    const handleGenerateReport = async () => {
+      if (!assessmentId) {
+        toast({
+          title: "Error",
+          description: "Assessment ID not available.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validation
+      if (riskScore === null || riskScore === undefined) {
+        toast({
+          title: "Validation Error",
+          description: "Please calculate risk score before generating report.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!comprehensiveNotes || comprehensiveNotes.trim().length === 0) {
+        toast({
+          title: "Validation Error",
+          description: "Please add comprehensive notes before generating report.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setGeneratingReport(true);
+      try {
+        await assessmentsApiService.generateReport(assessmentId);
+        toast({
+          title: "Success",
+          description: "Report generated successfully. Insurer has been notified.",
+        });
+        // Refresh assessments if callback available
+        if (onRefresh) {
+          onRefresh();
+        }
+      } catch (err: any) {
+        console.error('Failed to generate report:', err);
+        toast({
+          title: "Generation Failed",
+          description: err.message || 'Failed to generate report',
+          variant: "destructive",
+        });
+      } finally {
+        setGeneratingReport(false);
+      }
     };
 
     const handleSave = () => {
@@ -858,6 +1308,26 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                     <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
                       <p className="text-sm text-gray-700">Selected: {selectedFile.name}</p>
                       <p className="text-xs text-gray-500 mt-1">{(selectedFile.size / 1024).toFixed(2)} KB</p>
+                      {assessmentId && (
+                        <Button
+                          onClick={handleUploadDronePDF}
+                          disabled={uploadingPDF}
+                          className="mt-3 bg-green-600 hover:bg-green-700 text-white"
+                          size="sm"
+                        >
+                          {uploadingPDF ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Uploading...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="h-4 w-4 mr-2" />
+                              Upload PDF
+                            </>
+                          )}
+                        </Button>
+                      )}
                         </div>
                       )}
                     </div>
@@ -892,31 +1362,31 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <p className="text-xs text-gray-600 mb-1 font-medium">Healthy Area (Fine)</p>
                     <p className="text-xl font-bold text-gray-900">2.80 ha</p>
-                          </div>
+                      </div>
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <p className="text-xs text-gray-600 mb-1 font-medium">Plant Stress</p>
                     <p className="text-xl font-bold text-gray-900">17.6%</p>
-                              </div>
+                      </div>
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                     <p className="text-xs text-gray-600 mb-1 font-medium">Potential Stress</p>
                     <p className="text-xl font-bold text-gray-900">0%</p>
-                              </div>
+                      </div>
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <p className="text-xs text-gray-600 mb-1 font-medium">Field Area</p>
                     <p className="text-xl font-bold text-gray-900">{fieldDetails.area} ha</p>
-                              </div>
+                      </div>
                   <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                     <p className="text-xs text-gray-600 mb-1 font-medium">Growing Stage</p>
                     <p className="text-xl font-bold text-gray-900">N/A</p>
-                          </div>
-                        </div>
+                      </div>
+                    </div>
                       </CardContent>
                     </Card>
 
-            {/* Field Visualization */}
+                  {/* Field Visualization */}
             <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardHeader>
-                <div className="flex items-center justify-between">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
                   <CardTitle className="text-gray-900">Field Visualization</CardTitle>
                   <div className="flex items-center gap-2">
                     <Button
@@ -933,7 +1403,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                     >
                       <span className="text-lg">−</span>
                     </Button>
-                  </div>
+                          </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -944,15 +1414,15 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                       <Label className="text-sm text-gray-700">Layer:</Label>
                       <Select value={mapTileLayer} onValueChange={(value) => setMapTileLayer(value as "osm" | "satellite" | "terrain")}>
                         <SelectTrigger className="w-32 h-9 border-gray-300">
-                          <SelectValue />
-                        </SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="satellite">Satellite</SelectItem>
                           <SelectItem value="osm">Street</SelectItem>
                           <SelectItem value="terrain">Terrain</SelectItem>
-                        </SelectContent>
-                      </Select>
-                  </div>
+                              </SelectContent>
+                            </Select>
+                          </div>
 
                     <div className="flex items-center gap-2">
                       <Label className="text-sm text-gray-700">Index:</Label>
@@ -967,7 +1437,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                         </SelectContent>
                       </Select>
                         </div>
-                        </div>
+                          </div>
 
                   {/* Map Container */}
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -979,16 +1449,16 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                       showControls={true}
                       className="w-full"
                     />
-                  </div>
+                              </div>
 
                   {/* Vegetation Health Index Legend */}
                   <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                     <Label className="text-sm font-medium text-gray-900 mb-2 block">Vegetation Health Index</Label>
-                    <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-600">Low</span>
                       <div className="flex-1 h-4 bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 rounded"></div>
                       <span className="text-xs text-gray-600">High</span>
-                          </div>
+                            </div>
                           </div>
                         </div>
                       </CardContent>
@@ -1008,6 +1478,98 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                     />
               </CardContent>
             </Card>
+
+            {/* Comprehensive Notes */}
+            {assessmentId && (
+              <Card className="bg-white border border-gray-200 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-gray-900">Comprehensive Assessment Notes *</CardTitle>
+                  <p className="text-sm text-gray-600 mt-1">Required for report generation</p>
+                </CardHeader>
+                <CardContent>
+                  <Textarea
+                    value={comprehensiveNotes}
+                    onChange={(e) => setComprehensiveNotes(e.target.value)}
+                    className="min-h-[150px] border-gray-300"
+                    placeholder="Enter comprehensive assessment notes here..."
+                  />
+                  <Button
+                    onClick={handleSaveNotes}
+                    disabled={savingNotes}
+                    className="mt-3 bg-green-600 hover:bg-green-700 text-white"
+                    size="sm"
+                  >
+                    {savingNotes ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Save Notes
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Risk Score & Report Generation */}
+            {assessmentId && (
+              <Card className="bg-white border border-gray-200 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-gray-900">Risk Assessment & Report Generation</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Risk Score */}
+                  <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                    <div>
+                      <p className="text-sm text-gray-600">Risk Score</p>
+                      <p className={`text-2xl font-bold ${riskScore !== null ? 
+                        riskScore <= 30 ? 'text-green-600' : 
+                        riskScore <= 70 ? 'text-yellow-600' : 'text-red-600' 
+                        : 'text-gray-400'}`}>
+                        {riskScore !== null ? riskScore.toFixed(1) : 'Not calculated'}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleCalculateRiskScore}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Activity className="h-4 w-4 mr-2" />
+                      Calculate Risk Score
+                    </Button>
+                  </div>
+
+                  {/* Generate Report Button */}
+                  <Button
+                    onClick={handleGenerateReport}
+                    disabled={generatingReport || riskScore === null || !comprehensiveNotes || comprehensiveNotes.trim().length === 0}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    size="lg"
+                  >
+                    {generatingReport ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Generating Report...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="h-4 w-4 mr-2" />
+                        Generate Full Report
+                      </>
+                    )}
+                  </Button>
+                  {(!comprehensiveNotes || comprehensiveNotes.trim().length === 0) && (
+                    <p className="text-sm text-yellow-600">Please add comprehensive notes before generating report.</p>
+                  )}
+                  {riskScore === null && (
+                    <p className="text-sm text-yellow-600">Please calculate risk score before generating report.</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
                   {/* Action Buttons */}
                   <div className="flex gap-4">
@@ -1029,7 +1591,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                   </div>
           </>
         )}
-      </div>
+                </div>
     );
   };
 
@@ -1045,12 +1607,12 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
         {/* Clean Header */}
         <div className="max-w-7xl mx-auto px-6 mb-6">
           <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
-        <div>
+                  <div>
               <h1 className="text-2xl font-semibold text-gray-900">Field Detail View</h1>
               <p className="text-sm text-gray-500 mt-1">{fieldId} • {fieldDetails.farmer} • {fieldDetails.cropType}</p>
-            </div>
-          </div>
-        </div>
+                        </div>
+                        </div>
+                      </div>
 
         {/* Main Content */}
         <div className="max-w-7xl mx-auto px-6">
@@ -1097,41 +1659,41 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                   <div className="flex justify-between items-center border-b border-gray-200 pb-2.5">
                     <span className="text-sm text-gray-600">Field ID:</span>
                     <span className="text-sm font-medium text-gray-900">{fieldId}</span>
-                  </div>
+                        </div>
                   <div className="flex justify-between items-center border-b border-gray-200 pb-2.5">
                     <span className="text-sm text-gray-600">Field Name:</span>
                     <span className="text-sm font-medium text-gray-900">{fieldDetails.fieldName}</span>
-                  </div>
+                        </div>
                   <div className="flex justify-between items-center border-b border-gray-200 pb-2.5">
                     <span className="text-sm text-gray-600">Farmer:</span>
                     <span className="text-sm font-medium text-gray-900">{fieldDetails.farmer}</span>
-                  </div>
+                      </div>
                   <div className="flex justify-between items-center border-b border-gray-200 pb-2.5">
                     <span className="text-sm text-gray-600">Crop Type:</span>
                     <div className="flex items-center gap-1.5">
                       <Sprout className="h-3.5 w-3.5 text-green-500" />
                       <span className="text-sm font-medium text-gray-900">{fieldDetails.cropType}</span>
-                    </div>
-                  </div>
+                        </div>
+                        </div>
                   <div className="flex justify-between items-center border-b border-gray-200 pb-2.5">
                     <span className="text-sm text-gray-600">Area:</span>
                     <span className="text-sm font-medium text-gray-900">{fieldDetails.area} hectares</span>
-                  </div>
+                      </div>
                   <div className="flex justify-between items-center border-b border-gray-200 pb-2.5">
                     <span className="text-sm text-gray-600">Season:</span>
                     <div className="flex items-center gap-1.5">
                       <Calendar className="h-3.5 w-3.5 text-gray-500" />
                       <span className="text-sm font-medium text-gray-900">Season {fieldDetails.season}</span>
-                  </div>
-                    </div>
+                        </div>
+                        </div>
                   <div className="flex justify-between items-center pb-2.5">
                     <span className="text-sm text-gray-600">Location:</span>
                     <div className="flex items-center gap-1.5">
                       <MapPin className="h-3.5 w-3.5 text-teal-500" />
                       <span className="text-sm font-medium text-gray-900">{fieldDetails.location}</span>
-                  </div>
                     </div>
-                  
+                  </div>
+
                   {/* Action Buttons */}
                   <div className="flex gap-2 pt-3 border-t border-gray-200 mt-3">
                     <Button
@@ -1167,15 +1729,15 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                   </div>
                 </CardContent>
               </Card>
-            </div>
-          </TabsContent>
+                </div>
+              </TabsContent>
 
           <TabsContent value="weather" className="mt-4">
             <WeatherAnalysisTab location={fieldDetails.location} />
           </TabsContent>
 
           <TabsContent value="crop" className="mt-4">
-            <CropAnalysisTab fieldDetails={fieldDetails} />
+            <CropAnalysisTab fieldDetails={fieldDetails} assessmentId={selectedAssessment?.id} />
           </TabsContent>
 
           <TabsContent value="overview" className="mt-4">
@@ -1185,8 +1747,8 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-600">Field overview and summary information will be displayed here.</p>
-              </CardContent>
-            </Card>
+          </CardContent>
+        </Card>
           </TabsContent>
         </Tabs>
         </div>
@@ -1215,34 +1777,398 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
     }
   };
 
-  const renderDashboard = () => {
-    // Get unique farmers from assessments
-    const uniqueFarmerIds = new Set(assessments.map(a => a.farmerId).filter(Boolean));
+  // Helper function to get field details from farm
+  const getFieldDetailsFromFarm = (farm: any, farmer: any): FieldDetail => {
+    const farmerName = 
+      farmer?.name || 
+      (farmer?.firstName && farmer?.lastName ? `${farmer.firstName} ${farmer.lastName}`.trim() : '') ||
+      farmer?.firstName || 
+      farmer?.lastName || 
+      "Unknown Farmer";
     
-    // Build farmer data with field counts
-    const farmerData = Array.from(uniqueFarmerIds).map(farmerId => {
-      const farmerAssessments = assessments.filter(a => a.farmerId === farmerId);
-      const farmerName = farmerAssessments[0]?.farmerName || "Unknown Farmer";
-      const location = farmerAssessments[0]?.location || "Unknown Location";
-      
-      // Count fields for this farmer
-      const farmerFarms = Array.isArray(farms) 
-        ? farms.filter(farm => {
-            const farmFarmerId = farm.farmerId?._id || farm.farmerId || farm.farmer?._id || farm.farmer?.id || '';
-            return farmFarmerId === farmerId || 
-                   (typeof farmFarmerId === 'string' && typeof farmerId === 'string' && farmFarmerId === farmerId) ||
-                   farm.farmerName === farmerName;
-          })
-        : [];
-      
-      return {
-        farmerId: `F-${String(farmerId).slice(-3).padStart(3, '0')}`,
-        farmerName,
-        location,
-        totalFields: farmerFarms.length || 0,
-        originalFarmerId: farmerId
+    return {
+      fieldId: farm._id || farm.id || '',
+      fieldName: farm.name || "Unnamed Farm",
+      farmer: farmerName,
+      cropType: farm.cropType || farm.crop || "Unknown",
+      area: farm.area || farm.size || 0,
+      season: farm.season || "A",
+      sowingDate: farm.sowingDate || farm.plantingDate || new Date().toISOString().split('T')[0],
+      location: farmer?.location || 
+        (farmer?.province && farmer?.district ? `${farmer.province}, ${farmer.district}` : '') ||
+        farmer?.province ||
+        farmer?.district ||
+        "Unknown Location"
+    };
+  };
+
+  // Render field detail view for dashboard mode
+  const renderDashboardFieldDetail = () => {
+    if (!selectedFarmForDetail || !selectedFarmerForDetail) return null;
+    
+    const fieldDetails = getFieldDetailsFromFarm(selectedFarmForDetail, selectedFarmerForDetail);
+    const fieldId = selectedFarmForDetail._id || selectedFarmForDetail.id || '';
+    const displayFieldId = fieldId ? `FLD-${String(fieldId).slice(-3).padStart(3, '0')}` : 'FLD-000';
+
+    return (
+      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+        <div className="max-w-7xl mx-auto px-6 space-y-6">
+          {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm">
+          <button 
+              onClick={() => {
+                setDashboardViewMode("list");
+                setSelectedFarmerForDetail(null);
+                setSelectedFarmForDetail(null);
+              }}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-700"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Field List
+          </button>
+        </div>
+        
+          {/* Header */}
+        <div>
+          <h1 className="text-4xl font-bold text-gray-900">
+              Field Detail View: {displayFieldId}
+          </h1>
+            <p className="text-gray-900/70 mt-2">
+              {fieldDetails.farmer} - {fieldDetails.cropType}
+          </p>
+        </div>
+
+          {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="bg-white border border-gray-200 inline-flex h-10 items-center justify-center rounded-lg p-1">
+            <TabsTrigger 
+              value="basic-info" 
+                className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700 px-4 py-2 rounded text-sm"
+            >
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Basic Info
+            </TabsTrigger>
+            <TabsTrigger 
+              value="weather" 
+                className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700 px-4 py-2 rounded text-sm"
+            >
+              <CloudRain className="h-4 w-4 mr-2" />
+              Weather Analysis
+            </TabsTrigger>
+            <TabsTrigger 
+              value="crop" 
+                className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700 px-4 py-2 rounded text-sm"
+            >
+              <Leaf className="h-4 w-4 mr-2" />
+                Crop Analysis (Satellite)
+              </TabsTrigger>
+              <TabsTrigger 
+                value="overview" 
+                className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700 px-4 py-2 rounded text-sm"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Overview
+            </TabsTrigger>
+          </TabsList>
+
+            {/* Tab Contents */}
+          <TabsContent value="basic-info" className="mt-6">
+            <div className="grid gap-6 md:grid-cols-2">
+                {/* Field Information */}
+                <Card className="bg-white border border-gray-200 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-gray-900">Field Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
+                    <span className="text-gray-600">Field ID</span>
+                      <span className="text-gray-700 font-medium">{displayFieldId}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
+                    <span className="text-gray-600">Field Name</span>
+                    <span className="text-gray-700 font-medium">{fieldDetails.fieldName}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
+                    <span className="text-gray-600">Farmer</span>
+                    <span className="text-gray-700 font-medium">{fieldDetails.farmer}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
+                    <span className="text-gray-600">Crop Type</span>
+                    <div className="flex items-center gap-2">
+                      <Leaf className="h-4 w-4 text-gray-600" />
+                      <span className="text-gray-700 font-medium">{fieldDetails.cropType}</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
+                    <span className="text-gray-600">Area</span>
+                    <span className="text-gray-700 font-medium">{fieldDetails.area} hectares</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
+                    <span className="text-gray-600">Season</span>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-gray-600" />
+                        <span className="text-gray-700 font-medium">Season {fieldDetails.season}</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center pb-3">
+                    <span className="text-gray-600">Location</span>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-gray-600" />
+                      <span className="text-gray-700 font-medium">{fieldDetails.location}</span>
+                    </div>
+                  </div>
+                    <div className="flex gap-2 pt-3 border-t border-gray-200 mt-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                      >
+                        <Edit className="h-3.5 w-3.5 mr-1.5" />
+                        Edit Info
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                      >
+                        <FileText className="h-3.5 w-3.5 mr-1.5" />
+                        View History
+                      </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+                {/* Map View */}
+                <Card className="bg-white border border-gray-200 shadow-sm">
+                <CardHeader>
+                    <CardTitle className="text-gray-900">Map View</CardTitle>
+                </CardHeader>
+                  <CardContent className="h-[500px] flex items-center justify-center bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="text-center">
+                    <MapPin className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                      <p className="text-gray-900 text-lg font-medium">Map View</p>
+                      <p className="text-sm text-gray-600 mt-2">Field: {displayFieldId}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="weather" className="mt-6">
+              <WeatherAnalysisTabWithAPI fieldDetails={fieldDetails} farmId={fieldId} />
+          </TabsContent>
+
+          <TabsContent value="crop" className="mt-6">
+            <CropAnalysisTab fieldDetails={fieldDetails} assessmentId={selectedAssessment?.id} />
+          </TabsContent>
+
+            <TabsContent value="overview" className="mt-6">
+              <Card className="bg-white border border-gray-200 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-gray-900">Overview</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-900/60">Field overview and summary will be displayed here.</p>
+                </CardContent>
+              </Card>
+          </TabsContent>
+        </Tabs>
+        </div>
+      </div>
+    );
+  };
+
+  // Weather Analysis Tab with API integration (using all available weather and indices APIs)
+  const WeatherAnalysisTabWithAPI = ({ fieldDetails, farmId }: { fieldDetails: FieldDetail; farmId: string }) => {
+    const [weatherData, setWeatherData] = useState<any>(null);
+    const [indicesData, setIndicesData] = useState<any>(null);
+    const [weatherLoading, setWeatherLoading] = useState(false);
+    const [weatherError, setWeatherError] = useState<string | null>(null);
+
+    useEffect(() => {
+      const loadWeather = async () => {
+        if (!farmId) return;
+        
+        setWeatherLoading(true);
+        setWeatherError(null);
+        try {
+          const today = new Date();
+          const endDate = new Date();
+          endDate.setDate(today.getDate() + 7);
+          
+          const startDateStr = today.toISOString().split('T')[0];
+          const endDateStr = endDate.toISOString().split('T')[0];
+          
+          // Helper function to handle API errors gracefully
+          const handleApiError = (err: any, apiName: string) => {
+            // Silently handle 400 errors for missing EOSDA field ID
+            if (err?.message?.includes('EOSDA') || err?.message?.includes('register the farm')) {
+              return null;
+            }
+            console.warn(`${apiName} error:`, err);
+            return null;
+          };
+          
+          // Load all weather APIs
+          const [forecast, historical, accumulated] = await Promise.all([
+            getWeatherForecast(farmId, startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'Weather forecast')),
+            getHistoricalWeather(farmId, startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'Historical weather')),
+            getAccumulatedWeather(farmId, startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'Accumulated weather'))
+          ]);
+
+          // Load all indices APIs
+          const [indicesStats, ndviTimeSeries, fieldTrend] = await Promise.all([
+            getVegetationStats(farmId, startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'Vegetation indices statistics')),
+            getNDVITimeSeries(farmId, startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'NDVI time series')),
+            getFieldTrend(farmId, 'NDVI', startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'Field trend'))
+          ]);
+
+          setWeatherData({ forecast, historical, accumulated });
+          setIndicesData({ indicesStats, ndviTimeSeries, fieldTrend });
+        } catch (err: any) {
+          // Only show error if it's not an expected EOSDA error
+          if (!err?.message?.includes('EOSDA') && !err?.message?.includes('register the farm')) {
+            console.error('Failed to load weather data:', err);
+            setWeatherError(err.message || 'Failed to load weather data');
+          }
+        } finally {
+          setWeatherLoading(false);
+        }
       };
-    });
+
+      loadWeather();
+    }, [farmId]);
+
+    if (weatherLoading) {
+      return (
+        <Card className="bg-white border border-gray-200 shadow-sm">
+          <CardContent className="p-12">
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mr-3"></div>
+              <span className="text-sm text-gray-600">Loading weather data...</span>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (weatherError) {
+      return (
+        <Card className="bg-white border border-red-200 shadow-sm">
+          <CardContent className="p-4">
+            <div className="text-center text-red-600">
+              <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
+              <p>{weatherError}</p>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <div>
+        <CombinedWeatherForecast className="bg-gradient-to-br from-blue-900/90 to-cyan-900/90 border border-blue-700/30 rounded-xl shadow-xl" />
+      </div>
+    );
+  };
+
+  const renderDashboard = () => {
+    // Use farmers from API if available, otherwise fall back to assessments
+    let farmerData: any[] = [];
+    
+    if (farmersList && farmersList.length > 0) {
+      // Build farmer data from API farmers list
+      farmerData = farmersList.map((farmer: any) => {
+        const farmerId = farmer._id || farmer.id;
+        const farmerName = 
+          farmer.name || 
+          (farmer.firstName && farmer.lastName ? `${farmer.firstName} ${farmer.lastName}`.trim() : '') ||
+          farmer.firstName || 
+          farmer.lastName || 
+          "Unknown Farmer";
+        const location = 
+          farmer.location || 
+          (farmer.province && farmer.district ? `${farmer.province}, ${farmer.district}` : '') ||
+          farmer.province ||
+          farmer.district ||
+          "Unknown Location";
+        
+        // Count fields for this farmer
+        // First, try to get fields from farmersList (which has _fields populated from API)
+        const farmerFromList = farmersList.find((f: any) => {
+          const fId = f._id || f.id;
+          const fIdStr = fId?.toString() || '';
+          const targetFarmerIdStr = farmerId?.toString() || '';
+          return fIdStr === targetFarmerIdStr;
+        });
+        
+        let fieldCount = 0;
+        if (farmerFromList && farmerFromList._fields && Array.isArray(farmerFromList._fields)) {
+          // Use fields from API response
+          fieldCount = farmerFromList._fields.length;
+        } else {
+          // Fallback: Count from farms array
+          const farmerFarms = Array.isArray(farms) 
+            ? farms.filter(farm => {
+                const farmFarmerId = farm.farmerId?._id || farm.farmerId || farm.farmer?._id || farm.farmer?.id || farm.farmer || '';
+                const farmFarmerIdStr = farmFarmerId?.toString() || '';
+                const targetFarmerIdStr = farmerId?.toString() || '';
+                return farmFarmerIdStr === targetFarmerIdStr;
+              })
+            : [];
+          fieldCount = farmerFarms.length || 0;
+        }
+        
+        return {
+          farmerId: `F-${String(farmerId).slice(-3).padStart(3, '0')}`,
+          farmerName,
+          location,
+          totalFields: fieldCount,
+          originalFarmerId: farmerId
+        };
+      });
+    } else {
+      // Fallback: Get unique farmers from assessments
+      const uniqueFarmerIds = new Set(assessments.map(a => a.farmerId).filter(Boolean));
+      
+      farmerData = Array.from(uniqueFarmerIds).map(farmerId => {
+        const farmerAssessments = assessments.filter(a => a.farmerId === farmerId);
+        const farmerName = farmerAssessments[0]?.farmerName || "Unknown Farmer";
+        const location = farmerAssessments[0]?.location || "Unknown Location";
+        
+        // Count fields for this farmer
+        // First, try to get fields from farmersList (which has _fields populated from API)
+        const farmerFromList = farmersList.find((f: any) => {
+          const fId = f._id || f.id;
+          return fId === farmerId || fId?.toString() === farmerId?.toString();
+        });
+        
+        let fieldCount = 0;
+        if (farmerFromList && farmerFromList._fields && Array.isArray(farmerFromList._fields)) {
+          // Use fields from API response
+          fieldCount = farmerFromList._fields.length;
+        } else {
+          // Fallback: Count from farms array
+          const farmerFarms = Array.isArray(farms) 
+            ? farms.filter(farm => {
+                const farmFarmerId = farm.farmerId?._id || farm.farmerId || farm.farmer?._id || farm.farmer?.id || '';
+                return farmFarmerId === farmerId || 
+                       (typeof farmFarmerId === 'string' && typeof farmerId === 'string' && farmFarmerId === farmerId) ||
+                       farm.farmerName === farmerName;
+              })
+            : [];
+          fieldCount = farmerFarms.length || 0;
+        }
+        
+        return {
+          farmerId: `F-${String(farmerId).slice(-3).padStart(3, '0')}`,
+          farmerName,
+          location,
+          totalFields: fieldCount,
+          originalFarmerId: farmerId
+        };
+      });
+    }
 
     // Filter farmers by search query
     const filteredFarmers = farmerData.filter(farmer => {
@@ -1252,26 +2178,53 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
         farmer.location.toLowerCase().includes(searchQuery.toLowerCase());
     });
 
-    // Find assessment for farmer click
+    // Handle farmer click - show field detail view
     const handleFarmerClick = (farmer: typeof farmerData[0]) => {
-      const farmerAssessment = assessments.find(a => a.farmerId === farmer.originalFarmerId);
-      if (farmerAssessment) {
-        handleAssessmentClick(farmerAssessment);
+      // Find the farmer in farmersList
+      const farmerObj = farmersList.find(f => (f._id || f.id) === farmer.originalFarmerId);
+      if (!farmerObj) {
+        // Fallback: try to find in assessments
+        const farmerAssessment = assessments.find(a => a.farmerId === farmer.originalFarmerId);
+        if (farmerAssessment) {
+          handleAssessmentClick(farmerAssessment);
+        }
+        return;
+      }
+      
+      // Get fields for this farmer - prefer _fields from API, fallback to farms array
+      let farmerFarms: any[] = [];
+      
+      if (farmerObj._fields && Array.isArray(farmerObj._fields) && farmerObj._fields.length > 0) {
+        // Use fields from API response
+        farmerFarms = farmerObj._fields;
+      } else {
+        // Fallback: Get from farms array
+        farmerFarms = Array.isArray(farms) 
+          ? farms.filter(farm => {
+              const farmFarmerId = farm.farmerId?._id || farm.farmerId || farm.farmer?._id || farm.farmer?.id || farm.farmer || '';
+              const farmFarmerIdStr = farmFarmerId?.toString() || '';
+              const targetFarmerIdStr = farmer.originalFarmerId?.toString() || '';
+              return farmFarmerIdStr === targetFarmerIdStr;
+            })
+          : [];
+      }
+      
+      if (farmerFarms.length > 0) {
+        setSelectedFarmerForDetail(farmerObj);
+        setSelectedFarmForDetail(farmerFarms[0]);
+        setDashboardViewMode("fieldDetail");
+        setActiveTab("basic-info");
+      } else {
+        toast({
+          title: 'No fields found',
+          description: 'This farmer has no fields available.',
+          variant: 'destructive'
+        });
       }
     };
 
     return (
       <div className="min-h-screen bg-gray-50 pt-6 pb-8">
-        {/* Clean Header */}
-        <div className="max-w-7xl mx-auto px-6 mb-6">
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900">Risk Assessment</h1>
-              <p className="text-sm text-gray-500 mt-1">Drone-based crop analysis and risk evaluation</p>
-            </div>
-          </div>
-        </div>
-
         {/* Main Content */}
         <div className="max-w-7xl mx-auto px-6">
           {/* Summary Cards - Clean Modern Style */}
@@ -1283,11 +2236,11 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                     <p className="text-xs text-gray-500 mb-1">Total Farmers</p>
                     <p className="text-xl font-semibold text-gray-900">{filteredFarmers.length}</p>
                     <p className="text-xs text-green-600 mt-1">All registered</p>
-                  </div>
+            </div>
                   <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
                     <Users className="h-6 w-6 text-green-600" />
                   </div>
-                </div>
+                  </div>
               </CardContent>
             </Card>
 
@@ -1300,10 +2253,10 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                       {filteredFarmers.reduce((sum, f) => sum + f.totalFields, 0)}
                     </p>
                     <p className="text-xs text-green-600 mt-1">Across all farmers</p>
-                  </div>
+                </div>
                   <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
                     <Leaf className="h-6 w-6 text-green-600" />
-                  </div>
+          </div>
                 </div>
               </CardContent>
             </Card>
@@ -1342,7 +2295,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
         </div>
 
         {/* Loading State */}
-          {(loading || loadingFarms) && (
+          {(loading || loadingFarms || loadingFarmers) && (
             <Card className="bg-white border border-gray-200 shadow-sm">
             <CardContent className="p-12">
               <div className="flex items-center justify-center">
@@ -1377,7 +2330,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
         )}
 
           {/* Farmers Management Table - Clean Professional Style */}
-          {!loading && !loadingFarms && !error && (
+          {!loading && !loadingFarms && !loadingFarmers && !error && (
             <Card className="bg-white border border-gray-200 shadow-sm">
               <CardHeader className="border-b border-gray-200 bg-white px-6 py-4">
                 <div className="flex items-center justify-between">
@@ -1408,21 +2361,21 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                           <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Farmer Name</th>
                           <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Location</th>
                           <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Total Fields</th>
-                          <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Actions</th>
                       </tr>
                     </thead>
                       <tbody className="bg-white divide-y divide-gray-100">
                         {filteredFarmers.map((farmer, index) => (
                         <tr
                             key={farmer.farmerId}
-                            className="hover:bg-green-50/30 transition-colors"
+                            className="hover:bg-green-50/30 transition-colors cursor-pointer"
+                            onClick={() => handleFarmerClick(farmer)}
                         >
                             <td className="py-3.5 px-6 whitespace-nowrap">
                               <div className="text-sm font-medium text-gray-900 bg-green-50 px-2 py-1 rounded inline-block">{farmer.farmerId}</div>
                           </td>
                             <td className="py-3.5 px-6 whitespace-nowrap">
                               <div className="text-sm text-gray-900">{farmer.farmerName}</div>
-                            </td>
+                          </td>
                             <td className="py-3.5 px-6 whitespace-nowrap">
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                                 <MapPin className="h-4 w-4 text-gray-400" />
@@ -1431,15 +2384,6 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                           </td>
                             <td className="py-3.5 px-6 whitespace-nowrap">
                               <div className="text-sm text-gray-900">{farmer.totalFields} fields</div>
-                          </td>
-                            <td className="py-3.5 px-6 whitespace-nowrap">
-                              <Button
-                                onClick={() => handleFarmerClick(farmer)}
-                                size="sm"
-                                className="bg-green-600 hover:bg-green-700 text-white text-xs h-8 px-4"
-                              >
-                                View Fields
-                              </Button>
                           </td>
                         </tr>
                       ))}
@@ -1462,6 +2406,11 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
 
   if (viewMode === "fieldDetail") {
     return renderFieldDetail();
+  }
+
+  // Check if we're in dashboard field detail mode
+  if (dashboardViewMode === "fieldDetail") {
+    return renderDashboardFieldDetail();
   }
 
   return renderDashboard();

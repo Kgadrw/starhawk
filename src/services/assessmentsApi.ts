@@ -95,13 +95,21 @@ class AssessmentsApiService {
 
       if (response.status === 401) {
         // Token expired or invalid
+        console.error('❌ 401 Unauthorized - Token expired or invalid');
+        console.error('Request URL:', url);
+        console.error('Response:', data);
+        
+        // Clear all auth-related localStorage
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         localStorage.removeItem('role');
         localStorage.removeItem('userId');
         localStorage.removeItem('phoneNumber');
         localStorage.removeItem('email');
-        throw new Error('Authentication required. Please log in again.');
+        
+        // Show user-friendly error
+        const errorMessage = data?.detail || data?.message || 'Your session has expired. Please log in again.';
+        throw new Error(errorMessage);
       }
 
       if (!response.ok) {
@@ -262,6 +270,98 @@ class AssessmentsApiService {
     return this.request(`/${id}/submit`, {
       method: 'POST',
       body: JSON.stringify({}),
+    });
+  }
+
+  // Get Pending Farms (Admin Only)
+  async getPendingFarms() {
+    const token = this.getToken();
+    if (!token) {
+      console.error('❌ No authentication token found');
+      throw new Error('Authentication required. Please log in again.');
+    }
+    console.log('🔑 Token found, making request to /pending-farms');
+    return this.request('/pending-farms');
+  }
+
+  // Assign Assessor to Farm (Admin Only)
+  async assignAssessor(farmId: string, assessorId: string, insurerId?: string | null) {
+    const requestBody: any = {
+      farmId,
+      assessorId,
+    };
+    
+    if (insurerId) {
+      requestBody.insurerId = insurerId;
+    }
+    
+    return this.request('/assign', {
+      method: 'POST',
+      body: JSON.stringify(requestBody),
+    });
+  }
+
+  // Upload Drone PDF (Assessor Only)
+  async uploadDronePDF(assessmentId: string, file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const token = this.getToken();
+    const headers: HeadersInit = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    // Don't set Content-Type for FormData - let the browser set it
+    
+    const url = `${this.baseURL}/${assessmentId}/upload-drone-pdf`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('role');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('phoneNumber');
+      localStorage.removeItem('email');
+      throw new Error('Authentication required. Please log in again.');
+    }
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: `HTTP error! status: ${response.status}` }));
+      throw new Error(errorData.message || errorData.error || `Failed to upload drone PDF: ${response.status}`);
+    }
+    
+    return response.json();
+  }
+
+  // Generate Full Report (Assessor Only)
+  async generateReport(assessmentId: string) {
+    return this.request(`/${assessmentId}/generate-report`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+  }
+
+  // Approve Assessment (Insurer Only)
+  async approveAssessment(assessmentId: string) {
+    return this.request(`/${assessmentId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+  }
+
+  // Reject Assessment (Insurer Only)
+  async rejectAssessment(assessmentId: string, rejectionReason: string) {
+    return this.request(`/${assessmentId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({
+        rejectionReason,
+      }),
     });
   }
 }

@@ -5,15 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { HomeNavbar } from "@/components/layout/HomeNavbar";
-import { FooterSection } from "@/components/home/FooterSection";
 import CustomScrollbar from "@/components/ui/CustomScrollbar";
 import { motion } from "framer-motion";
 import { 
   LogIn,
   Eye,
   EyeOff,
-  UserPlus
+  ArrowLeft
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { farmerLogin, assessorLogin, insurerLogin, adminLogin } from "@/services/authAPI";
@@ -22,20 +20,54 @@ export default function RoleSelection() {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [isLoginMode, setIsLoginMode] = useState(true);
   const [formData, setFormData] = useState({
     phoneNumber: "",
-    email: "",
-    password: "",
-    confirmPassword: ""
+    password: ""
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Validate and format Rwandan phone number
+  const validatePhoneNumber = (phone: string): { valid: boolean; formatted: string; error?: string } => {
+    // Remove spaces, dashes, and other non-digit characters
+    const cleaned = phone.replace(/\D/g, '');
+    
+    // Check if it's exactly 10 digits and starts with valid prefix
+    const validPrefixes = ['072', '073', '078', '079'];
+    const prefix = cleaned.substring(0, 3);
+    
+    if (cleaned.length === 0) {
+      return { valid: false, formatted: cleaned, error: "Phone number is required" };
+    }
+    
+    if (cleaned.length !== 10) {
+      return { 
+        valid: false, 
+        formatted: cleaned, 
+        error: "Phone number must be 10 digits (e.g., 0781234567)" 
+      };
+    }
+    
+    if (!validPrefixes.includes(prefix)) {
+      return { 
+        valid: false, 
+        formatted: cleaned, 
+        error: "Phone number must start with 072, 073, 078, or 079" 
+      };
+    }
+    
+    return { valid: true, formatted: cleaned };
+  };
+
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'phoneNumber') {
+      // Only allow digits and limit to 10 digits
+      const cleaned = value.replace(/\D/g, '').substring(0, 10);
+      setFormData(prev => ({ ...prev, [field]: cleaned }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
     setError("");
   };
 
@@ -56,50 +88,20 @@ export default function RoleSelection() {
     setError("");
 
     try {
-      if (isLoginMode) {
-        // Login mode
-        if (!formData.phoneNumber || !formData.password) {
-          setError("Please enter both phone number and password.");
-          setIsLoading(false);
-          return;
-        }
-      } else {
-        // Registration mode
-        if (!formData.phoneNumber || !formData.email || !formData.password || !formData.confirmPassword) {
-          setError("Please fill in all fields.");
-          setIsLoading(false);
-          return;
-        }
-
-        if (formData.password !== formData.confirmPassword) {
-          setError("Passwords do not match.");
-          setIsLoading(false);
-          return;
-        }
-
-        if (formData.password.length < 6) {
-          setError("Password must be at least 6 characters long.");
-          setIsLoading(false);
-          return;
-        }
-
-        // Redirect to farmer registration for now
-        toast({
-          title: "Registration",
-          description: "Redirecting to complete registration...",
-        });
-        navigate('/farmer-register');
+      // Login validation
+      if (!formData.phoneNumber || !formData.password) {
+        setError("Please enter both phone number and password.");
         setIsLoading(false);
         return;
       }
 
-      // Login mode - Try to authenticate and determine role
+      // Try to authenticate and determine role
       // We'll try different login methods to find the correct role
       const loginMethods = [
-        () => farmerLogin(formData.phoneNumber, formData.password),
-        () => assessorLogin(formData.phoneNumber, formData.password),
-        () => insurerLogin(formData.phoneNumber, formData.password),
-        () => adminLogin(formData.phoneNumber, formData.password),
+        () => farmerLogin(formattedPhone, formData.password),
+        () => assessorLogin(formattedPhone, formData.password),
+        () => insurerLogin(formattedPhone, formData.password),
+        () => adminLogin(formattedPhone, formData.password),
       ];
 
       let loginResponse = null;
@@ -135,7 +137,7 @@ export default function RoleSelection() {
             localStorage.setItem('token', loginResponse.token);
             localStorage.setItem('role', loginResponse.role);
             localStorage.setItem('userId', loginResponse.userId || '');
-            localStorage.setItem('phoneNumber', formData.phoneNumber);
+            localStorage.setItem('phoneNumber', formattedPhone);
           }
         } catch (err) {
           // Ignore government login error
@@ -176,100 +178,60 @@ export default function RoleSelection() {
 
   return (
     <CustomScrollbar>
-      <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50 min-h-screen">
-        {/* Navigation */}
-        <HomeNavbar />
+      <div className="min-h-screen flex">
+        {/* Left Side - Farmer Image */}
+        <div className="hidden lg:block lg:w-1/2 relative">
+          <img
+            src="/farmer.jpg"
+            alt="Farmer"
+            className="w-full h-full object-cover"
+          />
+          {/* Back to Home Button - Absolute positioned on image */}
+          <div className="absolute top-6 left-6">
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/')}
+              className="text-white hover:text-white hover:bg-white/20 backdrop-blur-sm rounded-none border border-white/30"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Home
+            </Button>
+          </div>
+        </div>
 
-      {/* Grid Pattern Background */}
-      <div className="absolute inset-0 opacity-70 flex items-center justify-center">
-        <img
-          src="/lines.png"
-          alt="Grid lines"
-          className="w-3/4 h-3/4 object-contain"
-        />
-      </div>
-      
-      {/* Bottom Corner Lines */}
-      <div className="absolute bottom-0 left-0 opacity-60">
-        <img
-          src="/lines2.png"
-          alt="Bottom left lines"
-          className="w-[32rem] h-[32rem]"
-        />
-              </div>
-      <div className="absolute bottom-0 right-0 opacity-60">
-        <img
-          src="/lines2.png"
-          alt="Bottom right lines"
-          className="w-[32rem] h-[32rem]"
-        />
-      </div>
-
-      {/* Login Form */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-4 pt-32">
-        <div className="w-full max-w-md">
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <Card className="bg-white border border-gray-200 shadow-lg">
+        {/* Right Side - Login Form */}
+        <div className="w-full lg:w-1/2 bg-gradient-to-br from-gray-50 via-white to-gray-50 min-h-screen flex items-center justify-center p-4 lg:p-8 xl:p-12">
+          <div className="w-full max-w-md lg:max-w-lg xl:max-w-xl">
+            {/* Back to Home Button - For mobile */}
+            <div className="mb-6 lg:hidden">
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/')}
+                className="text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-none"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Home
+              </Button>
+            </div>
+            
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <Card className="bg-white !border-0 !rounded-none !shadow-none w-full">
               <CardHeader>
-                <div className="flex gap-2 mb-4">
-                  <Button
-                    type="button"
-                    variant={isLoginMode ? "default" : "ghost"}
-                    onClick={() => {
-                      setIsLoginMode(true);
-                      setError("");
-                      setFormData({
-                        phoneNumber: "",
-                        email: "",
-                        password: "",
-                        confirmPassword: ""
-                      });
-                    }}
-                    className={`flex-1 ${isLoginMode 
-                      ? "bg-green-600 hover:bg-green-700 text-white" 
-                      : "bg-gray-100 hover:bg-gray-200 text-gray-700"}`}
-                  >
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Login
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={!isLoginMode ? "default" : "ghost"}
-                    onClick={() => {
-                      setIsLoginMode(false);
-                      setError("");
-                      setFormData({
-                        phoneNumber: "",
-                        email: "",
-                        password: "",
-                        confirmPassword: ""
-                      });
-                    }}
-                    className={`flex-1 ${!isLoginMode 
-                      ? "bg-green-600 hover:bg-green-700 text-white" 
-                      : "bg-gray-100 hover:bg-gray-200 text-gray-700"}`}
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Sign Up
-                  </Button>
-                </div>
-                <CardTitle className="text-center text-xl text-gray-900">
-                  {isLoginMode ? "Welcome Back" : "Create Your Account"}
+                <CardTitle className="text-left text-xl text-gray-900">
+                  Welcome Back
                 </CardTitle>
-                <p className="text-center text-gray-600 text-sm mt-2">
-                  {isLoginMode 
-                    ? "Enter your credentials to access your dashboard"
-                    : "Fill in your details to create a new account"}
+                <p className="text-left text-gray-600 text-sm mt-2">
+                  Enter your credentials to access your dashboard
                 </p>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   {error && (
-                    <Alert variant="destructive">
+                    <Alert variant="destructive" className="!rounded-none">
                       <AlertDescription>{error}</AlertDescription>
                     </Alert>
                   )}
@@ -281,26 +243,12 @@ export default function RoleSelection() {
                       type="tel"
                       value={formData.phoneNumber}
                       onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
-                      placeholder="Enter your phone number (e.g., 0781234567)"
+                      placeholder="0781234567 (10 digits)"
+                      maxLength={10}
                       required
-                      className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
+                      className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 !rounded-none"
                     />
                   </div>
-
-                  {!isLoginMode && (
-                    <div className="space-y-2">
-                      <Label htmlFor="email" className="text-gray-700">Email Address</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        placeholder="your.email@example.com"
-                        required
-                        className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
-                      />
-                    </div>
-                  )}
 
                   <div className="space-y-2">
                     <Label htmlFor="password" className="text-gray-700">Password</Label>
@@ -310,9 +258,9 @@ export default function RoleSelection() {
                         type={showPassword ? "text" : "password"}
                         value={formData.password}
                         onChange={(e) => handleInputChange('password', e.target.value)}
-                        placeholder={isLoginMode ? "Enter your password" : "Create a password"}
+                        placeholder="Enter your password"
                         required
-                        className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
+                        className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 !rounded-none"
                       />
                       <Button
                         type="button"
@@ -327,96 +275,30 @@ export default function RoleSelection() {
                           <Eye className="h-4 w-4 text-gray-500" />
                         )}
                       </Button>
-                      </div>
                     </div>
+                  </div>
 
-                  {!isLoginMode && (
-                    <div className="space-y-2">
-                      <Label htmlFor="confirmPassword" className="text-gray-700">Confirm Password</Label>
-                      <div className="relative">
-                        <Input
-                          id="confirmPassword"
-                          type={showConfirmPassword ? "text" : "password"}
-                          value={formData.confirmPassword}
-                          onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                          placeholder="Confirm your password"
-                          required
-                          className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        >
-                          {showConfirmPassword ? (
-                            <EyeOff className="h-4 w-4 text-gray-500" />
-                          ) : (
-                            <Eye className="h-4 w-4 text-gray-500" />
-                          )}
-                        </Button>
-                            </div>
-                        </div>
-                  )}
-
-                    <Button 
+                  <Button 
                     type="submit"
-                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    className="w-full bg-green-600 hover:bg-green-700 text-white !rounded-none"
                     disabled={isLoading}
                   >
                     {isLoading ? (
-                      isLoginMode ? "Signing In..." : "Creating Account..."
+                      "Signing In..."
                     ) : (
                       <>
-                        {isLoginMode ? (
-                          <>
-                            <LogIn className="h-4 w-4 mr-2" />
-                            Sign In
-                          </>
-                        ) : (
-                          <>
-                            <UserPlus className="h-4 w-4 mr-2" />
-                            Create Account
-                          </>
-                        )}
+                        <LogIn className="h-4 w-4 mr-2" />
+                        Sign In
                       </>
                     )}
-                    </Button>
+                  </Button>
                 </form>
-
-                <div className="mt-6 text-center">
-                  {isLoginMode ? (
-                    <div className="text-sm text-gray-600">
-                      Don't have an account yet?{" "}
-                      <button
-                        onClick={() => setIsLoginMode(false)}
-                        className="text-green-600 hover:text-green-700 font-medium"
-                      >
-                        Create Account
-                      </button>
-                      </div>
-                  ) : (
-                    <div className="text-sm text-gray-600">
-                      Already have an account?{" "}
-                      <button
-                        onClick={() => setIsLoginMode(true)}
-                        className="text-green-600 hover:text-green-700 font-medium"
-                      >
-                        Sign In
-                      </button>
-                    </div>
-                  )}
-                </div>
                   </CardContent>
                 </Card>
               </motion.div>
-        </div>
-              </div>
-
-        {/* Footer */}
-        <FooterSection />
             </div>
+          </div>
+      </div>
     </CustomScrollbar>
   );
 }

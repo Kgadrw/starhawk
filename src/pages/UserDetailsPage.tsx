@@ -99,13 +99,13 @@ export default function UserDetailsPage() {
   // Route protection
   useEffect(() => {
     if (!isAdmin()) {
-      navigate("/admin-login");
+      navigate("/role-selection");
     }
   }, [navigate]);
 
   const handleLogout = () => {
     authLogout();
-    navigate("/admin-login");
+    navigate("/role-selection");
   };
 
   const handlePageChange = (page: string) => {

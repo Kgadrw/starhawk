@@ -73,6 +73,15 @@ export default function InsurerDashboard() {
   const [policyEndDate, setPolicyEndDate] = useState("");
   const [isCreatingPolicy, setIsCreatingPolicy] = useState(false);
   
+  // Approval/Rejection state
+  const [approveRejectDialog, setApproveRejectDialog] = useState<{
+    open: boolean;
+    assessment: any | null;
+    action: 'approve' | 'reject' | null;
+  }>({ open: false, assessment: null, action: null });
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [processingApproval, setProcessingApproval] = useState(false);
+  
   // Get logged-in insurer data from localStorage
   const insurerId = getUserId() || "";
   const insurerPhone = getPhoneNumber() || "";
@@ -776,15 +785,35 @@ export default function InsurerDashboard() {
                             : "N/A"}
                         </td>
                         <td className="py-1 px-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setCreatePolicyDialog({ open: true, assessment })}
-                            className="border-green-600 text-green-600 hover:bg-green-50 text-xs h-6 px-2"
-                          >
-                            <Shield className="h-2.5 w-2.5 mr-0.5" />
-                            Policy
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setApproveRejectDialog({ open: true, assessment, action: 'approve' })}
+                              className="border-green-600 text-green-600 hover:bg-green-50 text-xs h-6 px-2"
+                            >
+                              <CheckCircle className="h-2.5 w-2.5 mr-0.5" />
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setApproveRejectDialog({ open: true, assessment, action: 'reject' })}
+                              className="border-red-600 text-red-600 hover:bg-red-50 text-xs h-6 px-2"
+                            >
+                              <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
+                              Reject
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setCreatePolicyDialog({ open: true, assessment })}
+                              className="border-blue-600 text-blue-600 hover:bg-blue-50 text-xs h-6 px-2"
+                            >
+                              <Shield className="h-2.5 w-2.5 mr-0.5" />
+                              Policy
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -851,7 +880,7 @@ export default function InsurerDashboard() {
         localStorage.removeItem('userId');
         localStorage.removeItem('phoneNumber');
         localStorage.removeItem('email');
-        window.location.href = '/insurer-login';
+        window.location.href = '/role-selection';
       }}
     >
       {renderPage()}
@@ -978,8 +1007,117 @@ export default function InsurerDashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* Approve/Reject Assessment Dialog */}
+      <Dialog open={approveRejectDialog.open} onOpenChange={(open) => {
+        if (!open) {
+          setRejectionReason("");
+        }
+        setApproveRejectDialog({ ...approveRejectDialog, open });
+      }}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-gray-900">
+              {approveRejectDialog.action === 'approve' ? 'Approve Assessment' : 'Reject Assessment'}
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              {approveRejectDialog.action === 'approve' 
+                ? 'Are you sure you want to approve this assessment? You can create a policy after approval.'
+                : 'Please provide a reason for rejecting this assessment.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            {approveRejectDialog.assessment && (
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                <div className="text-sm">
+                  <span className="text-gray-600">Farm: </span>
+                  <span className="font-medium text-gray-900">
+                    {(approveRejectDialog.assessment.farmId || approveRejectDialog.assessment.farm)?.name || "N/A"}
+                  </span>
+                </div>
+                <div className="text-sm">
+                  <span className="text-gray-600">Crop Type: </span>
+                  <span className="font-medium text-gray-900">
+                    {(approveRejectDialog.assessment.farmId || approveRejectDialog.assessment.farm)?.cropType || "N/A"}
+                  </span>
+                </div>
+                <div className="text-sm">
+                  <span className="text-gray-600">Risk Score: </span>
+                  <span className="font-medium text-gray-900">
+                    {approveRejectDialog.assessment.riskScore || "N/A"}
+                  </span>
+                </div>
+              </div>
+            )}
+            
+            {approveRejectDialog.action === 'reject' && (
+              <div>
+                <Label htmlFor="rejectionReason" className="text-gray-900">Rejection Reason *</Label>
+                <Textarea
+                  id="rejectionReason"
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Enter reason for rejection..."
+                  className="mt-1 min-h-[100px]"
+                  required
+                />
+              </div>
+            )}
+            
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setApproveRejectDialog({ open: false, assessment: null, action: null });
+                  setRejectionReason("");
+                }}
+                className="border-gray-300 text-gray-900 hover:bg-gray-100"
+              >
+                Cancel
+              </Button>
+              {approveRejectDialog.action === 'approve' ? (
+                <Button
+                  onClick={handleApproveAssessment}
+                  disabled={processingApproval}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {processingApproval ? (
+                    <>
+                      <Clock className="h-4 w-4 mr-2 animate-spin" />
+                      Approving...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Approve Assessment
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleRejectAssessment}
+                  disabled={processingApproval || !rejectionReason.trim()}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {processingApproval ? (
+                    <>
+                      <Clock className="h-4 w-4 mr-2 animate-spin" />
+                      Rejecting...
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      Reject Assessment
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Create Policy Dialog */}
-      <Dialog open={createPolicyDialog.open} onOpenChange={(open) => 
+      <Dialog open={createPolicyDialog.open} onOpenChange={(open) =>
         setCreatePolicyDialog({ ...createPolicyDialog, open })
       }>
         <DialogContent className="sm:max-w-[500px]">

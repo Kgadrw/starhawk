@@ -1,19 +1,21 @@
 import { HomeNavbar } from "@/components/layout/HomeNavbar";
 import { HeroSection } from "@/components/home/HeroSection";
-import { DashboardSection } from "@/components/home/DashboardSection";
-import { FeaturesSection } from "@/components/home/FeaturesSection";
+import { ServiceHeroSection } from "@/components/home/ServiceHeroSection";
+import { WhyWeExistSection } from "@/components/home/WhyWeExistSection";
+import { ImpactSection } from "@/components/home/ImpactSection";
 import { FooterSection } from "@/components/home/FooterSection";
 import CustomScrollbar from "@/components/ui/CustomScrollbar";
 
 const Index = () => {
   return (
     <CustomScrollbar>
-      <div className="bg-white relative min-h-screen">
+      <div className="relative min-h-screen">
         <HomeNavbar />
         <HeroSection />
         <div className="relative z-10">
-          <DashboardSection />
-          <FeaturesSection />
+          <ImpactSection />
+          <WhyWeExistSection />
+          <ServiceHeroSection />
           <FooterSection />
         </div>
       </div>

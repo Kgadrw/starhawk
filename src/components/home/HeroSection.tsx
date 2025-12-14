@@ -1,57 +1,120 @@
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
+import { 
+  Satellite, 
+  Shield, 
+  BarChart3
+} from "lucide-react";
+
+const features = [
+  {
+    icon: Satellite,
+    title: "Satellite Monitoring",
+    description: "Real-time satellite imagery analysis for comprehensive farm monitoring and crop health assessment."
+  },
+  {
+    icon: Shield,
+    title: "AI-Powered Risk Assessment",
+    description: "Advanced machine learning algorithms analyze weather patterns, crop health, and historical data to assess risks."
+  },
+  {
+    icon: BarChart3,
+    title: "Automated Claims Processing",
+    description: "Streamlined claims processing with AI-driven damage assessment and fast payout recommendations."
+  }
+];
 
 export function HeroSection() {
   return (
-    <section className="relative w-full px-4 sm:px-6 md:px-8 mt-6 sm:mt-8 md:mt-12 mb-4 sm:mb-6 md:mb-8">
-      {/* Hero Section with Rounded Top Corners */}
-      <div className="relative w-full min-h-[50vh] md:min-h-[60vh] rounded-t-[2rem] md:rounded-t-[3rem] rounded-b-[2rem] md:rounded-b-[3rem] overflow-hidden border-b border-gray-200">
-        {/* Background Image */}
+    <section className="relative w-full overflow-hidden">
+      {/* Hero Section */}
+      <div className="relative w-full min-h-[70vh] md:min-h-[80vh] flex flex-col pb-20 md:pb-32 lg:pb-40">
+        {/* Background Image - Full width aerial drone photo */}
         <div className="absolute inset-0">
           <img 
-            src="/surviellance.webp" 
-            alt="Agricultural surveillance" 
-            className="w-full h-full object-cover rounded-t-[2rem] md:rounded-t-[3rem] rounded-b-[2rem] md:rounded-b-[3rem]"
+            src="/farmer.jpg" 
+            alt="Farmer background" 
+            className="w-full h-full object-cover"
           />
         </div>
         
-        {/* Noise Overlay - Over the image */}
-        <div 
-          className="absolute inset-0 z-0 opacity-[0.15] rounded-t-[2rem] md:rounded-t-[3rem] rounded-b-[2rem] md:rounded-b-[3rem]"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-            mixBlendMode: 'overlay'
-          }}
-        ></div>
-        
-        {/* Left Gradient Overlay */}
-        <div className="absolute inset-0 z-[1] bg-gradient-to-r from-green-900/85 via-green-900/60 to-transparent rounded-t-[2rem] md:rounded-t-[3rem] rounded-b-[2rem] md:rounded-b-[3rem]"></div>
-        
-        {/* Content Overlay - Positioned on the left */}
-        <div className="relative z-10 w-full h-full flex items-start justify-start px-6 sm:px-8 lg:px-16 pt-8 sm:pt-12 md:pt-16 lg:pt-20 pb-8 sm:pb-12 md:pb-16 lg:pb-20">
-        <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6 }}
-            className="max-w-lg"
-        >
-            {/* Heading - White text for better contrast */}
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-6 leading-tight">
-              Transforming Agriculture with <span className="text-green-400">AI-Powered Solutions</span> for Farmers
-          </h1>
-          
-            {/* Paragraph - White text */}
-            <p className="text-base sm:text-lg text-white mb-8 leading-relaxed">
-            STARHAWK has a role at every step of the agricultural insurance journey. When it comes to farming, we monitor it, assess it, insure it, and protect it. Find out how we're transforming agriculture with innovative technology.
-          </p>
-          
-            {/* Button - White/light oval/pill shape */}
-            <button 
-              className="bg-white hover:bg-gray-100 text-gray-900 rounded-full px-12 py-4 text-base font-medium transition-colors"
-          >
-            Our Services
-            </button>
-        </motion.div>
+        {/* Dark Overlay for text contrast */}
+        <div className="absolute inset-0 bg-black/40"></div>
+
+        {/* Content Container - Top-left aligned */}
+        <div className="relative z-10 flex-1 flex flex-col">
+          {/* Top Section - STARHAWK Text */}
+          <div className="flex-1 flex items-start justify-start px-12 sm:px-16 md:px-20 lg:px-28 xl:px-32 pt-12 md:pt-16 lg:pt-20">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="text-left"
+            >
+              {/* Large Bold Heading */}
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-3 tracking-tight"
+                style={{ fontFamily: 'AvenirLTStd-Black, sans-serif' }}
+              >
+                STARHAWK
+              </motion.h1>
+              
+              {/* Subtitle */}
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className="text-base sm:text-lg md:text-xl lg:text-2xl text-white font-normal leading-relaxed"
+              >
+                AI-Powered Agricultural Insurance Platform
+              </motion.p>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+
+      {/* Feature Cards Section - Partially overlapping hero */}
+      <div className="relative -mt-20 md:-mt-24 lg:-mt-32 z-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {features.map((feature, index) => {
+              const Icon = feature.icon;
+              return (
+                <motion.div
+                  key={feature.title}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  className="group relative"
+                >
+                  <div className="h-full bg-white border-r-2 border-b-2 border-l-2 border-r-gray-100 border-b-gray-100 border-l-gray-100 border-dotted p-8 md:p-10 relative overflow-hidden">
+                    {/* Top Border Decoration */}
+                    <div className="absolute top-0 left-0 right-0 h-2 overflow-hidden">
+                      <img 
+                        src="/title.png" 
+                        alt="Border decoration" 
+                        className="w-full h-full object-cover object-top"
+                      />
+                    </div>
+                    
+                    {/* Icon and Title - Same Line */}
+                    <div className="flex items-center gap-3 mb-3 mt-2">
+                      <Icon className="h-8 w-8 md:h-10 md:w-10 text-gray-700 flex-shrink-0" />
+                      <h3 className="text-lg md:text-xl font-bold text-gray-900">
+                        {feature.title}
+                      </h3>
+                    </div>
+                    <p className="text-base md:text-lg text-gray-600 leading-relaxed">
+                      {feature.description}
+                    </p>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>

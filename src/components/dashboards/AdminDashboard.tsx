@@ -95,7 +95,7 @@ export const AdminDashboard = () => {
   useEffect(() => {
     if (!isAdmin()) {
       // Redirect to login if not admin
-      navigate("/admin-login");
+      navigate("/role-selection");
     }
   }, [navigate]);
 
@@ -336,13 +336,14 @@ export const AdminDashboard = () => {
       loadAssessments();
       loadFarmsForAssessment();
       loadAssessors();
+      loadPendingFarms();
     }
   }, [activePage]);
 
   // Handle logout
   const handleLogout = () => {
     authLogout();
-    navigate("/admin-login");
+    navigate("/role-selection");
   };
 
   // User Management State
@@ -419,14 +420,25 @@ export const AdminDashboard = () => {
   const [assessmentsError, setAssessmentsError] = useState<string | null>(null);
   const [assessmentSearchQuery, setAssessmentSearchQuery] = useState("");
   const [assessmentStatusFilter, setAssessmentStatusFilter] = useState<string>("all");
+  const [pendingFarms, setPendingFarms] = useState<any[]>([]);
+  const [pendingFarmsLoading, setPendingFarmsLoading] = useState(false);
+  const [pendingFarmsError, setPendingFarmsError] = useState<string | null>(null);
   const [showAssessmentDialog, setShowAssessmentDialog] = useState(false);
   const [creatingAssessment, setCreatingAssessment] = useState(false);
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [assigningAssessor, setAssigningAssessor] = useState(false);
+  const [selectedFarmForAssignment, setSelectedFarmForAssignment] = useState<any | null>(null);
   const [farms, setFarms] = useState<any[]>([]);
   const [farmsLoading, setFarmsLoading] = useState(false);
   const [assessors, setAssessors] = useState<any[]>([]);
+  const [insurers, setInsurers] = useState<any[]>([]);
   const [assessmentFormData, setAssessmentFormData] = useState({
     farmId: "",
     assessorId: "",
+  });
+  const [assignFormData, setAssignFormData] = useState({
+    assessorId: "",
+    insurerId: "",
   });
   
   // Policy Issuance from Assessment
@@ -597,23 +609,52 @@ export const AdminDashboard = () => {
       
       console.log('Extracted usersData:', usersData.length, 'users');
       
-      // Map API response to expected format
-      const mappedUsers = usersData.map((user: any) => ({
-        id: user._id || user.id || '',
-        userId: user._id || user.id || '',
-        name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name || 'Unknown',
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        email: user.email || '',
-        phoneNumber: user.phoneNumber || '',
-        role: user.role || 'Farmer',
-        status: user.active !== false ? 'active' : 'inactive',
-        active: user.active !== false,
-        lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never',
-        region: user.region || user.location || 'Unknown',
-        joinDate: user.createdAt ? new Date(user.createdAt).toISOString().split('T')[0] : '',
-        createdAt: user.createdAt || ''
-      }));
+      // Helper function to safely extract string values
+      const safeString = (value: any, defaultValue: string = ''): string => {
+        if (typeof value === 'string') return value;
+        if (value == null) return defaultValue;
+        return String(value);
+      };
+
+      // Map API response to expected format - ensure all values are primitives
+      const mappedUsers = usersData.map((user: any) => {
+        // Safely extract all string values to prevent object rendering
+        const firstName = safeString(user.firstName, '');
+        const lastName = safeString(user.lastName, '');
+        const fullName = `${firstName} ${lastName}`.trim();
+        const name = fullName || safeString(user.name, 'Unknown');
+        
+        return {
+          id: safeString(user._id || user.id, ''),
+          userId: safeString(user._id || user.id, ''),
+          name: name,
+          firstName: firstName,
+          lastName: lastName,
+          email: safeString(user.email, ''),
+          phoneNumber: safeString(user.phoneNumber, ''),
+          role: safeString(user.role, 'Farmer'),
+          status: user.active !== false ? 'active' : 'inactive',
+          active: user.active !== false,
+          lastLogin: user.lastLogin 
+            ? (typeof user.lastLogin === 'string' 
+                ? new Date(user.lastLogin).toLocaleString() 
+                : new Date(String(user.lastLogin)).toLocaleString())
+            : 'Never',
+          region: (() => {
+            if (typeof user.region === 'string') return user.region;
+            if (typeof user.location === 'string') return user.location;
+            if (typeof user.province === 'string') return user.province;
+            if (typeof user.district === 'string') return user.district;
+            return 'Unknown';
+          })(),
+          joinDate: user.createdAt 
+            ? (typeof user.createdAt === 'string'
+                ? new Date(user.createdAt).toISOString().split('T')[0]
+                : new Date(String(user.createdAt)).toISOString().split('T')[0])
+            : '',
+          createdAt: safeString(user.createdAt, '')
+        };
+      });
       
       setSystemUsers(mappedUsers);
     } catch (err: any) {
@@ -1039,7 +1080,7 @@ export const AdminDashboard = () => {
                       activities.push({
                         id: `policy-${policy._id || policy.id}`,
                         action: 'Policy Created',
-                        user: policy.farmerId?.name || policy.farmer?.name || 'System',
+                        user: (typeof policy.farmerId?.name === 'string' ? policy.farmerId.name : '') || (typeof policy.farmer?.name === 'string' ? policy.farmer.name : '') || 'System',
                         details: `Policy for ${policy.cropType || 'crop'} - ${policy.status || 'active'}`,
                         timestamp: timeAgo,
                         date: date,
@@ -1057,7 +1098,7 @@ export const AdminDashboard = () => {
                       activities.push({
                         id: `claim-${claim._id || claim.id}`,
                         action: 'Claim Filed',
-                        user: claim.policyId?.farmerId?.name || claim.farmer?.name || 'System',
+                        user: (typeof claim.policyId?.farmerId?.name === 'string' ? claim.policyId.farmerId.name : '') || (typeof claim.farmer?.name === 'string' ? claim.farmer.name : '') || 'System',
                         details: `${claim.lossEventType || claim.damageType || 'Loss'} claim - ${claim.status || 'pending'}`,
                         timestamp: timeAgo,
                         date: date,
@@ -1396,12 +1437,18 @@ export const AdminDashboard = () => {
   // Filter users based on search query
   const filteredUsers = systemUsers.filter(user => {
     const query = searchQuery.toLowerCase();
+    const userName = typeof user.name === 'string' ? user.name : '';
+    const userEmail = typeof user.email === 'string' ? user.email : '';
+    const userPhone = typeof user.phoneNumber === 'string' ? user.phoneNumber : '';
+    const userRole = typeof user.role === 'string' ? user.role : '';
+    const userRegion = typeof user.region === 'string' ? user.region : '';
+    
     return (
-      user.name.toLowerCase().includes(query) ||
-      user.email.toLowerCase().includes(query) ||
-      user.phoneNumber?.toLowerCase().includes(query) ||
-      user.role.toLowerCase().includes(query) ||
-      user.region.toLowerCase().includes(query)
+      userName.toLowerCase().includes(query) ||
+      userEmail.toLowerCase().includes(query) ||
+      userPhone.toLowerCase().includes(query) ||
+      userRole.toLowerCase().includes(query) ||
+      userRegion.toLowerCase().includes(query)
     );
   });
 
@@ -2137,13 +2184,25 @@ export const AdminDashboard = () => {
                     <td className="py-4 px-6 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-orange-600 rounded-full flex items-center justify-center text-white text-sm font-semibold shadow-sm">
-                            {(user.name || user.firstName || 'U').charAt(0).toUpperCase()}
+                            {(() => {
+                              const nameStr = typeof user.name === 'string' ? user.name : 
+                                            typeof user.firstName === 'string' ? user.firstName :
+                                            typeof user.lastName === 'string' ? user.lastName :
+                                            'U';
+                              return nameStr.charAt(0).toUpperCase();
+                            })()}
                         </div>
                         <div>
                           <div className="text-sm font-semibold text-gray-900">
-                            {user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown User'}
+                            {(() => {
+                              if (typeof user.name === 'string') return user.name;
+                              const firstName = typeof user.firstName === 'string' ? user.firstName : '';
+                              const lastName = typeof user.lastName === 'string' ? user.lastName : '';
+                              const fullName = `${firstName} ${lastName}`.trim();
+                              return fullName || 'Unknown User';
+                            })()}
                           </div>
-                            <div className="text-xs text-gray-500 mt-0.5">{user.userId || user.id || 'N/A'}</div>
+                            <div className="text-xs text-gray-500 mt-0.5">{user.userId || user.id || user._id || 'N/A'}</div>
                         </div>
                       </div>
                     </td>
@@ -2151,9 +2210,9 @@ export const AdminDashboard = () => {
                       <div className="space-y-1">
                         <div className="text-sm text-gray-900 flex items-center gap-1.5">
                           <Mail className="h-3.5 w-3.5 text-gray-400" />
-                          {user.email || 'N/A'}
+                          {typeof user.email === 'string' ? user.email : 'N/A'}
                         </div>
-                        {user.phoneNumber && (
+                        {user.phoneNumber && typeof user.phoneNumber === 'string' && (
                           <div className="text-xs text-gray-600 flex items-center gap-1.5">
                             <Phone className="h-3 w-3 text-gray-400" />
                             {user.phoneNumber}
@@ -2170,12 +2229,20 @@ export const AdminDashboard = () => {
                           user.role === 'ADMIN' || user.role === 'Admin' ? 'bg-red-100 text-red-700 border-red-300' :
                           'bg-gray-100 text-gray-700 border-gray-300'
                       } border`}>
-                        {user.role || 'N/A'}
+                        {typeof user.role === 'string' ? user.role : 'N/A'}
                       </Badge>
                     </td>
                     <td className="py-4 px-6 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {user.region || user.province || user.district || 'N/A'}
+                        {(() => {
+                          // Safely extract location string from various possible structures
+                          if (typeof user.region === 'string' && user.region) return user.region;
+                          if (typeof user.province === 'string' && user.province) return user.province;
+                          if (typeof user.district === 'string' && user.district) return user.district;
+                          if (typeof user.sector === 'string' && user.sector) return user.sector;
+                          if (typeof user.location === 'string' && user.location) return user.location;
+                          return 'N/A';
+                        })()}
                       </div>
                     </td>
                     <td className="py-4 px-6 whitespace-nowrap">
@@ -2192,7 +2259,7 @@ export const AdminDashboard = () => {
                     </td>
                     <td className="py-4 px-6 whitespace-nowrap">
                       <div className="text-sm text-gray-600">
-                        {user.lastLogin || 'Never'}
+                        {typeof user.lastLogin === 'string' ? user.lastLogin : (user.lastLogin ? String(user.lastLogin) : 'Never')}
                       </div>
                     </td>
                     <td className="py-4 px-6 whitespace-nowrap">
@@ -3892,7 +3959,7 @@ export const AdminDashboard = () => {
                   <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700">
                     {profile.firstName && profile.lastName 
                       ? `${profile.firstName} ${profile.lastName}` 
-                      : profile.name || adminName}
+                      : (typeof profile.name === 'string' ? profile.name : '') || adminName}
                   </div>
             </div>
             <div>
@@ -4887,17 +4954,26 @@ export const AdminDashboard = () => {
                           const role = u.role?.toLowerCase() || '';
                           return role === 'farmer';
                         })
-                        .map((farmer: any) => {
-                          const farmerId = farmer._id || farmer.id;
-                          if (!farmerId) return null; // Skip farmers without ID
+                        .map((farmer: any, index: number) => {
+                          const farmerId = farmer._id || farmer.id || `farmer-${index}`;
+                          if (!farmerId || farmerId === 'undefined' || farmerId === 'null') return null; // Skip farmers without valid ID
                           
-                          const farmerName = farmer.firstName && farmer.lastName
-                            ? `${farmer.firstName} ${farmer.lastName}`
-                            : farmer.name || farmer.email || farmer.phoneNumber || 'Unknown Farmer';
+                          const farmerName = (() => {
+                            const firstName = typeof farmer.firstName === 'string' ? farmer.firstName : '';
+                            const lastName = typeof farmer.lastName === 'string' ? farmer.lastName : '';
+                            if (firstName || lastName) {
+                              return `${firstName} ${lastName}`.trim();
+                            }
+                            if (typeof farmer.name === 'string') return farmer.name;
+                            if (typeof farmer.email === 'string') return farmer.email;
+                            if (typeof farmer.phoneNumber === 'string') return farmer.phoneNumber;
+                            return 'Unknown Farmer';
+                          })();
                           
+                          const farmerEmail = typeof farmer.email === 'string' ? farmer.email : '';
                           return (
                             <SelectItem key={farmerId} value={farmerId}>
-                              {farmerName} {farmer.email ? `(${farmer.email})` : ''}
+                              {farmerName}{farmerEmail ? ` (${farmerEmail})` : ''}
                             </SelectItem>
                           );
                         })
@@ -5493,14 +5569,125 @@ export const AdminDashboard = () => {
       }
       
       setAssessors(assessorUsers);
+      
+      // Also load insurers for assignment
+      let insurerUsers: any[] = [];
+      if (Array.isArray(allUsers)) {
+        insurerUsers = allUsers.filter((user: any) => user.role === 'INSURER' || user.role === 'Insurer');
+      } else if (allUsers && typeof allUsers === 'object') {
+        const usersData = allUsers.data || allUsers.users || [];
+        if (Array.isArray(usersData)) {
+          insurerUsers = usersData.filter((user: any) => user.role === 'INSURER' || user.role === 'Insurer');
+        }
+      }
+      if (!Array.isArray(insurerUsers)) {
+        insurerUsers = [];
+      }
+      setInsurers(insurerUsers);
     } catch (err: any) {
       console.error('Failed to load assessors:', err);
       setAssessors([]); // Set to empty array on error
+      setInsurers([]);
       toast({
         title: "Warning",
         description: "Could not load assessors. You may not be able to create assessments.",
         variant: "default",
       });
+    }
+  };
+
+  // Load pending farms
+  const loadPendingFarms = async () => {
+    setPendingFarmsLoading(true);
+    setPendingFarmsError(null);
+    try {
+      // Check if user is authenticated before making request
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('You are not logged in. Please log in again.');
+      }
+
+      console.log('🔄 Loading pending farms...');
+      const response: any = await assessmentsApiService.getPendingFarms();
+      console.log('✅ Pending farms response:', response);
+      
+      let pendingFarmsData: any[] = [];
+
+      if (Array.isArray(response)) {
+        pendingFarmsData = response;
+      } else if (response && typeof response === 'object') {
+        pendingFarmsData = response.data || response.farms || response.pendingFarms || [];
+      }
+
+      console.log('📊 Processed pending farms data:', pendingFarmsData.length, 'farms');
+      setPendingFarms(pendingFarmsData);
+    } catch (err: any) {
+      console.error('❌ Failed to load pending farms:', err);
+      const errorMessage = err.message || 'Failed to load pending farms';
+      
+      // If it's an auth error, suggest logging in again
+      if (errorMessage.includes('Authentication') || errorMessage.includes('Unauthorized') || errorMessage.includes('session')) {
+        setPendingFarmsError('Your session has expired. Please log out and log in again.');
+        toast({
+          title: "Authentication Required",
+          description: "Your session has expired. Please log out and log in again.",
+          variant: "destructive",
+        });
+      } else {
+        setPendingFarmsError(errorMessage);
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setPendingFarmsLoading(false);
+    }
+  };
+
+  // Handle assign assessor to pending farm
+  const handleAssignAssessor = async () => {
+    if (!selectedFarmForAssignment || !assignFormData.assessorId) {
+      toast({
+        title: "Validation Error",
+        description: "Please select an assessor.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAssigningAssessor(true);
+    try {
+      const farmId = selectedFarmForAssignment._id || selectedFarmForAssignment.id;
+      const insurerId = assignFormData.insurerId && assignFormData.insurerId !== '' && assignFormData.insurerId !== 'none-insurer' ? assignFormData.insurerId : null;
+      await assessmentsApiService.assignAssessor(
+        farmId,
+        assignFormData.assessorId,
+        insurerId
+      );
+      
+      toast({
+        title: "Success",
+        description: "Assessor assigned successfully. Assessor has been notified.",
+        variant: "default",
+      });
+      
+      setShowAssignDialog(false);
+      setSelectedFarmForAssignment(null);
+      setAssignFormData({ assessorId: "", insurerId: "" });
+      // Reload pending farms and assessments
+      loadPendingFarms();
+      loadAssessments();
+    } catch (err: any) {
+      console.error('Failed to assign assessor:', err);
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to assign assessor',
+        variant: "destructive",
+      });
+    } finally {
+      setAssigningAssessor(false);
     }
   };
 
@@ -5543,13 +5730,34 @@ export const AdminDashboard = () => {
     }
   };
 
+  // Helper function to safely extract string from user/farmer/assessor objects
+  const safeExtractUserName = (user: any): string => {
+    if (!user) return 'N/A';
+    if (typeof user === 'string') return user;
+    if (typeof user !== 'object') return String(user);
+    
+    // Try to get name from various properties
+    if (typeof user.name === 'string') return user.name;
+    const firstName = typeof user.firstName === 'string' ? user.firstName : '';
+    const lastName = typeof user.lastName === 'string' ? user.lastName : '';
+    if (firstName || lastName) return `${firstName} ${lastName}`.trim();
+    if (typeof user.email === 'string') return user.email;
+    if (typeof user.phoneNumber === 'string') return user.phoneNumber;
+    
+    return 'N/A';
+  };
+
   // Render Assessments Management Page
   const renderAssessmentsManagement = () => {
     const filteredAssessments = assessments.filter(assessment => {
+      const farmName = typeof assessment.farm?.name === 'string' ? assessment.farm.name : '';
+      const assessorName = typeof assessment.assessor?.name === 'string' ? assessment.assessor.name : '';
+      const farmerName = typeof assessment.farmer?.name === 'string' ? assessment.farmer.name : '';
+      
       const matchesSearch = assessmentSearchQuery === "" ||
-        (assessment.farm?.name || '').toLowerCase().includes(assessmentSearchQuery.toLowerCase()) ||
-        (assessment.assessor?.name || '').toLowerCase().includes(assessmentSearchQuery.toLowerCase()) ||
-        (assessment.farmer?.name || '').toLowerCase().includes(assessmentSearchQuery.toLowerCase());
+        farmName.toLowerCase().includes(assessmentSearchQuery.toLowerCase()) ||
+        assessorName.toLowerCase().includes(assessmentSearchQuery.toLowerCase()) ||
+        farmerName.toLowerCase().includes(assessmentSearchQuery.toLowerCase());
       
       const matchesStatus = assessmentStatusFilter === "all" || 
         (assessment.status || '').toLowerCase() === assessmentStatusFilter.toLowerCase();
@@ -5573,6 +5781,127 @@ export const AdminDashboard = () => {
             Create Assessment
           </Button>
         </div>
+
+        {/* Pending Farms Section */}
+        <Card className="bg-white border-gray-300">
+          <CardHeader className="border-b border-gray-200 bg-gray-50">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-semibold text-gray-900">Pending Farms</CardTitle>
+                <p className="text-sm text-gray-600 mt-1">Farms awaiting assessment assignment</p>
+              </div>
+              <Button
+                onClick={loadPendingFarms}
+                disabled={pendingFarmsLoading}
+                variant="outline"
+                size="sm"
+                className="border-gray-300 text-gray-900 hover:bg-gray-100"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${pendingFarmsLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {pendingFarmsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-green-600 mx-auto mb-2" />
+                  <p className="text-gray-600 text-sm">Loading pending farms...</p>
+                </div>
+              </div>
+            ) : pendingFarmsError ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <AlertCircle className="h-8 w-8 text-red-400 mx-auto mb-2" />
+                  <p className="text-red-400 text-sm">{pendingFarmsError}</p>
+                  <Button
+                    onClick={loadPendingFarms}
+                    variant="outline"
+                    size="sm"
+                    className="mt-4 border-gray-300 text-gray-900 hover:bg-gray-100"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Retry
+                  </Button>
+                </div>
+              </div>
+            ) : pendingFarms.length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                  <p className="text-gray-600 text-sm">No pending farms found</p>
+                </div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <th className="text-left py-3 px-6 font-medium text-gray-900">Farm Name</th>
+                      <th className="text-left py-3 px-6 font-medium text-gray-900">Farmer</th>
+                      <th className="text-left py-3 px-6 font-medium text-gray-900">Crop Type</th>
+                      <th className="text-left py-3 px-6 font-medium text-gray-900">Area (hectares)</th>
+                      <th className="text-left py-3 px-6 font-medium text-gray-900">Location</th>
+                      <th className="text-left py-3 px-6 font-medium text-gray-900">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingFarms.map((farm, index) => (
+                      <tr
+                        key={farm._id || farm.id || index}
+                        className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="py-3 px-6 text-gray-900">
+                          {(() => {
+                            const name = typeof farm.name === 'string' ? farm.name : '';
+                            const fieldName = typeof farm.fieldName === 'string' ? farm.fieldName : '';
+                            return name || fieldName || "Unnamed Farm";
+                          })()}
+                        </td>
+                        <td className="py-3 px-6 text-gray-900">
+                          {safeExtractUserName(farm.farmerName || farm.farmer) || "Unknown"}
+                        </td>
+                        <td className="py-3 px-6 text-gray-900">
+                          {(() => {
+                            const cropType = typeof farm.cropType === 'string' ? farm.cropType : '';
+                            const crop = typeof farm.crop === 'string' ? farm.crop : '';
+                            return cropType || crop || "N/A";
+                          })()}
+                        </td>
+                        <td className="py-3 px-6 text-gray-900">
+                          {typeof farm.area === 'number' ? farm.area : (typeof farm.area === 'string' ? parseFloat(farm.area) || 0 : 0)}
+                        </td>
+                        <td className="py-3 px-6 text-gray-900">
+                          {(() => {
+                            const location = typeof farm.location === 'string' ? farm.location : '';
+                            const district = typeof farm.district === 'string' ? farm.district : '';
+                            const province = typeof farm.province === 'string' ? farm.province : '';
+                            return location || district || province || "N/A";
+                          })()}
+                        </td>
+                        <td className="py-3 px-6">
+                          <Button
+                            onClick={() => {
+                              setSelectedFarmForAssignment(farm);
+                              setAssignFormData({ assessorId: "", insurerId: "" });
+                              setShowAssignDialog(true);
+                            }}
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 text-white !rounded-none"
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Assign Assessor
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Error Message */}
         {assessmentsError && (
@@ -5669,9 +5998,32 @@ export const AdminDashboard = () => {
                           index % 2 === 0 ? "bg-white" : "bg-gray-50/50"
                         }`}
                       >
-                        <td className="py-4 px-6 text-gray-900">{assessment.farm?.name || 'N/A'}</td>
-                        <td className="py-4 px-6 text-gray-900">{assessment.farmer?.name || assessment.farm?.farmerName || 'N/A'}</td>
-                        <td className="py-4 px-6 text-gray-900">{assessment.assessor?.name || assessment.assessorId || 'N/A'}</td>
+                        <td className="py-4 px-6 text-gray-900">
+                          {typeof assessment.farm?.name === 'string' ? assessment.farm.name : 'N/A'}
+                        </td>
+                        <td className="py-4 px-6 text-gray-900">
+                          {(() => {
+                            // Safely extract farmer name from various possible structures
+                            if (assessment.farm?.farmerName && typeof assessment.farm.farmerName === 'string') {
+                              return assessment.farm.farmerName;
+                            }
+                            const farmerName = safeExtractUserName(assessment.farmer);
+                            if (farmerName !== 'N/A') return farmerName;
+                            return safeExtractUserName(assessment.farm?.farmer) || 'N/A';
+                          })()}
+                        </td>
+                        <td className="py-4 px-6 text-gray-900">
+                          {(() => {
+                            // Safely extract assessor name from various possible structures
+                            const assessorName = safeExtractUserName(assessment.assessor);
+                            if (assessorName !== 'N/A') return assessorName;
+                            // Only return assessorId as last resort if it's a string
+                            if (assessment.assessorId && typeof assessment.assessorId === 'string') {
+                              return assessment.assessorId;
+                            }
+                            return 'N/A';
+                          })()}
+                        </td>
                         <td className="py-4 px-6">
                           <Badge
                             variant={
@@ -5758,7 +6110,7 @@ export const AdminDashboard = () => {
                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                   <p className="text-sm text-gray-600 mb-2">Assessment Details:</p>
                   <p className="text-sm font-medium text-gray-900">
-                    Farm: {policyIssuanceDialog.assessment.farm?.name || 'N/A'}
+                    Farm: {typeof policyIssuanceDialog.assessment.farm?.name === 'string' ? policyIssuanceDialog.assessment.farm.name : 'N/A'}
                   </p>
                   {policyIssuanceDialog.assessment.riskScore && (
                     <p className="text-sm text-gray-700">
@@ -5879,6 +6231,126 @@ export const AdminDashboard = () => {
           </DialogContent>
         </Dialog>
 
+        {/* Assign Assessor Dialog */}
+        <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+          <DialogContent className="bg-white border-gray-300">
+            <DialogHeader>
+              <DialogTitle className="text-gray-900">Assign Assessor to Farm</DialogTitle>
+              <DialogDescription className="text-gray-900/60">
+                Assign an assessor to evaluate {selectedFarmForAssignment?.name || selectedFarmForAssignment?.fieldName || 'this farm'}.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              {selectedFarmForAssignment && (
+                <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                  <p className="text-sm font-medium text-gray-900">Farm Details:</p>
+                  <p className="text-sm text-gray-600">
+                    Crop: {selectedFarmForAssignment.cropType || selectedFarmForAssignment.crop || 'N/A'}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Farmer: {safeExtractUserName(selectedFarmForAssignment.farmerName || selectedFarmForAssignment.farmer)}
+                  </p>
+                </div>
+              )}
+              <div>
+                <Label htmlFor="assignAssessorId" className="text-gray-900">Assessor *</Label>
+                <Select
+                  value={assignFormData.assessorId}
+                  onValueChange={(value) => setAssignFormData({ ...assignFormData, assessorId: value })}
+                >
+                  <SelectTrigger id="assignAssessorId" className="bg-gray-50 border-gray-300 text-gray-900 mt-1">
+                    <SelectValue placeholder="Select an assessor" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-gray-300">
+                    {!Array.isArray(assessors) || assessors.length === 0 ? (
+                      <SelectItem value="none" disabled>No assessors available</SelectItem>
+                    ) : (
+                      assessors.map((assessor, index) => {
+                        const assessorValue = assessor._id || assessor.id || `assessor-${index}`;
+                        const assessorName = safeExtractUserName(assessor);
+                        const contactInfo = (typeof assessor.email === 'string' ? assessor.email : '') || (typeof assessor.phoneNumber === 'string' ? assessor.phoneNumber : '');
+                        return (
+                          <SelectItem key={assessorValue} value={assessorValue}>
+                            {assessorName}{contactInfo ? ` (${contactInfo})` : ''}
+                          </SelectItem>
+                        );
+                      })
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="assignInsurerId" className="text-gray-900">Insurer (Optional)</Label>
+                <Select
+                  value={assignFormData.insurerId || 'none-insurer'}
+                  onValueChange={(value) => setAssignFormData({ ...assignFormData, insurerId: value === 'none-insurer' ? '' : value })}
+                >
+                  <SelectTrigger id="assignInsurerId" className="bg-gray-50 border-gray-300 text-gray-900 mt-1">
+                    <SelectValue placeholder="Select an insurer (optional)" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-gray-300">
+                    <SelectItem value="none-insurer">None</SelectItem>
+                    {!Array.isArray(insurers) || insurers.length === 0 ? (
+                      <SelectItem value="none" disabled>No insurers available</SelectItem>
+                    ) : (
+                      insurers.map((insurer) => {
+                        const insurerName = (() => {
+                          if (insurer.firstName && insurer.lastName) {
+                            return `${insurer.firstName} ${insurer.lastName}`;
+                          }
+                          if (insurer.firstName) return insurer.firstName;
+                          if (insurer.lastName) return insurer.lastName;
+                          if (typeof insurer.name === 'string') return insurer.name;
+                          if (insurer.email) return insurer.email;
+                          if (insurer.phoneNumber) return insurer.phoneNumber;
+                          return 'Unknown Insurer';
+                        })();
+                        const contactInfo = insurer.email || insurer.phoneNumber || '';
+                        const insurerValue = insurer._id || insurer.id || `insurer-${index}`;
+                        return (
+                          <SelectItem key={insurerValue} value={insurerValue}>
+                            {insurerName}{contactInfo ? ` (${contactInfo})` : ''}
+                          </SelectItem>
+                        );
+                      })
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowAssignDialog(false);
+                    setSelectedFarmForAssignment(null);
+                    setAssignFormData({ assessorId: "", insurerId: "" });
+                  }}
+                  className="border-gray-300 text-gray-900 hover:bg-gray-100"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAssignAssessor}
+                  disabled={assigningAssessor || !assignFormData.assessorId}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {assigningAssessor ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Assigning...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Assign Assessor
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Create Assessment Dialog */}
         <Dialog open={showAssessmentDialog} onOpenChange={setShowAssessmentDialog}>
           <DialogContent className="bg-white border-gray-300">
@@ -5904,11 +6376,14 @@ export const AdminDashboard = () => {
                     ) : !Array.isArray(farms) || farms.length === 0 ? (
                       <SelectItem value="none" disabled>No farms available</SelectItem>
                     ) : (
-                      farms.map((farm) => (
-                        <SelectItem key={farm._id || farm.id} value={farm._id || farm.id}>
-                          {farm.name || 'Unnamed Farm'} - {farm.farmerName || farm.farmer?.name || 'Unknown Farmer'}
-                        </SelectItem>
-                      ))
+                      farms.map((farm, index) => {
+                        const farmValue = farm._id || farm.id || `farm-${index}`;
+                        return (
+                          <SelectItem key={farmValue} value={farmValue}>
+                            {(typeof farm.name === 'string' ? farm.name : 'Unnamed Farm')} - {(typeof farm.farmerName === 'string' ? farm.farmerName : '') || (typeof farm.farmer?.name === 'string' ? farm.farmer.name : '') || 'Unknown Farmer'}
+                          </SelectItem>
+                        );
+                      })
                     )}
                   </SelectContent>
                 </Select>
@@ -5926,11 +6401,26 @@ export const AdminDashboard = () => {
                     {!Array.isArray(assessors) || assessors.length === 0 ? (
                       <SelectItem value="none" disabled>No assessors available</SelectItem>
                     ) : (
-                      assessors.map((assessor) => (
-                        <SelectItem key={assessor._id || assessor.id} value={assessor._id || assessor.id}>
-                          {assessor.firstName} {assessor.lastName} ({assessor.email || assessor.phoneNumber})
-                        </SelectItem>
-                      ))
+                      assessors.map((assessor, index) => {
+                        const assessorValue = assessor._id || assessor.id || `assessor-${index}`;
+                        const assessorName = (() => {
+                          if (assessor.firstName && assessor.lastName) {
+                            return `${assessor.firstName} ${assessor.lastName}`;
+                          }
+                          if (assessor.firstName) return assessor.firstName;
+                          if (assessor.lastName) return assessor.lastName;
+                          if (typeof assessor.name === 'string') return assessor.name;
+                          if (assessor.email) return assessor.email;
+                          if (assessor.phoneNumber) return assessor.phoneNumber;
+                          return 'Unknown Assessor';
+                        })();
+                        const contactInfo = assessor.email || assessor.phoneNumber || '';
+                        return (
+                          <SelectItem key={assessorValue} value={assessorValue}>
+                            {assessorName}{contactInfo ? ` (${contactInfo})` : ''}
+                          </SelectItem>
+                        );
+                      })
                     )}
                   </SelectContent>
                 </Select>

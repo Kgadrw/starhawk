@@ -10,12 +10,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import DashboardLayout from "../layout/DashboardLayout";
 import { getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
-import { getUserProfile } from "@/services/usersAPI";
+import { getUserProfile, updateUserProfile } from "@/services/usersAPI";
 import { getFarms, getAllFarms, createFarm, createInsuranceRequest, getFarmById, getWeatherForecast, getHistoricalWeather, getVegetationStats } from "@/services/farmsApi";
+import RwandaLocationSelector from "@/components/common/RwandaLocationSelector";
 import { API_BASE_URL, getAuthToken } from "@/config/api";
 import { getClaims, createClaim } from "@/services/claimsApi";
 import { getPolicies } from "@/services/policiesApi";
 import assessmentsApiService from "@/services/assessmentsApi";
+import { getAssessors } from "@/services/usersAPI";
 import { useToast } from "@/hooks/use-toast";
 import { 
   User, 
@@ -134,6 +136,35 @@ export default function FarmerDashboard() {
   const [farmerProfile, setFarmerProfile] = useState<any>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   
+  // State for Profile Form (from registration page)
+  const [profileStep, setProfileStep] = useState(1);
+  const [isSubmittingProfile, setIsSubmittingProfile] = useState(false);
+  const [profileFormData, setProfileFormData] = useState({
+    fullName: "",
+    gender: "",
+    nationalId: "",
+    phoneNumber: "",
+    email: "",
+    province: "",
+    district: "",
+    sector: "",
+    cell: "",
+    village: ""
+  });
+  const [selectedLocation, setSelectedLocation] = useState<{
+    province: any;
+    district: any;
+    sector: any;
+    village: any;
+    cell: any;
+  }>({
+    province: null,
+    district: null,
+    sector: null,
+    village: null,
+    cell: null
+  });
+  
   // Load data for dashboard and pages
   useEffect(() => {
     if (farmerId) {
@@ -167,13 +198,89 @@ export default function FarmerDashboard() {
     setProfileLoading(true);
     try {
       const profile = await getUserProfile();
-      setFarmerProfile(profile.data || profile);
+      const profileData = profile.data || profile;
+      setFarmerProfile(profileData);
+      
+      // Pre-populate form data if profile exists
+      if (profileData) {
+        const firstName = profileData.firstName || "";
+        const lastName = profileData.lastName || "";
+        const fullName = profileData.name || `${firstName} ${lastName}`.trim() || "";
+        
+        setProfileFormData({
+          fullName: fullName,
+          gender: profileData.sex || profileData.gender || "",
+          nationalId: profileData.nationalId || "",
+          phoneNumber: profileData.phoneNumber || farmerPhone || "",
+          email: profileData.email || farmerEmail || "",
+          province: profileData.province || profileData.farmerProfile?.farmProvince || "",
+          district: profileData.district || profileData.farmerProfile?.farmDistrict || "",
+          sector: profileData.sector || profileData.farmerProfile?.farmSector || "",
+          cell: profileData.cell || profileData.farmerProfile?.farmCell || "",
+          village: profileData.village || profileData.farmerProfile?.farmVillage || ""
+        });
+      }
     } catch (err: any) {
       console.error('Failed to load farmer profile:', err);
     } finally {
       setProfileLoading(false);
     }
   };
+  
+  const handleProfileInputChange = (field: keyof typeof profileFormData, value: string) => {
+    setProfileFormData(prev => ({ ...prev, [field]: value }));
+  };
+  
+  const handleProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingProfile(true);
+    
+    try {
+      const updateData: any = {
+        firstName: profileFormData.fullName.split(' ')[0] || profileFormData.fullName,
+        lastName: profileFormData.fullName.split(' ').slice(1).join(' ') || "",
+        name: profileFormData.fullName,
+        sex: profileFormData.gender,
+        nationalId: profileFormData.nationalId,
+        phoneNumber: profileFormData.phoneNumber,
+        email: profileFormData.email,
+        province: profileFormData.province,
+        district: profileFormData.district,
+        sector: profileFormData.sector,
+        cell: profileFormData.cell,
+        village: profileFormData.village,
+        farmerProfile: {
+          farmProvince: profileFormData.province,
+          farmDistrict: profileFormData.district,
+          farmSector: profileFormData.sector,
+          farmCell: profileFormData.cell,
+          farmVillage: profileFormData.village
+        }
+      };
+      
+      await updateUserProfile(updateData);
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been successfully updated.",
+      });
+      
+      // Reload profile to reflect changes
+      await loadFarmerProfile();
+      setProfileStep(1);
+    } catch (err: any) {
+      console.error('Failed to update profile:', err);
+      toast({
+        title: "Update Failed",
+        description: err.message || "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmittingProfile(false);
+    }
+  };
+  
+  const isProfileStep1Valid = profileFormData.fullName && profileFormData.gender && profileFormData.nationalId && profileFormData.phoneNumber;
+  const isProfileStep2Valid = selectedLocation.province && selectedLocation.district && selectedLocation.sector && selectedLocation.village && selectedLocation.cell;
   
   const loadFarms = async () => {
     setFarmsLoading(true);
@@ -377,7 +484,7 @@ export default function FarmerDashboard() {
       setReportsLoading(false);
     }
   };
-
+  
   const loadClaims = async () => {
     try {
       const response: any = await getClaims(1, 100);
@@ -839,6 +946,31 @@ export default function FarmerDashboard() {
     }
   };
 
+  // Validate sowing date is at least 14 days in the future
+  const validateSowingDate = (date: string): { valid: boolean; error?: string } => {
+    if (!date) {
+      return { valid: true }; // Date is optional
+    }
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset to start of day
+    
+    const minDate = new Date(today);
+    minDate.setDate(today.getDate() + 14);
+    
+    const selectedDate = new Date(date);
+    selectedDate.setHours(0, 0, 0, 0);
+    
+    if (selectedDate < minDate) {
+      return {
+        valid: false,
+        error: `Sowing date must be at least 14 days in the future. Minimum date: ${minDate.toISOString().split('T')[0]}`
+      };
+    }
+    
+    return { valid: true };
+  };
+
   const handleCreateField = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -849,6 +981,19 @@ export default function FarmerDashboard() {
         variant: 'destructive'
       });
       return;
+    }
+
+    // Validate sowing date if provided
+    if (newFieldData.sowingDate) {
+      const dateValidation = validateSowingDate(newFieldData.sowingDate);
+      if (!dateValidation.valid) {
+        toast({
+          title: 'Validation Error',
+          description: dateValidation.error || 'Invalid sowing date',
+          variant: 'destructive'
+        });
+        return;
+      }
     }
 
     setIsCreating(true);
@@ -1045,7 +1190,7 @@ export default function FarmerDashboard() {
                           <div className="flex items-center gap-2 text-sm text-gray-600">
                             <Leaf className="h-4 w-4 text-teal-500 flex-shrink-0" />
                             <span>{farm.cropType || farm.crop || "N/A"}</span>
-                          </div>
+    </div>
                         </td>
                         <td className="py-4 px-6 whitespace-nowrap">
                           <div className="text-sm text-gray-600">
@@ -1211,7 +1356,7 @@ export default function FarmerDashboard() {
       )}
       </div>
     </div>
-    );
+  );
   };
 
 
@@ -1220,7 +1365,7 @@ export default function FarmerDashboard() {
       {/* Header */}
       <div className="max-w-7xl mx-auto px-6 mb-6">
         <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
-          <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Farms</h1>
           <p className="text-sm text-gray-600 mt-1">Manage and view your registered farms</p>
@@ -1230,14 +1375,14 @@ export default function FarmerDashboard() {
             variant="outline" 
             onClick={loadFarms}
             disabled={farmsLoading}
-            className="border-gray-300 text-gray-700 hover:bg-gray-100"
+            className="border-gray-300 text-gray-700 hover:bg-gray-100 !rounded-none"
           >
             <Crop className={`h-4 w-4 mr-2 ${farmsLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           <Button 
             onClick={() => setActivePage("create-farm")}
-            className="bg-green-600 hover:bg-green-700 text-gray-900"
+            className="bg-green-600 hover:bg-green-700 text-gray-900 !rounded-none"
           >
             <Plus className="h-4 w-4 mr-2" />
             Create Farm
@@ -1363,7 +1508,7 @@ export default function FarmerDashboard() {
                                     farmId: farmId,
                                     farmName: farm.name || "Unnamed Farm"
                                   })}
-                                  className="border-green-600 text-green-600 hover:bg-green-50 h-8 px-3 text-xs font-medium rounded-md"
+                                  className="border-green-600 text-green-600 hover:bg-green-50 h-8 px-3 text-xs font-medium !rounded-none"
                                 >
                                   <Shield className="h-3.5 w-3.5 mr-1.5" />
                                   Insurance
@@ -1424,14 +1569,14 @@ export default function FarmerDashboard() {
                   setInsuranceRequestDialog({ open: false, farmId: null, farmName: "" });
                   setInsuranceRequestNotes("");
                 }}
-                className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                className="border-gray-300 text-gray-700 hover:bg-gray-100 !rounded-none"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleRequestInsurance}
                 disabled={isRequestingInsurance}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="bg-green-600 hover:bg-green-700 text-white !rounded-none"
               >
                 {isRequestingInsurance ? (
                   <>
@@ -1459,23 +1604,23 @@ export default function FarmerDashboard() {
       <div className="max-w-7xl mx-auto px-6 mb-6">
         <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
           <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => setActivePage("my-fields")}
-            className="text-gray-600 hover:text-gray-700 mb-2"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to My Farms
-          </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setActivePage("my-fields")}
+                className="text-gray-600 hover:text-gray-700 mb-2 !rounded-none"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to My Farms
+            </Button>
             <div>
               <h1 className="text-2xl font-semibold text-gray-900">Register New Farm</h1>
               <p className="text-sm text-gray-500 mt-1">
-                Submit the official farm record required by Starhawk&apos;s backend APIs.
-              </p>
+            Submit the official farm record required by Starhawk&apos;s backend APIs.
+          </p>
             </div>
           </div>
+          </div>
         </div>
-      </div>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6">
@@ -1507,11 +1652,17 @@ export default function FarmerDashboard() {
                   type="date"
                   value={newFieldData.sowingDate}
                   onChange={(e) => setNewFieldData({ ...newFieldData, sowingDate: e.target.value })}
+                  min={(() => {
+                    const today = new Date();
+                    const minDate = new Date(today);
+                    minDate.setDate(today.getDate() + 14);
+                    return minDate.toISOString().split('T')[0];
+                  })()}
                   className="bg-gray-50 border-gray-300 text-gray-900"
                 />
                 <p className="text-xs text-gray-500">
-                  Select the date when crops were sown.
-                </p>
+                  Select the date when crops will be sown (must be at least 14 days in the future).
+              </p>
               </div>
 
             <div className="flex gap-3 pt-2">
@@ -1525,7 +1676,7 @@ export default function FarmerDashboard() {
                     sowingDate: ""
                   });
                   }}
-                className="flex-1 bg-gray-50 hover:bg-gray-100 border border-gray-300 text-gray-900"
+                className="flex-1 bg-gray-50 hover:bg-gray-100 border border-gray-300 text-gray-900 !rounded-none"
                 >
                   Cancel
                 </Button>
@@ -1551,15 +1702,15 @@ export default function FarmerDashboard() {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+      </div>
+    );
 
   const renderFileClaim = () => (
     <div className="min-h-screen bg-gray-50 pt-6 pb-8">
       {/* Header */}
       <div className="max-w-7xl mx-auto px-6 mb-6">
         <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
-          <div>
+        <div>
             <h1 className="text-2xl font-semibold text-gray-900">File a Claim</h1>
             <p className="text-sm text-gray-500 mt-1">Report crop damage and request compensation</p>
           </div>
@@ -1585,7 +1736,7 @@ export default function FarmerDashboard() {
                     type="button"
                     variant="outline"
                     onClick={() => setActivePage("dashboard")}
-                    className="mt-2 border-gray-300 text-gray-900 hover:bg-gray-50"
+                    className="mt-2 border-gray-300 text-gray-900 hover:bg-gray-50 !rounded-none"
                   >
                     Go to Dashboard
                   </Button>
@@ -1768,7 +1919,7 @@ export default function FarmerDashboard() {
               <Button
                 type="submit"
                 disabled={isSubmittingClaim || policies.length === 0}
-                className="bg-red-600 hover:bg-red-700 text-white"
+                className="bg-red-600 hover:bg-red-700 text-white !rounded-none"
               >
                 {isSubmittingClaim ? (
                   <>
@@ -1795,21 +1946,21 @@ export default function FarmerDashboard() {
       {/* Header */}
       <div className="max-w-7xl mx-auto px-6 mb-6">
         <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
-          <div className="flex items-center justify-between">
-            <div>
+      <div className="flex items-center justify-between">
+        <div>
               <h1 className="text-2xl font-semibold text-gray-900">Reports</h1>
               <p className="text-sm text-gray-500 mt-1">View all your claim and risk assessment reports</p>
-            </div>
-            <Button 
-              variant="outline" 
+        </div>
+        <Button 
+          variant="outline" 
               size="sm"
               onClick={loadAllReports}
               disabled={reportsLoading}
-              className="border-gray-200 hover:bg-gray-50 text-xs h-9"
-            >
+              className="border-gray-200 hover:bg-gray-50 text-xs h-9 !rounded-none"
+        >
               <BarChart3 className={`h-4 w-4 mr-2 ${reportsLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
+          Refresh
+        </Button>
           </div>
         </div>
       </div>
@@ -1818,33 +1969,33 @@ export default function FarmerDashboard() {
       <div className="max-w-7xl mx-auto px-6 space-y-6">
         {reportsLoading && (
           <Card className="bg-white border border-gray-200 shadow-sm">
-            <CardContent className="p-12">
-              <div className="flex items-center justify-center">
-                <div className="text-center">
+          <CardContent className="p-12">
+            <div className="flex items-center justify-center">
+              <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-3"></div>
                   <p className="text-sm text-gray-600">Loading reports...</p>
-                </div>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
         {reportsError && !reportsLoading && (
           <Card className="bg-white border border-gray-200 shadow-sm">
-            <CardContent className="p-6">
-              <div className="text-center text-red-600">
-                <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
+          <CardContent className="p-6">
+            <div className="text-center text-red-600">
+              <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
                 <p className="text-sm">{reportsError}</p>
-                <Button 
+              <Button 
                   onClick={loadAllReports} 
                   className="mt-4 bg-green-600 hover:bg-green-700 text-white text-xs h-8"
-                >
-                  Retry
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              >
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
         {!reportsLoading && !reportsError && (
           <>
@@ -1852,18 +2003,18 @@ export default function FarmerDashboard() {
             <Card className="bg-white border border-gray-200 shadow-sm">
               <CardHeader className="border-b border-gray-200 bg-gray-50">
                 <CardTitle className="text-base font-semibold text-gray-900">Claim Reports</CardTitle>
-              </CardHeader>
+          </CardHeader>
               <CardContent className="p-0">
-                {claims.length === 0 ? (
-                  <div className="text-center py-12">
+            {claims.length === 0 ? (
+              <div className="text-center py-12">
                     <FileText className="h-12 w-12 mx-auto text-gray-300 mb-4" />
                     <p className="text-sm font-medium text-gray-900 mb-1">No claim reports found</p>
                     <p className="text-xs text-gray-500">Your claim reports will appear here</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead>
+                  <thead>
                         <tr className="bg-gray-50 border-b border-gray-200">
                           <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Claim ID</th>
                           <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Crop</th>
@@ -1871,14 +2022,14 @@ export default function FarmerDashboard() {
                           <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Damage Type</th>
                           <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Amount</th>
                           <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Status</th>
-                        </tr>
-                      </thead>
+                    </tr>
+                  </thead>
                       <tbody className="bg-white divide-y divide-gray-100">
                         {claims.map((claim) => (
-                          <tr 
+                      <tr 
                             key={claim._id || claim.id} 
                             className="hover:bg-green-50/30 transition-colors"
-                          >
+                      >
                             <td className="py-3.5 px-6 whitespace-nowrap">
                               <div className="text-sm font-medium text-gray-900">{claim.claimNumber || claim._id || claim.id || "N/A"}</div>
                             </td>
@@ -1887,35 +2038,35 @@ export default function FarmerDashboard() {
                             </td>
                             <td className="py-3.5 px-6 whitespace-nowrap">
                               <div className="text-sm text-gray-900">
-                                {claim.createdAt || claim.submittedAt || claim.date 
-                                  ? new Date(claim.createdAt || claim.submittedAt || claim.date).toLocaleDateString()
-                                  : "N/A"}
+                          {claim.createdAt || claim.submittedAt || claim.date 
+                            ? new Date(claim.createdAt || claim.submittedAt || claim.date).toLocaleDateString()
+                            : "N/A"}
                               </div>
-                            </td>
+                        </td>
                             <td className="py-3.5 px-6 whitespace-nowrap">
                               <div className="text-sm text-gray-900">{claim.lossEventType || claim.damageType || "N/A"}</div>
                             </td>
                             <td className="py-3.5 px-6 whitespace-nowrap">
                               <div className="text-sm text-gray-900">
-                                {claim.amount || claim.claimAmount 
-                                  ? `${(claim.amount || claim.claimAmount).toLocaleString()} RWF`
-                                  : "N/A"}
+                          {claim.amount || claim.claimAmount 
+                            ? `${(claim.amount || claim.claimAmount).toLocaleString()} RWF`
+                            : "N/A"}
                               </div>
-                            </td>
+                        </td>
                             <td className="py-3.5 px-6 whitespace-nowrap">
                               <Badge className={`text-xs py-1 px-2.5 ${getStatusColor(claim.status?.toLowerCase() || "pending")}`}>
-                                {getStatusIcon(claim.status?.toLowerCase() || "pending")}
-                                <span className="ml-1 capitalize">{claim.status?.replace('_', ' ') || "Pending"}</span>
-                              </Badge>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                            {getStatusIcon(claim.status?.toLowerCase() || "pending")}
+                            <span className="ml-1 capitalize">{claim.status?.replace('_', ' ') || "Pending"}</span>
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
             {/* Risk Assessment Reports */}
             <Card className="bg-white border border-gray-200 shadow-sm">
@@ -1998,7 +2149,7 @@ export default function FarmerDashboard() {
               setSelectedFarm(null);
               setActivePage("my-fields");
             }}
-            className="text-gray-900 hover:bg-gray-50"
+                  className="text-gray-900 hover:bg-gray-50 !rounded-none"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to My Fields
@@ -2075,7 +2226,7 @@ export default function FarmerDashboard() {
               setSelectedFarm(null);
               setActivePage("my-fields");
             }}
-            className="text-gray-900 hover:bg-gray-50"
+                  className="text-gray-900 hover:bg-gray-50 !rounded-none"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Fields List
@@ -2166,7 +2317,7 @@ export default function FarmerDashboard() {
                     farmId: farm._id || farm.id,
                     farmName: farm.name || "Unnamed Farm"
                   })}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-green-600 hover:bg-green-700 text-white !rounded-none"
                 >
                   <Shield className="h-4 w-4 mr-2" />
                   Request Insurance
@@ -2179,7 +2330,7 @@ export default function FarmerDashboard() {
                   loadFarmAnalytics(farm._id || farm.id);
                   setActivePage("farm-analytics");
                 }}
-                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                  className="border-blue-600 text-blue-600 hover:bg-blue-50 !rounded-none"
               >
                 <TrendingUp className="h-4 w-4 mr-2" />
                 View Analytics
@@ -2205,7 +2356,7 @@ export default function FarmerDashboard() {
               setSelectedFarm(null);
               setActivePage("my-fields");
             }}
-            className="text-gray-900 hover:bg-gray-50"
+                  className="text-gray-900 hover:bg-gray-50 !rounded-none"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to My Fields
@@ -2228,26 +2379,26 @@ export default function FarmerDashboard() {
         <div className="max-w-7xl mx-auto px-6 mb-6">
           <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
             <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
+            <Button
+              variant="ghost"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   setSelectedFarm(null);
                   setActivePage("my-fields");
-                }}
+              }}
                 className="text-gray-600 hover:text-gray-700 p-0 h-auto"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
-              </Button>
+            </Button>
               <div>
                 <h1 className="text-2xl font-semibold text-gray-900">Farm Analytics</h1>
                 <p className="text-sm text-gray-500 mt-1">{selectedFarm.name || "Weather forecasts, historical data, and vegetation indices"}</p>
               </div>
             </div>
           </div>
-        </div>
+            </div>
 
         {/* Main Content */}
         <div className="max-w-7xl mx-auto px-6">
@@ -2269,7 +2420,7 @@ export default function FarmerDashboard() {
               if (farmId) loadFarmAnalytics(farmId);
             }}
             disabled={loading}
-            className="border-gray-300 text-gray-700 hover:bg-gray-100"
+            className="border-gray-300 text-gray-700 hover:bg-gray-100 !rounded-none"
           >
             <Clock className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -2632,7 +2783,7 @@ export default function FarmerDashboard() {
               </CardContent>
             </Card>
           </>
-                )}
+        )}
         </div>
       </div>
     );
@@ -2651,44 +2802,169 @@ export default function FarmerDashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6">
-      <Card className="bg-white border border-gray-200 shadow-sm">
-        <CardHeader className="border-b border-gray-200 bg-gray-50">
-          <CardTitle className="text-base font-semibold text-gray-900">Personal Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name</Label>
-              <Input id="fullName" value={farmerName} readOnly />
-                </div>
-            <div className="space-y-2">
-              <Label htmlFor="farmerId">Farmer ID</Label>
-              <Input id="farmerId" value={farmerId} disabled />
-                </div>
-                </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input id="phone" value={farmerPhone || ""} readOnly placeholder="+250 7XX XXX XXX" />
-              </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={farmerEmail || ""} readOnly placeholder="your.email@example.com" />
+      <div className="max-w-4xl mx-auto px-6">
+        {/* Progress Steps */}
+        <div className="flex items-center justify-center mb-8">
+          <div className="flex items-center space-x-6">
+            <div className={`flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 ${profileStep >= 1 ? 'bg-green-600 text-white shadow-lg' : 'bg-gray-200 text-gray-600'}`}>
+              <span className="font-semibold">1</span>
+            </div>
+            <div className={`w-20 h-1 rounded-full transition-all duration-300 ${profileStep >= 2 ? 'bg-green-600' : 'bg-gray-200'}`}></div>
+            <div className={`flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 ${profileStep >= 2 ? 'bg-green-600 text-white shadow-lg' : 'bg-gray-200 text-gray-600'}`}>
+              <span className="font-semibold">2</span>
             </div>
           </div>
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <Input id="location" placeholder="Province, District, Sector, Cell, Village" />
-          </div>
+        <Card className="max-w-2xl mx-auto bg-white border border-gray-200 shadow-sm">
+          <CardHeader className="text-center pb-8">
+            <CardTitle className="text-2xl font-semibold text-gray-900 mb-2">
+              {profileStep === 1 ? "Personal Information" : "Location Details"}
+            </CardTitle>
+            <p className="text-gray-600">
+              {profileStep === 1 ? "Update your personal details" : "Update your location information"}
+            </p>
+          </CardHeader>
+          <CardContent>
+            {profileLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">Loading profile...</p>
+              </div>
+            ) : (
+              <form onSubmit={handleProfileSubmit} className="space-y-6">
+                {profileStep === 1 && (
+                  <>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="fullName">Full Name *</Label>
+                        <Input
+                          id="fullName"
+                          value={profileFormData.fullName}
+                          onChange={(e) => handleProfileInputChange('fullName', e.target.value)}
+                          placeholder="Enter your full name"
+                          required
+                          className="!rounded-none"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="gender">Gender *</Label>
+                        <Select value={profileFormData.gender} onValueChange={(value) => handleProfileInputChange('gender', value)}>
+                          <SelectTrigger className="!rounded-none">
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="male">Male</SelectItem>
+                            <SelectItem value="female">Female</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
 
-          <Button className="bg-green-600 hover:bg-green-700 text-white text-xs h-9">
-            Update Profile
-          </Button>
-        </CardContent>
-      </Card>
+                    <div className="space-y-2">
+                      <Label htmlFor="nationalId">National ID *</Label>
+                      <Input
+                        id="nationalId"
+                        value={profileFormData.nationalId}
+                        onChange={(e) => handleProfileInputChange('nationalId', e.target.value)}
+                        placeholder="Enter your national ID number"
+                        required
+                        className="!rounded-none"
+                      />
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="phoneNumber">Phone Number *</Label>
+                        <Input
+                          id="phoneNumber"
+                          type="tel"
+                          value={profileFormData.phoneNumber}
+                          onChange={(e) => handleProfileInputChange('phoneNumber', e.target.value)}
+                          placeholder="+250 7XX XXX XXX"
+                          required
+                          className="!rounded-none"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email (Optional)</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={profileFormData.email}
+                          onChange={(e) => handleProfileInputChange('email', e.target.value)}
+                          placeholder="your.email@example.com"
+                          className="!rounded-none"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {profileStep === 2 && (
+                  <>
+                    <div className="space-y-4">
+                      <div className="text-center mb-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Select Your Location</h3>
+                        <p className="text-gray-600">Choose your province, district, sector, village, and cell</p>
+                      </div>
+
+                      <RwandaLocationSelector
+                        onLocationChange={(location) => {
+                          setSelectedLocation(location);
+                          // Update form data with selected location
+                          setProfileFormData(prev => ({
+                            ...prev,
+                            province: location.province?.name || '',
+                            district: location.district?.name || '',
+                            sector: location.sector?.name || '',
+                            village: location.village?.name || '',
+                            cell: location.cell?.name || ''
+                          }));
+                        }}
+                        levels={['province', 'district', 'sector', 'village', 'cell']}
+                        className="space-y-4"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="flex justify-between pt-8">
+                  {profileStep === 2 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setProfileStep(1)}
+                      className="!rounded-none"
+                    >
+                      Previous
+                    </Button>
+                  )}
+                  <div className="flex-1"></div>
+                  {profileStep === 1 ? (
+                    <Button
+                      type="button"
+                      onClick={() => setProfileStep(2)}
+                      disabled={!isProfileStep1Valid}
+                      className="bg-green-600 hover:bg-green-700 text-white !rounded-none"
+                    >
+                      Next Step
+                    </Button>
+                  ) : (
+                    <Button
+                      type="submit"
+                      disabled={!isProfileStep2Valid || isSubmittingProfile}
+                      className="bg-green-600 hover:bg-green-700 text-white !rounded-none"
+                    >
+                      {isSubmittingProfile ? "Updating Profile..." : "Update Profile"}
+                    </Button>
+                  )}
+                </div>
+              </form>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
@@ -2736,7 +3012,7 @@ export default function FarmerDashboard() {
         localStorage.removeItem('userId');
         localStorage.removeItem('phoneNumber');
         localStorage.removeItem('email');
-        window.location.href = '/farmer-login';
+        window.location.href = '/role-selection';
       }}
     >
       {renderPage()}

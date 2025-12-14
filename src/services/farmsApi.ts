@@ -113,16 +113,28 @@ class FarmsApiService {
       }
 
       if (!response.ok) {
-        // Log the full error response for debugging
-        console.error('API Error Response:', JSON.stringify({
-          status: response.status,
-          statusText: response.statusText,
-          url: url,
-          data: data
-        }, null, 2));
+        // Handle 400 errors for missing EOSDA field ID gracefully (expected for unprocessed fields)
+        if (response.status === 400 && data.detail && 
+            (data.detail.includes('EOSDA') || data.detail.includes('register the farm'))) {
+          // This is expected - farm needs to be processed first
+          // Return a special error that can be caught and handled silently
+          const error = new Error(data.detail);
+          (error as any).isExpected = true;
+          throw error;
+        }
+        
+        // Log the full error response for debugging (only for unexpected errors)
+        if (response.status !== 400 || !data.detail?.includes('EOSDA')) {
+          console.error('API Error Response:', JSON.stringify({
+            status: response.status,
+            statusText: response.statusText,
+            url: url,
+            data: data
+          }, null, 2));
+        }
         
         // Try to extract more detailed error information
-        const errorMessage = data.message || data.error || data.details || data.title || `HTTP error! status: ${response.status}`;
+        const errorMessage = data.message || data.error || data.detail || data.title || `HTTP error! status: ${response.status}`;
         const errorDetails = data.errors ? JSON.stringify(data.errors) : '';
         const instance = data.instance ? ` (${data.instance})` : '';
         const fullError = errorDetails ? `${errorMessage}${instance} - ${errorDetails}` : `${errorMessage}${instance}`;
@@ -278,21 +290,37 @@ class FarmsApiService {
   }
 
   // Upload KML
-  async uploadKML(file: File) {
+  async uploadKML(file: File, farmId: string) {
     const formData = new FormData();
+    // Append the file
     formData.append('file', file);
+    // API requires a 'name' field - use the file name without extension as the name
+    const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
+    formData.append('name', fileNameWithoutExt || 'Field Boundary');
 
     const token = this.getToken();
     const headers: HeadersInit = {};
     if (token) {
       headers.Authorization = `Bearer ${token}`;
     }
+    // Don't set Content-Type for FormData - let the browser set it with boundary
+    // Setting Content-Type manually will break the multipart/form-data boundary
 
-    const response = await fetch(`${this.baseURL}/upload-kml`, {
+    // Construct URL: baseURL is already /api/v1/farms, so we need /{farmId}/upload-kml
+    // Final URL: /api/v1/farms/{farmId}/upload-kml
+    const url = `${this.baseURL}/${farmId}/upload-kml`;
+    console.log('📤 Uploading KML to:', url);
+    console.log('📦 Farm ID:', farmId);
+    console.log('📄 File:', file.name, file.size, 'bytes', 'type:', file.type);
+    console.log('📝 Name field:', fileNameWithoutExt || 'Field Boundary');
+    
+    const response = await fetch(url, {
       method: 'POST',
       headers,
       body: formData,
     });
+    
+    console.log('📥 Upload response status:', response.status);
 
     if (response.status === 401) {
       localStorage.removeItem('token');
@@ -300,12 +328,63 @@ class FarmsApiService {
       throw new Error('Authentication required. Please log in again.');
     }
 
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message || data.error || `HTTP error! status: ${response.status}`);
+    let responseData;
+    try {
+      responseData = await response.json();
+      console.log('📥 Response data:', JSON.stringify(responseData, null, 2));
+    } catch (e) {
+      const text = await response.text();
+      console.log('📥 Response text (not JSON):', text);
+      responseData = { message: text || `HTTP error! status: ${response.status}` };
     }
 
-    return data;
+    if (!response.ok) {
+      // Log detailed error information
+      console.error('❌ Full error response:', JSON.stringify(responseData, null, 2));
+      
+      // Handle 403 Forbidden - Permission denied
+      if (response.status === 403) {
+        const errorMessage = responseData.detail || responseData.message || responseData.error || 'Permission denied';
+        throw new Error(errorMessage);
+      }
+      
+      // Check for validationErrors object (from the API response structure)
+      if (responseData.validationErrors) {
+        const validationMessages: string[] = [];
+        Object.entries(responseData.validationErrors).forEach(([key, errors]) => {
+          if (Array.isArray(errors)) {
+            errors.forEach((error: string) => {
+              validationMessages.push(`${key}: ${error}`);
+            });
+          } else {
+            validationMessages.push(`${key}: ${errors}`);
+          }
+        });
+        throw new Error(`Validation failed: ${validationMessages.join(', ')}`);
+      }
+      
+      // Check for validation errors array (common in Express.js validation)
+      if (responseData.errors && Array.isArray(responseData.errors)) {
+        const validationErrors = responseData.errors.map((err: any) => 
+          `${err.field || err.path || err.param || 'field'}: ${err.message || err.msg || 'validation error'}`
+        ).join(', ');
+        throw new Error(`Validation failed: ${validationErrors}`);
+      }
+      
+      // Check for nested error messages
+      if (responseData.error && typeof responseData.error === 'object') {
+        const errorDetails = Object.entries(responseData.error)
+          .map(([key, value]) => `${key}: ${value}`)
+          .join(', ');
+        throw new Error(`Validation failed: ${errorDetails}`);
+      }
+      
+      const errorMessage = responseData.message || responseData.error || responseData.detail || responseData.msg || `HTTP error! status: ${response.status}`;
+      console.error('❌ Upload failed:', errorMessage);
+      throw new Error(errorMessage);
+    }
+
+    return responseData;
   }
 
   // Create Insurance Request
@@ -329,18 +408,47 @@ class FarmsApiService {
   }
 
   // Get Weather Forecast for a Farm
-  async getWeatherForecast(farmId: string, startDate: string, endDate: string) {
-    return this.request<any>(`/${farmId}/weather/forecast?dateStart=${startDate}&dateEnd=${endDate}`);
+  async getWeatherForecast(farmId: string, startDate?: string, endDate?: string) {
+    const params = startDate && endDate ? `?dateStart=${startDate}&dateEnd=${endDate}` : '';
+    return this.request<any>(`/${farmId}/weather/forecast${params}`);
   }
 
   // Get Historical Weather
-  async getHistoricalWeather(farmId: string, startDate: string, endDate: string) {
-    return this.request<any>(`/${farmId}/weather/historical?dateStart=${startDate}&dateEnd=${endDate}`);
+  async getHistoricalWeather(farmId: string, startDate?: string, endDate?: string) {
+    const params = startDate && endDate ? `?dateStart=${startDate}&dateEnd=${endDate}` : '';
+    return this.request<any>(`/${farmId}/weather/historical${params}`);
+  }
+
+  // Get Accumulated Weather Data (GDD, seasonal analysis)
+  async getAccumulatedWeather(farmId: string, startDate?: string, endDate?: string) {
+    const params = startDate && endDate ? `?dateStart=${startDate}&dateEnd=${endDate}` : '';
+    return this.request<any>(`/${farmId}/weather/accumulated${params}`);
   }
 
   // Get Vegetation Indices Statistics
-  async getVegetationStats(farmId: string, startDate: string, endDate: string, indices: string = 'NDVI,MSAVI') {
-    return this.request<any>(`/${farmId}/indices/statistics?dateStart=${startDate}&dateEnd=${endDate}&indices=${indices}`);
+  async getVegetationStats(farmId: string, startDate?: string, endDate?: string, indices: string = 'NDVI,MSAVI') {
+    const params = new URLSearchParams();
+    if (startDate) params.append('dateStart', startDate);
+    if (endDate) params.append('dateEnd', endDate);
+    if (indices) params.append('indices', indices);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    return this.request<any>(`/${farmId}/indices/statistics${queryString}`);
+  }
+
+  // Get NDVI Time Series
+  async getNDVITimeSeries(farmId: string, startDate?: string, endDate?: string) {
+    const params = startDate && endDate ? `?dateStart=${startDate}&dateEnd=${endDate}` : '';
+    return this.request<any>(`/${farmId}/indices/ndvi${params}`);
+  }
+
+  // Get Field Trend (NDVI or other index over time)
+  async getFieldTrend(farmId: string, index: string = 'NDVI', startDate?: string, endDate?: string) {
+    const params = new URLSearchParams();
+    if (index) params.append('index', index);
+    if (startDate) params.append('dateStart', startDate);
+    if (endDate) params.append('dateEnd', endDate);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    return this.request<any>(`/${farmId}/indices/trend${queryString}`);
   }
 }
 
@@ -355,10 +463,13 @@ export const getAllFarms = () => farmsApiService.getAllFarms();
 export const getFarmById = (farmId: string) => farmsApiService.getFarmById(farmId);
 export const updateFarm = (farmId: string, updateData: UpdateFarmData) => farmsApiService.updateFarm(farmId, updateData);
 export const uploadShapefile = (file: File) => farmsApiService.uploadShapefile(file);
-export const uploadKML = (file: File) => farmsApiService.uploadKML(file);
+export const uploadKML = (file: File, farmId: string) => farmsApiService.uploadKML(file, farmId);
 export const createInsuranceRequest = (farmId: string, notes?: string) => farmsApiService.createInsuranceRequest(farmId, notes);
 export const getInsuranceRequests = (page?: number, size?: number, status?: string) => farmsApiService.getInsuranceRequests(page, size, status);
-export const getWeatherForecast = (farmId: string, startDate: string, endDate: string) => farmsApiService.getWeatherForecast(farmId, startDate, endDate);
-export const getHistoricalWeather = (farmId: string, startDate: string, endDate: string) => farmsApiService.getHistoricalWeather(farmId, startDate, endDate);
-export const getVegetationStats = (farmId: string, startDate: string, endDate: string, indices?: string) => farmsApiService.getVegetationStats(farmId, startDate, endDate, indices);
+export const getWeatherForecast = (farmId: string, startDate?: string, endDate?: string) => farmsApiService.getWeatherForecast(farmId, startDate, endDate);
+export const getHistoricalWeather = (farmId: string, startDate?: string, endDate?: string) => farmsApiService.getHistoricalWeather(farmId, startDate, endDate);
+export const getAccumulatedWeather = (farmId: string, startDate?: string, endDate?: string) => farmsApiService.getAccumulatedWeather(farmId, startDate, endDate);
+export const getVegetationStats = (farmId: string, startDate?: string, endDate?: string, indices?: string) => farmsApiService.getVegetationStats(farmId, startDate, endDate, indices);
+export const getNDVITimeSeries = (farmId: string, startDate?: string, endDate?: string) => farmsApiService.getNDVITimeSeries(farmId, startDate, endDate);
+export const getFieldTrend = (farmId: string, index?: string, startDate?: string, endDate?: string) => farmsApiService.getFieldTrend(farmId, index, startDate, endDate);
 
