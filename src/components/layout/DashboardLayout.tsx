@@ -101,7 +101,7 @@ export default function DashboardLayout({
 
   const getUserColor = () => {
     switch (userType) {
-      case "farmer": return "bg-green-600";
+      case "farmer": return "bg-[rgba(20,40,75,1)]";
       case "assessor": return "bg-orange-600";
       case "insurer": return "bg-blue-600";
       case "admin": return "bg-purple-600";
@@ -121,10 +121,10 @@ export default function DashboardLayout({
   };
 
   const getNavigationColors = () => {
-    // Use green for all user types
+    // Use primary color for all user types
     return {
-      active: "bg-green-50 text-green-700",
-      hover: "hover:text-green-600"
+      active: "bg-[rgba(20,40,75,0.1)] text-[rgba(15,30,56,1)]",
+      hover: "hover:text-[rgba(20,40,75,1)]"
     };
   };
 
@@ -251,15 +251,15 @@ export default function DashboardLayout({
                   }}
                   className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'justify-between px-4'} py-4 text-sm font-medium transition-all duration-300 ease-in-out group relative ${
                     isActive
-                      ? `bg-green-50 text-green-700 shadow-sm ${sidebarCollapsed ? 'border-l-2' : 'border-l-4'} border-l-green-500`
-                      : `text-gray-700 hover:bg-green-50 hover:text-green-700 ${colors.hover}`
+                      ? `bg-[rgba(20,40,75,0.1)] text-[rgba(15,30,56,1)] shadow-sm ${sidebarCollapsed ? 'border-l-2' : 'border-l-4'} border-l-[rgba(20,40,75,0.75)]`
+                      : `text-gray-700 hover:bg-[rgba(20,40,75,0.1)] hover:text-[rgba(15,30,56,1)] ${colors.hover}`
                   }`}
                   title={sidebarCollapsed ? item.label : undefined}
                 >
                   {sidebarCollapsed ? (
                     // Collapsed: Only icon
                     <div className="flex items-center justify-center relative">
-                      <Icon className={`h-5 w-5 ${isActive ? 'text-green-600' : 'text-gray-600'}`} />
+                      <Icon className={`h-5 w-5 ${isActive ? 'text-[rgba(20,40,75,1)]' : 'text-gray-600'}`} />
                       {item.badge && item.badge > 0 && (
                         <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
                       )}
@@ -274,8 +274,8 @@ export default function DashboardLayout({
                       {item.badge && item.badge > 0 && (
                         <Badge variant="secondary" className={`text-xs ${
                           isActive 
-                            ? 'bg-green-600 text-white' 
-                            : 'bg-green-100 text-green-700'
+                            ? 'bg-[rgba(20,40,75,1)] text-white' 
+                            : 'bg-[rgba(20,40,75,0.15)] text-[rgba(15,30,56,1)]'
                         }`}>
                           {item.badge}
                         </Badge>

@@ -157,7 +157,7 @@ export default function FarmerLogin() {
                   });
                 }}
                 className={`flex-1 ${isLoginMode 
-                  ? "bg-green-600 hover:bg-green-700 text-white" 
+                  ? "bg-[rgba(20,40,75,1)] hover:bg-[rgba(15,30,56,1)] text-white" 
                   : "bg-gray-100 hover:bg-gray-200 text-gray-700"}`}
               >
                 <LogIn className="h-4 w-4 mr-2" />
@@ -177,7 +177,7 @@ export default function FarmerLogin() {
                   });
                 }}
                 className={`flex-1 ${!isLoginMode 
-                  ? "bg-green-600 hover:bg-green-700 text-white" 
+                  ? "bg-[rgba(20,40,75,1)] hover:bg-[rgba(15,30,56,1)] text-white" 
                   : "bg-gray-100 hover:bg-gray-200 text-gray-700"}`}
               >
                 <UserPlus className="h-4 w-4 mr-2" />
@@ -289,7 +289,7 @@ export default function FarmerLogin() {
 
               <Button
                 type="submit"
-                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                className="w-full bg-[rgba(20,40,75,1)] hover:bg-[rgba(15,30,56,1)] text-white"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -318,7 +318,7 @@ export default function FarmerLogin() {
                   Don't have an account yet?{" "}
                   <button
                     onClick={() => setIsLoginMode(false)}
-                    className="text-green-600 hover:text-green-700 font-medium"
+                    className="text-[rgba(20,40,75,1)] hover:text-[rgba(15,30,56,1)] font-medium"
                   >
                     Create Account
                   </button>
@@ -328,7 +328,7 @@ export default function FarmerLogin() {
                   Already have an account?{" "}
                   <button
                     onClick={() => setIsLoginMode(true)}
-                    className="text-green-600 hover:text-green-700 font-medium"
+                    className="text-[rgba(20,40,75,1)] hover:text-[rgba(15,30,56,1)] font-medium"
                   >
                     Sign In
                   </button>
@@ -349,7 +349,7 @@ export default function FarmerLogin() {
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-500">
             Need help? Contact support at{" "}
-            <a href="tel:+250788123456" className="text-green-600 hover:text-green-700">
+            <a href="tel:+250788123456" className="text-[rgba(20,40,75,1)] hover:text-[rgba(15,30,56,1)]">
               +250 788 123 456
             </a>
           </p>

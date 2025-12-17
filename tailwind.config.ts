@@ -22,6 +22,19 @@ export default {
 				sans: ['Montserrat', 'sans-serif'],
 			},
 			colors: {
+				// Custom primary color (replacing green)
+				primary: {
+					50: 'rgba(20, 40, 75, 0.05)',
+					100: 'rgba(20, 40, 75, 0.1)',
+					200: 'rgba(20, 40, 75, 0.2)',
+					300: 'rgba(20, 40, 75, 0.3)',
+					400: 'rgba(20, 40, 75, 0.4)',
+					500: 'rgba(20, 40, 75, 0.6)',
+					600: 'rgba(20, 40, 75, 1)',
+					700: 'rgba(15, 30, 56, 1)',
+					800: 'rgba(10, 20, 38, 1)',
+					900: 'rgba(5, 10, 19, 1)',
+				},
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',

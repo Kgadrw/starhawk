@@ -31,19 +31,19 @@ export function HeroSection() {
         {/* Background Image - Full width aerial drone photo */}
         <div className="absolute inset-0">
           <img 
-            src="/farmer.jpg" 
-            alt="Farmer background" 
+            src="/intro.webp" 
+            alt="Hero background" 
             className="w-full h-full object-cover"
           />
         </div>
         
-        {/* Dark Overlay for text contrast */}
-        <div className="absolute inset-0 bg-black/40"></div>
+        {/* Color Overlay to mask green and provide text contrast */}
+        <div className="absolute inset-0" style={{ backgroundColor: 'rgba(20, 40, 75, 0.6)' }}></div>
 
         {/* Content Container - Top-left aligned */}
         <div className="relative z-10 flex-1 flex flex-col">
           {/* Top Section - STARHAWK Text */}
-          <div className="flex-1 flex items-start justify-start px-12 sm:px-16 md:px-20 lg:px-28 xl:px-32 pt-12 md:pt-16 lg:pt-20">
+          <div className="flex-1 flex items-start justify-start px-16 sm:px-20 md:px-28 lg:px-36 xl:px-44 pt-16 md:pt-20 lg:pt-24">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -55,7 +55,7 @@ export function HeroSection() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
-                className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-3 tracking-tight"
+                className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-3 tracking-tight"
                 style={{ fontFamily: 'AvenirLTStd-Black, sans-serif' }}
               >
                 STARHAWK

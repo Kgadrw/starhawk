@@ -8,7 +8,7 @@ export const dashboardTheme = {
   cardDescription: "text-gray-600",
   
   // Button styling
-  buttonPrimary: "bg-green-600 hover:bg-green-700 text-white border border-green-600",
+  buttonPrimary: "bg-[rgba(20,40,75,1)] hover:bg-[rgba(15,30,56,1)] text-white border border-[rgba(20,40,75,1)]",
   buttonSecondary: "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300",
   
   // Input styling
@@ -30,7 +30,7 @@ export const dashboardTheme = {
   borderSecondary: "border-gray-300",
   
   // Accent colors
-  accentGreen: "text-green-600",
+  accentGreen: "text-[rgba(20,40,75,1)]",
   accentBlue: "text-blue-600",
   accentOrange: "text-orange-600",
   accentPurple: "text-purple-600",

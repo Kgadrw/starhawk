@@ -290,13 +290,14 @@ class FarmsApiService {
   }
 
   // Upload KML
-  async uploadKML(file: File, farmId: string) {
+  // Endpoint: POST /farms/:farmId/upload-kml
+  async uploadKML(file: File, farmId: string, name?: string) {
     const formData = new FormData();
     // Append the file
     formData.append('file', file);
-    // API requires a 'name' field - use the file name without extension as the name
-    const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
-    formData.append('name', fileNameWithoutExt || 'Field Boundary');
+    // API requires a 'name' field - use provided name or file name without extension
+    const farmName = name || file.name.replace(/\.[^/.]+$/, '') || 'Field Boundary';
+    formData.append('name', farmName);
 
     const token = this.getToken();
     const headers: HeadersInit = {};
@@ -463,7 +464,7 @@ export const getAllFarms = () => farmsApiService.getAllFarms();
 export const getFarmById = (farmId: string) => farmsApiService.getFarmById(farmId);
 export const updateFarm = (farmId: string, updateData: UpdateFarmData) => farmsApiService.updateFarm(farmId, updateData);
 export const uploadShapefile = (file: File) => farmsApiService.uploadShapefile(file);
-export const uploadKML = (file: File, farmId: string) => farmsApiService.uploadKML(file, farmId);
+export const uploadKML = (file: File, farmId: string, name?: string) => farmsApiService.uploadKML(file, farmId, name);
 export const createInsuranceRequest = (farmId: string, notes?: string) => farmsApiService.createInsuranceRequest(farmId, notes);
 export const getInsuranceRequests = (page?: number, size?: number, status?: string) => farmsApiService.getInsuranceRequests(page, size, status);
 export const getWeatherForecast = (farmId: string, startDate?: string, endDate?: string) => farmsApiService.getWeatherForecast(farmId, startDate, endDate);

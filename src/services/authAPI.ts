@@ -108,18 +108,10 @@ class AuthApiService {
       if (!response.ok) {
         // Provide better error messages for common status codes
         if (response.status === 401) {
-          // Log detailed error for debugging
-          console.error('401 Unauthorized - Full response:', data);
-          console.error('401 Unauthorized - JSON:', JSON.stringify(data, null, 2));
-          
           // Extract error message from various possible response formats
           const errorMessage = data.message || data.error || data.detail || 'Invalid credentials. Please check your phone number and password.';
           throw new Error(errorMessage);
         } else if (response.status === 400) {
-          // Log detailed error for debugging
-          console.error('400 Bad Request - Full response:', data);
-          console.error('400 Bad Request - JSON:', JSON.stringify(data, null, 2));
-          
           // Extract validation errors if they exist
           let errorMessage = data.message || data.error || data.detail || 'Bad request. Please check your input.';
           
@@ -160,8 +152,6 @@ class AuthApiService {
 
       return data;
     } catch (error: any) {
-      console.error('Auth API request failed:', error);
-      
       // Handle timeout/abort errors
       if (error.name === 'AbortError' || error.name === 'TimeoutError') {
         throw new Error('Request timeout. The server is taking too long to respond. Please check your connection and try again.');
@@ -204,10 +194,8 @@ class AuthApiService {
       localStorage.setItem('phoneNumber', data.phoneNumber || '');
       localStorage.setItem('email', data.email || '');
 
-      console.log('✅ Admin login successful:', data);
       return data;
     } catch (error: any) {
-      console.error('❌ Login failed:', error);
       // Re-throw with a more user-friendly message if possible
       if (error.message) {
         throw error;
@@ -220,25 +208,20 @@ class AuthApiService {
   async assessorLogin(phoneNumber: string, password: string): Promise<LoginResponse> {
     try {
       const requestBody = { phoneNumber, password };
-      console.log('📤 Assessor login request:', JSON.stringify(requestBody, null, 2));
       
       const response = await this.request<any>('/login', {
         method: 'POST',
         body: JSON.stringify(requestBody),
       });
 
-      console.log('📥 Assessor login response:', response);
-
       // Handle both response structures: { data: {...} } or direct {...}
       const data = response.data || response;
 
       if (!data || !data.token) {
-        console.error('❌ Invalid response structure:', data);
         throw new Error('Invalid response from server');
       }
 
       if (data.role !== 'ASSESSOR') {
-        console.error('❌ Invalid role:', data.role, 'Expected: ASSESSOR');
         throw new Error('Access denied. Only assessors can log in here.');
       }
 
@@ -249,15 +232,8 @@ class AuthApiService {
       localStorage.setItem('phoneNumber', data.phoneNumber || '');
       localStorage.setItem('email', data.email || '');
 
-      console.log('✅ Assessor login successful:', data);
       return data;
     } catch (error: any) {
-      console.error('❌ Assessor login failed:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      });
       // Re-throw with a more user-friendly message if possible
       if (error.message) {
         throw error;
@@ -270,25 +246,20 @@ class AuthApiService {
   async farmerLogin(phoneNumber: string, password: string): Promise<LoginResponse> {
     try {
       const requestBody = { phoneNumber, password };
-      console.log('📤 Farmer login request:', JSON.stringify(requestBody, null, 2));
       
       const response = await this.request<any>('/login', {
         method: 'POST',
         body: JSON.stringify(requestBody),
       });
 
-      console.log('📥 Farmer login response:', response);
-
       // Handle both response structures: { data: {...} } or direct {...}
       const data = response.data || response;
 
       if (!data || !data.token) {
-        console.error('❌ Invalid response structure:', data);
         throw new Error('Invalid response from server');
       }
 
       if (data.role !== 'FARMER') {
-        console.error('❌ Invalid role:', data.role, 'Expected: FARMER');
         throw new Error('Access denied. Only farmers can log in here.');
       }
 
@@ -299,15 +270,8 @@ class AuthApiService {
       localStorage.setItem('phoneNumber', data.phoneNumber || '');
       localStorage.setItem('email', data.email || '');
 
-      console.log('✅ Farmer login successful:', data);
       return data;
     } catch (error: any) {
-      console.error('❌ Farmer login failed:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      });
       // Re-throw with a more user-friendly message if possible
       if (error.message) {
         throw error;
@@ -320,25 +284,20 @@ class AuthApiService {
   async insurerLogin(phoneNumber: string, password: string): Promise<LoginResponse> {
     try {
       const requestBody = { phoneNumber, password };
-      console.log('📤 Insurer login request:', JSON.stringify(requestBody, null, 2));
       
       const response = await this.request<any>('/login', {
         method: 'POST',
         body: JSON.stringify(requestBody),
       });
 
-      console.log('📥 Insurer login response:', response);
-
       // Handle both response structures: { data: {...} } or direct {...}
       const data = response.data || response;
 
       if (!data || !data.token) {
-        console.error('❌ Invalid response structure:', data);
         throw new Error('Invalid response from server');
       }
 
       if (data.role !== 'INSURER') {
-        console.error('❌ Invalid role:', data.role, 'Expected: INSURER');
         throw new Error('Access denied. Only insurers can log in here.');
       }
 
@@ -349,15 +308,8 @@ class AuthApiService {
       localStorage.setItem('phoneNumber', data.phoneNumber || '');
       localStorage.setItem('email', data.email || '');
 
-      console.log('✅ Insurer login successful:', data);
       return data;
     } catch (error: any) {
-      console.error('❌ Insurer login failed:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      });
       // Re-throw with a more user-friendly message if possible
       if (error.message) {
         throw error;

@@ -95,6 +95,16 @@ export default function RoleSelection() {
         return;
       }
 
+      // Validate and format phone number
+      const phoneValidation = validatePhoneNumber(formData.phoneNumber);
+      if (!phoneValidation.valid) {
+        setError(phoneValidation.error || "Invalid phone number format.");
+        setIsLoading(false);
+        return;
+      }
+
+      const formattedPhone = phoneValidation.formatted;
+
       // Try to authenticate and determine role
       // We'll try different login methods to find the correct role
       const loginMethods = [
@@ -127,7 +137,7 @@ export default function RoleSelection() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-              phoneNumber: formData.phoneNumber, 
+              phoneNumber: formattedPhone, 
               password: formData.password 
             }),
           });
@@ -200,7 +210,25 @@ export default function RoleSelection() {
         </div>
 
         {/* Right Side - Login Form */}
-        <div className="w-full lg:w-1/2 bg-gradient-to-br from-gray-50 via-white to-gray-50 min-h-screen flex items-center justify-center p-4 lg:p-8 xl:p-12">
+        <div className="w-full lg:w-1/2 bg-gradient-to-br from-gray-50 via-white to-gray-50 min-h-screen flex items-center justify-center p-4 lg:p-8 xl:p-12 relative">
+          {/* Top Border Decoration */}
+          <div className="absolute top-0 left-0 right-0 h-8 md:h-12 overflow-hidden">
+            <img 
+              src="/title.png" 
+              alt="Top border decoration" 
+              className="w-full h-full object-cover object-top"
+            />
+          </div>
+          
+          {/* Bottom Border Decoration */}
+          <div className="absolute bottom-0 left-0 right-0 h-8 md:h-12 overflow-hidden">
+            <img 
+              src="/title.png" 
+              alt="Bottom border decoration" 
+              className="w-full h-full object-cover object-top"
+            />
+          </div>
+          
           <div className="w-full max-w-md lg:max-w-lg xl:max-w-xl">
             {/* Back to Home Button - For mobile */}
             <div className="mb-6 lg:hidden">
@@ -280,7 +308,7 @@ export default function RoleSelection() {
 
                   <Button 
                     type="submit"
-                    className="w-full bg-green-600 hover:bg-green-700 text-white !rounded-none"
+                    className="w-full bg-[rgba(20,40,75,1)] hover:bg-[rgba(15,30,56,1)] text-white !rounded-none"
                     disabled={isLoading}
                   >
                     {isLoading ? (

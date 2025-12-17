@@ -36,18 +36,28 @@ const Team = () => {
 
   return (
     <CustomScrollbar>
-      <div className="bg-white relative min-h-screen">
+      <div 
+        className="relative min-h-screen"
+        style={{
+          backgroundImage: 'url(/bg_img.png)',
+          backgroundAttachment: 'fixed',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
         <HomeNavbar />
 
         {/* Hero Section */}
-        <section className="relative py-8 bg-gradient-to-br from-green-50 via-white to-emerald-50">
+        <section className="relative py-8">
           <div className="max-w-7xl mx-auto px-12 sm:px-16 lg:px-24 text-left">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
+              className="bg-white/80 backdrop-blur-sm p-6 rounded-lg"
             >
-              <h1 className="text-xl font-bold text-green-600 mb-4">
+              <h1 className="text-xl font-bold text-[rgba(20,40,75,1)] mb-4">
                 Our Expert Team
               </h1>
               
@@ -61,7 +71,7 @@ const Team = () => {
         </section>
 
         {/* Team Grid */}
-        <section className="py-8 bg-white">
+        <section className="py-8">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {teamMembers.map((member, index) => {
@@ -74,7 +84,7 @@ const Team = () => {
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: index * 0.1 }}
                   >
-                    <Card className="border border-gray-200 hover:border-green-300 hover:shadow-lg transition-all duration-300 overflow-hidden group">
+                    <Card className="border border-gray-200 hover:border-[rgba(20,40,75,0.3)] hover:shadow-lg transition-all duration-300 overflow-hidden group">
                       <div className="relative h-96 overflow-hidden">
                         <img 
                           src={member.image} 
@@ -100,7 +110,7 @@ const Team = () => {
                         {/* Text Overlay - Bottom */}
                         <div className="absolute bottom-0 left-0 right-0 p-4">
                           <h3 className="text-base font-bold text-white mb-1">{member.title}</h3>
-                          <p className="text-green-300 text-sm font-medium mb-1">{member.subtitle}</p>
+                          <p className="text-[rgba(20,40,75,0.6)] text-sm font-medium mb-1">{member.subtitle}</p>
                           <p className="text-white/80 text-xs">{member.handle}</p>      
                         </div>
                       </div>

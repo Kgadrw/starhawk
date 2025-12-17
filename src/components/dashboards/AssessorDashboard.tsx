@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import DashboardLayout from "../layout/DashboardLayout";
 import AssessorNotifications from "../assessor/AssessorNotifications";
 import AssessorProfileSettings from "../assessor/AssessorProfileSettings";
@@ -213,6 +214,7 @@ export default function AssessorDashboard() {
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const [selectedFieldForUpload, setSelectedFieldForUpload] = useState<any | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [kmlUploadName, setKmlUploadName] = useState<string>('');
   const [uploadingFile, setUploadingFile] = useState(false);
   
   // API state
@@ -269,7 +271,7 @@ export default function AssessorDashboard() {
   const totalFarmers = farmers.length > 0 ? farmers.length : uniqueFarmerIds.size || 0;
   const totalFields = Array.isArray(farms) ? farms.length : 0;
   const totalArea = Array.isArray(farms) 
-    ? farms.reduce((sum, farm) => sum + (farm.area || 0), 0) 
+    ? farms.filter(farm => farm != null).reduce((sum, farm) => sum + (farm?.area || 0), 0) 
     : 0;
   const activeAssessments = assessments.filter(a => 
     a.status === "Pending" || a.status === "Processing" || a.status === "Under Review"
@@ -315,13 +317,15 @@ export default function AssessorDashboard() {
         const location = farmerAssessments[0]?.location || "Unknown Location";
         const farmerFarms = Array.isArray(farms) 
           ? farms.filter(farm => 
-              farm.farmerId === farmerId || 
-              farm.farmer?._id === farmerId ||
-              farm.farmer?.id === farmerId
+              farm != null && (
+                farm.farmerId === farmerId || 
+                farm.farmer?._id === farmerId ||
+                farm.farmer?.id === farmerId
+              )
             )
           : [];
         const farmerTotalFields = farmerFarms.length;
-        const farmerTotalArea = farmerFarms.reduce((sum, farm) => sum + (farm.area || 0), 0);
+        const farmerTotalArea = farmerFarms.filter(farm => farm != null).reduce((sum, farm) => sum + (farm?.area || 0), 0);
         
         return {
           farmerId: `F-${String(farmerId).slice(-3).padStart(3, '0')}`,
@@ -370,58 +374,20 @@ export default function AssessorDashboard() {
     setFarmersLoading(true);
     setFarmersError(null);
     try {
-      const token = getAuthToken();
-      
-      // Try the assessments/farmers/list endpoint first
-      let farmersUrl = `${API_BASE_URL}/assessments/farmers/list`;
-      let response = await fetch(farmersUrl, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` })
-        }
-      });
-
-      // If that fails, try getting all users and filtering by role
-      if (!response.ok) {
-        console.log(`⚠️ Assessments farmers endpoint returned ${response.status}, trying users endpoint...`);
-        try {
-          farmersUrl = `${API_BASE_URL}/users`;
-          response = await fetch(farmersUrl, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token && { Authorization: `Bearer ${token}` })
-            }
-          });
-        } catch (fallbackErr) {
-          console.error('Fallback to users endpoint also failed:', fallbackErr);
-          throw new Error(`Failed to load farmers: ${response.status}`);
-        }
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: `HTTP error! status: ${response.status}` }));
-        throw new Error(errorData.message || errorData.error || `Failed to load farmers: ${response.status}`);
-      }
-
-      const responseData = await response.json();
-      console.log('✅ Farmers list API response:', responseData);
-      console.log('📋 Full response structure:', JSON.stringify(responseData, null, 2));
+      // Use the new API method: GET /assessments/farmers/list
+      const responseData = await assessmentsApiService.getAssignedFarmers();
+      console.log('✅ Assigned farmers API response:', responseData);
       
       // Handle response - it might be in response.data or directly in response
       let farmersList = responseData.data || responseData.items || responseData || [];
       
-      // If we got all users, filter by role "farmer"
-      if (Array.isArray(farmersList) && farmersList.length > 0 && farmersList[0].role) {
-        farmersList = farmersList.filter((user: any) => 
-          user.role?.toLowerCase() === 'farmer' || 
-          user.role?.toLowerCase() === 'farmers'
-        );
+      // Ensure it's an array
+      if (!Array.isArray(farmersList)) {
+        farmersList = [];
       }
       
       const farmersArray = Array.isArray(farmersList) ? farmersList : [];
-      console.log(`✅ Loaded ${farmersArray.length} farmers`);
+      console.log(`✅ Loaded ${farmersArray.length} assigned farmers with farms`);
       
       // Extract fields from each farmer if they exist in the response
       const fieldsMap: Record<string, any[]> = {};
@@ -431,55 +397,39 @@ export default function AssessorDashboard() {
           // Log the structure of the first farmer for debugging
           if (index === 0) {
             console.log('🔍 Sample farmer structure:', {
-              _id: farmer._id,
               id: farmer.id,
-              name: farmer.name,
+              _id: farmer._id,
+              firstName: farmer.firstName,
+              lastName: farmer.lastName,
               hasFarms: !!farmer.farms,
-              hasFields: !!farmer.fields,
-              hasFarm: !!farmer.farm,
+              farmsCount: farmer.farms?.length || 0,
               farmerKeys: Object.keys(farmer)
             });
           }
           
-          // Check for fields in various possible locations
-          let fields: any[] = [];
+          // New API structure: farms array is directly in farmer.farms
+          let farms: any[] = [];
           
-          // Try different field locations
           if (farmer.farms && Array.isArray(farmer.farms)) {
-            fields = farmer.farms;
-          } else if (farmer.fields && Array.isArray(farmer.fields)) {
-            fields = farmer.fields;
-          } else if (farmer.farm) {
-            // Could be single object or array
-            fields = Array.isArray(farmer.farm) ? farmer.farm : [farmer.farm];
-          } else if (farmer.farmList && Array.isArray(farmer.farmList)) {
-            fields = farmer.farmList;
-          } else if (farmer.farmDetails && Array.isArray(farmer.farmDetails)) {
-            fields = farmer.farmDetails;
+            farms = farmer.farms;
           }
           
-          // Also check nested structures
-          if (fields.length === 0 && farmer.profile) {
-            if (farmer.profile.farms && Array.isArray(farmer.profile.farms)) {
-              fields = farmer.profile.farms;
-            } else if (farmer.profile.fields && Array.isArray(farmer.profile.fields)) {
-              fields = farmer.profile.fields;
-            }
-          }
-          
-          if (fields && fields.length > 0) {
-            fieldsMap[farmerId] = fields;
-            console.log(`  📦 Farmer ${farmerId} (${farmer.name || 'Unnamed'}) has ${fields.length} fields from API`);
+          if (farms && farms.length > 0) {
+            fieldsMap[farmerId] = farms;
+            const farmerName = `${farmer.firstName || ''} ${farmer.lastName || ''}`.trim() || 'Unnamed';
+            console.log(`  📦 Farmer ${farmerId} (${farmerName}) has ${farms.length} farms from API`);
             if (index === 0) {
-              console.log('  📋 Sample field structure:', {
-                name: fields[0].name,
-                cropType: fields[0].cropType,
-                area: fields[0].area,
-                fieldKeys: Object.keys(fields[0] || {})
+              console.log('  📋 Sample farm structure:', {
+                id: farms[0].id,
+                cropType: farms[0].cropType,
+                status: farms[0].status,
+                sowingDate: farms[0].sowingDate,
+                farmKeys: Object.keys(farms[0] || {})
               });
             }
           } else {
-            console.log(`  ⚠️ Farmer ${farmerId} (${farmer.name || 'Unnamed'}) has no fields in API response`);
+            const farmerName = `${farmer.firstName || ''} ${farmer.lastName || ''}`.trim() || 'Unnamed';
+            console.log(`  ⚠️ Farmer ${farmerId} (${farmerName}) has no farms in API response`);
           }
         }
       });
@@ -717,7 +667,7 @@ export default function AssessorDashboard() {
           cropType: farmerFarms[0].cropType,
           farmerId: farmerFarms[0].farmerId,
           farmer: farmerFarms[0].farmer,
-          _id: farmerFarms[0]._id,
+          _id: farmerFarms[0]?._id,
           id: farmerFarms[0].id
         });
       } else {
@@ -1012,8 +962,8 @@ export default function AssessorDashboard() {
         
         // Priority 1: Direct farmerId field
         if (item.farmerId) {
-          if (typeof item.farmerId === 'object') {
-            farmerId = item.farmerId._id || item.farmerId.id || '';
+          if (typeof item.farmerId === 'object' && item.farmerId != null) {
+            farmerId = item.farmerId?._id || item.farmerId?.id || '';
           } else {
             farmerId = item.farmerId;
           }
@@ -1021,12 +971,12 @@ export default function AssessorDashboard() {
         // Priority 2: From farm object
         else if (item.farm) {
           if (item.farm.farmerId) {
-            farmerId = typeof item.farm.farmerId === 'object' 
-              ? (item.farm.farmerId._id || item.farm.farmerId.id || '') 
+            farmerId = typeof item.farm.farmerId === 'object' && item.farm.farmerId != null
+              ? (item.farm.farmerId?._id || item.farm.farmerId?.id || '') 
               : item.farm.farmerId;
           } else if (item.farm.farmer) {
-            farmerId = typeof item.farm.farmer === 'object'
-              ? (item.farm.farmer._id || item.farm.farmer.id || '')
+            farmerId = typeof item.farm.farmer === 'object' && item.farm.farmer != null
+              ? (item.farm.farmer?._id || item.farm.farmer?.id || '')
               : item.farm.farmer;
           }
         }
@@ -1316,8 +1266,8 @@ export default function AssessorDashboard() {
       farm.farmer?._id === assessment.farmerId
     );
     
-    return relevantFarms.map((farm: any) => ({
-      id: farm._id || farm.id || '',
+    return relevantFarms.filter(farm => farm != null).map((farm: any) => ({
+      id: farm?._id || farm?.id || '',
       farmerName: farm.farmerName || farm.farmer?.name || assessment.farmerName,
       crop: farm.cropType || 'Unknown',
       area: farm.area || 0,
@@ -2455,7 +2405,7 @@ export default function AssessorDashboard() {
     setFieldStatus("Ready to Sync");
   };
 
-  const handleKMLUpload = async (file: File) => {
+  const handleKMLUpload = async (file: File, farmName?: string) => {
     if (!selectedFieldForUpload) {
       toast({
         title: "Error",
@@ -2465,11 +2415,33 @@ export default function AssessorDashboard() {
       return;
     }
 
-    const farmId = selectedFieldForUpload._id || selectedFieldForUpload.id;
+    const farmId = selectedFieldForUpload.id || selectedFieldForUpload._id;
     if (!farmId) {
       toast({
         title: "Error",
-        description: "Field ID not found",
+        description: "Farm ID not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    if (fileExtension !== 'kml' && fileExtension !== 'kmz') {
+      toast({
+        title: "Invalid File",
+        description: "Please select a KML or KMZ file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 1MB)
+    const maxSize = 1 * 1024 * 1024; // 1MB in bytes
+    if (file.size > maxSize) {
+      toast({
+        title: "File Too Large",
+        description: "KML file size must be less than 1MB",
         variant: "destructive",
       });
       return;
@@ -2479,24 +2451,25 @@ export default function AssessorDashboard() {
     try {
       console.log('📤 Starting KML upload for farm:', farmId);
       console.log('📄 File details:', { name: file.name, size: file.size, type: file.type });
+      console.log('📝 Farm name:', farmName || kmlUploadName);
       
-      await uploadKML(file, farmId);
+      await uploadKML(file, farmId, farmName || kmlUploadName);
       
       console.log('✅ KML upload successful');
       toast({
         title: "Success",
-        description: "KML file uploaded successfully",
+        description: "KML uploaded successfully. EOSDA field created.",
       });
       
-      // Reload farms to update status
-      await loadFarms();
+      // Reload farmers to update farm status
+      await loadFarmers();
       // Reload farmer fields for all expanded farmers
       for (const farmerId of expandedFarmers) {
         await loadFarmerFields(farmerId);
       }
       setShowUploadModal(false);
       setSelectedFieldForUpload(null);
-      setSelectedFieldForUpload(null);
+      setKmlUploadName('');
     } catch (err: any) {
       console.error('❌ Failed to upload KML:', err);
       console.error('❌ Error details:', {
@@ -2519,17 +2492,7 @@ export default function AssessorDashboard() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const fileExtension = file.name.split('.').pop()?.toLowerCase();
-    if (fileExtension !== 'kml' && fileExtension !== 'kmz') {
-      toast({
-        title: "Invalid File",
-        description: "Please select a KML or KMZ file",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    await handleKMLUpload(file);
+    await handleKMLUpload(file, kmlUploadName);
     // Reset input
     e.target.value = '';
   };
@@ -3964,9 +3927,9 @@ export default function AssessorDashboard() {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {farmers.map((farmer, index) => {
+                        {farmers.filter(farmer => farmer != null).map((farmer, index) => {
                           // Get the actual farmer ID - don't use index as fallback for loading fields
-                          const farmerId = farmer._id || farmer.id;
+                          const farmerId = farmer?._id || farmer?.id;
                           if (!farmerId) {
                             console.warn(`Farmer at index ${index} has no ID:`, farmer);
                           }
@@ -3995,7 +3958,10 @@ export default function AssessorDashboard() {
                                 key={farmerIdKey}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleViewFarmerFields(farmer);
+                                  toggleFarmerExpansion(farmerIdKey);
+                                  if (!isExpanded) {
+                                    loadFarmerFields(farmerIdKey);
+                                  }
                                 }}
                                 className="hover:bg-gray-50/50 transition-all duration-150 border-b border-gray-100 cursor-pointer"
                               >
@@ -4003,7 +3969,7 @@ export default function AssessorDashboard() {
                                   <div className="text-sm font-medium text-gray-900">{farmerName}</div>
                                   {farmerFieldsList.length > 0 && (
                                     <div className="text-xs text-gray-500 mt-0.5">
-                                      {farmerFieldsList.length} field{farmerFieldsList.length !== 1 ? 's' : ''}
+                                      {farmerFieldsList.length} farm{farmerFieldsList.length !== 1 ? 's' : ''}
                                     </div>
                                   )}
                                 </td>
@@ -4023,6 +3989,60 @@ export default function AssessorDashboard() {
                                   </div>
                                 </td>
                               </tr>
+                              {/* Expandable farms row */}
+                              {isExpanded && farmerFieldsList.length > 0 && (
+                                <tr>
+                                  <td colSpan={5} className="px-6 py-4 bg-gray-50">
+                                    <div className="space-y-3">
+                                      <p className="text-sm font-semibold text-gray-700 mb-2">Farms:</p>
+                                      <div className="space-y-2">
+                                        {farmerFieldsList.filter((farm: any) => farm != null).map((farm: any, farmIndex: number) => {
+                                          const farmId = farm.id || farm._id;
+                                          const farmStatus = farm.status || 'PENDING';
+                                          const isPending = farmStatus === 'PENDING';
+                                          const cropType = farm.cropType || 'N/A';
+                                          const sowingDate = farm.sowingDate ? new Date(farm.sowingDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A';
+                                          
+                                          return (
+                                            <div key={farmId || farmIndex} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
+                                              <div className="flex-1">
+                                                <div className="flex items-center gap-3">
+                                                  <span className="text-sm font-medium text-gray-900">{farm.name || `Farm ${farmIndex + 1}`}</span>
+                                                  <Badge 
+                                                    variant={isPending ? "destructive" : "default"}
+                                                    className={isPending ? "bg-yellow-500" : "bg-green-500"}
+                                                  >
+                                                    {farmStatus}
+                                                  </Badge>
+                                                </div>
+                                                <div className="mt-1 text-xs text-gray-600">
+                                                  <span>Crop: {cropType}</span>
+                                                  {sowingDate !== 'N/A' && <span className="ml-3">Sowing: {sowingDate}</span>}
+                                                </div>
+                                              </div>
+                                              {isPending && (
+                                                <Button
+                                                  size="sm"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedFieldForUpload(farm);
+                                                    setKmlUploadName(farm.name || '');
+                                                    setShowUploadModal(true);
+                                                  }}
+                                                  className="bg-green-600 hover:bg-green-700 text-white ml-4"
+                                                >
+                                                  <Upload className="h-4 w-4 mr-2" />
+                                                  Upload KML
+                                                </Button>
+                                              )}
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
                             </>
                           );
                         })}
@@ -4803,7 +4823,19 @@ export default function AssessorDashboard() {
                 Upload KML or KMZ file with field boundaries for {selectedFieldForUpload.cropType || "this field"}
               </DialogDescription>
             </DialogHeader>
-            <div className="mt-4">
+            <div className="mt-4 space-y-4">
+              <div>
+                <Label htmlFor="farmName" className="text-gray-900">Farm Name *</Label>
+                <Input
+                  id="farmName"
+                  type="text"
+                  value={kmlUploadName}
+                  onChange={(e) => setKmlUploadName(e.target.value)}
+                  placeholder="Enter farm name"
+                  className="mt-1 bg-gray-50 border-gray-300 text-gray-900"
+                  disabled={uploadingFile}
+                />
+              </div>
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-green-500 transition-colors">
                 <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                 <p className="text-gray-700 mb-2 font-medium">Drag-and-drop here or select files</p>
@@ -4834,7 +4866,7 @@ export default function AssessorDashboard() {
                   )}
                 </Button>
                 <p className="text-xs text-gray-500 mt-4">
-                  Supported formats are: .kml, .kmz
+                  Supported formats: .kml, .kmz (Max size: 1MB)
                 </p>
               </div>
             </div>

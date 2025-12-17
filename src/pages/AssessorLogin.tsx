@@ -154,7 +154,7 @@ export default function AssessorLogin() {
 
               <Button
                 type="submit"
-                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                className="w-full bg-[rgba(20,40,75,1)] hover:bg-[rgba(15,30,56,1)] text-white"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -183,7 +183,7 @@ export default function AssessorLogin() {
             Assessor accounts are created by system administrators.
             <br />
             Contact admin at{" "}
-            <a href="mailto:admin@cropinsurance.rw" className="text-green-600 hover:text-green-700">
+            <a href="mailto:admin@cropinsurance.rw" className="text-[rgba(20,40,75,1)] hover:text-[rgba(15,30,56,1)]">
               admin@cropinsurance.rw
             </a>
           </p>

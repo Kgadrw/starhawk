@@ -2,10 +2,10 @@
   --hue: 27;
   --sat: 69%;
   --white: hsl(0, 0%, 100%);
-  --green-primary: rgba(34, 197, 94, 1);
-  --green-glow: rgba(34, 197, 94, 0.2);
-  --green-border: rgba(34, 197, 94, 0.8);
-  --border-color: rgba(34, 197, 94, 0.3);
+  --green-primary: rgba(20, 40, 75, 1);
+  --green-glow: rgba(20, 40, 75, 0.2);
+  --green-border: rgba(20, 40, 75, 0.8);
+  --border-color: rgba(20, 40, 75, 0.3);
   --background-dark: #060010;
   color-scheme: light dark;
 }
@@ -150,8 +150,8 @@
   padding: 6px;
   background: radial-gradient(
     var(--glow-radius) circle at var(--glow-x) var(--glow-y),
-    rgba(34, 197, 94, calc(var(--glow-intensity) * 0.8)) 0%,
-    rgba(34, 197, 94, calc(var(--glow-intensity) * 0.4)) 30%,
+    rgba(20, 40, 75, calc(var(--glow-intensity) * 0.8)) 0%,
+    rgba(20, 40, 75, calc(var(--glow-intensity) * 0.4)) 30%,
     transparent 60%
   );
   border-radius: inherit;
@@ -174,7 +174,7 @@
 
 .card--border-glow:hover {
   box-shadow:
-    0 4px 20px rgba(34, 197, 94, 0.4),
+    0 4px 20px rgba(20, 40, 75, 0.4),
     0 0 30px var(--green-glow);
 }
 
@@ -190,14 +190,14 @@
   left: -2px;
   right: -2px;
   bottom: -2px;
-  background: rgba(34, 197, 94, 0.2);
+  background: rgba(20, 40, 75, 0.2);
   border-radius: 50%;
   z-index: -1;
 }
 
 .particle-container:hover {
   box-shadow:
-    0 4px 20px rgba(34, 197, 94, 0.2),
+    0 4px 20px rgba(20, 40, 75, 0.2),
     0 0 30px var(--green-glow);
 }
 

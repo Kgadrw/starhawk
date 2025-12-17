@@ -1,12 +1,12 @@
 // Homepage Constants - Colors and Typography
 export const HOMEPAGE_COLORS = {
   // Primary colors
-  primary: "text-green-600",
-  primaryBg: "bg-green-600",
-  primaryBorder: "border-green-600",
+  primary: "text-[rgba(20,40,75,1)]",
+  primaryBg: "bg-[rgba(20,40,75,1)]",
+  primaryBorder: "border-[rgba(20,40,75,1)]",
   
   // Text colors
-  heading: "text-green-600",
+  heading: "text-[rgba(20,40,75,1)]",
   body: "text-gray-700",
   bodyLight: "text-gray-600",
   bodyDark: "text-gray-800",

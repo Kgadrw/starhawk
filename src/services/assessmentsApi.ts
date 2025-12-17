@@ -93,6 +93,21 @@ class AssessmentsApiService {
         throw new Error(`Unexpected response format: ${text.substring(0, 100)}`);
       }
 
+      // Handle 500 errors with better messaging
+      if (response.status === 500) {
+        const errorDetail = data?.detail || data?.message || 'Internal server error';
+        console.error('❌ 500 Internal Server Error');
+        console.error('Request URL:', url);
+        console.error('Error detail:', errorDetail);
+        console.error('Full response:', data);
+        
+        // Provide more helpful error message
+        if (errorDetail.includes('Cannot read properties of null')) {
+          throw new Error('Server error: Missing data in database. Please contact support or try again later.');
+        }
+        throw new Error(`Server error: ${errorDetail}`);
+      }
+
       if (response.status === 401) {
         // Token expired or invalid
         console.error('❌ 401 Unauthorized - Token expired or invalid');
@@ -249,6 +264,12 @@ class AssessmentsApiService {
     return this.request(`/${id}`);
   }
 
+  // Get Assigned Farmers (Assessor only)
+  // Endpoint: GET /assessments/farmers/list
+  async getAssignedFarmers() {
+    return this.request('/farmers/list');
+  }
+
   // Update Assessment (Assessor Only)
   async updateAssessment(id: string, updateData: UpdateAssessmentRequest) {
     return this.request(`/${id}`, {
@@ -258,6 +279,7 @@ class AssessmentsApiService {
   }
 
   // Calculate Risk Score (Assessor Only)
+  // Endpoint: /api/v1/assessments/{id}/calculate-risk
   async calculateRiskScore(id: string) {
     return this.request(`/${id}/calculate-risk`, {
       method: 'POST',

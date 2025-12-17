@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../layout/DashboardLayout";
 import { isAdmin, logout as authLogout, getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
 import { getAllUsers, deactivateUser, updateUser, getUserById, createUser, getUserProfile, updateUserProfile, getAssessors } from "@/services/usersAPI";
-import { getSystemStatistics, getPolicyOverview, getClaimStatistics } from "@/services/adminApi";
+import { getSystemStatistics, getPolicyOverview, getClaimStatistics, getHealthStatus } from "@/services/adminApi";
 import { createPolicy, createPolicyFromAssessment, getPolicies, getPolicyById, updatePolicy, deletePolicy } from "@/services/policiesApi";
 import { createClaim, getClaims, getClaimById, updateClaim, deleteClaim } from "@/services/claimsApi";
 import assessmentsApiService from "@/services/assessmentsApi";
@@ -127,11 +127,27 @@ export const AdminDashboard = () => {
     }
   };
 
+  // Load health status
+  const loadHealthStatus = async () => {
+    setHealthLoading(true);
+    setHealthError(null);
+    try {
+      const response = await getHealthStatus();
+      setHealthStatus(response.data || response);
+    } catch (err: any) {
+      console.error('Failed to load health status:', err);
+      setHealthError(err.message || 'Failed to load health status');
+    } finally {
+      setHealthLoading(false);
+    }
+  };
+
   // Load statistics when dashboard or analytics is active
   useEffect(() => {
     if (activePage === "dashboard" || activePage === "analytics") {
       loadAdminStatistics();
       loadAdminProfile();
+      loadHealthStatus();
     }
     if (activePage === "analytics") {
       loadAnalyticsData();
@@ -362,6 +378,9 @@ export const AdminDashboard = () => {
   const [claimStats, setClaimStats] = useState<any | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsError, setStatsError] = useState<string | null>(null);
+  const [healthStatus, setHealthStatus] = useState<any | null>(null);
+  const [healthLoading, setHealthLoading] = useState(false);
+  const [healthError, setHealthError] = useState<string | null>(null);
   
   // Analytics data state
   const [analyticsUsers, setAnalyticsUsers] = useState<any[]>([]);
@@ -635,11 +654,6 @@ export const AdminDashboard = () => {
           role: safeString(user.role, 'Farmer'),
           status: user.active !== false ? 'active' : 'inactive',
           active: user.active !== false,
-          lastLogin: user.lastLogin 
-            ? (typeof user.lastLogin === 'string' 
-                ? new Date(user.lastLogin).toLocaleString() 
-                : new Date(String(user.lastLogin)).toLocaleString())
-            : 'Never',
           region: (() => {
             if (typeof user.region === 'string') return user.region;
             if (typeof user.location === 'string') return user.location;
@@ -841,12 +855,7 @@ export const AdminDashboard = () => {
 
   // Dashboard Overview
   const renderDashboard = () => (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-600 mt-1">System overview and key metrics</p>
-      </div>
+    <div className="space-y-4 pt-6 pr-6">
       {/* Error State */}
       {statsError && !statsLoading && (
         <Card className={`${dashboardTheme.card} border-l-4 border-l-red-500`}>
@@ -870,342 +879,278 @@ export const AdminDashboard = () => {
         </Card>
       )}
 
-      {/* Header Stats */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Users</CardTitle>
-            <Users className="h-5 w-5 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-700">
-              {systemStats?.totalUsers || userStats.total.toLocaleString()}
+      {/* Header Stats - Compact Design */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className={`${dashboardTheme.card} p-4 hover:shadow-md transition-shadow`}>
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Total Users</p>
+              <div className="flex items-baseline gap-2">
+                {statsLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                ) : (
+                  <span className="text-2xl font-bold text-gray-900">
+                    {(systemStats?.totalUsers || userStats.total || 0).toLocaleString()}
+                  </span>
+                )}
             </div>
-            <p className="text-xs text-gray-600 mt-1">
-              <span className="text-gray-500">+{systemStats?.newUsersThisMonth || userStats.newThisMonth}</span> this month
-            </p>
-          </CardContent>
+              <p className="text-xs text-gray-500 mt-1.5">
+                <span className="font-medium text-gray-600">{userStats.newThisMonth || 0}</span> new this month
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+              <Users className="h-5 w-5 text-blue-600" />
+            </div>
+          </div>
         </Card>
 
-        <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Monthly Revenue</CardTitle>
-            <DollarSign className="h-5 w-5 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-700">
-              RWF {systemStats?.monthlyRevenue ? (systemStats.monthlyRevenue / 1000000).toFixed(1) : (financialData.monthlyRevenue / 1000000).toFixed(1)}M
+        <Card className={`${dashboardTheme.card} p-4 hover:shadow-md transition-shadow`}>
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Total Policies</p>
+              <div className="flex items-baseline gap-2">
+                {statsLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                ) : (
+                  <span className="text-2xl font-bold text-gray-900">
+                    {(policyOverview?.total || 0).toLocaleString()}
+                  </span>
+                )}
             </div>
-            <p className="text-xs text-gray-600 mt-1">
-              <span className="text-gray-500">+{systemStats?.revenueGrowth || financialData.growthRate}%</span> from last month
-            </p>
-          </CardContent>
+              <p className="text-xs text-gray-500 mt-1.5">
+                <span className="font-medium text-gray-600">{policyOverview?.active || 0}</span> active
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
+              <FileCheck className="h-5 w-5 text-green-600" />
+            </div>
+          </div>
         </Card>
 
-        <Card className={`${dashboardTheme.card} border-l-4 border-l-purple-500`}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">System Health</CardTitle>
-            <Activity className="h-5 w-5 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-700">
-              {systemStats?.uptime || systemMetrics.uptime}%
+        <Card className={`${dashboardTheme.card} p-4 hover:shadow-md transition-shadow`}>
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Total Claims</p>
+              <div className="flex items-baseline gap-2">
+                {statsLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                ) : (
+                  <span className="text-2xl font-bold text-gray-900">
+                    {(claimStats?.total || 0).toLocaleString()}
+                  </span>
+                )}
             </div>
-            <p className="text-xs text-gray-600 mt-1">
-              <span className="text-gray-500">Excellent</span> uptime
-            </p>
-          </CardContent>
+              <p className="text-xs text-gray-500 mt-1.5">
+                <span className="font-medium text-gray-600">{claimStats?.pending || 0}</span> pending
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
+              <AlertCircle className="h-5 w-5 text-purple-600" />
+            </div>
+          </div>
         </Card>
 
-        <Card className={`${dashboardTheme.card} border-l-4 border-l-orange-500`}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Active Sessions</CardTitle>
-            <Zap className="h-5 w-5 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-700">
-              {systemStats?.activeSessions || systemMetrics.activeConnections}
+        <Card className={`${dashboardTheme.card} p-4 hover:shadow-md transition-shadow`}>
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Farmers</p>
+              <div className="flex items-baseline gap-2">
+                {statsLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                ) : (
+                  <span className="text-2xl font-bold text-gray-900">
+                    {(systemStats?.totalFarmers || userStats.farmers || 0).toLocaleString()}
+                  </span>
+                )}
             </div>
-            <p className="text-xs text-gray-600 mt-1">Live connections</p>
-          </CardContent>
+              <p className="text-xs text-gray-500 mt-1.5">Registered</p>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center">
+              <Users className="h-5 w-5 text-orange-600" />
+            </div>
+          </div>
         </Card>
       </div>
 
-      {/* Analytics Tabs */}
+      {/* Quick Stats Overview */}
+      <div className="grid gap-6 md:grid-cols-2">
       <Card className={dashboardTheme.card}>
         <CardHeader>
           <CardTitle className="text-gray-700 flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Platform Analytics
+              <Users className="h-5 w-5" />
+              User Breakdown
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="users" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 bg-gray-100">
-              <TabsTrigger value="users" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
-                <Users className="h-4 w-4 mr-2" />
-                Users
-              </TabsTrigger>
-              <TabsTrigger value="revenue" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
-                <DollarSign className="h-4 w-4 mr-2" />
-                Revenue
-              </TabsTrigger>
-              <TabsTrigger value="system" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
-                <Server className="h-4 w-4 mr-2" />
-                System
-              </TabsTrigger>
-              <TabsTrigger value="activity" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
-                <Activity className="h-4 w-4 mr-2" />
-                Activity
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="users" className="mt-6">
-              <div className="h-80">
-                {analyticsLoading ? (
-                  <div className="flex items-center justify-center h-full">
-                    <RefreshCw className="h-8 w-8 animate-spin text-gray-600" />
-                    <p className="ml-3 text-gray-600">Loading user data...</p>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span className="text-sm text-gray-700">Farmers</span>
+                <span className="text-lg font-semibold text-gray-900">{userStats.farmers || 0}</span>
                   </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={userGrowthData}>
-                      <defs>
-                        <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="colorFarmers" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                      <XAxis dataKey="month" stroke="#6B7280" />
-                      <YAxis stroke="#6B7280" />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '8px', color: '#111827' }}
-                        labelStyle={{ color: '#111827' }}
-                      />
-                      <Legend />
-                      <Area type="monotone" dataKey="farmers" stroke="#10B981" fillOpacity={0.6} fill="url(#colorFarmers)" name="Farmers" />
-                      <Area type="monotone" dataKey="assessors" stroke="#F59E0B" fillOpacity={0.6} fill="#F59E0B" name="Assessors" />
-                      <Area type="monotone" dataKey="total" stroke="#3B82F6" fillOpacity={1} fill="url(#colorTotal)" name="Total Users" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                )}
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span className="text-sm text-gray-700">Assessors</span>
+                <span className="text-lg font-semibold text-gray-900">{userStats.assessors || 0}</span>
               </div>
-            </TabsContent>
-
-            <TabsContent value="revenue" className="mt-6">
-              <div className="h-80">
-                {analyticsLoading ? (
-                  <div className="flex items-center justify-center h-full">
-                    <RefreshCw className="h-8 w-8 animate-spin text-gray-600" />
-                    <p className="ml-3 text-gray-600">Loading revenue data...</p>
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span className="text-sm text-gray-700">Insurers</span>
+                <span className="text-lg font-semibold text-gray-900">{userStats.insurers || 0}</span>
                   </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={revenueTrends}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                      <XAxis dataKey="month" stroke="#6B7280" />
-                      <YAxis stroke="#6B7280" />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '8px', color: '#111827' }}
-                        labelStyle={{ color: '#111827' }}
-                        formatter={(value: number) => `RWF ${(value / 1000000).toFixed(1)}M`}
-                      />
-                      <Legend />
-                      <Bar dataKey="revenue" fill="#10B981" name="Revenue" />
-                      <Line type="monotone" dataKey="commission" stroke="#8B5CF6" strokeWidth={3} name="Commission" />
-                      <Line type="monotone" dataKey="expenses" stroke="#EF4444" strokeWidth={2} strokeDasharray="5 5" name="Expenses" />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                )}
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span className="text-sm text-gray-700">Active Users</span>
+                <span className="text-lg font-semibold text-green-600">{userStats.active || 0}</span>
               </div>
-            </TabsContent>
+                    </div>
+                  </CardContent>
+                </Card>
 
-            <TabsContent value="system" className="mt-6">
-              <div className="grid gap-4 md:grid-cols-3">
-                <Card className="bg-gray-50 border border-gray-200">
+        <Card className={dashboardTheme.card}>
                   <CardHeader>
-                    <CardTitle className="text-sm text-gray-600">System Uptime</CardTitle>
+            <CardTitle className="text-gray-700 flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Policy & Claims Overview
+            </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-gray-700">
-                      {systemStats?.uptime || systemMetrics.uptime || 99.9}%
-                    </div>
-                    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden mt-2">
-                      <div className="h-full bg-green-500" style={{ width: `${systemStats?.uptime || systemMetrics.uptime || 99.9}%` }} />
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-gray-50 border border-gray-200">
-                  <CardHeader>
-                    <CardTitle className="text-sm text-gray-600">Avg Response Time</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-gray-700">
-                      {systemStats?.avgResponseTime || systemMetrics.avgResponseTime || 127}ms
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1">API response time</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-gray-50 border border-gray-200">
-                  <CardHeader>
-                    <CardTitle className="text-sm text-gray-600">Active Sessions</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-gray-700">
-                      {systemStats?.activeSessions || systemMetrics.activeConnections || analyticsUsers.filter((u: any) => u.active !== false).length}
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1">Current connections</p>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="activity" className="mt-6">
               <div className="space-y-3">
-                {(() => {
-                  // Create activity from real data: recent policies, claims, and assessments
-                  const activities: any[] = [];
-                  
-                  // Add recent policies
-                  analyticsPolicies.slice(0, 5).forEach((policy: any) => {
-                    const createdAt = policy.createdAt || policy.created_at || policy.startDate;
-                    if (createdAt) {
-                      const date = new Date(createdAt);
-                      const timeAgo = getTimeAgo(date);
-                      activities.push({
-                        id: `policy-${policy._id || policy.id}`,
-                        action: 'Policy Created',
-                        user: (typeof policy.farmerId?.name === 'string' ? policy.farmerId.name : '') || (typeof policy.farmer?.name === 'string' ? policy.farmer.name : '') || 'System',
-                        details: `Policy for ${policy.cropType || 'crop'} - ${policy.status || 'active'}`,
-                        timestamp: timeAgo,
-                        date: date,
-                        severity: policy.status === 'active' ? 'success' : 'info'
-                      });
-                    }
-                  });
-                  
-                  // Add recent claims
-                  analyticsClaims.slice(0, 5).forEach((claim: any) => {
-                    const createdAt = claim.createdAt || claim.created_at || claim.filedDate;
-                    if (createdAt) {
-                      const date = new Date(createdAt);
-                      const timeAgo = getTimeAgo(date);
-                      activities.push({
-                        id: `claim-${claim._id || claim.id}`,
-                        action: 'Claim Filed',
-                        user: (typeof claim.policyId?.farmerId?.name === 'string' ? claim.policyId.farmerId.name : '') || (typeof claim.farmer?.name === 'string' ? claim.farmer.name : '') || 'System',
-                        details: `${claim.lossEventType || claim.damageType || 'Loss'} claim - ${claim.status || 'pending'}`,
-                        timestamp: timeAgo,
-                        date: date,
-                        severity: claim.status === 'approved' ? 'success' : claim.status === 'rejected' ? 'error' : 'warning'
-                      });
-                    }
-                  });
-                  
-                  // Sort by date (most recent first) and take top 5
-                  activities.sort((a, b) => {
-                    const dateA = a.date || new Date(0);
-                    const dateB = b.date || new Date(0);
-                    return dateB.getTime() - dateA.getTime();
-                  });
-                  
-                  return activities.slice(0, 5).length > 0 ? activities.slice(0, 5) : [
-                    { id: 1, action: "No recent activity", user: "System", details: "Activity will appear here", timestamp: "N/A", severity: "info" }
-                  ];
-                })().map((activity: any) => (
-                  <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-full ${
-                        activity.severity === 'success' ? 'bg-green-500' :
-                        activity.severity === 'warning' ? 'bg-yellow-500' :
-                        activity.severity === 'error' ? 'bg-red-500' :
-                        'bg-blue-500'
-                      }`}></div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">{activity.action}</p>
-                        <p className="text-xs text-gray-600">{activity.user} • {activity.details}</p>
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span className="text-sm text-gray-700">Active Policies</span>
+                <span className="text-lg font-semibold text-green-600">{policyOverview?.active || 0}</span>
                       </div>
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span className="text-sm text-gray-700">Pending Claims</span>
+                <span className="text-lg font-semibold text-yellow-600">{claimStats?.pending || 0}</span>
                     </div>
-                    <span className="text-xs text-gray-500">{activity.timestamp}</span>
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span className="text-sm text-gray-700">Approved Claims</span>
+                <span className="text-lg font-semibold text-green-600">{claimStats?.approved || 0}</span>
                   </div>
-                ))}
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span className="text-sm text-gray-700">Rejected Claims</span>
+                <span className="text-lg font-semibold text-red-600">{claimStats?.rejected || 0}</span>
               </div>
-            </TabsContent>
-          </Tabs>
+            </div>
         </CardContent>
       </Card>
-
-      {/* Quick Stats Grid */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className={dashboardTheme.card}>
-          <CardHeader>
-            <CardTitle className="text-sm text-gray-600 flex items-center gap-2">
-              <Users className="h-4 w-4 text-blue-500" />
-              User Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {[
-              { role: "Farmers", count: userStats.farmers, color: "bg-green-500" },
-              { role: "Assessors", count: userStats.assessors, color: "bg-orange-500" },
-              { role: "Insurers", count: userStats.insurers, color: "bg-blue-500" },
-              { role: "Government", count: userStats.government, color: "bg-purple-500" },
-              { role: "Admins", count: userStats.admins, color: "bg-red-500" }
-            ].map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className={`w-3 h-3 rounded-full ${item.color}`}></div>
-                  <span className="text-sm text-gray-600">{item.role}</span>
-                </div>
-                <span className="text-sm font-medium text-gray-700">{item.count.toLocaleString()}</span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card className={dashboardTheme.card}>
-          <CardHeader>
-            <CardTitle className="text-sm text-gray-600 flex items-center gap-2">
-              <Activity className="h-4 w-4 text-purple-500" />
-              System Performance
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-600">Uptime</span>
-                <span className="text-green-400">{systemMetrics.uptime}%</span>
-              </div>
-              <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-green-500" style={{ width: `${systemMetrics.uptime}%` }} />
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-600">API Response</span>
-                <span className="text-blue-400">{systemMetrics.avgResponseTime}ms</span>
-              </div>
-              <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500" style={{ width: '85%' }} />
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-600">Error Rate</span>
-                <span className="text-green-400">{systemMetrics.errorRate}%</span>
-              </div>
-              <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-green-500" style={{ width: '3%' }} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
+
+      {/* System Health Status */}
+      <Card className={`${dashboardTheme.card} border-gray-200 shadow-sm`}>
+        <CardHeader className="border-b border-gray-200 bg-gray-50">
+          <CardTitle className="text-base font-semibold text-gray-900 flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <Activity className="h-4 w-4 text-blue-600" />
+            </div>
+            System Health Status
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          {healthLoading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-3" />
+              <p className="text-sm text-gray-600">Loading health status...</p>
+                </div>
+          ) : healthError ? (
+            <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" />
+              <p className="text-sm text-red-600">{healthError}</p>
+              </div>
+          ) : healthStatus ? (
+            <div className="space-y-4">
+              {/* Overall Status - Compact */}
+              <div className={`flex items-center justify-between p-4 rounded-lg border ${
+                healthStatus.status === 'ok' 
+                  ? 'bg-green-50 border-green-200' 
+                  : 'bg-red-50 border-red-200'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    healthStatus.status === 'ok' ? 'bg-green-100' : 'bg-red-100'
+                  }`}>
+                    {healthStatus.status === 'ok' ? (
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <AlertCircle className="h-5 w-5 text-red-600" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-0.5">Overall Status</p>
+                    <p className={`text-lg font-bold ${
+                      healthStatus.status === 'ok' ? 'text-green-700' : 'text-red-700'
+                    }`}>
+                      {healthStatus.status === 'ok' ? 'All Systems Operational' : 'System Issues Detected'}
+                    </p>
+                  </div>
+                </div>
+                <Badge className={`text-xs font-semibold px-3 py-1 ${
+                  healthStatus.status === 'ok' 
+                    ? 'bg-green-600 text-white' 
+                    : 'bg-red-600 text-white'
+                }`}>
+                  {healthStatus.status?.toUpperCase() || 'UNKNOWN'}
+                </Badge>
+              </div>
+
+              {/* Health Details Grid - Compact Cards */}
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                {healthStatus.details && Object.entries(healthStatus.details).map(([key, value]: [string, any]) => {
+                  const isUp = value.status === 'up';
+                  const iconMap: { [key: string]: any } = {
+                    mongodb: Database,
+                    memory_heap: Cpu,
+                    memory_rss: HardDrive,
+                    storage: HardDrive,
+                  };
+                  const IconComponent = iconMap[key.toLowerCase()] || Activity;
+                  const displayName = key.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+                  
+                  return (
+                    <div 
+                      key={key} 
+                      className={`p-4 rounded-lg border transition-all hover:shadow-sm ${
+                        isUp 
+                          ? 'bg-white border-green-200' 
+                          : 'bg-white border-red-200'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                          isUp ? 'bg-green-50' : 'bg-red-50'
+                        }`}>
+                          <IconComponent className={`h-4 w-4 ${
+                            isUp ? 'text-green-600' : 'text-red-600'
+                          }`} />
+                        </div>
+                        <div className={`w-2 h-2 rounded-full ${
+                          isUp ? 'bg-green-500' : 'bg-red-500'
+                        } ${isUp ? 'animate-pulse' : ''}`}></div>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{displayName}</p>
+                        {value.state && (
+                          <p className="text-xs text-gray-600 mb-1.5 capitalize">{value.state}</p>
+                        )}
+                        <Badge className={`text-xs font-medium px-2 py-0.5 ${
+                          isUp 
+                            ? 'bg-green-100 text-green-700 border-green-300' 
+                            : 'bg-red-100 text-red-700 border-red-300'
+                        } border`}>
+                          {value.status?.toUpperCase() || 'UNKNOWN'}
+                        </Badge>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Server className="h-12 w-12 text-gray-300 mb-3" />
+              <p className="text-sm font-medium text-gray-600 mb-1">No health data available</p>
+              <p className="text-xs text-gray-500">Click refresh to load health status</p>
+            </div>
+          )}
+          </CardContent>
+        </Card>
     </div>
   );
 
@@ -1454,30 +1399,9 @@ export const AdminDashboard = () => {
 
   // User Management Page
   const renderUserManagement = () => (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-          <p className="text-sm text-gray-600 mt-1">Manage all platform users and permissions</p>
-        </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            className="border-gray-300 text-gray-900 hover:bg-gray-100"
-            onClick={loadUsers}
-            disabled={usersLoading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${usersLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+    <div className="space-y-4 pt-6 pr-6">
+      {/* Add User Dialog */}
           <Dialog open={showAddUserDialog} onOpenChange={setShowAddUserDialog}>
-            <DialogTrigger asChild>
-          <Button className="bg-red-600 hover:bg-red-700">
-            <UserPlus className="h-4 w-4 mr-2" />
-            Add User
-          </Button>
-            </DialogTrigger>
             <DialogContent className={`${dashboardTheme.card} border-gray-800 max-w-2xl max-h-[90vh] overflow-y-auto`}>
               <DialogHeader>
                 <DialogTitle className="text-gray-900 text-2xl">Add New User</DialogTitle>
@@ -1531,7 +1455,7 @@ export const AdminDashboard = () => {
                       value={newUserData.role}
                       onValueChange={(value) => setNewUserData({ ...newUserData, role: value })}
                     >
-                      <SelectTrigger className={`${dashboardTheme.select}`}>
+                      <SelectTrigger className={dashboardTheme.select}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className={dashboardTheme.card}>
@@ -1720,7 +1644,7 @@ export const AdminDashboard = () => {
                         value={editUserData.sex}
                         onValueChange={(value) => setEditUserData({ ...editUserData, sex: value })}
                       >
-                        <SelectTrigger className={`${dashboardTheme.select}`}>
+                        <SelectTrigger className={dashboardTheme.select}>
                           <SelectValue placeholder="Select sex" />
                         </SelectTrigger>
                         <SelectContent className={dashboardTheme.card}>
@@ -1746,80 +1670,6 @@ export const AdminDashboard = () => {
                   </div>
 
                   {/* Role-specific Profile Fields */}
-                  {selectedUser.role === 'FARMER' && (
-                    <div className="space-y-4 mt-4 pt-4 border-t border-gray-300">
-                      <h3 className="text-gray-900 font-semibold">Farmer Profile</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="editFarmProvince" className="text-gray-900">Farm Province</Label>
-                          <Input
-                            id="editFarmProvince"
-                            value={editUserData.farmerProfile.farmProvince}
-                            onChange={(e) => setEditUserData({
-                              ...editUserData,
-                              farmerProfile: { ...editUserData.farmerProfile, farmProvince: e.target.value }
-                            })}
-                            className={`${dashboardTheme.input} border-gray-300`}
-                            placeholder="Farm Province"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="editFarmDistrict" className="text-gray-900">Farm District</Label>
-                          <Input
-                            id="editFarmDistrict"
-                            value={editUserData.farmerProfile.farmDistrict}
-                            onChange={(e) => setEditUserData({
-                              ...editUserData,
-                              farmerProfile: { ...editUserData.farmerProfile, farmDistrict: e.target.value }
-                            })}
-                            className={`${dashboardTheme.input} border-gray-300`}
-                            placeholder="Farm District"
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="editFarmSector" className="text-gray-900">Farm Sector</Label>
-                          <Input
-                            id="editFarmSector"
-                            value={editUserData.farmerProfile.farmSector}
-                            onChange={(e) => setEditUserData({
-                              ...editUserData,
-                              farmerProfile: { ...editUserData.farmerProfile, farmSector: e.target.value }
-                            })}
-                            className={`${dashboardTheme.input} border-gray-300`}
-                            placeholder="Farm Sector"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="editFarmCell" className="text-gray-900">Farm Cell</Label>
-                          <Input
-                            id="editFarmCell"
-                            value={editUserData.farmerProfile.farmCell}
-                            onChange={(e) => setEditUserData({
-                              ...editUserData,
-                              farmerProfile: { ...editUserData.farmerProfile, farmCell: e.target.value }
-                            })}
-                            className={`${dashboardTheme.input} border-gray-300`}
-                            placeholder="Farm Cell"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label htmlFor="editFarmVillage" className="text-gray-900">Farm Village</Label>
-                        <Input
-                          id="editFarmVillage"
-                          value={editUserData.farmerProfile.farmVillage}
-                          onChange={(e) => setEditUserData({
-                            ...editUserData,
-                            farmerProfile: { ...editUserData.farmerProfile, farmVillage: e.target.value }
-                          })}
-                          className={`${dashboardTheme.input} border-gray-300`}
-                          placeholder="Farm Village"
-                        />
-                      </div>
-                    </div>
-                  )}
 
                   {selectedUser.role === 'ASSESSOR' && (
                     <div className="space-y-4 mt-4 pt-4 border-t border-gray-300">
@@ -2045,8 +1895,6 @@ export const AdminDashboard = () => {
               )}
             </DialogContent>
           </Dialog>
-        </div>
-      </div>
 
       {/* Error Message */}
       {usersError && (
@@ -2071,42 +1919,70 @@ export const AdminDashboard = () => {
         </Card>
       )}
 
-      <div className="grid gap-6 md:grid-cols-4">
-        <Card className={`${dashboardTheme.card} border-l-4 border-l-blue-500`}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-gray-900/80">Total Users</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{userStats.total.toLocaleString()}</div>
-            <p className="text-xs text-gray-900/60 mt-1">All roles</p>
-          </CardContent>
+      {/* User Stats - Compact Design */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className={`${dashboardTheme.card} p-4 hover:shadow-md transition-shadow`}>
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Total Users</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-gray-900">{userStats.total.toLocaleString()}</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1.5">All roles</p>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+              <Users className="h-5 w-5 text-blue-600" />
+            </div>
+          </div>
         </Card>
-        <Card className={`${dashboardTheme.card} border-l-4 border-l-green-500`}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-gray-900/80">Active</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{userStats.active.toLocaleString()}</div>
-            <p className="text-xs text-green-400 mt-1">90.9% active rate</p>
-          </CardContent>
+
+        <Card className={`${dashboardTheme.card} p-4 hover:shadow-md transition-shadow`}>
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Active</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-gray-900">{userStats.active.toLocaleString()}</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1.5">
+                <span className="font-medium text-green-600">
+                  {userStats.total > 0 ? ((userStats.active / userStats.total) * 100).toFixed(1) : 0}%
+                </span> active rate
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+            </div>
+          </div>
         </Card>
-        <Card className={`${dashboardTheme.card} border-l-4 border-l-yellow-500`}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-gray-900/80">Inactive</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{userStats.inactive.toLocaleString()}</div>
-            <p className="text-xs text-gray-900/60 mt-1">Need attention</p>
-          </CardContent>
+
+        <Card className={`${dashboardTheme.card} p-4 hover:shadow-md transition-shadow`}>
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Inactive</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-gray-900">{userStats.inactive.toLocaleString()}</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1.5">Need attention</p>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center">
+              <AlertCircle className="h-5 w-5 text-yellow-600" />
+            </div>
+          </div>
         </Card>
-        <Card className={`${dashboardTheme.card} border-l-4 border-l-purple-500`}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-gray-900/80">New This Month</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{userStats.newThisMonth}</div>
-            <p className="text-xs text-purple-400 mt-1">+3.1% growth</p>
-          </CardContent>
+
+        <Card className={`${dashboardTheme.card} p-4 hover:shadow-md transition-shadow`}>
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">New This Month</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-gray-900">{userStats.newThisMonth}</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1.5">This month</p>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
+              <TrendingUp className="h-5 w-5 text-purple-600" />
+            </div>
+          </div>
         </Card>
       </div>
 
@@ -2114,8 +1990,17 @@ export const AdminDashboard = () => {
         <CardHeader className="border-b border-gray-200 bg-gray-50">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl font-semibold text-gray-900">All Users</CardTitle>
+            <div className="flex items-center gap-3">
             <div className="text-sm text-gray-600">
               {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'}
+              </div>
+              <Button 
+                className="bg-red-600 hover:bg-red-700"
+                onClick={() => setShowAddUserDialog(true)}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add User
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -2169,14 +2054,12 @@ export const AdminDashboard = () => {
                   <th className="text-left py-4 px-6 text-gray-700 font-semibold text-xs uppercase tracking-wider">Role</th>
                   <th className="text-left py-4 px-6 text-gray-700 font-semibold text-xs uppercase tracking-wider">Location</th>
                   <th className="text-left py-4 px-6 text-gray-700 font-semibold text-xs uppercase tracking-wider">Status</th>
-                  <th className="text-left py-4 px-6 text-gray-700 font-semibold text-xs uppercase tracking-wider">Last Login</th>
-                  <th className="text-left py-4 px-6 text-gray-700 font-semibold text-xs uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredUsers.map((user, index) => (
+                  {filteredUsers.filter(user => user != null).map((user, index) => (
                   <tr 
-                    key={user.id} 
+                    key={user?.id || user?._id || index} 
                     className={`hover:bg-gray-50 transition-colors ${
                       index % 2 === 0 ? "bg-white" : "bg-gray-50/30"
                     }`}
@@ -2256,49 +2139,6 @@ export const AdminDashboard = () => {
                           }`}></span>
                           {user.active !== false ? 'Active' : 'Inactive'}
                       </Badge>
-                    </td>
-                    <td className="py-4 px-6 whitespace-nowrap">
-                      <div className="text-sm text-gray-600">
-                        {typeof user.lastLogin === 'string' ? user.lastLogin : (user.lastLogin ? String(user.lastLogin) : 'Never')}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 w-8 p-0 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                            onClick={() => handleViewUser(user.userId)}
-                            title="View Details"
-                          >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 w-8 p-0 text-gray-600 hover:text-blue-600 hover:bg-blue-50"
-                            onClick={() => handleEditUser(user.userId)}
-                            title="Edit User"
-                          >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                          {user.active !== false && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-8 w-8 p-0 text-gray-600 hover:text-red-600 hover:bg-red-50"
-                              onClick={() => handleDeactivateUser(user.userId)}
-                              disabled={updatingUserId === user.userId}
-                              title="Deactivate User"
-                            >
-                              {updatingUserId === user.userId ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                              <UserMinus className="h-4 w-4" />
-                              )}
-                        </Button>
-                          )}
-                      </div>
                     </td>
                   </tr>
                 ))}
@@ -3879,11 +3719,10 @@ export const AdminDashboard = () => {
       userId: adminId,
       email: getEmail() || "",
       phoneNumber: getPhoneNumber() || "",
-      firstName: adminName.split(' ')[0] || "",
-      lastName: adminName.split(' ').slice(1).join(' ') || "",
+      firstName: adminName ? adminName.split(' ')[0] || "" : "",
+      lastName: adminName ? adminName.split(' ').slice(1).join(' ') || "" : "",
       role: "ADMIN",
-      active: true,
-      lastLogin: null
+      active: true
     };
 
     return (
@@ -3977,16 +3816,6 @@ export const AdminDashboard = () => {
                 <div>
                   <label className="text-sm text-gray-600 block mb-2">Role</label>
               <Badge className="bg-red-600">Super Administrator</Badge>
-            </div>
-            <div>
-                  <label className="text-sm text-gray-600 block mb-2">Last Login</label>
-              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-600 text-sm">
-                    {profile.lastLogin 
-                      ? new Date(profile.lastLogin).toLocaleString()
-                      : profile.lastLoginDate
-                      ? new Date(profile.lastLoginDate).toLocaleString()
-                      : 'Never'}
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -4731,7 +4560,7 @@ export const AdminDashboard = () => {
     };
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 pt-6 pr-6">
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <div>
@@ -4859,10 +4688,10 @@ export const AdminDashboard = () => {
                         </td>
                       </tr>
                     ) : (
-                      filteredPolicies.map((policy) => (
-                        <tr key={policy._id || policy.id} className="border-b border-gray-800 hover:bg-gray-100/50">
+                      filteredPolicies.filter(policy => policy != null).map((policy) => (
+                        <tr key={policy?._id || policy?.id || 'unknown'} className="border-b border-gray-800 hover:bg-gray-100/50">
                           <td className="py-3 px-4 text-gray-900 font-medium">
-                            {policy._id?.toString().substring(0, 8) || policy.id || "N/A"}
+                            {policy?._id?.toString().substring(0, 8) || policy?.id || "N/A"}
                           </td>
                           <td className="py-3 px-4 text-gray-900">
                             {policy.farmerId?.toString().substring(0, 8) || "N/A"}
@@ -5152,7 +4981,7 @@ export const AdminDashboard = () => {
     };
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 pt-6 pr-6">
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <div>
@@ -5276,10 +5105,10 @@ export const AdminDashboard = () => {
                         </td>
                       </tr>
                     ) : (
-                      filteredClaims.map((claim) => (
-                        <tr key={claim._id || claim.id} className="border-b border-gray-800 hover:bg-gray-100/50">
+                      filteredClaims.filter(claim => claim != null).map((claim) => (
+                        <tr key={claim?._id || claim?.id || 'unknown'} className="border-b border-gray-800 hover:bg-gray-100/50">
                           <td className="py-3 px-4 text-gray-900 font-medium">
-                            {claim._id?.toString().substring(0, 8) || claim.id || "N/A"}
+                            {claim?._id?.toString().substring(0, 8) || claim?.id || "N/A"}
                           </td>
                           <td className="py-3 px-4 text-gray-900">
                             {claim.farmerId?.toString().substring(0, 8) || "N/A"}
@@ -5493,14 +5322,18 @@ export const AdminDashboard = () => {
     setAssessmentsError(null);
     try {
       const response: any = await assessmentsApiService.getAllAssessments();
+      console.log('✅ Assessments API response:', response);
+      
       let assessmentsData: any[] = [];
       
+      // Handle new API structure: { message, data: [], success }
       if (Array.isArray(response)) {
         assessmentsData = response;
       } else if (response && typeof response === 'object') {
         assessmentsData = response.data || response.assessments || [];
       }
       
+      console.log(`📊 Loaded ${assessmentsData.length} assessments`);
       setAssessments(assessmentsData);
     } catch (err: any) {
       console.error('Failed to load assessments:', err);
@@ -5519,23 +5352,40 @@ export const AdminDashboard = () => {
   const loadFarmsForAssessment = async () => {
     setFarmsLoading(true);
     try {
-      const response: any = await getFarms(1, 100);
+      console.log('🔄 Loading farms for assessment creation...');
+      const response: any = await getFarms(0, 100);
+      console.log('✅ Farms API response:', response);
+      console.log('✅ Farms API response type:', typeof response);
+      console.log('✅ Farms API response isArray:', Array.isArray(response));
+      
       let farmsData: any[] = [];
       
+      // Handle different response structures
       if (Array.isArray(response)) {
         farmsData = response;
+        console.log('✅ Response is array, using directly');
       } else if (response && typeof response === 'object') {
-        farmsData = response.data || response.farms || response.items || [];
+        // Handle paginated response: { data: [], items: [], totalItems, etc. }
+        farmsData = response.data || response.items || response.farms || [];
+        console.log('✅ Response is object, extracted data:', {
+          hasData: !!response.data,
+          hasItems: !!response.items,
+          hasFarms: !!response.farms,
+          extractedLength: farmsData.length
+        });
       }
       
       // Ensure farmsData is always an array
       if (!Array.isArray(farmsData)) {
+        console.warn('⚠️ farmsData is not an array, converting:', farmsData);
         farmsData = [];
       }
       
+      console.log(`📊 Loaded ${farmsData.length} farms for assessment creation`);
+      console.log('📊 Sample farm:', farmsData[0]);
       setFarms(farmsData);
     } catch (err: any) {
-      console.error('Failed to load farms:', err);
+      console.error('❌ Failed to load farms:', err);
       setFarms([]); // Set to empty array on error
       toast({
         title: "Warning",
@@ -5550,25 +5400,39 @@ export const AdminDashboard = () => {
   // Load assessors for assessment creation
   const loadAssessors = async () => {
     try {
-      // Use dedicated assessors endpoint
-      const assessorsResponse = await getAssessors();
+      console.log('🔄 Loading assessors for assessment creation...');
+      // Use dedicated assessors endpoint with pagination
+      const assessorsResponse = await getAssessors(0, 100);
+      console.log('✅ Assessors API response:', assessorsResponse);
+      console.log('✅ Assessors API response type:', typeof assessorsResponse);
+      console.log('✅ Assessors API response isArray:', Array.isArray(assessorsResponse));
+      
       let assessorUsers: any[] = [];
       
-      // Handle different response structures
+      // Handle paginated response structure: { items: [], totalItems: number, totalPages: number, currentPage: number }
       if (Array.isArray(assessorsResponse)) {
         assessorUsers = assessorsResponse;
+        console.log('✅ Response is array, using directly');
       } else if (assessorsResponse && typeof assessorsResponse === 'object') {
-        // Handle paginated response or wrapped response
+        // Handle paginated response structure
         assessorUsers = assessorsResponse.items || assessorsResponse.data || assessorsResponse.assessors || [];
+        console.log('✅ Response is object, extracted data:', {
+          hasItems: !!assessorsResponse.items,
+          hasData: !!assessorsResponse.data,
+          hasAssessors: !!assessorsResponse.assessors,
+          extractedLength: assessorUsers.length
+        });
       }
       
       // Ensure assessorUsers is always an array
       if (!Array.isArray(assessorUsers)) {
+        console.warn('⚠️ assessorUsers is not an array, converting:', assessorUsers);
         assessorUsers = [];
       }
       
       setAssessors(assessorUsers);
-      console.log('✅ Loaded assessors:', assessorUsers.length);
+      console.log(`✅ Loaded ${assessorUsers.length} assessors`);
+      console.log('📊 Sample assessor:', assessorUsers[0]);
       
       // Also load insurers for assignment (fallback to getAllUsers for insurers)
       try {
@@ -5641,11 +5505,24 @@ export const AdminDashboard = () => {
           variant: "destructive",
         });
       } else {
-        setPendingFarmsError(errorMessage);
+        // Handle 500 errors with more specific messaging
+        let finalErrorMessage = errorMessage;
+        if (errorMessage.includes('Cannot read properties of null') || 
+            errorMessage.includes('Missing data in database') ||
+            errorMessage.includes('Server error')) {
+          // Check if it's a backend database issue
+          if (errorMessage.includes('Cannot read properties of null')) {
+            finalErrorMessage = 'Backend error: Some farm data may be incomplete. The pending farms list cannot be loaded. You can still create assessments manually.';
+          } else {
+            finalErrorMessage = 'Server error: There may be incomplete data in the database. Please contact support or try again later.';
+          }
+        }
+        setPendingFarmsError(finalErrorMessage);
         toast({
-          title: "Error",
-          description: errorMessage,
+          title: "Error Loading Pending Farms",
+          description: finalErrorMessage,
           variant: "destructive",
+          duration: 5000,
         });
       }
     } finally {
@@ -5666,7 +5543,11 @@ export const AdminDashboard = () => {
 
     setAssigningAssessor(true);
     try {
-      const farmId = selectedFarmForAssignment._id || selectedFarmForAssignment.id;
+      if (!selectedFarmForAssignment) {
+        throw new Error("No farm selected for assignment");
+      }
+      // Use id from the new API response structure
+      const farmId = selectedFarmForAssignment?.id || selectedFarmForAssignment?._id;
       const insurerId = assignFormData.insurerId && assignFormData.insurerId !== '' && assignFormData.insurerId !== 'none-insurer' ? assignFormData.insurerId : null;
       await assessmentsApiService.assignAssessor(
         farmId,
@@ -5757,12 +5638,16 @@ export const AdminDashboard = () => {
   // Render Assessments Management Page
   const renderAssessmentsManagement = () => {
     const filteredAssessments = assessments.filter(assessment => {
-      const farmName = typeof assessment.farm?.name === 'string' ? assessment.farm.name : '';
+      // Handle new API structure: farmId is an object
+      const farmIdObj = assessment.farmId || assessment.farm;
+      const farmName = typeof farmIdObj?.name === 'string' ? farmIdObj.name : '';
+      const cropType = farmIdObj?.cropType || '';
       const assessorName = typeof assessment.assessor?.name === 'string' ? assessment.assessor.name : '';
       const farmerName = typeof assessment.farmer?.name === 'string' ? assessment.farmer.name : '';
       
       const matchesSearch = assessmentSearchQuery === "" ||
         farmName.toLowerCase().includes(assessmentSearchQuery.toLowerCase()) ||
+        cropType.toLowerCase().includes(assessmentSearchQuery.toLowerCase()) ||
         assessorName.toLowerCase().includes(assessmentSearchQuery.toLowerCase()) ||
         farmerName.toLowerCase().includes(assessmentSearchQuery.toLowerCase());
       
@@ -5773,13 +5658,9 @@ export const AdminDashboard = () => {
     });
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 pt-6 pr-6">
         {/* Header */}
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Assessments Management</h1>
-            <p className="text-sm text-gray-600 mt-1">Manage and create assessments for farms</p>
-          </div>
+        <div className="mb-4 flex items-center justify-end">
           <Button
             onClick={() => setShowAssessmentDialog(true)}
             className="bg-red-600 hover:bg-red-700"
@@ -5818,19 +5699,39 @@ export const AdminDashboard = () => {
                 </div>
               </div>
             ) : pendingFarmsError ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-center">
+              <div className="flex items-center justify-center py-8 px-4">
+                <div className="text-center max-w-md">
                   <AlertCircle className="h-8 w-8 text-red-400 mx-auto mb-2" />
-                  <p className="text-red-400 text-sm">{pendingFarmsError}</p>
-                  <Button
-                    onClick={loadPendingFarms}
-                    variant="outline"
-                    size="sm"
-                    className="mt-4 border-gray-300 text-gray-900 hover:bg-gray-100"
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Retry
-                  </Button>
+                  <p className="text-red-400 text-sm mb-1 font-medium">Error Loading Pending Farms</p>
+                  <p className="text-gray-600 text-xs mb-4">{pendingFarmsError}</p>
+                  <div className="flex gap-2 justify-center">
+                    <Button
+                      onClick={() => {
+                        console.log('🔄 Retrying to load pending farms...');
+                        loadPendingFarms();
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="border-gray-300 text-gray-900 hover:bg-gray-100"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Retry
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setPendingFarmsError(null);
+                        setPendingFarms([]);
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      className="text-gray-600 hover:bg-gray-100"
+                    >
+                      Dismiss
+                    </Button>
+                  </div>
+                  <p className="text-gray-500 text-xs mt-3">
+                    You can still create assessments manually using the "Create Assessment" button above.
+                  </p>
                 </div>
               </div>
             ) : pendingFarms.length === 0 ? (
@@ -5845,64 +5746,102 @@ export const AdminDashboard = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200 bg-gray-50">
-                      <th className="text-left py-3 px-6 font-medium text-gray-900">Farm Name</th>
-                      <th className="text-left py-3 px-6 font-medium text-gray-900">Farmer</th>
+                      <th className="text-left py-3 px-6 font-medium text-gray-900">Farmer Name</th>
                       <th className="text-left py-3 px-6 font-medium text-gray-900">Crop Type</th>
-                      <th className="text-left py-3 px-6 font-medium text-gray-900">Area (hectares)</th>
-                      <th className="text-left py-3 px-6 font-medium text-gray-900">Location</th>
+                      <th className="text-left py-3 px-6 font-medium text-gray-900">Sowing Date</th>
+                      <th className="text-left py-3 px-6 font-medium text-gray-900">Farm Location</th>
                       <th className="text-left py-3 px-6 font-medium text-gray-900">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {pendingFarms.map((farm, index) => (
-                      <tr
-                        key={farm._id || farm.id || index}
-                        className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
-                      >
-                        <td className="py-3 px-6 text-gray-900">
-                          {(() => {
-                            const name = typeof farm.name === 'string' ? farm.name : '';
-                            const fieldName = typeof farm.fieldName === 'string' ? farm.fieldName : '';
-                            return name || fieldName || "Unnamed Farm";
-                          })()}
-                        </td>
-                        <td className="py-3 px-6 text-gray-900">
-                          {safeExtractUserName(farm.farmerName || farm.farmer) || "Unknown"}
-                        </td>
-                        <td className="py-3 px-6 text-gray-900">
-                          {(() => {
-                            const cropType = typeof farm.cropType === 'string' ? farm.cropType : '';
-                            const crop = typeof farm.crop === 'string' ? farm.crop : '';
-                            return cropType || crop || "N/A";
-                          })()}
-                        </td>
-                        <td className="py-3 px-6 text-gray-900">
-                          {typeof farm.area === 'number' ? farm.area : (typeof farm.area === 'string' ? parseFloat(farm.area) || 0 : 0)}
-                        </td>
-                        <td className="py-3 px-6 text-gray-900">
-                          {(() => {
-                            const location = typeof farm.location === 'string' ? farm.location : '';
-                            const district = typeof farm.district === 'string' ? farm.district : '';
-                            const province = typeof farm.province === 'string' ? farm.province : '';
-                            return location || district || province || "N/A";
-                          })()}
-                        </td>
-                        <td className="py-3 px-6">
-                          <Button
-                            onClick={() => {
-                              setSelectedFarmForAssignment(farm);
-                              setAssignFormData({ assessorId: "", insurerId: "" });
-                              setShowAssignDialog(true);
-                            }}
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700 text-white !rounded-none"
-                          >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Assign Assessor
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
+                    {pendingFarms
+                      .filter(farm => farm != null && farm.farmer != null && (farm.id || farm._id))
+                      .map((farm, index) => {
+                      // Extract farmer name from the new response structure with null checks
+                      const farmer = farm?.farmer;
+                      const farmerName = farmer && (farmer.firstName || farmer.lastName)
+                        ? `${farmer.firstName || ''} ${farmer.lastName || ''}`.trim() || 'Unknown'
+                        : 'Unknown';
+                      
+                      // Extract crop type
+                      const cropType = farm?.cropType || 'N/A';
+                      
+                      // Extract sowing date
+                      const sowingDate = farm?.sowingDate 
+                        ? new Date(farm.sowingDate).toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'short', 
+                            day: 'numeric' 
+                          })
+                        : 'N/A';
+                      
+                      // Extract farm location from farmerProfile or farmer location
+                      const farmerProfile = farm?.farmer?.farmerProfile;
+                      const farmLocation = farmerProfile
+                        ? `${farmerProfile.farmProvince || ''}, ${farmerProfile.farmDistrict || ''}`.trim().replace(/^,\s*|,\s*$/g, '') || 
+                          `${farm.farmer?.province || ''}, ${farm.farmer?.district || ''}`.trim().replace(/^,\s*|,\s*$/g, '')
+                        : farm?.farmer
+                        ? `${farm.farmer.province || ''}, ${farm.farmer.district || ''}`.trim().replace(/^,\s*|,\s*$/g, '')
+                        : 'N/A';
+                      
+                      // Extract farm ID with null check
+                      const farmId = farm?.id || farm?._id;
+                      if (!farmId) {
+                        console.warn('Farm missing ID at index', index, farm);
+                        return null; // Skip rendering if no ID
+                      }
+                      
+                      return (
+                        <tr
+                          key={farmId}
+                          className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
+                        >
+                          <td className="py-3 px-6 text-gray-900">
+                            <div className="font-medium">{farmerName}</div>
+                            {farm?.farmer?.email && (
+                              <div className="text-xs text-gray-500 mt-0.5">{farm.farmer.email}</div>
+                            )}
+                          </td>
+                          <td className="py-3 px-6 text-gray-900">
+                            <Badge className="bg-green-100 text-green-700 border-green-300">
+                              {cropType}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-6 text-gray-900">
+                            {sowingDate}
+                          </td>
+                          <td className="py-3 px-6 text-gray-900">
+                            <div className="flex items-center gap-1.5">
+                              <MapPin className="h-3.5 w-3.5 text-gray-400" />
+                              <span className="text-sm">{farmLocation || 'N/A'}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-6">
+                            <Button
+                              onClick={() => {
+                                if (farm && farmId) {
+                                  setSelectedFarmForAssignment(farm);
+                                  setAssignFormData({ assessorId: "", insurerId: "" });
+                                  setShowAssignDialog(true);
+                                } else {
+                                  toast({
+                                    title: "Error",
+                                    description: "Invalid farm data. Please refresh the page.",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                              disabled={!farmId}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Assign Assessor
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -5998,25 +5937,37 @@ export const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredAssessments.map((assessment, index) => (
+                    {filteredAssessments.filter(assessment => assessment != null).map((assessment, index) => (
                       <tr
-                        key={assessment._id || assessment.id || index}
+                        key={assessment?._id || assessment?.id || index}
                         className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${
                           index % 2 === 0 ? "bg-white" : "bg-gray-50/50"
                         }`}
                       >
                         <td className="py-4 px-6 text-gray-900">
-                          {typeof assessment.farm?.name === 'string' ? assessment.farm.name : 'N/A'}
+                          {(() => {
+                            // Handle new API structure: farmId is an object
+                            const farmIdObj = assessment.farmId || assessment.farm;
+                            if (farmIdObj?.name && typeof farmIdObj.name === 'string') {
+                              return farmIdObj.name;
+                            }
+                            // Show crop type if name not available
+                            if (farmIdObj?.cropType) {
+                              return `${farmIdObj.cropType} Farm`;
+                            }
+                            return 'N/A';
+                          })()}
                         </td>
                         <td className="py-4 px-6 text-gray-900">
                           {(() => {
-                            // Safely extract farmer name from various possible structures
-                            if (assessment.farm?.farmerName && typeof assessment.farm.farmerName === 'string') {
-                              return assessment.farm.farmerName;
+                            // Handle new API structure: farmId has farmerId
+                            const farmIdObj = assessment.farmId || assessment.farm;
+                            if (farmIdObj?.farmerName && typeof farmIdObj.farmerName === 'string') {
+                              return farmIdObj.farmerName;
                             }
                             const farmerName = safeExtractUserName(assessment.farmer);
                             if (farmerName !== 'N/A') return farmerName;
-                            return safeExtractUserName(assessment.farm?.farmer) || 'N/A';
+                            return safeExtractUserName(farmIdObj?.farmer) || 'N/A';
                           })()}
                         </td>
                         <td className="py-4 px-6 text-gray-900">
@@ -6024,31 +5975,35 @@ export const AdminDashboard = () => {
                             // Safely extract assessor name from various possible structures
                             const assessorName = safeExtractUserName(assessment.assessor);
                             if (assessorName !== 'N/A') return assessorName;
+                            // Check if assessorId is an object with name
+                            if (assessment.assessorId && typeof assessment.assessorId === 'object') {
+                              return safeExtractUserName(assessment.assessorId) || 'N/A';
+                            }
                             // Only return assessorId as last resort if it's a string
                             if (assessment.assessorId && typeof assessment.assessorId === 'string') {
                               return assessment.assessorId;
                             }
-                            return 'N/A';
+                            return 'Not Assigned';
                           })()}
                         </td>
                         <td className="py-4 px-6">
                           <Badge
                             variant={
-                              assessment.status === 'completed' || assessment.status === 'submitted'
+                              assessment.status === 'COMPLETED' || assessment.status === 'SUBMITTED' || assessment.status === 'completed' || assessment.status === 'submitted'
                                 ? 'default'
-                                : assessment.status === 'in-progress'
+                                : assessment.status === 'IN_PROGRESS' || assessment.status === 'ASSIGNED' || assessment.status === 'in-progress' || assessment.status === 'assigned'
                                 ? 'secondary'
                                 : 'outline'
                             }
                             className={
-                              assessment.status === 'completed' || assessment.status === 'submitted'
+                              assessment.status === 'COMPLETED' || assessment.status === 'SUBMITTED' || assessment.status === 'completed' || assessment.status === 'submitted'
                                 ? 'bg-green-100 text-green-700 border-green-300'
-                                : assessment.status === 'in-progress'
+                                : assessment.status === 'IN_PROGRESS' || assessment.status === 'ASSIGNED' || assessment.status === 'in-progress' || assessment.status === 'assigned'
                                 ? 'bg-yellow-100 text-yellow-700 border-yellow-300'
                                 : 'bg-gray-100 text-gray-700 border-gray-300'
                             }
                           >
-                            {assessment.status || 'Pending'}
+                            {assessment.status ? String(assessment.status).replace('_', ' ') : 'PENDING'}
                           </Badge>
                         </td>
                         <td className="py-4 px-6 text-gray-900/80">
@@ -6250,13 +6205,24 @@ export const AdminDashboard = () => {
             <div className="space-y-4 mt-4">
               {selectedFarmForAssignment && (
                 <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                  <p className="text-sm font-medium text-gray-900">Farm Details:</p>
-                  <p className="text-sm text-gray-600">
-                    Crop: {selectedFarmForAssignment.cropType || selectedFarmForAssignment.crop || 'N/A'}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Farmer: {safeExtractUserName(selectedFarmForAssignment.farmerName || selectedFarmForAssignment.farmer)}
-                  </p>
+                  <p className="text-sm font-medium text-gray-900 mb-2">Farm Details:</p>
+                  <div className="space-y-1">
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium">Crop:</span> {selectedFarmForAssignment.cropType || selectedFarmForAssignment.crop || 'N/A'}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium">Farmer:</span> {
+                        selectedFarmForAssignment.farmer
+                          ? `${selectedFarmForAssignment.farmer.firstName || ''} ${selectedFarmForAssignment.farmer.lastName || ''}`.trim() || 'Unknown'
+                          : safeExtractUserName(selectedFarmForAssignment.farmerName || selectedFarmForAssignment.farmer) || 'Unknown'
+                      }
+                    </p>
+                    {selectedFarmForAssignment.sowingDate && (
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium">Sowing Date:</span> {new Date(selectedFarmForAssignment.sowingDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
               <div>
@@ -6273,12 +6239,17 @@ export const AdminDashboard = () => {
                       <SelectItem value="none" disabled>No assessors available</SelectItem>
                     ) : (
                       assessors.map((assessor, index) => {
-                        const assessorValue = assessor._id || assessor.id || `assessor-${index}`;
-                        const assessorName = safeExtractUserName(assessor);
-                        const contactInfo = (typeof assessor.email === 'string' ? assessor.email : '') || (typeof assessor.phoneNumber === 'string' ? assessor.phoneNumber : '');
+                        // Use id from the new API response structure
+                        const assessorValue = assessor.id || assessor._id || `assessor-${index}`;
+                        // Extract name from firstName and lastName
+                        const assessorName = assessor.firstName && assessor.lastName
+                          ? `${assessor.firstName} ${assessor.lastName}`
+                          : assessor.firstName || assessor.lastName || assessor.name || 'Unknown Assessor';
+                        const contactInfo = assessor.email || assessor.phoneNumber || '';
+                        const specialization = assessor.assessorProfile?.specialization || '';
                         return (
                           <SelectItem key={assessorValue} value={assessorValue}>
-                            {assessorName}{contactInfo ? ` (${contactInfo})` : ''}
+                            {assessorName}{contactInfo ? ` (${contactInfo})` : ''}{specialization ? ` - ${specialization}` : ''}
                           </SelectItem>
                         );
                       })
@@ -6381,13 +6352,28 @@ export const AdminDashboard = () => {
                     {farmsLoading ? (
                       <SelectItem value="loading" disabled>Loading farms...</SelectItem>
                     ) : !Array.isArray(farms) || farms.length === 0 ? (
-                      <SelectItem value="none" disabled>No farms available</SelectItem>
+                      <SelectItem value="none" disabled>
+                        {!Array.isArray(farms) ? 'Farms data error' : `No farms available (loaded: ${farms.length})`}
+                      </SelectItem>
                     ) : (
-                      farms.map((farm, index) => {
-                        const farmValue = farm._id || farm.id || `farm-${index}`;
+                      farms.filter(farm => {
+                        const hasId = farm != null && (farm._id || farm.id);
+                        if (!hasId) {
+                          console.warn('⚠️ Farm filtered out (no ID):', farm);
+                        }
+                        return hasId;
+                      }).map((farm, index) => {
+                        const farmValue = farm.id || farm._id;
+                        const farmName = farm.name || `Farm ${index + 1}`;
+                        const cropType = farm.cropType || '';
+                        const farmerName = farm.farmerName || 
+                          (farm.farmer?.firstName && farm.farmer?.lastName 
+                            ? `${farm.farmer.firstName} ${farm.farmer.lastName}` 
+                            : farm.farmer?.name || 'Unknown Farmer');
+                        
                         return (
                           <SelectItem key={farmValue} value={farmValue}>
-                            {(typeof farm.name === 'string' ? farm.name : 'Unnamed Farm')} - {(typeof farm.farmerName === 'string' ? farm.farmerName : '') || (typeof farm.farmer?.name === 'string' ? farm.farmer.name : '') || 'Unknown Farmer'}
+                            {farmName}{cropType ? ` (${cropType})` : ''} - {farmerName}
                           </SelectItem>
                         );
                       })
@@ -6406,25 +6392,28 @@ export const AdminDashboard = () => {
                   </SelectTrigger>
                   <SelectContent className="bg-white border-gray-300">
                     {!Array.isArray(assessors) || assessors.length === 0 ? (
-                      <SelectItem value="none" disabled>No assessors available</SelectItem>
+                      <SelectItem value="none" disabled>
+                        {!Array.isArray(assessors) ? 'Assessors data error' : `No assessors available (loaded: ${assessors.length})`}
+                      </SelectItem>
                     ) : (
-                      assessors.map((assessor, index) => {
-                        const assessorValue = assessor._id || assessor.id || `assessor-${index}`;
-                        const assessorName = (() => {
-                          if (assessor.firstName && assessor.lastName) {
-                            return `${assessor.firstName} ${assessor.lastName}`;
-                          }
-                          if (assessor.firstName) return assessor.firstName;
-                          if (assessor.lastName) return assessor.lastName;
-                          if (typeof assessor.name === 'string') return assessor.name;
-                          if (assessor.email) return assessor.email;
-                          if (assessor.phoneNumber) return assessor.phoneNumber;
-                          return 'Unknown Assessor';
-                        })();
+                      assessors.filter(assessor => {
+                        const hasId = assessor != null && (assessor.id || assessor._id);
+                        if (!hasId) {
+                          console.warn('⚠️ Assessor filtered out (no ID):', assessor);
+                        }
+                        return hasId;
+                      }).map((assessor, index) => {
+                        // Use id from the new API response structure
+                        const assessorValue = assessor.id || assessor._id;
+                        // Extract name from firstName and lastName
+                        const assessorName = assessor.firstName && assessor.lastName
+                          ? `${assessor.firstName} ${assessor.lastName}`
+                          : assessor.firstName || assessor.lastName || assessor.name || 'Unknown Assessor';
                         const contactInfo = assessor.email || assessor.phoneNumber || '';
+                        const specialization = assessor.assessorProfile?.specialization || '';
                         return (
                           <SelectItem key={assessorValue} value={assessorValue}>
-                            {assessorName}{contactInfo ? ` (${contactInfo})` : ''}
+                            {assessorName}{contactInfo ? ` (${contactInfo})` : ''}{specialization ? ` - ${specialization}` : ''}
                           </SelectItem>
                         );
                       })

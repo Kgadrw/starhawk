@@ -81,16 +81,12 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center">
-              <Shield className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-light text-gray-900 tracking-tight">
-                STARHAWK
-              </h1>
-              <p className="text-xs text-gray-500 font-light">AI Agricultural Insurance</p>
-            </div>
+          <Link to="/" className="flex items-center hover:opacity-80 transition-opacity">
+            <img 
+              src="/logo.png" 
+              alt="STARHAWK - Agricultural Insurance Platform" 
+              className="h-12 w-auto"
+            />
           </Link>
 
           {/* Desktop Navigation */}
@@ -98,13 +94,13 @@ export function Navbar() {
             <NavigationMenu>
               <NavigationMenuList>
                 <NavigationMenuItem>
-                  <Link to="/" className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                  <Link to="/" className="px-4 py-2.5 text-base font-medium text-gray-600">
                     Home
                   </Link>
                 </NavigationMenuItem>
                 
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger className="text-sm font-medium text-gray-600 hover:text-gray-900">
+                  <NavigationMenuTrigger className="text-base font-medium text-gray-600">
                     Services
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
@@ -115,7 +111,7 @@ export function Navbar() {
                           <NavigationMenuLink key={service.title} asChild>
                             <Link
                               to={service.href}
-                              className="block select-none space-y-1 rounded-lg p-3 leading-none no-underline outline-none transition-colors hover:bg-gray-50"
+                              className="block select-none space-y-1 rounded-lg p-3 leading-none no-underline outline-none"
                             >
                               <div className="flex items-center gap-3">
                                 <Icon className="h-5 w-5 text-gray-600" />
@@ -135,7 +131,7 @@ export function Navbar() {
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger className="text-sm font-medium text-gray-600 hover:text-gray-900">
+                  <NavigationMenuTrigger className="text-base font-medium text-gray-600">
                     Team
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
@@ -143,7 +139,7 @@ export function Navbar() {
                       <div className="text-sm font-medium mb-2 text-gray-900">Our Expert Team</div>
                       {teamMembers.map((member, index) => (
                         <NavigationMenuLink key={index} asChild>
-                          <div className="block select-none space-y-1 rounded-lg p-3 leading-none no-underline outline-none transition-colors hover:bg-gray-50">
+                          <div className="block select-none space-y-1 rounded-lg p-3 leading-none no-underline outline-none">
                             <div className="text-sm font-medium leading-none text-gray-900">{member.name}</div>
                             <p className="text-sm text-gray-500">{member.role}</p>
                             <p className="text-xs text-gray-600">{member.expertise}</p>
@@ -155,13 +151,13 @@ export function Navbar() {
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <Link to="/contact" className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                  <Link to="/contact" className="px-4 py-2.5 text-base font-medium text-gray-600">
                     Contact
                   </Link>
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <Link to="/claim" className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                  <Link to="/claim" className="px-4 py-2.5 text-base font-medium text-gray-600">
                     File a Claim
                   </Link>
                 </NavigationMenuItem>
@@ -205,19 +201,19 @@ export function Navbar() {
             <div className="space-y-6">
               <Link
                 to="/"
-                className="block px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                className="block px-4 py-2.5 text-base font-medium text-gray-600"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Home
               </Link>
-              <div className="px-3 py-2">
-                <div className="text-sm font-medium mb-3 text-gray-900">Services</div>
+              <div className="px-4 py-2.5">
+                <div className="text-base font-medium mb-3 text-gray-900">Services</div>
                 <div className="space-y-3 ml-4">
                   {services.map((service) => (
                     <Link
                       key={service.title}
                       to={service.href}
-                      className="block text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                      className="block text-base text-gray-500"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       {service.title}
@@ -227,21 +223,21 @@ export function Navbar() {
               </div>
               <Link
                 to="/team"
-                className="block px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                className="block px-4 py-2.5 text-base font-medium text-gray-600"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Team
               </Link>
               <Link
                 to="/contact"
-                className="block px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                className="block px-4 py-2.5 text-base font-medium text-gray-600"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Contact
               </Link>
               <Link
                 to="/claim"
-                className="block px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                className="block px-4 py-2.5 text-base font-medium text-gray-600"
                 onClick={() => setIsMenuOpen(false)}
               >
                 File a Claim

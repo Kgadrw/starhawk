@@ -254,8 +254,10 @@ class UsersApiService {
   }
 
   // Get All Assessors
-  async getAssessors() {
-    return this.request<any>('/assessors');
+  // Get Assessors (Admin/Insurer only)
+  // Endpoint: GET /users/assessors with pagination
+  async getAssessors(page: number = 0, size: number = 100) {
+    return this.request<any>(`/assessors?page=${page}&size=${size}`);
   }
 }
 
@@ -311,7 +313,7 @@ export const createUser = (userData: {
   [key: string]: any;
 }) => usersApiService.createUser(userData);
 
-export const getAssessors = () => usersApiService.getAssessors();
+export const getAssessors = (page: number = 0, size: number = 100) => usersApiService.getAssessors(page, size);
 
 export default usersApiService;
 

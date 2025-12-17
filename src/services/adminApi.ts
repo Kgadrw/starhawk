@@ -90,6 +90,39 @@ class AdminApiService {
   async getClaimStatistics() {
     return this.request<any>('/claims/statistics');
   }
+
+  // Get Health Status
+  async getHealthStatus() {
+    // Health endpoint is at /health, not /admin/health
+    const url = `${API_BASE_URL}/health`;
+    const token = this.getToken();
+
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      'accept': 'application/json',
+    };
+
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Health check request failed:', error);
+      throw error;
+    }
+  }
 }
 
 // Create and export a singleton instance
@@ -100,4 +133,5 @@ export default adminApiService;
 export const getSystemStatistics = () => adminApiService.getSystemStatistics();
 export const getPolicyOverview = () => adminApiService.getPolicyOverview();
 export const getClaimStatistics = () => adminApiService.getClaimStatistics();
+export const getHealthStatus = () => adminApiService.getHealthStatus();
 

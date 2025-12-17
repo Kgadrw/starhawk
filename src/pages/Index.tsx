@@ -12,7 +12,16 @@ const Index = () => {
       <div className="relative min-h-screen">
         <HomeNavbar />
         <HeroSection />
-        <div className="relative z-10">
+        <div 
+          className="relative z-10"
+          style={{
+            backgroundImage: 'url(/bg_img.png)',
+            backgroundAttachment: 'fixed',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+          }}
+        >
           <ImpactSection />
           <WhyWeExistSection />
           <ServiceHeroSection />

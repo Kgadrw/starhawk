@@ -101,7 +101,16 @@ export default function Services() {
   
   return (
     <CustomScrollbar>
-      <div className="bg-white relative min-h-screen">
+      <div 
+        className="bg-white relative min-h-screen"
+        style={{
+          backgroundImage: 'url(/bg_img.png)',
+          backgroundAttachment: 'fixed',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
         <HomeNavbar />
         
         {/* Hero Section */}
@@ -159,7 +168,7 @@ export default function Services() {
               transition={{ duration: 0.6 }}
               className="text-center mb-12 md:mb-16"
             >
-              <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-green-600 mb-3">
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-[rgba(20,40,75,1)] mb-3">
                 What We Offer
               </h2>
               <p className="text-sm sm:text-base text-gray-700 leading-relaxed max-w-3xl mx-auto">
@@ -181,7 +190,7 @@ export default function Services() {
                   >
                     {/* Icon and Title */}
                     <div className="flex items-center gap-3 mb-3">
-                      <Icon className="h-8 w-8 md:h-10 md:w-10 text-green-600 flex-shrink-0" />
+                      <Icon className="h-8 w-8 md:h-10 md:w-10 text-[rgba(20,40,75,1)] flex-shrink-0" />
                       <h3 className="text-lg md:text-xl font-bold text-gray-700">
                         {service.title}
                       </h3>
@@ -196,7 +205,7 @@ export default function Services() {
                     <ul className="space-y-2">
                       {service.features.map((feature, idx) => (
                         <li key={idx} className="flex items-start gap-2">
-                          <span className="text-green-600 mt-1">•</span>
+                          <span className="text-[rgba(20,40,75,1)] mt-1">•</span>
                           <span className="text-xs md:text-sm text-gray-600">{feature}</span>
                         </li>
                       ))}
@@ -210,7 +219,7 @@ export default function Services() {
               <div className="flex justify-center mt-8">
                 <button
                   onClick={() => setShowAll(!showAll)}
-                  className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                  className="flex items-center gap-2 px-6 py-3 bg-[rgba(20,40,75,1)] text-white rounded-lg hover:bg-[rgba(15,30,56,1)] transition-colors font-medium"
                 >
                   {showAll ? (
                     <>
