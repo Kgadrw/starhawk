@@ -307,15 +307,17 @@ class AssessmentsApiService {
   }
 
   // Assign Assessor to Farm (Admin Only)
+  // Endpoint: POST /api/v1/assessments/assign
   async assignAssessor(farmId: string, assessorId: string, insurerId?: string | null) {
-    const requestBody: any = {
+    const requestBody: {
+      farmId: string;
+      assessorId: string;
+      insurerId: string | null;
+    } = {
       farmId,
       assessorId,
+      insurerId: insurerId || null, // Always include insurerId, even if null
     };
-    
-    if (insurerId) {
-      requestBody.insurerId = insurerId;
-    }
     
     return this.request('/assign', {
       method: 'POST',
