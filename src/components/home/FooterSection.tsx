@@ -15,7 +15,7 @@ export function FooterSection() {
             transition={{ duration: 0.6 }}
             className="flex items-center gap-3"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(20, 40, 75, 1)' }}>
               <Satellite className="h-6 w-6 text-white" />
             </div>
             <div>

@@ -54,22 +54,22 @@ export function Footer() {
   ];
 
   return (
-    <footer className="bg-white border-t border-gray-100">
+    <footer className="border-t border-gray-100" style={{ backgroundColor: 'rgba(20, 40, 75, 1)' }}>
       {/* Main Footer Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
           {/* Company Info */}
           <div className="space-y-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(15, 30, 56, 1)' }}>
                 <Shield className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h3 className="text-xl font-light text-gray-900 tracking-tight">STARHAWK</h3>
-                <p className="text-sm text-gray-500 font-light">AI Agricultural Insurance</p>
+                <h3 className="text-xl font-light text-white tracking-tight">STARHAWK</h3>
+                <p className="text-sm text-white/70 font-light">AI Agricultural Insurance</p>
               </div>
             </div>
-            <p className="text-sm text-gray-500 leading-relaxed font-light">
+            <p className="text-sm text-white/80 leading-relaxed font-light">
               Revolutionizing agricultural insurance through cutting-edge AI technology, 
               real-time data analysis, and intelligent risk assessment for modern farming.
             </p>
@@ -81,7 +81,7 @@ export function Footer() {
                     key={social.name}
                     variant="ghost"
                     size="sm"
-                    className="text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full"
+                    className="text-white/60 hover:text-white hover:bg-white/10 rounded-full"
                     asChild
                   >
                     <a href={social.href} aria-label={social.name}>
@@ -95,13 +95,13 @@ export function Footer() {
 
           {/* Quick Links */}
           <div className="space-y-6">
-            <h4 className="text-lg font-medium text-gray-900">Quick Links</h4>
+            <h4 className="text-lg font-medium text-white">Quick Links</h4>
             <ul className="space-y-3">
               {quickLinks.map((link) => (
                 <li key={link.name}>
                   <Link
                     to={link.href}
-                    className="text-sm text-gray-500 hover:text-gray-900 transition-colors font-light"
+                    className="text-sm text-white/70 hover:text-white transition-colors font-light"
                   >
                     {link.name}
                   </Link>
@@ -112,13 +112,13 @@ export function Footer() {
 
           {/* Services */}
           <div className="space-y-6">
-            <h4 className="text-lg font-medium text-gray-900">Our Services</h4>
+            <h4 className="text-lg font-medium text-white">Our Services</h4>
             <ul className="space-y-3">
               {services.map((service) => (
                 <li key={service.name}>
                   <Link
                     to={service.href}
-                    className="text-sm text-gray-500 hover:text-gray-900 transition-colors font-light"
+                    className="text-sm text-white/70 hover:text-white transition-colors font-light"
                   >
                     {service.name}
                   </Link>
@@ -129,7 +129,7 @@ export function Footer() {
 
           {/* Platform Access & Newsletter */}
           <div className="space-y-6">
-            <h4 className="text-lg font-medium text-gray-900">Platform Access</h4>
+            <h4 className="text-lg font-medium text-white">Platform Access</h4>
             <div className="space-y-3">
               {platforms.map((platform) => {
                 const Icon = platform.icon;
@@ -137,7 +137,7 @@ export function Footer() {
                   <Link
                     key={platform.name}
                     to={platform.href}
-                    className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors font-light"
+                    className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors font-light"
                   >
                     <Icon className="h-4 w-4" />
                     {platform.name}
@@ -147,8 +147,8 @@ export function Footer() {
             </div>
 
             <div className="pt-4">
-              <h4 className="text-lg font-medium mb-3 text-gray-900">Newsletter</h4>
-              <p className="text-sm text-gray-500 mb-4 font-light">
+              <h4 className="text-lg font-medium mb-3 text-white">Newsletter</h4>
+              <p className="text-sm text-white/70 mb-4 font-light">
                 Stay updated with the latest in agricultural insurance technology.
               </p>
               <div className="flex gap-2">
@@ -157,7 +157,7 @@ export function Footer() {
                   placeholder="Enter your email"
                   className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 rounded-full"
                 />
-                <Button className="bg-gray-900 hover:bg-gray-800 rounded-full">
+                <Button className="rounded-full" style={{ backgroundColor: 'rgba(20, 40, 75, 1)', color: 'white' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(15, 30, 56, 1)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(20, 40, 75, 1)'}>
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -167,40 +167,40 @@ export function Footer() {
       </div>
 
       {/* Contact Info Bar */}
-      <div className="border-t border-gray-100">
+      <div className="border-t border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid gap-6 md:grid-cols-3 text-center md:text-left">
             <div className="flex items-center justify-center md:justify-start gap-3">
-              <Phone className="h-4 w-4 text-gray-500" />
-              <span className="text-sm text-gray-500 font-light">+250 123 456 789</span>
+              <Phone className="h-4 w-4 text-white/70" />
+              <span className="text-sm text-white/70 font-light">+250 123 456 789</span>
             </div>
             <div className="flex items-center justify-center md:justify-start gap-3">
-              <Mail className="h-4 w-4 text-gray-500" />
-              <span className="text-sm text-gray-500 font-light">info@starhawk.com</span>
+              <Mail className="h-4 w-4 text-white/70" />
+              <span className="text-sm text-white/70 font-light">info@starhawk.com</span>
             </div>
             <div className="flex items-center justify-center md:justify-start gap-3">
-              <MapPin className="h-4 w-4 text-gray-500" />
-              <span className="text-sm text-gray-500 font-light">Kigali, Rwanda</span>
+              <MapPin className="h-4 w-4 text-white/70" />
+              <span className="text-sm text-white/70 font-light">Kigali, Rwanda</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Bottom Bar */}
-      <div className="border-t border-gray-100">
+      <div className="border-t border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="text-sm text-gray-500 font-light">
+            <div className="text-sm text-white/70 font-light">
               © {currentYear} STARHAWK. All rights reserved. | AI Agricultural Insurance Platform
             </div>
-            <div className="flex items-center gap-6 text-sm text-gray-500">
-              <Link to="/privacy" className="hover:text-gray-900 transition-colors font-light">
+            <div className="flex items-center gap-6 text-sm text-white/70">
+              <Link to="/privacy" className="hover:text-white transition-colors font-light">
                 Privacy Policy
               </Link>
-              <Link to="/terms" className="hover:text-gray-900 transition-colors font-light">
+              <Link to="/terms" className="hover:text-white transition-colors font-light">
                 Terms of Service
               </Link>
-              <Link to="/cookies" className="hover:text-gray-900 transition-colors font-light">
+              <Link to="/cookies" className="hover:text-white transition-colors font-light">
                 Cookie Policy
               </Link>
             </div>

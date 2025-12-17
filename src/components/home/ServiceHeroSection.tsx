@@ -81,7 +81,10 @@ export function ServiceHeroSection() {
               </div>
               <button
                 type="submit"
-                className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded transition-colors duration-200 whitespace-nowrap"
+                className="px-6 py-3 text-white font-medium rounded transition-colors duration-200 whitespace-nowrap"
+                style={{ backgroundColor: 'rgba(20, 40, 75, 1)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(15, 30, 56, 1)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(20, 40, 75, 1)'}
               >
                 Subscribe
               </button>
