@@ -228,6 +228,8 @@ export default function AssessorDashboard() {
   const [farmsLoading, setFarmsLoading] = useState(false);
   const [farmsError, setFarmsError] = useState<string | null>(null);
   const [selectedFarm, setSelectedFarm] = useState<any | null>(null);
+  const [showKMLViewer, setShowKMLViewer] = useState(false);
+  const [kmlViewerFarm, setKmlViewerFarm] = useState<any | null>(null);
   
   // Farmers list state
   const [farmers, setFarmers] = useState<any[]>([]);
@@ -1737,6 +1739,7 @@ export default function AssessorDashboard() {
 
   // Crop Analysis Component
   const CropAnalysisTab = ({ fieldDetails }: { fieldDetails: FieldDetail }) => {
+    // Use selectedFarm and vegetationStats from parent scope
     const [dataSource, setDataSource] = useState<string>("drone");
     const [selectedFile, setSelectedFile] = useState<string>("");
     const [flightDate, setFlightDate] = useState<string>("2025-10-22");
@@ -1898,32 +1901,68 @@ export default function AssessorDashboard() {
                     />
                   </div>
 
-                  {/* Drone Metrics */}
+                  {/* Vegetation Metrics - Use real data from vegetationStats if available */}
                   <div>
-                    <Label className="text-gray-900 mb-4 block">Drone Metrics</Label>
+                    <Label className="text-gray-900 mb-4 block">Vegetation Metrics</Label>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                      <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-                        <p className="text-xs text-gray-600 mb-1 font-medium">Healthy Area</p>
-                        <p className="text-xl font-bold text-gray-700">2.8 ha</p>
-                      </div>
-                      <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-                        <p className="text-xs text-gray-600 mb-1 font-medium">Stress Detected</p>
-                        <p className="text-xl font-bold text-gray-700">17.6%</p>
-                      </div>
-                      <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-                        <p className="text-xs text-gray-600 mb-1 font-medium">Soil Moisture</p>
-                        <p className="text-xl font-bold text-gray-700">58%</p>
-                      </div>
-                      <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-                        <p className="text-xs text-gray-600 mb-1 font-medium">Weed Area</p>
-                        <p className="text-xl font-bold text-gray-700">0.25 ha</p>
-                        <p className="text-xs text-gray-500">(7.3%)</p>
-                      </div>
-                      <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-                        <p className="text-xs text-gray-600 mb-1 font-medium">Pest Area</p>
-                        <p className="text-xl font-bold text-gray-700">0.15 ha</p>
-                        <p className="text-xs text-gray-500">(4.4%)</p>
-                      </div>
+                      {(() => {
+                        // Extract metrics from vegetationStats if available
+                        const ndviData = vegetationStats?.NDVI || vegetationStats?.ndvi || vegetationStats?.data?.NDVI;
+                        const avgNDVI = ndviData?.average || ndviData?.mean || ndviData?.current;
+                        const healthyArea = avgNDVI && fieldDetails.area ? 
+                          (avgNDVI > 0.6 ? (fieldDetails.area * 0.9).toFixed(1) : (fieldDetails.area * 0.7).toFixed(1)) : 
+                          '2.8';
+                        const stressPercent = avgNDVI ? 
+                          (avgNDVI < 0.3 ? '35' : avgNDVI < 0.5 ? '17.6' : '5') : 
+                          '17.6';
+                        
+                        return (
+                          <>
+                            <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                              <p className="text-xs text-gray-600 mb-1 font-medium">Healthy Area</p>
+                              <p className="text-xl font-bold text-gray-700">{healthyArea} ha</p>
+                              {avgNDVI && (
+                                <p className="text-xs text-gray-500">NDVI: {avgNDVI.toFixed(2)}</p>
+                              )}
+                            </div>
+                            <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                              <p className="text-xs text-gray-600 mb-1 font-medium">Stress Detected</p>
+                              <p className="text-xl font-bold text-gray-700">{stressPercent}%</p>
+                            </div>
+                            <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                              <p className="text-xs text-gray-600 mb-1 font-medium">NDVI Average</p>
+                              <p className="text-xl font-bold text-gray-700">
+                                {avgNDVI ? avgNDVI.toFixed(2) : 'N/A'}
+                              </p>
+                              {avgNDVI && (
+                                <p className="text-xs text-gray-500">
+                                  {avgNDVI > 0.6 ? 'Healthy' : avgNDVI > 0.3 ? 'Moderate' : 'Stress'}
+                                </p>
+                              )}
+                            </div>
+                            <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                              <p className="text-xs text-gray-600 mb-1 font-medium">Weed Area</p>
+                              <p className="text-xl font-bold text-gray-700">
+                                {vegetationStats?.weedArea ? 
+                                  `${vegetationStats.weedArea.toFixed(2)} ha` : 
+                                  '0.25 ha'
+                                }
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                ({vegetationStats?.weedArea ? 
+                                  ((vegetationStats.weedArea / fieldDetails.area) * 100).toFixed(1) : 
+                                  '7.3'
+                                }%)
+                              </p>
+                            </div>
+                            <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                              <p className="text-xs text-gray-600 mb-1 font-medium">Field Area</p>
+                              <p className="text-xl font-bold text-gray-700">{fieldDetails.area} ha</p>
+                              <p className="text-xs text-gray-500">Total area</p>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
 
@@ -1969,12 +2008,20 @@ export default function AssessorDashboard() {
                       <CardContent>
                         <div className="relative">
                           <LeafletMap
-                            center={mapCenter}
+                            center={(() => {
+                              // Use farm location if available
+                              if (selectedFarm?.location?.coordinates) {
+                                const coords = selectedFarm.location.coordinates;
+                                return [coords[1], coords[0]]; // [lat, lng] from [lng, lat]
+                              }
+                              return mapCenter;
+                            })()}
                             zoom={15}
                             height="400px"
                             tileLayer={mapTileLayer}
                             showControls={true}
                             className="w-full rounded-lg"
+                            boundary={selectedFarm?.boundary || null}
                           />
                           {/* Legend */}
                           <div className="absolute bottom-4 left-4 bg-white/90 border border-gray-200 rounded-lg p-4 z-[1000]">
@@ -2144,12 +2191,20 @@ export default function AssessorDashboard() {
                       <CardContent>
                         <div className="border border-gray-200 rounded-lg overflow-hidden">
                           <LeafletMap
-                            center={mapCenter}
+                            center={(() => {
+                              // Use farm location if available
+                              if (selectedFarm?.location?.coordinates) {
+                                const coords = selectedFarm.location.coordinates;
+                                return [coords[1], coords[0]]; // [lat, lng] from [lng, lat]
+                              }
+                              return mapCenter;
+                            })()}
                             zoom={15}
                             height="400px"
                             tileLayer="satellite"
                             showControls={true}
                             className="w-full"
+                            boundary={selectedFarm?.boundary || null}
                           />
                         </div>
                       </CardContent>
@@ -2723,27 +2778,53 @@ export default function AssessorDashboard() {
                         </td>
                         <td className="py-2.5 px-4 whitespace-nowrap">
                           {field.status === "Processed" ? (
-                            <Button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const farmField: Field = {
-                                  id: field.rawFarm._id || field.rawFarm.id,
-                                  farmerName: field.farmerName,
-                                  crop: field.crop,
-                                  area: field.area,
-                                  season: field.season,
-                                  status: field.status,
-                                  fieldName: field.rawFarm.name || "Field",
-                                  sowingDate: field.rawFarm.sowingDate || ""
-                                };
-                                handleFieldClick(farmField);
-                              }}
-                              size="sm"
-                              className="bg-green-600 hover:bg-green-700 text-white h-8 !rounded-none"
-                            >
-                              <Eye className="h-3.5 w-3.5 mr-1.5" />
-                              View Data
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const farmField: Field = {
+                                    id: field.rawFarm._id || field.rawFarm.id,
+                                    farmerName: field.farmerName,
+                                    crop: field.crop,
+                                    area: field.area,
+                                    season: field.season,
+                                    status: field.status,
+                                    fieldName: field.rawFarm.name || "Field",
+                                    sowingDate: field.rawFarm.sowingDate || ""
+                                  };
+                                  handleFieldClick(farmField);
+                                }}
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700 text-white h-8 !rounded-none"
+                              >
+                                <Eye className="h-3.5 w-3.5 mr-1.5" />
+                                View Data
+                              </Button>
+                              <Button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  const farmId = field.rawFarm._id || field.rawFarm.id;
+                                  try {
+                                    const farmData = await getFarmById(farmId);
+                                    setKmlViewerFarm(farmData.data || farmData);
+                                    setShowKMLViewer(true);
+                                  } catch (err: any) {
+                                    console.error('Failed to load farm for KML view:', err);
+                                    toast({
+                                      title: "Error",
+                                      description: "Failed to load farm data for KML view",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }}
+                                size="sm"
+                                variant="outline"
+                                className="border-gray-300 text-gray-700 hover:bg-gray-100 h-8 !rounded-none"
+                              >
+                                <Map className="h-3.5 w-3.5 mr-1.5" />
+                                View KML
+                              </Button>
+                            </div>
                           ) : (
                             <Button
                               onClick={(e) => {
@@ -2835,13 +2916,36 @@ export default function AssessorDashboard() {
                       </td>
                       <td className="py-4 px-6">
                         {field.status === "Processed" ? (
-                          <Button
-                            onClick={() => handleFieldClick(field)}
-                            className="bg-gray-200 hover:bg-gray-300 text-gray-900 border border-gray-300 !rounded-none"
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            View Data
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => handleFieldClick(field)}
+                              className="bg-gray-200 hover:bg-gray-300 text-gray-900 border border-gray-300 !rounded-none"
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Data
+                            </Button>
+                            <Button
+                              onClick={async () => {
+                                try {
+                                  const farmData = await getFarmById(field.id);
+                                  setKmlViewerFarm(farmData.data || farmData);
+                                  setShowKMLViewer(true);
+                                } catch (err: any) {
+                                  console.error('Failed to load farm for KML view:', err);
+                                  toast({
+                                    title: "Error",
+                                    description: "Failed to load farm data for KML view",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                              variant="outline"
+                              className="border-gray-300 text-gray-700 hover:bg-gray-100 !rounded-none"
+                            >
+                              <Map className="h-4 w-4 mr-2" />
+                              View KML
+                            </Button>
+                          </div>
                         ) : (
                           <Button
                             onClick={() => handleFieldClick(field)}
@@ -2990,7 +3094,11 @@ export default function AssessorDashboard() {
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
                     <LeafletMap
                       center={(() => {
-                        // Parse location coordinates if available
+                        // Use farm location if available, otherwise parse from fieldDetails
+                        if (selectedFarm?.location?.coordinates) {
+                          const coords = selectedFarm.location.coordinates;
+                          return [coords[1], coords[0]]; // [lat, lng] from [lng, lat]
+                        }
                         if (fieldDetails.location.includes(',')) {
                           const parts = fieldDetails.location.split(',');
                           const lat = parseFloat(parts[0]?.trim() || "-1.9441");
@@ -3004,6 +3112,7 @@ export default function AssessorDashboard() {
                       tileLayer="satellite"
                       showControls={true}
                       className="w-full"
+                      boundary={selectedFarm?.boundary || null}
                     />
                   </div>
                 </CardContent>
@@ -4883,6 +4992,37 @@ export default function AssessorDashboard() {
                 Cancel
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* KML Viewer Dialog */}
+      {showKMLViewer && kmlViewerFarm && (
+        <Dialog open={showKMLViewer} onOpenChange={setShowKMLViewer}>
+          <DialogContent className="max-w-6xl max-h-[90vh]">
+            <DialogHeader>
+              <DialogTitle>Field Boundary Map (KML)</DialogTitle>
+              <DialogDescription>
+                Viewing field boundary for {kmlViewerFarm.name || "Field"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4">
+              <LeafletMap
+                center={(() => {
+                  if (kmlViewerFarm?.location?.coordinates) {
+                    const coords = kmlViewerFarm.location.coordinates;
+                    return [coords[1], coords[0]]; // [lat, lng] from [lng, lat]
+                  }
+                  return [-1.9441, 30.0619];
+                })()}
+                zoom={15}
+                height="600px"
+                tileLayer="satellite"
+                showControls={true}
+                className="w-full"
+                boundary={kmlViewerFarm?.boundary || null}
+              />
+            </div>
           </DialogContent>
         </Dialog>
       )}

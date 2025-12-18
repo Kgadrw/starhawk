@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { dashboardTheme } from "@/utils/dashboardTheme";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from "recharts";
 import meteosourceApiService from "@/services/meteosourceApi";
 import CombinedWeatherForecast from "@/components/common/CombinedWeatherForecast";
 import LeafletMap from "@/components/common/LeafletMap";
@@ -52,7 +53,9 @@ import {
   Edit,
   User,
   ArrowUp,
-  Loader2
+  Loader2,
+  Save,
+  AlertCircle
 } from "lucide-react";
 
 interface AssessmentSummary {
@@ -154,6 +157,8 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
   const [selectedFarmForDetail, setSelectedFarmForDetail] = useState<any | null>(null);
   const [dashboardViewMode, setDashboardViewMode] = useState<"list" | "fieldDetail">("list");
   const [filterOpen, setFilterOpen] = useState(false);
+  const [assessmentDetails, setAssessmentDetails] = useState<any | null>(null);
+  const [loadingAssessmentDetails, setLoadingAssessmentDetails] = useState(false);
 
   // Use prop assessments if provided, otherwise use internal state
   const assessments = propAssessments || internalAssessments;
@@ -692,9 +697,43 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
     setViewMode("fieldSelection");
   };
 
-  const handleFieldClick = (field: Field) => {
+  const handleFieldClick = async (field: Field) => {
     setSelectedField(field);
     setViewMode("fieldDetail");
+    
+    // Load full assessment details
+    if (selectedAssessment?.id) {
+      setLoadingAssessmentDetails(true);
+      try {
+        const assessment = await assessmentsApiService.getAssessmentById(selectedAssessment.id);
+        const assessmentData = assessment.data || assessment;
+        setAssessmentDetails(assessmentData);
+        
+        // Load farm details if farmId is available
+        if (assessmentData.farmId) {
+          const farmId = typeof assessmentData.farmId === 'string' 
+            ? assessmentData.farmId 
+            : assessmentData.farmId._id || assessmentData.farmId.id;
+          if (farmId) {
+            try {
+              const farmData = await getFarmById(farmId);
+              setSelectedFarmForDetail(farmData.data || farmData);
+            } catch (err) {
+              console.error('Failed to load farm details:', err);
+            }
+          }
+        }
+      } catch (err: any) {
+        console.error('Failed to load assessment details:', err);
+        toast({
+          title: "Error",
+          description: "Failed to load assessment details",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingAssessmentDetails(false);
+      }
+    }
   };
 
   const handleBackToList = () => {
@@ -962,9 +1001,41 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
     const [riskScore, setRiskScore] = useState<number | null>(null);
     const [mapTileLayer, setMapTileLayer] = useState<"osm" | "satellite" | "terrain">("satellite");
     const [selectedIndex, setSelectedIndex] = useState<string>("ndvi");
+    const [vegetationStats, setVegetationStats] = useState<any>(null);
+    const [loadingVegetation, setLoadingVegetation] = useState(false);
     
     // Default map center (Kigali, Rwanda coordinates)
     const mapCenter: [number, number] = [-1.9441, 30.0619];
+    
+    // Load vegetation stats when field is available
+    useEffect(() => {
+      const loadVegetationData = async () => {
+        const farmId = fieldDetails.fieldId;
+        if (!farmId) return;
+        
+        setLoadingVegetation(true);
+        try {
+          const today = new Date();
+          const startDate = new Date();
+          startDate.setDate(today.getDate() - 30);
+          
+          const startDateStr = startDate.toISOString().split('T')[0];
+          const endDateStr = today.toISOString().split('T')[0];
+          
+          const stats = await getVegetationStats(farmId, startDateStr, endDateStr, 'NDVI,MSAVI,EVI,NDMI');
+          setVegetationStats(stats.data || stats);
+        } catch (err: any) {
+          // Silently handle errors for missing EOSDA field ID
+          if (!err?.message?.includes('EOSDA') && !err?.message?.includes('register the farm')) {
+            console.error('Failed to load vegetation stats:', err);
+          }
+        } finally {
+          setLoadingVegetation(false);
+        }
+      };
+      
+      loadVegetationData();
+    }, [fieldDetails.fieldId]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -1442,12 +1513,27 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                   {/* Map Container */}
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
                     <LeafletMap
-                      center={mapCenter}
+                      center={(() => {
+                        // Use farm location if available
+                        if (selectedFarmForDetail?.location?.coordinates) {
+                          const coords = selectedFarmForDetail.location.coordinates;
+                          return [coords[1], coords[0]]; // [lat, lng] from [lng, lat]
+                        }
+                        // Try parsing from fieldDetails location
+                        if (fieldDetails.location.includes(',')) {
+                          const parts = fieldDetails.location.split(',');
+                          const lat = parseFloat(parts[0]?.trim() || "-1.9441");
+                          const lng = parseFloat(parts[1]?.trim() || "30.0619");
+                          return [lat, lng];
+                        }
+                        return mapCenter;
+                      })()}
                       zoom={15}
                       height="500px"
                       tileLayer={mapTileLayer}
                       showControls={true}
                       className="w-full"
+                      boundary={selectedFarmForDetail?.boundary || null}
                     />
                               </div>
 
@@ -1595,6 +1681,423 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
     );
   };
 
+  // Overview Tab Component with Risk Score, Notes, and Report Generation
+  const OverviewTab = ({ 
+    assessmentDetails, 
+    assessmentId, 
+    fieldDetails,
+    onRefresh 
+  }: { 
+    assessmentDetails: any | null; 
+    assessmentId?: string;
+    fieldDetails: FieldDetail;
+    onRefresh: () => void;
+  }) => {
+    const [riskScore, setRiskScore] = useState<number | null>(assessmentDetails?.riskScore ?? null);
+    const [calculatingRisk, setCalculatingRisk] = useState(false);
+    const [comprehensiveNotes, setComprehensiveNotes] = useState(assessmentDetails?.comprehensiveNotes || '');
+    const [savingNotes, setSavingNotes] = useState(false);
+    const [generatingReport, setGeneratingReport] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [uploadingPDF, setUploadingPDF] = useState(false);
+    const [droneAnalysisData, setDroneAnalysisData] = useState<any>(assessmentDetails?.droneAnalysisData || null);
+
+    // Update state when assessmentDetails changes
+    useEffect(() => {
+      if (assessmentDetails) {
+        setRiskScore(assessmentDetails.riskScore ?? null);
+        setComprehensiveNotes(assessmentDetails.comprehensiveNotes || '');
+        setDroneAnalysisData(assessmentDetails.droneAnalysisData || null);
+      }
+    }, [assessmentDetails]);
+
+    const handleCalculateRiskScore = async () => {
+      if (!assessmentId) {
+        toast({
+          title: "Error",
+          description: "Assessment ID not available.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setCalculatingRisk(true);
+      try {
+        const score = await assessmentsApiService.calculateRiskScore(assessmentId);
+        const riskScoreValue = typeof score === 'number' ? score : (score?.data || score?.riskScore || score);
+        setRiskScore(riskScoreValue);
+        toast({
+          title: "Success",
+          description: `Risk score calculated: ${riskScoreValue}`,
+        });
+        // Refresh assessment details
+        if (onRefresh) onRefresh();
+      } catch (err: any) {
+        console.error('Failed to calculate risk score:', err);
+        toast({
+          title: "Calculation Failed",
+          description: err.message || 'Failed to calculate risk score',
+          variant: "destructive",
+        });
+      } finally {
+        setCalculatingRisk(false);
+      }
+    };
+
+    const handleSaveNotes = async () => {
+      if (!assessmentId) {
+        toast({
+          title: "Error",
+          description: "Assessment ID not available.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSavingNotes(true);
+      try {
+        await assessmentsApiService.updateAssessment(assessmentId, {
+          comprehensiveNotes: comprehensiveNotes,
+        });
+        toast({
+          title: "Success",
+          description: "Comprehensive notes saved successfully.",
+        });
+        if (onRefresh) onRefresh();
+      } catch (err: any) {
+        console.error('Failed to save notes:', err);
+        toast({
+          title: "Save Failed",
+          description: err.message || 'Failed to save comprehensive notes',
+          variant: "destructive",
+        });
+      } finally {
+        setSavingNotes(false);
+      }
+    };
+
+    const handleUploadDronePDF = async () => {
+      if (!selectedFile || !assessmentId) {
+        toast({
+          title: "Validation Error",
+          description: "Please select a PDF file.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setUploadingPDF(true);
+      try {
+        const result = await assessmentsApiService.uploadDronePDF(assessmentId, selectedFile);
+        setDroneAnalysisData(result?.droneAnalysisData || result?.data?.droneAnalysisData || null);
+        toast({
+          title: "Success",
+          description: "Drone PDF uploaded successfully.",
+        });
+        setSelectedFile(null);
+        if (onRefresh) onRefresh();
+      } catch (err: any) {
+        console.error('Failed to upload drone PDF:', err);
+        toast({
+          title: "Upload Failed",
+          description: err.message || 'Failed to upload drone PDF',
+          variant: "destructive",
+        });
+      } finally {
+        setUploadingPDF(false);
+      }
+    };
+
+    const handleGenerateReport = async () => {
+      if (!assessmentId) {
+        toast({
+          title: "Error",
+          description: "Assessment ID not available.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validation
+      if (riskScore === null || riskScore === undefined) {
+        toast({
+          title: "Validation Error",
+          description: "Please calculate risk score before generating report.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!comprehensiveNotes || comprehensiveNotes.trim().length === 0) {
+        toast({
+          title: "Validation Error",
+          description: "Please add comprehensive notes before generating report.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setGeneratingReport(true);
+      try {
+        await assessmentsApiService.generateReport(assessmentId);
+        toast({
+          title: "Success",
+          description: "Report generated successfully. Insurer has been notified.",
+        });
+        if (onRefresh) onRefresh();
+        if (onRefresh) {
+          onRefresh();
+        }
+      } catch (err: any) {
+        console.error('Failed to generate report:', err);
+        toast({
+          title: "Generation Failed",
+          description: err.message || 'Failed to generate report',
+          variant: "destructive",
+        });
+      } finally {
+        setGeneratingReport(false);
+      }
+    };
+
+    const getRiskScoreColor = (score: number | null) => {
+      if (score === null || score === undefined) return 'bg-gray-500';
+      if (score <= 30) return 'bg-green-500';
+      if (score <= 70) return 'bg-yellow-500';
+      return 'bg-red-500';
+    };
+
+    const getRiskScoreLabel = (score: number | null) => {
+      if (score === null || score === undefined) return 'Not Calculated';
+      if (score <= 30) return 'Low Risk';
+      if (score <= 70) return 'Medium Risk';
+      return 'High Risk';
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Risk Score Card */}
+        <Card className="bg-white border border-gray-200 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-gray-900 flex items-center justify-between">
+              <span>Risk Score</span>
+              {riskScore !== null && (
+                <Badge className={`${getRiskScoreColor(riskScore)} text-white`}>
+                  {getRiskScoreLabel(riskScore)}
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {riskScore !== null ? (
+              <div className="text-center py-6">
+                <div className={`inline-flex items-center justify-center w-32 h-32 rounded-full ${getRiskScoreColor(riskScore)} text-white text-4xl font-bold mb-4`}>
+                  {riskScore.toFixed(1)}
+                </div>
+                <p className="text-gray-600">{getRiskScoreLabel(riskScore)}</p>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-gray-600 mb-4">Risk score has not been calculated yet.</p>
+                <Button
+                  onClick={handleCalculateRiskScore}
+                  disabled={calculatingRisk || !assessmentId}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {calculatingRisk ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Calculating...
+                    </>
+                  ) : (
+                    <>
+                      <Activity className="h-4 w-4 mr-2" />
+                      Calculate Risk Score
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Comprehensive Notes Card */}
+        <Card className="bg-white border border-gray-200 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-gray-900">Comprehensive Assessment Notes</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Textarea
+              value={comprehensiveNotes}
+              onChange={(e) => setComprehensiveNotes(e.target.value)}
+              placeholder="Enter comprehensive assessment notes here..."
+              className="min-h-[200px] border-gray-300"
+            />
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-500">
+                {comprehensiveNotes.length} characters
+              </p>
+              <Button
+                onClick={handleSaveNotes}
+                disabled={savingNotes || !assessmentId}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {savingNotes ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Notes
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Drone PDF Upload Card */}
+        <Card className="bg-white border border-gray-200 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-gray-900">Drone Analysis PDF</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {assessmentDetails?.droneAnalysisPdfUrl ? (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-700 mb-2">PDF uploaded successfully</p>
+                <a 
+                  href={assessmentDetails.droneAnalysisPdfUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-green-600 hover:underline"
+                >
+                  View PDF
+                </a>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <p className="text-gray-700 mb-2">Upload Drone Analysis PDF</p>
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                    className="hidden"
+                    id="drone-pdf-upload"
+                  />
+                  <Button
+                    onClick={() => document.getElementById('drone-pdf-upload')?.click()}
+                    variant="outline"
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Select PDF File
+                  </Button>
+                  {selectedFile && (
+                    <p className="text-sm text-gray-600 mt-2">Selected: {selectedFile.name}</p>
+                  )}
+                </div>
+                {selectedFile && (
+                  <Button
+                    onClick={handleUploadDronePDF}
+                    disabled={uploadingPDF || !assessmentId}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {uploadingPDF ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload PDF
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            )}
+            {droneAnalysisData && (
+              <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm font-medium text-gray-900 mb-2">Extracted Data:</p>
+                <pre className="text-xs bg-white p-3 rounded border border-gray-200 overflow-auto">
+                  {JSON.stringify(droneAnalysisData, null, 2)}
+                </pre>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Generate Report Card */}
+        <Card className="bg-white border border-gray-200 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-gray-900">Generate Full Report</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                {riskScore !== null ? (
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 text-gray-400" />
+                )}
+                <span className={`text-sm ${riskScore !== null ? 'text-gray-900' : 'text-gray-500'}`}>
+                  Risk score calculated {riskScore !== null ? '✓' : '✗'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {comprehensiveNotes && comprehensiveNotes.trim().length > 0 ? (
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 text-gray-400" />
+                )}
+                <span className={`text-sm ${comprehensiveNotes && comprehensiveNotes.trim().length > 0 ? 'text-gray-900' : 'text-gray-500'}`}>
+                  Comprehensive notes added {comprehensiveNotes && comprehensiveNotes.trim().length > 0 ? '✓' : '✗'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-500" />
+                <span className="text-sm text-gray-900">
+                  Weather analysis done ✓
+                </span>
+              </div>
+            </div>
+            <Button
+              onClick={handleGenerateReport}
+              disabled={generatingReport || riskScore === null || !comprehensiveNotes || comprehensiveNotes.trim().length === 0 || !assessmentId}
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+            >
+              {generatingReport ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating Report...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Generate Full Report
+                </>
+              )}
+            </Button>
+            {assessmentDetails?.reportGenerated && (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-700">
+                  Report generated on {assessmentDetails.reportGeneratedAt 
+                    ? new Date(assessmentDetails.reportGeneratedAt).toLocaleString() 
+                    : 'N/A'}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
   const renderFieldDetail = () => {
     if (!selectedField) return null;
     const fieldDetails = getFieldDetails(selectedField);
@@ -1721,11 +2224,31 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                 <CardHeader>
                   <CardTitle className="text-gray-900">Map View</CardTitle>
                 </CardHeader>
-                <CardContent className="h-[500px] flex items-center justify-center bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="text-center">
-                    <MapPin className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                    <p className="text-gray-900 text-lg font-medium">Map View</p>
-                    <p className="text-sm text-gray-600 mt-2">Field: {fieldId}</p>
+                <CardContent className="p-0">
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <LeafletMap
+                      center={(() => {
+                        // Use farm location if available
+                        if (selectedFarmForDetail?.location?.coordinates) {
+                          const coords = selectedFarmForDetail.location.coordinates;
+                          return [coords[1], coords[0]]; // [lat, lng] from [lng, lat]
+                        }
+                        // Try parsing from fieldDetails location
+                        if (fieldDetails.location.includes(',')) {
+                          const parts = fieldDetails.location.split(',');
+                          const lat = parseFloat(parts[0]?.trim() || "-1.9441");
+                          const lng = parseFloat(parts[1]?.trim() || "30.0619");
+                          return [lat, lng];
+                        }
+                        return [-1.9441, 30.0619];
+                      })()}
+                      zoom={15}
+                      height="500px"
+                      tileLayer="satellite"
+                      showControls={true}
+                      className="w-full"
+                      boundary={selectedFarmForDetail?.boundary || null}
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -1733,22 +2256,48 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
               </TabsContent>
 
           <TabsContent value="weather" className="mt-4">
-            <WeatherAnalysisTab location={fieldDetails.location} />
+            <WeatherAnalysisTabWithAPI 
+              fieldDetails={fieldDetails} 
+              farmId={(() => {
+                // Extract farmId from assessmentDetails or selectedField
+                if (assessmentDetails?.farmId) {
+                  return typeof assessmentDetails.farmId === 'string' 
+                    ? assessmentDetails.farmId 
+                    : assessmentDetails.farmId._id || assessmentDetails.farmId.id;
+                }
+                return selectedField?.id || '';
+              })()} 
+            />
           </TabsContent>
 
           <TabsContent value="crop" className="mt-4">
-            <CropAnalysisTab fieldDetails={fieldDetails} assessmentId={selectedAssessment?.id} />
+            <CropAnalysisTab 
+              fieldDetails={fieldDetails} 
+              assessmentId={(() => {
+                // Use assessmentDetails _id if available, otherwise use selectedAssessment id
+                if (assessmentDetails?._id) return assessmentDetails._id;
+                if (assessmentDetails?.id) return assessmentDetails.id;
+                return selectedAssessment?.id || '';
+              })()}
+            />
           </TabsContent>
 
           <TabsContent value="overview" className="mt-4">
-            <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-gray-900">Overview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600">Field overview and summary information will be displayed here.</p>
-          </CardContent>
-        </Card>
+            <OverviewTab 
+              assessmentDetails={assessmentDetails}
+              assessmentId={(() => {
+                // Use assessmentDetails _id if available, otherwise use selectedAssessment id
+                if (assessmentDetails?._id) return assessmentDetails._id;
+                if (assessmentDetails?.id) return assessmentDetails.id;
+                return selectedAssessment?.id || '';
+              })()}
+              fieldDetails={fieldDetails}
+              onRefresh={() => {
+                if (selectedAssessment?.id && selectedField) {
+                  handleFieldClick(selectedField);
+                }
+              }}
+            />
           </TabsContent>
         </Tabs>
         </div>
@@ -1943,13 +2492,33 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                 <CardHeader>
                     <CardTitle className="text-gray-900">Map View</CardTitle>
                 </CardHeader>
-                  <CardContent className="h-[500px] flex items-center justify-center bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="text-center">
-                    <MapPin className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                      <p className="text-gray-900 text-lg font-medium">Map View</p>
-                      <p className="text-sm text-gray-600 mt-2">Field: {displayFieldId}</p>
-                  </div>
-                </CardContent>
+                  <CardContent className="p-0">
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <LeafletMap
+                        center={(() => {
+                          // Use farm location if available
+                          if (selectedFarmForDetail?.location?.coordinates) {
+                            const coords = selectedFarmForDetail.location.coordinates;
+                            return [coords[1], coords[0]]; // [lat, lng] from [lng, lat]
+                          }
+                          // Try parsing from fieldDetails location string
+                          if (fieldDetails.location.includes(',')) {
+                            const parts = fieldDetails.location.split(',');
+                            const lat = parseFloat(parts[0]?.trim() || "-1.9441");
+                            const lng = parseFloat(parts[1]?.trim() || "30.0619");
+                            return [lat, lng];
+                          }
+                          return [-1.9441, 30.0619]; // Default: Kigali, Rwanda
+                        })()}
+                        zoom={15}
+                        height="500px"
+                        tileLayer="satellite"
+                        showControls={true}
+                        className="w-full"
+                        boundary={selectedFarmForDetail?.boundary || null}
+                      />
+                    </div>
+                  </CardContent>
               </Card>
             </div>
           </TabsContent>
@@ -1963,14 +2532,16 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
           </TabsContent>
 
             <TabsContent value="overview" className="mt-6">
-              <Card className="bg-white border border-gray-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-gray-900">Overview</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-900/60">Field overview and summary will be displayed here.</p>
-                </CardContent>
-              </Card>
+              <OverviewTab 
+                assessmentDetails={assessmentDetails}
+                assessmentId={selectedAssessment?.id}
+                fieldDetails={fieldDetails}
+                onRefresh={() => {
+                  if (selectedAssessment?.id) {
+                    handleFieldClick(selectedField!);
+                  }
+                }}
+              />
           </TabsContent>
         </Tabs>
         </div>
@@ -2065,9 +2636,152 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
       );
     }
 
+    // Prepare NDVI chart data
+    const ndviChartData = indicesData?.ndviTimeSeries?.data || indicesData?.ndviTimeSeries || [];
+    const ndviChartFormatted = Array.isArray(ndviChartData) ? ndviChartData.map((item: any) => ({
+      date: item.date || item.timestamp || item.time || '',
+      ndvi: item.ndvi || item.value || 0
+    })) : [];
+
+    // Prepare weather history chart data
+    const weatherHistoryData = weatherData?.historical?.data || weatherData?.historical || [];
+    const weatherChartData = Array.isArray(weatherHistoryData) ? weatherHistoryData.map((item: any) => ({
+      date: item.date || item.timestamp || item.time || '',
+      temperature: item.temperature || item.temp || 0,
+      rainfall: item.rainfall || item.precipitation || item.precip || 0
+    })) : [];
+
     return (
-      <div>
+      <div className="space-y-6">
+        {/* Weather Forecast */}
         <CombinedWeatherForecast className="bg-gradient-to-br from-blue-900/90 to-cyan-900/90 border border-blue-700/30 rounded-xl shadow-xl" />
+        
+        {/* NDVI Chart */}
+        {ndviChartFormatted.length > 0 && (
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-gray-900">NDVI Time Series</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={ndviChartFormatted}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fontSize: 12 }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                  />
+                  <YAxis 
+                    domain={[0, 1]}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <Tooltip />
+                  <Legend />
+                  <Line 
+                    type="monotone" 
+                    dataKey="ndvi" 
+                    stroke="rgba(20, 40, 75, 1)" 
+                    strokeWidth={2}
+                    name="NDVI"
+                    dot={{ r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Weather History Chart */}
+        {weatherChartData.length > 0 && (
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-gray-900">Weather History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <ComposedChart data={weatherChartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fontSize: 12 }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                  />
+                  <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar yAxisId="right" dataKey="rainfall" fill="#3b82f6" name="Rainfall (mm)" />
+                  <Line 
+                    yAxisId="left"
+                    type="monotone" 
+                    dataKey="temperature" 
+                    stroke="#ef4444" 
+                    strokeWidth={2}
+                    name="Temperature (°C)"
+                    dot={{ r: 4 }}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Vegetation Statistics Summary */}
+        {indicesData?.indicesStats && (
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-gray-900">Vegetation Indices Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {indicesData.indicesStats.NDVI && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <p className="text-xs text-gray-600 mb-1">NDVI Average</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {indicesData.indicesStats.NDVI.average?.toFixed(2) || 
+                       indicesData.indicesStats.NDVI.mean?.toFixed(2) || 
+                       'N/A'}
+                    </p>
+                  </div>
+                )}
+                {indicesData.indicesStats.MSAVI && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-xs text-gray-600 mb-1">MSAVI Average</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {indicesData.indicesStats.MSAVI.average?.toFixed(2) || 
+                       indicesData.indicesStats.MSAVI.mean?.toFixed(2) || 
+                       'N/A'}
+                    </p>
+                  </div>
+                )}
+                {indicesData.indicesStats.EVI && (
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <p className="text-xs text-gray-600 mb-1">EVI Average</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {indicesData.indicesStats.EVI.average?.toFixed(2) || 
+                       indicesData.indicesStats.EVI.mean?.toFixed(2) || 
+                       'N/A'}
+                    </p>
+                  </div>
+                )}
+                {indicesData.indicesStats.NDMI && (
+                  <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
+                    <p className="text-xs text-gray-600 mb-1">NDMI Average</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {indicesData.indicesStats.NDMI.average?.toFixed(2) || 
+                       indicesData.indicesStats.NDMI.mean?.toFixed(2) || 
+                       'N/A'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   };

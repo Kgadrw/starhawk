@@ -313,7 +313,7 @@ class FarmsApiService {
     console.log('📤 Uploading KML to:', url);
     console.log('📦 Farm ID:', farmId);
     console.log('📄 File:', file.name, file.size, 'bytes', 'type:', file.type);
-    console.log('📝 Name field:', fileNameWithoutExt || 'Field Boundary');
+    console.log('📝 Name field:', farmName);
     
     const response = await fetch(url, {
       method: 'POST',

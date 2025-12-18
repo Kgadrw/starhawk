@@ -259,6 +259,13 @@ class UsersApiService {
   async getAssessors(page: number = 0, size: number = 100) {
     return this.request<any>(`/assessors?page=${page}&size=${size}`);
   }
+
+  // Get All Insurers
+  // Get Insurers (Admin only)
+  // Endpoint: GET /users/insurers with pagination
+  async getInsurers(page: number = 0, size: number = 100) {
+    return this.request<any>(`/insurers?page=${page}&size=${size}`);
+  }
 }
 
 // Create and export a singleton instance
@@ -314,6 +321,7 @@ export const createUser = (userData: {
 }) => usersApiService.createUser(userData);
 
 export const getAssessors = (page: number = 0, size: number = 100) => usersApiService.getAssessors(page, size);
+export const getInsurers = (page: number = 0, size: number = 100) => usersApiService.getInsurers(page, size);
 
 export default usersApiService;
 

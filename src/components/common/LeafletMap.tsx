@@ -15,6 +15,8 @@ interface LeafletMapProps {
   zoom?: number;
   height?: string;
   geoJsonData?: any; // GeoJSON data for field boundaries
+  kmlUrl?: string; // URL to KML file to display
+  boundary?: any; // Farm boundary object (GeoJSON Polygon format)
   showControls?: boolean;
   tileLayer?: "osm" | "satellite" | "terrain";
   onMapClick?: (lat: number, lng: number) => void;
@@ -26,6 +28,8 @@ export default function LeafletMap({
   zoom = 13,
   height = "500px",
   geoJsonData,
+  kmlUrl,
+  boundary,
   showControls = true,
   tileLayer = "satellite",
   onMapClick,
@@ -33,6 +37,7 @@ export default function LeafletMap({
 }: LeafletMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const layerRef = useRef<L.Layer | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
 
   useEffect(() => {
@@ -77,27 +82,104 @@ export default function LeafletMap({
       }).addTo(map);
     }
 
-    // Add marker at center if no GeoJSON
-    if (!geoJsonData) {
+    // Helper function to convert boundary to GeoJSON Feature
+    const boundaryToGeoJSON = (boundary: any): any => {
+      if (!boundary) return null;
+      
+      // If it's already a GeoJSON Feature or FeatureCollection, return as is
+      if (boundary.type === 'Feature' || boundary.type === 'FeatureCollection') {
+        return boundary;
+      }
+      
+      // If it's a GeoJSON Polygon, wrap it in a Feature
+      if (boundary.type === 'Polygon' && boundary.coordinates) {
+        return {
+          type: 'Feature',
+          geometry: boundary,
+          properties: {}
+        };
+      }
+      
+      // If it has coordinates but no type, assume Polygon
+      if (boundary.coordinates && Array.isArray(boundary.coordinates)) {
+        return {
+          type: 'Feature',
+          geometry: {
+            type: 'Polygon',
+            coordinates: boundary.coordinates
+          },
+          properties: {}
+        };
+      }
+      
+      return null;
+    };
+
+    // Determine which data to use (priority: geoJsonData > boundary > kmlUrl)
+    let dataToDisplay = geoJsonData;
+    if (!dataToDisplay && boundary) {
+      dataToDisplay = boundaryToGeoJSON(boundary);
+    }
+
+    // Add marker at center if no data to display (boundary/GeoJSON/KML)
+    if (!dataToDisplay && !kmlUrl) {
       L.marker(center).addTo(map);
     }
 
     // Add GeoJSON layer if provided
-    if (geoJsonData) {
-      const geoJsonLayer = L.geoJSON(geoJsonData, {
+    if (dataToDisplay) {
+      const geoJsonLayer = L.geoJSON(dataToDisplay, {
         style: {
-          color: "#10b981",
+          color: "rgba(20, 40, 75, 1)",
           weight: 3,
-          fillColor: "#22c55e",
+          fillColor: "rgba(20, 40, 75, 0.3)",
           fillOpacity: 0.3
         }
       }).addTo(map);
+      layerRef.current = geoJsonLayer;
 
       // Fit map to bounds
       const bounds = geoJsonLayer.getBounds();
       if (bounds.isValid()) {
         map.fitBounds(bounds, { padding: [20, 20] });
       }
+    }
+
+    // Load KML if URL is provided
+    if (kmlUrl && typeof window !== 'undefined') {
+      // Dynamically load toGeoJSON library for KML parsing
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/@mapbox/togeojson@0.16.0/togeojson.js';
+      script.onload = () => {
+        fetch(kmlUrl)
+          .then(response => response.text())
+          .then(kmlText => {
+            const parser = new DOMParser();
+            const kml = parser.parseFromString(kmlText, 'text/xml');
+            // @ts-ignore - toGeoJSON is loaded dynamically
+            const geojson = toGeoJSON.kml(kml);
+            if (geojson && mapInstanceRef.current) {
+              const kmlLayer = L.geoJSON(geojson, {
+                style: {
+                  color: "rgba(20, 40, 75, 1)",
+                  weight: 3,
+                  fillColor: "rgba(20, 40, 75, 0.3)",
+                  fillOpacity: 0.3
+                }
+              }).addTo(mapInstanceRef.current);
+              layerRef.current = kmlLayer;
+              
+              const bounds = kmlLayer.getBounds();
+              if (bounds.isValid()) {
+                mapInstanceRef.current.fitBounds(bounds, { padding: [20, 20] });
+              }
+            }
+          })
+          .catch(error => {
+            console.error('Failed to load KML:', error);
+          });
+      };
+      document.head.appendChild(script);
     }
 
     // Handle map clicks
@@ -118,33 +200,71 @@ export default function LeafletMap({
     };
   }, []); // Only run once on mount
 
-  // Update GeoJSON layer if data changes
-  useEffect(() => {
-    if (!mapInstanceRef.current || !geoJsonData || !mapLoaded) return;
+  // Helper function to convert boundary to GeoJSON
+  const boundaryToGeoJSON = (boundary: any): any => {
+    if (!boundary) return null;
+    
+    if (boundary.type === 'Feature' || boundary.type === 'FeatureCollection') {
+      return boundary;
+    }
+    
+    if (boundary.type === 'Polygon' && boundary.coordinates) {
+      return {
+        type: 'Feature',
+        geometry: boundary,
+        properties: {}
+      };
+    }
+    
+    if (boundary.coordinates && Array.isArray(boundary.coordinates)) {
+      return {
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',
+          coordinates: boundary.coordinates
+        },
+        properties: {}
+      };
+    }
+    
+    return null;
+  };
 
-    // Remove existing GeoJSON layers
-    mapInstanceRef.current.eachLayer((layer) => {
-      if (layer instanceof L.GeoJSON) {
-        mapInstanceRef.current?.removeLayer(layer);
-      }
-    });
+  // Update GeoJSON/boundary layer if data changes
+  useEffect(() => {
+    if (!mapInstanceRef.current || !mapLoaded) return;
+
+    // Determine which data to use
+    let dataToDisplay = geoJsonData;
+    if (!dataToDisplay && boundary) {
+      dataToDisplay = boundaryToGeoJSON(boundary);
+    }
+
+    if (!dataToDisplay) return;
+
+    // Remove existing GeoJSON layers (but keep base tile layer)
+    if (layerRef.current) {
+      mapInstanceRef.current.removeLayer(layerRef.current);
+      layerRef.current = null;
+    }
 
     // Add new GeoJSON layer
-    const geoJsonLayer = L.geoJSON(geoJsonData, {
+    const geoJsonLayer = L.geoJSON(dataToDisplay, {
       style: {
-        color: "#10b981",
+        color: "rgba(20, 40, 75, 1)",
         weight: 3,
-        fillColor: "#22c55e",
+        fillColor: "rgba(20, 40, 75, 0.3)",
         fillOpacity: 0.3
       }
     }).addTo(mapInstanceRef.current);
+    layerRef.current = geoJsonLayer;
 
     // Fit map to bounds
     const bounds = geoJsonLayer.getBounds();
     if (bounds.isValid()) {
       mapInstanceRef.current.fitBounds(bounds, { padding: [20, 20] });
     }
-  }, [geoJsonData, mapLoaded]);
+  }, [geoJsonData, boundary, mapLoaded]);
 
   // Update center if it changes
   useEffect(() => {

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../layout/DashboardLayout";
 import { isAdmin, logout as authLogout, getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
-import { getAllUsers, deactivateUser, updateUser, getUserById, createUser, getUserProfile, updateUserProfile, getAssessors } from "@/services/usersAPI";
+import { getAllUsers, deactivateUser, updateUser, getUserById, createUser, getUserProfile, updateUserProfile, getInsurers } from "@/services/usersAPI";
 import { getSystemStatistics, getPolicyOverview, getClaimStatistics, getHealthStatus } from "@/services/adminApi";
 import { createPolicy, createPolicyFromAssessment, getPolicies, getPolicyById, updatePolicy, deletePolicy } from "@/services/policiesApi";
 import { createClaim, getClaims, getClaimById, updateClaim, deleteClaim } from "@/services/claimsApi";
@@ -352,6 +352,7 @@ export const AdminDashboard = () => {
       loadAssessments();
       loadFarmsForAssessment();
       loadAssessors();
+      loadInsurers();
       loadPendingFarms();
     }
   }, [activePage]);
@@ -5397,73 +5398,156 @@ export const AdminDashboard = () => {
     }
   };
 
-  // Load assessors for assessment creation
+  // Load assessors for assessment creation and assignment
   const loadAssessors = async () => {
     try {
-      console.log('🔄 Loading assessors for assessment creation...');
-      // Use dedicated assessors endpoint with pagination
-      const assessorsResponse = await getAssessors(0, 100);
-      console.log('✅ Assessors API response:', assessorsResponse);
-      console.log('✅ Assessors API response type:', typeof assessorsResponse);
-      console.log('✅ Assessors API response isArray:', Array.isArray(assessorsResponse));
+      console.log('🔄 Loading assessors...');
+      // Fetch all users and filter for assessors
+      const response: any = await getAllUsers();
+      console.log('✅ All users API response:', response);
       
-      let assessorUsers: any[] = [];
+      let allUsers: any[] = [];
       
-      // Handle paginated response structure: { items: [], totalItems: number, totalPages: number, currentPage: number }
-      if (Array.isArray(assessorsResponse)) {
-        assessorUsers = assessorsResponse;
-        console.log('✅ Response is array, using directly');
-      } else if (assessorsResponse && typeof assessorsResponse === 'object') {
-        // Handle paginated response structure
-        assessorUsers = assessorsResponse.items || assessorsResponse.data || assessorsResponse.assessors || [];
-        console.log('✅ Response is object, extracted data:', {
-          hasItems: !!assessorsResponse.items,
-          hasData: !!assessorsResponse.data,
-          hasAssessors: !!assessorsResponse.assessors,
-          extractedLength: assessorUsers.length
-        });
-      }
-      
-      // Ensure assessorUsers is always an array
-      if (!Array.isArray(assessorUsers)) {
-        console.warn('⚠️ assessorUsers is not an array, converting:', assessorUsers);
-        assessorUsers = [];
-      }
-      
-      setAssessors(assessorUsers);
-      console.log(`✅ Loaded ${assessorUsers.length} assessors`);
-      console.log('📊 Sample assessor:', assessorUsers[0]);
-      
-      // Also load insurers for assignment (fallback to getAllUsers for insurers)
-      try {
-        const allUsers = await getAllUsers();
-        let insurerUsers: any[] = [];
-        if (Array.isArray(allUsers)) {
-          insurerUsers = allUsers.filter((user: any) => user.role === 'INSURER' || user.role === 'Insurer');
-        } else if (allUsers && typeof allUsers === 'object') {
-          const usersData = allUsers.data || allUsers.users || [];
-          if (Array.isArray(usersData)) {
-            insurerUsers = usersData.filter((user: any) => user.role === 'INSURER' || user.role === 'Insurer');
+      // Handle different response structures
+      if (Array.isArray(response)) {
+        allUsers = response;
+      } else if (response && typeof response === 'object') {
+        // Try multiple possible response structures
+        if (Array.isArray(response.users)) {
+          allUsers = response.users;
+        } else if (Array.isArray(response.data)) {
+          allUsers = response.data;
+        } else if (Array.isArray(response.results)) {
+          allUsers = response.results;
+        } else if (Array.isArray(response.items)) {
+          allUsers = response.items;
+        } else if (Array.isArray(response.list)) {
+          allUsers = response.list;
+        } else if (response.data) {
+          if (Array.isArray(response.data)) {
+            allUsers = response.data;
+          } else if (response.data.data && Array.isArray(response.data.data)) {
+            allUsers = response.data.data;
+          } else if (response.data.users && Array.isArray(response.data.users)) {
+            allUsers = response.data.users;
+          } else if (response.data.results && Array.isArray(response.data.results)) {
+            allUsers = response.data.results;
+          } else if (response.data.items && Array.isArray(response.data.items)) {
+            allUsers = response.data.items;
+          } else if (response.data.list && Array.isArray(response.data.list)) {
+            allUsers = response.data.list;
+          }
+        } else {
+          // Try to find any array property
+          const keys = Object.keys(response);
+          for (const key of keys) {
+            if (Array.isArray(response[key])) {
+              allUsers = response[key];
+              break;
+            }
           }
         }
-        if (!Array.isArray(insurerUsers)) {
-          insurerUsers = [];
-        }
-        setInsurers(insurerUsers);
-        console.log('✅ Loaded insurers:', insurerUsers.length);
-      } catch (insurerErr) {
-        console.error('Failed to load insurers:', insurerErr);
-        setInsurers([]);
+      }
+      
+      // Ensure allUsers is an array
+      if (!Array.isArray(allUsers)) {
+        console.warn('⚠️ allUsers is not an array, converting:', allUsers);
+        allUsers = [];
+      }
+      
+      // Filter users by role to get only assessors
+      const assessorUsers = allUsers.filter((user: any) => {
+        const role = user.role || '';
+        return role.toUpperCase() === 'ASSESSOR' || role === 'Assessor';
+      });
+      
+      setAssessors(assessorUsers);
+      console.log(`✅ Filtered ${assessorUsers.length} assessors from ${allUsers.length} total users`);
+      if (assessorUsers.length > 0) {
+        console.log('📊 Sample assessor:', assessorUsers[0]);
       }
     } catch (err: any) {
       console.error('❌ Failed to load assessors:', err);
-      setAssessors([]); // Set to empty array on error
-      setInsurers([]);
+      setAssessors([]);
       toast({
         title: "Warning",
         description: "Could not load assessors. Please try refreshing the page.",
         variant: "default",
       });
+    }
+  };
+
+  // Load insurers for assignment
+  const loadInsurers = async () => {
+    try {
+      console.log('🔄 Loading insurers...');
+      // Use dedicated insurers endpoint with pagination
+      // Endpoint: GET /users/insurers?page=0&size=100
+      const insurersResponse = await getInsurers(0, 100);
+      console.log('✅ Insurers API response:', insurersResponse);
+      
+      let insurerUsers: any[] = [];
+      
+      // Handle paginated response structure: { items: [], totalItems: number, totalPages: number, currentPage: number }
+      if (insurersResponse && typeof insurersResponse === 'object') {
+        // Check for paginated response structure
+        if (Array.isArray(insurersResponse.items)) {
+          insurerUsers = insurersResponse.items;
+          console.log(`✅ Loaded ${insurerUsers.length} insurers from paginated response (total: ${insurersResponse.totalItems || 'unknown'})`);
+        } else if (Array.isArray(insurersResponse)) {
+          // Fallback: response is directly an array
+          insurerUsers = insurersResponse;
+          console.log('✅ Response is array, using directly');
+        } else {
+          // Try other possible response structures
+          insurerUsers = insurersResponse.data || insurersResponse.insurers || [];
+          console.log('✅ Extracted insurers from alternative structure');
+        }
+      } else if (Array.isArray(insurersResponse)) {
+        insurerUsers = insurersResponse;
+        console.log('✅ Response is array, using directly');
+      }
+      
+      // Ensure insurerUsers is always an array
+      if (!Array.isArray(insurerUsers)) {
+        console.warn('⚠️ insurerUsers is not an array, converting:', insurerUsers);
+        insurerUsers = [];
+      }
+      
+      setInsurers(insurerUsers);
+      console.log(`✅ Set ${insurerUsers.length} insurers`);
+      if (insurerUsers.length > 0) {
+        console.log('📊 Sample insurer:', insurerUsers[0]);
+      }
+    } catch (err: any) {
+      console.error('❌ Failed to load insurers:', err);
+      setInsurers([]);
+      toast({
+        title: "Warning",
+        description: "Could not load insurers. Please try refreshing the page.",
+        variant: "default",
+      });
+    }
+  };
+
+  // Handler for assign dialog open/close
+  const handleAssignDialogChange = (open: boolean) => {
+    setShowAssignDialog(open);
+    if (open) {
+      // Load assessors and insurers when dialog opens
+      loadAssessors();
+      loadInsurers();
+    }
+  };
+
+  // Handler for assessment dialog open/close
+  const handleAssessmentDialogChange = (open: boolean) => {
+    setShowAssessmentDialog(open);
+    if (open) {
+      // Load assessors and insurers when dialog opens
+      loadAssessors();
+      loadInsurers();
+      loadFarmsForAssessment();
     }
   };
 
@@ -6194,7 +6278,7 @@ export const AdminDashboard = () => {
         </Dialog>
 
         {/* Assign Assessor Dialog */}
-        <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+        <Dialog open={showAssignDialog} onOpenChange={handleAssignDialogChange}>
           <DialogContent className="bg-white border-gray-300">
             <DialogHeader>
               <DialogTitle className="text-gray-900">Assign Assessor to Farm</DialogTitle>
@@ -6330,7 +6414,7 @@ export const AdminDashboard = () => {
         </Dialog>
 
         {/* Create Assessment Dialog */}
-        <Dialog open={showAssessmentDialog} onOpenChange={setShowAssessmentDialog}>
+        <Dialog open={showAssessmentDialog} onOpenChange={handleAssessmentDialogChange}>
           <DialogContent className="bg-white border-gray-300">
             <DialogHeader>
               <DialogTitle className="text-gray-900">Create Assessment</DialogTitle>

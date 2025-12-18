@@ -26,7 +26,8 @@ class AssessmentsApiService {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    timeoutMs: number = 30000 // Default 30 second timeout
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     const token = this.getToken();
@@ -42,7 +43,7 @@ class AssessmentsApiService {
 
     // Create AbortController for timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     // Merge existing signal with our timeout signal if it exists
     let signal = controller.signal;
@@ -208,10 +209,14 @@ class AssessmentsApiService {
       return data;
     } catch (error: any) {
       console.error('Assessments API request failed:', error);
+      console.error('Request URL:', url);
+      console.error('Request method:', config.method || 'GET');
+      console.error('Timeout was:', timeoutMs, 'ms');
       
       // Handle timeout/abort errors
-      if (error.name === 'AbortError' || error.name === 'TimeoutError') {
-        throw new Error('Request timeout. The server is taking too long to respond. Please check your connection and try again.');
+      if (error.name === 'AbortError' || error.name === 'TimeoutError' || error.message?.includes('aborted')) {
+        const timeoutSeconds = Math.round(timeoutMs / 1000);
+        throw new Error(`Request timed out after ${timeoutSeconds} seconds. The server may be processing your request (e.g., sending notifications). Please wait a moment and check if the operation completed, or try again.`);
       }
       
       // Re-throw with better error message if it's already an Error
@@ -309,6 +314,7 @@ class AssessmentsApiService {
   // Assign Assessor to Farm (Admin Only)
   // Endpoint: POST /api/v1/assessments/assign
   async assignAssessor(farmId: string, assessorId: string, insurerId?: string | null) {
+    console.log('🔄 Assigning assessor:', { farmId, assessorId, insurerId });
     const requestBody: {
       farmId: string;
       assessorId: string;
@@ -319,10 +325,18 @@ class AssessmentsApiService {
       insurerId: insurerId || null, // Always include insurerId, even if null
     };
     
-    return this.request('/assign', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-    });
+    try {
+      // Use longer timeout (60 seconds) for assignment as it may involve sending emails/notifications
+      const result = await this.request('/assign', {
+        method: 'POST',
+        body: JSON.stringify(requestBody),
+      }, 60000);
+      console.log('✅ Assessor assigned successfully:', result);
+      return result;
+    } catch (error: any) {
+      console.error('❌ Failed to assign assessor:', error);
+      throw error;
+    }
   }
 
   // Upload Drone PDF (Assessor Only)
