@@ -38,13 +38,24 @@ export default function LeafletMap({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.Layer | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
-    // Initialize map
-    const map = L.map(mapRef.current).setView(center, zoom);
+    // Validate center coordinates
+    let validCenter = center;
+    const [lat, lng] = center;
+    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      console.warn('Invalid center coordinates, using default:', center);
+      validCenter = [-1.9441, 30.0619]; // Default: Kigali, Rwanda
+    }
+
+    // Initialize map with max zoom set to 18
+    const map = L.map(mapRef.current, {
+      maxZoom: 18
+    }).setView(validCenter, zoom);
     mapInstanceRef.current = map;
 
     // Tile layer options
@@ -70,10 +81,11 @@ export default function LeafletMap({
     }
 
     // Add tile layer
-    L.tileLayer(tileUrl, {
+    const tileLayerInstance = L.tileLayer(tileUrl, {
       attribution,
-      maxZoom: 19
+      maxZoom: 18
     }).addTo(map);
+    tileLayerRef.current = tileLayerInstance;
 
     // Add zoom controls if requested
     if (showControls) {
@@ -130,10 +142,34 @@ export default function LeafletMap({
     if (dataToDisplay) {
       const geoJsonLayer = L.geoJSON(dataToDisplay, {
         style: {
-          color: "rgba(20, 40, 75, 1)",
-          weight: 3,
-          fillColor: "rgba(20, 40, 75, 0.3)",
-          fillOpacity: 0.3
+          color: "#22c55e", // Green color for boundary lines
+          weight: 4, // Thicker lines for better visibility
+          fillColor: "#22c55e",
+          fillOpacity: 0.2,
+          dashArray: "5, 5", // Dashed line style
+          lineCap: "round",
+          lineJoin: "round"
+        },
+        onEachFeature: (feature, layer) => {
+          // Add hover effect
+          layer.on({
+            mouseover: (e) => {
+              const layer = e.target;
+              layer.setStyle({
+                weight: 6,
+                color: "#16a34a",
+                fillOpacity: 0.3
+              });
+            },
+            mouseout: (e) => {
+              const layer = e.target;
+              layer.setStyle({
+                weight: 4,
+                color: "#22c55e",
+                fillOpacity: 0.2
+              });
+            }
+          });
         }
       }).addTo(map);
       layerRef.current = geoJsonLayer;
@@ -161,10 +197,34 @@ export default function LeafletMap({
             if (geojson && mapInstanceRef.current) {
               const kmlLayer = L.geoJSON(geojson, {
                 style: {
-                  color: "rgba(20, 40, 75, 1)",
-                  weight: 3,
-                  fillColor: "rgba(20, 40, 75, 0.3)",
-                  fillOpacity: 0.3
+                  color: "#22c55e", // Green color for KML boundary lines
+                  weight: 4, // Thicker lines for better visibility
+                  fillColor: "#22c55e",
+                  fillOpacity: 0.2,
+                  dashArray: "5, 5", // Dashed line style
+                  lineCap: "round",
+                  lineJoin: "round"
+                },
+                onEachFeature: (feature, layer) => {
+                  // Add hover effect
+                  layer.on({
+                    mouseover: (e) => {
+                      const layer = e.target;
+                      layer.setStyle({
+                        weight: 6,
+                        color: "#16a34a",
+                        fillOpacity: 0.3
+                      });
+                    },
+                    mouseout: (e) => {
+                      const layer = e.target;
+                      layer.setStyle({
+                        weight: 4,
+                        color: "#22c55e",
+                        fillOpacity: 0.2
+                      });
+                    }
+                  });
                 }
               }).addTo(mapInstanceRef.current);
               layerRef.current = kmlLayer;
@@ -199,6 +259,46 @@ export default function LeafletMap({
       }
     };
   }, []); // Only run once on mount
+
+  // Update tile layer when prop changes
+  useEffect(() => {
+    if (!mapInstanceRef.current || !mapLoaded) return;
+
+    // Remove old tile layer
+    if (tileLayerRef.current) {
+      mapInstanceRef.current.removeLayer(tileLayerRef.current);
+      tileLayerRef.current = null;
+    }
+
+    // Get new tile layer URL and attribution
+    let tileUrl: string;
+    let attribution: string;
+
+    switch (tileLayer) {
+      case "osm":
+        tileUrl = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+        attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+        break;
+      case "satellite":
+        tileUrl = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+        attribution = '&copy; <a href="https://www.esri.com/">ESRI</a>';
+        break;
+      case "terrain":
+        tileUrl = "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png";
+        attribution = '&copy; <a href="https://opentopomap.org">OpenTopoMap</a>';
+        break;
+      default:
+        tileUrl = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+        attribution = '&copy; <a href="https://www.esri.com/">ESRI</a>';
+    }
+
+    // Add new tile layer
+    const newTileLayer = L.tileLayer(tileUrl, {
+      attribution,
+      maxZoom: 18
+    }).addTo(mapInstanceRef.current);
+    tileLayerRef.current = newTileLayer;
+  }, [tileLayer, mapLoaded]);
 
   // Helper function to convert boundary to GeoJSON
   const boundaryToGeoJSON = (boundary: any): any => {
@@ -251,10 +351,34 @@ export default function LeafletMap({
     // Add new GeoJSON layer
     const geoJsonLayer = L.geoJSON(dataToDisplay, {
       style: {
-        color: "rgba(20, 40, 75, 1)",
-        weight: 3,
-        fillColor: "rgba(20, 40, 75, 0.3)",
-        fillOpacity: 0.3
+        color: "#22c55e", // Green color for boundary lines
+        weight: 4, // Thicker lines for better visibility
+        fillColor: "#22c55e",
+        fillOpacity: 0.2,
+        dashArray: "5, 5", // Dashed line style
+        lineCap: "round",
+        lineJoin: "round"
+      },
+      onEachFeature: (feature, layer) => {
+        // Add hover effect
+        layer.on({
+          mouseover: (e) => {
+            const layer = e.target;
+            layer.setStyle({
+              weight: 6,
+              color: "#16a34a",
+              fillOpacity: 0.3
+            });
+          },
+          mouseout: (e) => {
+            const layer = e.target;
+            layer.setStyle({
+              weight: 4,
+              color: "#22c55e",
+              fillOpacity: 0.2
+            });
+          }
+        });
       }
     }).addTo(mapInstanceRef.current);
     layerRef.current = geoJsonLayer;
@@ -269,7 +393,11 @@ export default function LeafletMap({
   // Update center if it changes
   useEffect(() => {
     if (mapInstanceRef.current && mapLoaded) {
-      mapInstanceRef.current.setView(center, zoom);
+      // Validate center coordinates before setting view
+      const [lat, lng] = center;
+      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        mapInstanceRef.current.setView(center, zoom);
+      }
     }
   }, [center, zoom, mapLoaded]);
 
@@ -278,10 +406,7 @@ export default function LeafletMap({
       <div ref={mapRef} className="w-full h-full rounded-lg" />
       {!mapLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-50 rounded-lg">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-2"></div>
-            <p className="text-sm text-gray-600">Loading map...</p>
-          </div>
+          <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
         </div>
       )}
     </div>

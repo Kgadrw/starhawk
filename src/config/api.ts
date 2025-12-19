@@ -66,6 +66,14 @@ export const API_ENDPOINTS = {
     MARK_ALERT_READ: (alertId: string) => `/monitoring/alerts/${alertId}/read`,
   },
   
+  // Crop Monitoring
+  CROP_MONITORING: {
+    BASE: '/crop-monitoring',
+    START: '/crop-monitoring/start',
+    BY_ID: (id: string) => `/crop-monitoring/${id}`,
+    GENERATE_REPORT: (id: string) => `/crop-monitoring/${id}/generate-report`,
+  },
+  
   // Admin
   ADMIN: {
     STATISTICS: '/admin/statistics',

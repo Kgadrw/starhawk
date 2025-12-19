@@ -11,8 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from "recharts";
-import meteosourceApiService from "@/services/meteosourceApi";
-import CombinedWeatherForecast from "@/components/common/CombinedWeatherForecast";
 import LeafletMap from "@/components/common/LeafletMap";
 import assessmentsApiService from "@/services/assessmentsApi";
 import { getFarms, getAllFarms, getFarmById, getWeatherForecast, getHistoricalWeather, getAccumulatedWeather, getVegetationStats, getNDVITimeSeries, getFieldTrend } from "@/services/farmsApi";
@@ -53,7 +51,6 @@ import {
   Edit,
   User,
   ArrowUp,
-  Loader2,
   Save,
   AlertCircle
 } from "lucide-react";
@@ -133,9 +130,10 @@ interface WeatherData {
 interface RiskAssessmentSystemProps {
   assessments?: AssessmentSummary[];
   onRefresh?: () => void;
+  initialField?: Field | null;
 }
 
-export default function RiskAssessmentSystem({ assessments: propAssessments, onRefresh }: RiskAssessmentSystemProps): JSX.Element {
+export default function RiskAssessmentSystem({ assessments: propAssessments, onRefresh, initialField }: RiskAssessmentSystemProps): JSX.Element {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [fieldSearchQuery, setFieldSearchQuery] = useState("");
@@ -174,6 +172,14 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
       setLoading(false);
     }
   }, [propAssessments]);
+
+  // Handle initial field prop - navigate to field detail view if provided
+  useEffect(() => {
+    if (initialField) {
+      setSelectedField(initialField);
+      setViewMode("fieldDetail");
+    }
+  }, [initialField]);
 
   // Load farms when component mounts or when assessment is selected
   useEffect(() => {
@@ -781,10 +787,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
           <Card className="bg-white border border-gray-200 shadow-sm">
             <CardContent className="p-8">
               <div className="flex items-center justify-center">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500 mx-auto mb-3"></div>
-                  <p className="text-sm text-gray-600">Loading fields...</p>
-                </div>
+                <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
               </div>
             </CardContent>
           </Card>
@@ -884,7 +887,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                         return (
                       <tr
                         key={field.id}
-                          className="hover:bg-green-50/30 transition-colors"
+                          className="hover:bg-green-600/30 transition-colors"
                       >
                           <td className="py-3.5 px-6 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">{fieldId}</div>
@@ -907,7 +910,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                           <td className="py-3.5 px-6 whitespace-nowrap">
                             <span className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-medium ${
                               isHealthy
-                                ? "bg-green-50 text-green-700 border border-green-200"
+                                ? "bg-green-50 text-green-600 border border-green-600"
                                 : "bg-blue-50 text-blue-700 border border-blue-200"
                             }`}>
                               {statusText}
@@ -940,16 +943,16 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
     );
   };
 
-  // Weather Analysis Component - Using CombinedWeatherForecast from common components
+  // Weather Analysis Component - Using new weather APIs
   const WeatherAnalysisTab = ({ location, farmId }: { location: string; farmId?: string }) => {
     const [weatherData, setWeatherData] = useState<any>(null);
+    const [indicesData, setIndicesData] = useState<any>(null);
     const [weatherLoading, setWeatherLoading] = useState(false);
     const [weatherError, setWeatherError] = useState<string | null>(null);
 
     useEffect(() => {
       const loadWeather = async () => {
         if (!farmId) {
-          // If no farmId, just show the component without API data
           return;
         }
         
@@ -963,16 +966,36 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
           const startDateStr = today.toISOString().split('T')[0];
           const endDateStr = endDate.toISOString().split('T')[0];
           
-          // Load forecast and historical weather using Farmer Dashboard APIs
-          const [forecast, historical] = await Promise.all([
-            getWeatherForecast(farmId, startDateStr, endDateStr).catch(() => null),
-            getHistoricalWeather(farmId, startDateStr, endDateStr).catch(() => null)
+          // Helper function to handle API errors gracefully
+          const handleApiError = (err: any, apiName: string) => {
+            if (err?.message?.includes('EOSDA') || err?.message?.includes('register the farm')) {
+              return null;
+            }
+            console.warn(`${apiName} error:`, err);
+            return null;
+          };
+          
+          // Load all weather APIs
+          const [forecast, historical, accumulated] = await Promise.all([
+            getWeatherForecast(farmId, startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'Weather forecast')),
+            getHistoricalWeather(farmId, startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'Historical weather')),
+            getAccumulatedWeather(farmId, startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'Accumulated weather'))
           ]);
 
-          setWeatherData({ forecast, historical });
+          // Load all indices APIs
+          const [indicesStats, ndviTimeSeries, fieldTrend] = await Promise.all([
+            getVegetationStats(farmId, startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'Vegetation indices statistics')),
+            getNDVITimeSeries(farmId, startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'NDVI time series')),
+            getFieldTrend(farmId, 'NDVI', startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'Field trend'))
+          ]);
+
+          setWeatherData({ forecast, historical, accumulated });
+          setIndicesData({ indicesStats, ndviTimeSeries, fieldTrend });
       } catch (err: any) {
+          if (!err?.message?.includes('EOSDA') && !err?.message?.includes('register the farm')) {
         console.error('Failed to load weather data:', err);
           setWeatherError(err.message || 'Failed to load weather data');
+          }
       } finally {
           setWeatherLoading(false);
         }
@@ -981,9 +1004,144 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
       loadWeather();
     }, [farmId]);
 
+    if (weatherLoading) {
       return (
-                <div>
-        <CombinedWeatherForecast className="bg-gradient-to-br from-blue-900/90 to-cyan-900/90 border border-blue-700/30 rounded-xl shadow-xl" />
+        <Card className="bg-white border border-gray-200 shadow-sm">
+          <CardContent className="p-12">
+            <div className="flex items-center justify-center">
+              <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (weatherError) {
+      return (
+        <Card className="bg-white border border-red-200 shadow-sm">
+          <CardContent className="p-4">
+            <div className="text-center text-red-600">
+              <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
+              <p>{weatherError}</p>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // Prepare weather forecast data
+    const forecastData = weatherData?.forecast?.data || weatherData?.forecast || [];
+    const forecastChartData = Array.isArray(forecastData) ? forecastData.map((item: any) => ({
+      date: item.date || item.timestamp || item.time || item.datetime || '',
+      temperature: item.temperature || item.temp || item.maxTemp || 0,
+      minTemp: item.minTemp || item.temperatureMin || 0,
+      rainfall: item.rainfall || item.precipitation || item.precip || item.precipitationAmount || 0,
+      humidity: item.humidity || 0,
+      windSpeed: item.windSpeed || item.wind || 0
+    })) : [];
+
+    // Prepare accumulated weather data
+    const accumulatedData = weatherData?.accumulated || {};
+
+    return (
+      <div className="space-y-6">
+        {/* Weather Forecast */}
+        {forecastChartData.length > 0 && (
+          <Card className="bg-gradient-to-br from-blue-900/90 to-cyan-900/90 border border-blue-700/30 shadow-xl">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Cloud className="h-5 w-5" />
+                Weather Forecast
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Forecast Chart */}
+                <ResponsiveContainer width="100%" height={250}>
+                  <ComposedChart data={forecastChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.2)" />
+                    <XAxis 
+                      dataKey="date" 
+                      tick={{ fill: 'white', fontSize: 12 }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                    />
+                    <YAxis yAxisId="left" tick={{ fill: 'white', fontSize: 12 }} />
+                    <YAxis yAxisId="right" orientation="right" tick={{ fill: 'white', fontSize: 12 }} />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: '8px', color: 'white' }}
+                    />
+                    <Legend wrapperStyle={{ color: 'white' }} />
+                    <Bar yAxisId="right" dataKey="rainfall" fill="#60a5fa" name="Rainfall (mm)" />
+                    <Line 
+                      yAxisId="left"
+                      type="monotone" 
+                      dataKey="temperature" 
+                      stroke="#fbbf24" 
+                      strokeWidth={2}
+                      name="Temperature (°C)"
+                      dot={{ r: 4, fill: '#fbbf24' }}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+                
+                {/* Forecast Summary Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+                  {forecastChartData.slice(0, 4).map((day: any, index: number) => (
+                    <div key={index} className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+                      <p className="text-white/80 text-xs mb-1">{day.date || `Day ${index + 1}`}</p>
+                      <p className="text-white text-lg font-bold">{day.temperature}°C</p>
+                      {day.rainfall > 0 && (
+                        <p className="text-blue-200 text-xs mt-1 flex items-center gap-1">
+                          <Droplets className="h-3 w-3" />
+                          {day.rainfall}mm
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Accumulated Weather Data */}
+        {accumulatedData && Object.keys(accumulatedData).length > 0 && (
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-gray-900">Accumulated Weather Data</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {accumulatedData.gdd && (
+                  <div className="bg-green-50 border border-green-600 rounded-lg p-4">
+                    <p className="text-xs text-gray-600 mb-1">Growing Degree Days (GDD)</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {typeof accumulatedData.gdd === 'number' ? accumulatedData.gdd.toFixed(1) : accumulatedData.gdd || 'N/A'}
+                    </p>
+                  </div>
+                )}
+                {accumulatedData.seasonalRainfall && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-xs text-gray-600 mb-1">Seasonal Rainfall</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {typeof accumulatedData.seasonalRainfall === 'number' ? accumulatedData.seasonalRainfall.toFixed(1) : accumulatedData.seasonalRainfall || 'N/A'} mm
+                    </p>
+                  </div>
+                )}
+                {accumulatedData.averageTemperature && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <p className="text-xs text-gray-600 mb-1">Average Temperature</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {typeof accumulatedData.averageTemperature === 'number' ? accumulatedData.averageTemperature.toFixed(1) : accumulatedData.averageTemperature || 'N/A'} °C
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   };
@@ -1284,57 +1442,57 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
 
     return (
       <div className="space-y-4">
-        {/* Field Summary */}
+        {/* Field Summary & Data Source */}
         <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-gray-900">Field Summary</CardTitle>
+            <CardTitle className="text-gray-900">Field Summary & Data Source</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Farmer: <span className="text-gray-900 font-medium">{fieldDetails.farmer}</span></p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Field Summary */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Field Information</h3>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Farmer: <span className="text-gray-900 font-medium">{fieldDetails.farmer}</span></p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Crop: <span className="text-gray-900 font-medium">{fieldDetails.cropType}</span></p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Area: <span className="text-gray-900 font-medium">{Number(fieldDetails.area).toFixed(2)} ha</span></p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Crop: <span className="text-gray-900 font-medium">{fieldDetails.cropType}</span></p>
+              
+              {/* Data Source */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Data Source</h3>
+                <div className="flex gap-2">
+                  <Button
+                    variant={dataSource === "drone" ? "default" : "outline"}
+                    onClick={() => setDataSource("drone")}
+                    className={`flex items-center gap-2 ${
+                      dataSource === "drone" 
+                        ? "bg-gray-800 hover:bg-gray-900 text-white" 
+                        : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    <Upload className="h-4 w-4" />
+                    Drone Upload
+                  </Button>
+                  <Button
+                    variant={dataSource === "manual" ? "default" : "outline"}
+                    onClick={() => setDataSource("manual")}
+                    className={`flex items-center gap-2 ${
+                      dataSource === "manual" 
+                        ? "bg-gray-800 hover:bg-gray-900 text-white" 
+                        : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    <User className="h-4 w-4" />
+                    Manual Check
+                  </Button>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Area: <span className="text-gray-900 font-medium">{fieldDetails.area} ha</span></p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Data Source */}
-        <Card className="bg-white border border-gray-200 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-gray-900">Data Source</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2">
-              <Button
-                variant={dataSource === "drone" ? "default" : "outline"}
-                onClick={() => setDataSource("drone")}
-                className={`flex items-center gap-2 ${
-                  dataSource === "drone" 
-                    ? "bg-gray-800 hover:bg-gray-900 text-white" 
-                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                <Upload className="h-4 w-4" />
-                  Drone Upload
-              </Button>
-              <Button
-                variant={dataSource === "manual" ? "default" : "outline"}
-                onClick={() => setDataSource("manual")}
-                className={`flex items-center gap-2 ${
-                  dataSource === "manual" 
-                    ? "bg-gray-800 hover:bg-gray-900 text-white" 
-                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                <User className="h-4 w-4" />
-                  Manual Check
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -1342,122 +1500,174 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
         {/* Upload Drone Report Section - Only show when drone is selected */}
         {dataSource === "drone" && (
           <>
-            <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-gray-900 flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Upload Drone Report (PDF)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-gray-400 transition-colors cursor-pointer"
-                  onClick={() => document.getElementById('pdf-upload')?.click()}
-                >
-                  <ArrowUp className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                  <p className="text-gray-900 text-lg font-medium mb-2">Upload PDF Report</p>
-                  <p className="text-sm text-gray-600 mb-6">Supports plant stress analysis reports (Agremo format)</p>
+            {/* Two Column Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Left Column: Upload & Flight Date Combined */}
+              <div className="space-y-4">
+                <Card className="bg-white border border-gray-200 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-gray-900 flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Upload Drone Data
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div
+                      onDrop={handleDrop}
+                      onDragOver={handleDragOver}
+                      className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors cursor-pointer"
+                      onClick={() => document.getElementById('pdf-upload')?.click()}
+                    >
+                      <ArrowUp className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                      <p className="text-gray-900 text-base font-medium mb-1">Upload PDF Report</p>
+                      <p className="text-xs text-gray-600 mb-4">Supports plant stress analysis reports (Agremo format)</p>
                       <input
                         type="file"
-                    id="pdf-upload"
+                        id="pdf-upload"
                         className="hidden"
-                    accept=".pdf"
+                        accept=".pdf"
                         onChange={handleFileChange}
                       />
                       <Button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      document.getElementById('pdf-upload')?.click();
-                    }}
-                    className="bg-gray-800 hover:bg-gray-900 text-white"
-                  >
-                    Select PDF File
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          document.getElementById('pdf-upload')?.click();
+                        }}
+                        className="bg-gray-800 hover:bg-gray-900 text-white"
+                        size="sm"
+                      >
+                        Select PDF File
                       </Button>
                       {selectedFile && (
-                    <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                      <p className="text-sm text-gray-700">Selected: {selectedFile.name}</p>
-                      <p className="text-xs text-gray-500 mt-1">{(selectedFile.size / 1024).toFixed(2)} KB</p>
-                      {assessmentId && (
-                        <Button
-                          onClick={handleUploadDronePDF}
-                          disabled={uploadingPDF}
-                          className="mt-3 bg-green-600 hover:bg-green-700 text-white"
-                          size="sm"
-                        >
-                          {uploadingPDF ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Uploading...
-                            </>
-                          ) : (
-                            <>
-                              <Upload className="h-4 w-4 mr-2" />
-                              Upload PDF
-                            </>
+                        <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                          <p className="text-sm text-gray-700">Selected: {selectedFile.name}</p>
+                          <p className="text-xs text-gray-500 mt-1">{(selectedFile.size / 1024).toFixed(2)} KB</p>
+                          {assessmentId && (
+                            <Button
+                              onClick={handleUploadDronePDF}
+                              disabled={uploadingPDF}
+                              className="mt-3 bg-green-600 hover:bg-green-700 text-white"
+                              size="sm"
+                            >
+                              {uploadingPDF ? (
+                                <img src="/loading.gif" alt="Loading" className="w-4 h-4" />
+                              ) : (
+                                <>
+                                  <Upload className="h-4 w-4 mr-2" />
+                                  Upload PDF
+                                </>
+                              )}
+                            </Button>
                           )}
-                        </Button>
-                      )}
                         </div>
                       )}
                     </div>
-              </CardContent>
-            </Card>
-
-                  {/* Flight Date */}
-            <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-gray-900">Flight Date:</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4">
-                    <Input
-                      type="date"
-                      value={flightDate}
-                      onChange={(e) => setFlightDate(e.target.value)}
-                    className="w-48 border-gray-300"
-                    />
-                  <span className="text-sm text-gray-700">{formatDate(flightDate)}</span>
-                  </div>
-              </CardContent>
-            </Card>
-
-                  {/* Drone Metrics */}
-            <Card className="bg-white border border-gray-200 shadow-sm">
-                      <CardHeader>
-                <CardTitle className="text-gray-900">Drone Metrics</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <p className="text-xs text-gray-600 mb-1 font-medium">Healthy Area (Fine)</p>
-                    <p className="text-xl font-bold text-gray-900">2.80 ha</p>
-                      </div>
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <p className="text-xs text-gray-600 mb-1 font-medium">Plant Stress</p>
-                    <p className="text-xl font-bold text-gray-900">17.6%</p>
-                      </div>
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <p className="text-xs text-gray-600 mb-1 font-medium">Potential Stress</p>
-                    <p className="text-xl font-bold text-gray-900">0%</p>
-                      </div>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-xs text-gray-600 mb-1 font-medium">Field Area</p>
-                    <p className="text-xl font-bold text-gray-900">{fieldDetails.area} ha</p>
-                      </div>
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                    <p className="text-xs text-gray-600 mb-1 font-medium">Growing Stage</p>
-                    <p className="text-xl font-bold text-gray-900">N/A</p>
+                    
+                    {/* Flight Date */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-gray-900">Flight Date</Label>
+                      <div className="flex items-center gap-3">
+                        <Input
+                          type="date"
+                          value={flightDate}
+                          onChange={(e) => setFlightDate(e.target.value)}
+                          className="flex-1 border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700 whitespace-nowrap">{formatDate(flightDate)}</span>
                       </div>
                     </div>
-                      </CardContent>
-                    </Card>
+                  </CardContent>
+                </Card>
 
-                  {/* Field Visualization */}
+                {/* Assessor Notes */}
+                <Card className="bg-white border border-gray-200 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-gray-900">Assessor Notes</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Textarea
+                      value={assessorNotes}
+                      onChange={(e) => setAssessorNotes(e.target.value)}
+                      className="min-h-[100px] border-gray-300"
+                      placeholder="Enter your notes here..."
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Right Column: Drone Metrics */}
+              <div className="space-y-4">
+                <Card className="bg-white border border-gray-200 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-gray-900">Drone Metrics</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="bg-green-50 border-0 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-green-100 rounded-lg p-2">
+                            <Leaf className="h-5 w-5 text-green-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs text-gray-600 mb-1 font-medium">Healthy Area (Fine)</p>
+                            <p className="text-xl font-bold text-gray-900">2.80 ha</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-yellow-50 border-0 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-yellow-100 rounded-lg p-2">
+                            <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs text-gray-600 mb-1 font-medium">Plant Stress</p>
+                            <p className="text-xl font-bold text-gray-900">17.6%</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-gray-50 border-0 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-gray-100 rounded-lg p-2">
+                            <TrendingUp className="h-5 w-5 text-gray-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs text-gray-600 mb-1 font-medium">Potential Stress</p>
+                            <p className="text-xl font-bold text-gray-900">0%</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-blue-50 border-0 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-blue-100 rounded-lg p-2">
+                            <Map className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs text-gray-600 mb-1 font-medium">Field Area</p>
+                            <p className="text-xl font-bold text-gray-900">{Number(fieldDetails.area).toFixed(2)} ha</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-purple-50 border-0 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-purple-100 rounded-lg p-2">
+                            <Sprout className="h-5 w-5 text-purple-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs text-gray-600 mb-1 font-medium">Growing Stage</p>
+                            <p className="text-xl font-bold text-gray-900">N/A</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Field Visualization */}
             <Card className="bg-white border border-gray-200 shadow-sm">
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
+              <CardHeader>
+                <div className="flex items-center justify-between">
                   <CardTitle className="text-gray-900">Field Visualization</CardTitle>
                   <div className="flex items-center gap-2">
                     <Button
@@ -1474,7 +1684,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                     >
                       <span className="text-lg">−</span>
                     </Button>
-                          </div>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -1485,15 +1695,15 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                       <Label className="text-sm text-gray-700">Layer:</Label>
                       <Select value={mapTileLayer} onValueChange={(value) => setMapTileLayer(value as "osm" | "satellite" | "terrain")}>
                         <SelectTrigger className="w-32 h-9 border-gray-300">
-                                <SelectValue />
-                              </SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="satellite">Satellite</SelectItem>
                           <SelectItem value="osm">Street</SelectItem>
                           <SelectItem value="terrain">Terrain</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
                     <div className="flex items-center gap-2">
                       <Label className="text-sm text-gray-700">Index:</Label>
@@ -1507,8 +1717,8 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                           <SelectItem value="savi">🌾 SAVI</SelectItem>
                         </SelectContent>
                       </Select>
-                        </div>
-                          </div>
+                    </div>
+                  </div>
 
                   {/* Map Container */}
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -1535,33 +1745,51 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                       className="w-full"
                       boundary={selectedFarmForDetail?.boundary || null}
                     />
-                              </div>
+                  </div>
 
-                  {/* Vegetation Health Index Legend */}
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <Label className="text-sm font-medium text-gray-900 mb-2 block">Vegetation Health Index</Label>
-                              <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-600">Low</span>
-                      <div className="flex-1 h-4 bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 rounded"></div>
-                      <span className="text-xs text-gray-600">High</span>
-                            </div>
-                          </div>
+                  {/* Vegetation Health Index Legend - Enhanced */}
+                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-5 border border-gray-200 shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Activity className="h-5 w-5 text-green-600" />
+                      <Label className="text-base font-semibold text-gray-900">Vegetation Health Index</Label>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-medium text-gray-700 w-12">Low</span>
+                        <div className="flex-1 h-6 bg-gradient-to-r from-red-500 via-yellow-500 to-green-600 rounded-lg shadow-inner relative overflow-hidden">
+                          <div className="absolute inset-0 bg-gradient-to-r from-red-400/20 via-yellow-400/20 to-green-500/20 animate-pulse"></div>
                         </div>
-                      </CardContent>
-                    </Card>
-
-                  {/* Assessor Notes */}
-            <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-gray-900">Assessor Notes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                    <Textarea
-                      value={assessorNotes}
-                      onChange={(e) => setAssessorNotes(e.target.value)}
-                  className="min-h-[100px] border-gray-300"
-                      placeholder="Enter your notes here..."
-                    />
+                        <span className="text-xs font-medium text-gray-700 w-12 text-right">High</span>
+                      </div>
+                      <div className="grid grid-cols-5 gap-2 mt-2">
+                        <div className="text-center">
+                          <div className="h-3 w-full bg-red-500 rounded mb-1"></div>
+                          <span className="text-xs text-gray-600">0.0-0.2</span>
+                        </div>
+                        <div className="text-center">
+                          <div className="h-3 w-full bg-orange-500 rounded mb-1"></div>
+                          <span className="text-xs text-gray-600">0.2-0.4</span>
+                        </div>
+                        <div className="text-center">
+                          <div className="h-3 w-full bg-yellow-500 rounded mb-1"></div>
+                          <span className="text-xs text-gray-600">0.4-0.6</span>
+                        </div>
+                        <div className="text-center">
+                          <div className="h-3 w-full bg-lime-500 rounded mb-1"></div>
+                          <span className="text-xs text-gray-600">0.6-0.8</span>
+                        </div>
+                        <div className="text-center">
+                          <div className="h-3 w-full bg-green-600 rounded mb-1"></div>
+                          <span className="text-xs text-gray-600">0.8-1.0</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-300">
+                        <span className="text-xs text-gray-600">Health Status: <span className="font-semibold text-green-600">Good</span></span>
+                        <span className="text-xs text-gray-600">Current Index: <span className="font-semibold text-gray-900">0.72</span></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
@@ -1586,10 +1814,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                     size="sm"
                   >
                     {savingNotes ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Saving...
-                      </>
+                      <img src="/loading.gif" alt="Loading" className="w-4 h-4" />
                     ) : (
                       <>
                         <CheckCircle className="h-4 w-4 mr-2" />
@@ -1636,10 +1861,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                     size="lg"
                   >
                     {generatingReport ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Generating Report...
-                      </>
+                      <img src="/loading.gif" alt="Loading" className="w-4 h-4" />
                     ) : (
                       <>
                         <FileText className="h-4 w-4 mr-2" />
@@ -1862,7 +2084,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
 
     const getRiskScoreColor = (score: number | null) => {
       if (score === null || score === undefined) return 'bg-gray-500';
-      if (score <= 30) return 'bg-green-500';
+      if (score <= 30) return 'bg-green-600';
       if (score <= 70) return 'bg-yellow-500';
       return 'bg-red-500';
     };
@@ -1905,10 +2127,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >
                   {calculatingRisk ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Calculating...
-                    </>
+                    <img src="/loading.gif" alt="Loading" className="w-4 h-4" />
                   ) : (
                     <>
                       <Activity className="h-4 w-4 mr-2" />
@@ -1943,10 +2162,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                 className="bg-green-600 hover:bg-green-700 text-white"
               >
                 {savingNotes ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
+                  <img src="/loading.gif" alt="Loading" className="w-4 h-4" />
                 ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
@@ -1965,8 +2181,8 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
           </CardHeader>
           <CardContent className="space-y-4">
             {assessmentDetails?.droneAnalysisPdfUrl ? (
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-700 mb-2">PDF uploaded successfully</p>
+              <div className="p-4 bg-green-50 border border-green-600 rounded-lg">
+                <p className="text-sm text-green-600 mb-2">PDF uploaded successfully</p>
                 <a 
                   href={assessmentDetails.droneAnalysisPdfUrl} 
                   target="_blank" 
@@ -2007,10 +2223,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                     className="w-full bg-green-600 hover:bg-green-700 text-white"
                   >
                     {uploadingPDF ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Uploading...
-                      </>
+                      <img src="/loading.gif" alt="Loading" className="w-4 h-4" />
                     ) : (
                       <>
                         <Upload className="h-4 w-4 mr-2" />
@@ -2041,7 +2254,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 {riskScore !== null ? (
-                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <CheckCircle className="h-5 w-5 text-green-600" />
                 ) : (
                   <AlertCircle className="h-5 w-5 text-gray-400" />
                 )}
@@ -2051,7 +2264,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
               </div>
               <div className="flex items-center gap-2">
                 {comprehensiveNotes && comprehensiveNotes.trim().length > 0 ? (
-                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <CheckCircle className="h-5 w-5 text-green-600" />
                 ) : (
                   <AlertCircle className="h-5 w-5 text-gray-400" />
                 )}
@@ -2060,7 +2273,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-500" />
+                  <CheckCircle className="h-5 w-5 text-green-600" />
                 <span className="text-sm text-gray-900">
                   Weather analysis done ✓
                 </span>
@@ -2072,10 +2285,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
               className="w-full bg-green-600 hover:bg-green-700 text-white"
             >
               {generatingReport ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Generating Report...
-                </>
+                <img src="/loading.gif" alt="Loading" className="w-4 h-4" />
               ) : (
                 <>
                   <FileText className="h-4 w-4 mr-2" />
@@ -2084,8 +2294,8 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
               )}
             </Button>
             {assessmentDetails?.reportGenerated && (
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-700">
+              <div className="p-4 bg-green-50 border border-green-600 rounded-lg">
+                <p className="text-sm text-green-600">
                   Report generated on {assessmentDetails.reportGeneratedAt 
                     ? new Date(assessmentDetails.reportGeneratedAt).toLocaleString() 
                     : 'N/A'}
@@ -2174,7 +2384,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                   <div className="flex justify-between items-center border-b border-gray-200 pb-2.5">
                     <span className="text-sm text-gray-600">Crop Type:</span>
                     <div className="flex items-center gap-1.5">
-                      <Sprout className="h-3.5 w-3.5 text-green-500" />
+                      <Sprout className="h-3.5 w-3.5 text-green-600" />
                       <span className="text-sm font-medium text-gray-900">{fieldDetails.cropType}</span>
                         </div>
                         </div>
@@ -2229,16 +2439,23 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                     <LeafletMap
                       center={(() => {
                         // Use farm location if available
-                        if (selectedFarmForDetail?.location?.coordinates) {
+                        if (selectedFarmForDetail?.location?.coordinates && Array.isArray(selectedFarmForDetail.location.coordinates)) {
                           const coords = selectedFarmForDetail.location.coordinates;
-                          return [coords[1], coords[0]]; // [lat, lng] from [lng, lat]
+                          const lat = coords[1];
+                          const lng = coords[0];
+                          // Validate coordinates
+                          if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                            return [lat, lng]; // [lat, lng] from [lng, lat]
+                          }
                         }
                         // Try parsing from fieldDetails location
-                        if (fieldDetails.location.includes(',')) {
+                        if (fieldDetails.location && fieldDetails.location.includes(',')) {
                           const parts = fieldDetails.location.split(',');
-                          const lat = parseFloat(parts[0]?.trim() || "-1.9441");
-                          const lng = parseFloat(parts[1]?.trim() || "30.0619");
+                          const lat = parseFloat(parts[0]?.trim() || "");
+                          const lng = parseFloat(parts[1]?.trim() || "");
+                          if (!isNaN(lat) && !isNaN(lng)) {
                           return [lat, lng];
+                          }
                         }
                         return [-1.9441, 30.0619];
                       })()}
@@ -2248,6 +2465,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                       showControls={true}
                       className="w-full"
                       boundary={selectedFarmForDetail?.boundary || null}
+                      kmlUrl={selectedFarmForDetail?.kmlUrl || selectedFarmForDetail?.kmlFileUrl || null}
                     />
                   </div>
                 </CardContent>
@@ -2311,7 +2529,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
     switch (statusLower) {
       case "approved":
       case "completed":
-        return "bg-green-500 text-white border-green-600";
+        return "bg-green-600 text-white border-green-600";
       case "pending":
         return "bg-yellow-500 text-white border-yellow-600";
       case "submitted":
@@ -2379,7 +2597,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
         
           {/* Header */}
         <div>
-          <h1 className="text-4xl font-bold text-gray-900">
+          <h1 className="text-sm font-normal text-gray-900">
               Field Detail View: {displayFieldId}
           </h1>
             <p className="text-gray-900/70 mt-2">
@@ -2615,8 +2833,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
         <Card className="bg-white border border-gray-200 shadow-sm">
           <CardContent className="p-12">
             <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mr-3"></div>
-              <span className="text-sm text-gray-600">Loading weather data...</span>
+              <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
             </div>
           </CardContent>
         </Card>
@@ -2651,10 +2868,119 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
       rainfall: item.rainfall || item.precipitation || item.precip || 0
     })) : [];
 
+    // Prepare weather forecast data
+    const forecastData = weatherData?.forecast?.data || weatherData?.forecast || [];
+    const forecastChartData = Array.isArray(forecastData) ? forecastData.map((item: any) => ({
+      date: item.date || item.timestamp || item.time || item.datetime || '',
+      temperature: item.temperature || item.temp || item.maxTemp || 0,
+      minTemp: item.minTemp || item.temperatureMin || 0,
+      rainfall: item.rainfall || item.precipitation || item.precip || item.precipitationAmount || 0,
+      humidity: item.humidity || 0,
+      windSpeed: item.windSpeed || item.wind || 0
+    })) : [];
+
+    // Prepare accumulated weather data
+    const accumulatedData = weatherData?.accumulated || {};
+
     return (
       <div className="space-y-6">
         {/* Weather Forecast */}
-        <CombinedWeatherForecast className="bg-gradient-to-br from-blue-900/90 to-cyan-900/90 border border-blue-700/30 rounded-xl shadow-xl" />
+        {forecastChartData.length > 0 && (
+          <Card className="bg-gradient-to-br from-blue-900/90 to-cyan-900/90 border border-blue-700/30 shadow-xl">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Cloud className="h-5 w-5" />
+                Weather Forecast
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Forecast Chart */}
+                <ResponsiveContainer width="100%" height={250}>
+                  <ComposedChart data={forecastChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.2)" />
+                    <XAxis 
+                      dataKey="date" 
+                      tick={{ fill: 'white', fontSize: 12 }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                    />
+                    <YAxis yAxisId="left" tick={{ fill: 'white', fontSize: 12 }} />
+                    <YAxis yAxisId="right" orientation="right" tick={{ fill: 'white', fontSize: 12 }} />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: '8px', color: 'white' }}
+                    />
+                    <Legend wrapperStyle={{ color: 'white' }} />
+                    <Bar yAxisId="right" dataKey="rainfall" fill="#60a5fa" name="Rainfall (mm)" />
+                    <Line 
+                      yAxisId="left"
+                      type="monotone" 
+                      dataKey="temperature" 
+                      stroke="#fbbf24" 
+                      strokeWidth={2}
+                      name="Temperature (°C)"
+                      dot={{ r: 4, fill: '#fbbf24' }}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+                
+                {/* Forecast Summary Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+                  {forecastChartData.slice(0, 4).map((day: any, index: number) => (
+                    <div key={index} className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+                      <p className="text-white/80 text-xs mb-1">{day.date || `Day ${index + 1}`}</p>
+                      <p className="text-white text-lg font-bold">{day.temperature}°C</p>
+                      {day.rainfall > 0 && (
+                        <p className="text-blue-200 text-xs mt-1 flex items-center gap-1">
+                          <Droplets className="h-3 w-3" />
+                          {day.rainfall}mm
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Accumulated Weather Data */}
+        {accumulatedData && Object.keys(accumulatedData).length > 0 && (
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-gray-900">Accumulated Weather Data</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {accumulatedData.gdd && (
+                  <div className="bg-green-50 border border-green-600 rounded-lg p-4">
+                    <p className="text-xs text-gray-600 mb-1">Growing Degree Days (GDD)</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {typeof accumulatedData.gdd === 'number' ? accumulatedData.gdd.toFixed(1) : accumulatedData.gdd || 'N/A'}
+                    </p>
+                  </div>
+                )}
+                {accumulatedData.seasonalRainfall && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-xs text-gray-600 mb-1">Seasonal Rainfall</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {typeof accumulatedData.seasonalRainfall === 'number' ? accumulatedData.seasonalRainfall.toFixed(1) : accumulatedData.seasonalRainfall || 'N/A'} mm
+                    </p>
+                  </div>
+                )}
+                {accumulatedData.averageTemperature && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <p className="text-xs text-gray-600 mb-1">Average Temperature</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {typeof accumulatedData.averageTemperature === 'number' ? accumulatedData.averageTemperature.toFixed(1) : accumulatedData.averageTemperature || 'N/A'} °C
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
         
         {/* NDVI Chart */}
         {ndviChartFormatted.length > 0 && (
@@ -2739,7 +3065,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {indicesData.indicesStats.NDVI && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="bg-green-50 border border-green-600 rounded-lg p-4">
                     <p className="text-xs text-gray-600 mb-1">NDVI Average</p>
                     <p className="text-2xl font-bold text-gray-900">
                       {indicesData.indicesStats.NDVI.average?.toFixed(2) || 
@@ -2941,82 +3267,12 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
       <div className="min-h-screen bg-gray-50 pt-6 pb-8">
         {/* Main Content */}
         <div className="max-w-7xl mx-auto px-6">
-          {/* Summary Cards - Clean Modern Style */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500 mb-1">Total Farmers</p>
-                    <p className="text-xl font-semibold text-gray-900">{filteredFarmers.length}</p>
-                    <p className="text-xs text-green-600 mt-1">All registered</p>
-            </div>
-                  <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
-                    <Users className="h-6 w-6 text-green-600" />
-                  </div>
-                  </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500 mb-1">Total Fields</p>
-                    <p className="text-xl font-semibold text-gray-900">
-                      {filteredFarmers.reduce((sum, f) => sum + f.totalFields, 0)}
-                    </p>
-                    <p className="text-xs text-green-600 mt-1">Across all farmers</p>
-                </div>
-                  <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
-                    <Leaf className="h-6 w-6 text-green-600" />
-          </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500 mb-1">Active Assessments</p>
-                    <p className="text-xl font-semibold text-gray-900">{assessments.length}</p>
-                    <p className="text-xs text-green-600 mt-1">In progress</p>
-                  </div>
-                  <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
-                    <Shield className="h-6 w-6 text-green-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500 mb-1">Completion Rate</p>
-                    <p className="text-xl font-semibold text-gray-900">
-                      {assessments.length > 0 ? Math.round((assessments.filter(a => a.status === 'submitted' || a.status === 'approved').length / assessments.length) * 100) : 0}%
-                    </p>
-                    <p className="text-xs text-green-600 mt-1">Success rate</p>
-                  </div>
-                  <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="h-6 w-6 text-green-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-        </div>
-
         {/* Loading State */}
           {(loading || loadingFarms || loadingFarmers) && (
             <Card className="bg-white border border-gray-200 shadow-sm">
             <CardContent className="p-12">
               <div className="flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-600 mx-auto mb-4"></div>
-                    <p className="text-sm text-gray-600">Loading data...</p>
-                </div>
+                <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
               </div>
             </CardContent>
           </Card>

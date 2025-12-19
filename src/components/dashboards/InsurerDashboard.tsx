@@ -543,7 +543,9 @@ export default function InsurerDashboard() {
           </CardHeader>
           <CardContent>
             {loadingSummary ? (
-              <div className="text-sm text-gray-600">Loading...</div>
+              <div className="flex items-center justify-center py-4">
+                <img src="/loading.gif" alt="Loading" className="w-12 h-12" />
+              </div>
             ) : recentClaims.length === 0 ? (
               <div className="text-sm text-gray-600">No claims available.</div>
             ) : (
@@ -618,7 +620,9 @@ export default function InsurerDashboard() {
       {insuranceRequestsLoading ? (
         <Card className="bg-white border-gray-200">
           <CardContent className="p-12">
-            <div className="text-center text-gray-600">Loading insurance requests...</div>
+            <div className="flex items-center justify-center">
+              <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
+            </div>
           </CardContent>
         </Card>
       ) : insuranceRequests.length === 0 ? (
@@ -722,7 +726,9 @@ export default function InsurerDashboard() {
       {submittedAssessmentsLoading ? (
         <Card className="bg-white border-gray-200">
           <CardContent className="p-12">
-            <div className="text-center text-gray-600">Loading submitted assessments...</div>
+            <div className="flex items-center justify-center">
+              <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
+            </div>
           </CardContent>
         </Card>
       ) : submittedAssessments.length === 0 ? (
@@ -922,7 +928,9 @@ export default function InsurerDashboard() {
             <div>
               <Label className="text-gray-700">Select Assessor *</Label>
               {assessorsLoading ? (
-                <div className="text-sm text-gray-500 mt-2">Loading assessors...</div>
+                <div className="flex items-center justify-center py-4">
+                  <img src="/loading.gif" alt="Loading" className="w-12 h-12" />
+                </div>
               ) : assessors.length === 0 ? (
                 <div className="space-y-2">
                   <Input

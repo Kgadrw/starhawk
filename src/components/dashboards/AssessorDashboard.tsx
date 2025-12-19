@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { dashboardTheme } from "@/utils/dashboardTheme";
+import { StatsGridSkeleton, TableSkeleton, CardSkeleton, CardListSkeleton } from "@/components/ui/skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -19,6 +20,8 @@ import { Slider } from "@/components/ui/slider";
 import meteosourceApiService from "@/services/meteosourceApi";
 import assessmentsApiService from "@/services/assessmentsApi";
 import farmsApiService, { getFarms, getAllFarms, getFarmById, getWeatherForecast, getHistoricalWeather, getVegetationStats, uploadShapefile, uploadKML, createFarm, createInsuranceRequest, updateFarm } from "@/services/farmsApi";
+import policiesApiService from "@/services/policiesApi";
+import cropMonitoringApiService, { startCropMonitoring, getMonitoringHistory, updateMonitoring, generateMonitoringReport } from "@/services/cropMonitoringApi";
 import { getUserId, getPhoneNumber, getEmail } from "@/services/authAPI";
 import { getUserProfile, getUserById } from "@/services/usersAPI";
 import { API_BASE_URL, getAuthToken } from "@/config/api";
@@ -206,6 +209,7 @@ export default function AssessorDashboard() {
   const [selectedField, setSelectedField] = useState<Field | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "fieldSelection" | "fieldDetail">("list");
   const [activeTab, setActiveTab] = useState("basic-info");
+  const [fieldToViewInRiskAssessment, setFieldToViewInRiskAssessment] = useState<Field | null>(null);
   const [selectedFarmerForProcessing, setSelectedFarmerForProcessing] = useState<string | null>(null);
   const [showDrawField, setShowDrawField] = useState(false);
   const [calculatedArea, setCalculatedArea] = useState<string>("");
@@ -240,6 +244,14 @@ export default function AssessorDashboard() {
   const [loadingFields, setLoadingFields] = useState<Record<string, boolean>>({});
   const [selectedFarmerForFields, setSelectedFarmerForFields] = useState<{id: string; name: string} | null>(null);
   const [showFarmerFieldsView, setShowFarmerFieldsView] = useState(false);
+  const [farmerViewMode, setFarmerViewMode] = useState<"list" | "detail">("list");
+  const [selectedFarmerDetail, setSelectedFarmerDetail] = useState<any | null>(null);
+  const [farmerDetailLoading, setFarmerDetailLoading] = useState(false);
+  // State for Farmers Page (similar to crop monitoring)
+  const [farmersPageViewMode, setFarmersPageViewMode] = useState<"farmers" | "farmerFields" | "fieldDetail">("farmers");
+  const [selectedFarmerForFarmersPage, setSelectedFarmerForFarmersPage] = useState<any | null>(null);
+  const [selectedFieldForFarmersPage, setSelectedFieldForFarmersPage] = useState<any | null>(null);
+  const [farmersPageSearchQuery, setFarmersPageSearchQuery] = useState("");
   const [weatherForecast, setWeatherForecast] = useState<any | null>(null);
   const [historicalWeather, setHistoricalWeather] = useState<any | null>(null);
   const [vegetationStats, setVegetationStats] = useState<any | null>(null);
@@ -250,13 +262,37 @@ export default function AssessorDashboard() {
   const [assessorProfile, setAssessorProfile] = useState<any>(null);
   const [profileLoading, setProfileLoading] = useState(false);
 
-  // State for Crop Monitoring
+  // State for Crop Monitoring (New API Structure)
+  const [policies, setPolicies] = useState<any[]>([]);
+  const [monitoringHistory, setMonitoringHistory] = useState<any[]>([]);
+  const [cropMonitoringLoading, setCropMonitoringLoading] = useState(false);
+  const [cropMonitoringViewMode, setCropMonitoringViewMode] = useState<"policies" | "monitoring" | "detail" | "farmers" | "farmerFields" | "fieldDetail">("farmers");
+  const [selectedMonitoring, setSelectedMonitoring] = useState<any | null>(null);
+  const [selectedFarmerForCropMonitoring, setSelectedFarmerForCropMonitoring] = useState<any | null>(null);
+  const [selectedFieldForCropMonitoring, setSelectedFieldForCropMonitoring] = useState<any | null>(null);
+  const [cropMonitoringSearchQuery, setCropMonitoringSearchQuery] = useState("");
+  
+  // Dialog states for crop monitoring
+  const [startMonitoringDialogOpen, setStartMonitoringDialogOpen] = useState(false);
+  const [selectedPolicyId, setSelectedPolicyId] = useState<string | null>(null);
+  const [startingMonitoring, setStartingMonitoring] = useState(false);
+  
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const [updatingMonitoring, setUpdatingMonitoring] = useState(false);
+  const [updateData, setUpdateData] = useState({
+    observations: [] as string[],
+    photoUrls: [] as string[],
+    notes: ''
+  });
+  
+  const [generateReportLoading, setGenerateReportLoading] = useState(false);
+  
+  // Legacy state (keeping for backward compatibility)
   const [monitoringData, setMonitoringData] = useState<Record<string, any>>({});
   const [alerts, setAlerts] = useState<any[]>([]);
   const [selectedFarmForMonitoring, setSelectedFarmForMonitoring] = useState<string | null>(null);
   const [selectedFarmerForDetail, setSelectedFarmerForDetail] = useState<any | null>(null);
   const [selectedFarmForDetail, setSelectedFarmForDetail] = useState<any | null>(null);
-  const [cropMonitoringViewMode, setCropMonitoringViewMode] = useState<"list" | "fieldDetail">("list");
   const [monitoringLoading, setMonitoringLoading] = useState(false);
   const [alertsLoading, setAlertsLoading] = useState(false);
   const [monitoringError, setMonitoringError] = useState<string | null>(null);
@@ -773,12 +809,9 @@ export default function AssessorDashboard() {
             </CardHeader>
             <CardContent className="p-0">
               {isLoadingFields ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-500 mx-auto mb-4"></div>
-                    <p className="text-sm text-gray-600">Loading fields...</p>
-                  </div>
-                </div>
+                <CardContent className="p-0">
+                  <TableSkeleton rows={3} columns={7} />
+                </CardContent>
               ) : farmerFieldsList.length === 0 ? (
                 <div className="text-center py-12">
                   <p className="text-sm text-gray-500">No fields found for this farmer</p>
@@ -1439,10 +1472,7 @@ export default function AssessorDashboard() {
     if (loading) {
       return (
         <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
-            <p className="text-gray-900/60">Loading weather data...</p>
-          </div>
+          <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
         </div>
       );
     }
@@ -1738,7 +1768,7 @@ export default function AssessorDashboard() {
   };
 
   // Crop Analysis Component
-  const CropAnalysisTab = ({ fieldDetails }: { fieldDetails: FieldDetail }) => {
+  const CropAnalysisTab = ({ fieldDetails, farm }: { fieldDetails: FieldDetail; farm?: any }) => {
     // Use selectedFarm and vegetationStats from parent scope
     const [dataSource, setDataSource] = useState<string>("drone");
     const [selectedFile, setSelectedFile] = useState<string>("");
@@ -1756,16 +1786,27 @@ export default function AssessorDashboard() {
     
     // Parse location coordinates if available
     const parseCoordinates = (location: string): [number, number] => {
+      if (!location || typeof location !== 'string') {
+        return [-1.9441, 30.0619]; // Default: Kigali, Rwanda
+      }
+      
+      // Try to parse if it contains numbers (coordinates)
       if (location.includes(',')) {
         const parts = location.split(',');
-        const lat = parseFloat(parts[0]?.trim() || "-1.9441");
-        const lng = parseFloat(parts[1]?.trim() || "30.0619");
+        const lat = parseFloat(parts[0]?.trim() || "");
+        const lng = parseFloat(parts[1]?.trim() || "");
+        
+        // Validate that we got valid numbers
+        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
         return [lat, lng];
       }
+      }
+      
+      // If location is a place name (like "Gatsibo, Eastern Province"), return default
       return [-1.9441, 30.0619]; // Default: Kigali, Rwanda
     };
     
-    const mapCenter = parseCoordinates(fieldDetails.location);
+    const mapCenter = parseCoordinates(fieldDetails?.location || "");
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -1971,31 +2012,63 @@ export default function AssessorDashboard() {
                     <Label className="text-gray-900 mb-4 block">Field Visualization</Label>
                     <Card className={`${dashboardTheme.card} border border-gray-200`}>
                       <CardHeader>
-                        <div className="flex items-center justify-between flex-wrap gap-4">
                           <div>
                             <p className="text-gray-900 font-medium">Map View</p>
                           </div>
-                          <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2">
-                              <Label className="text-sm text-gray-700">Layer:</Label>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="relative">
+                          <LeafletMap
+                            center={(() => {
+                              // Use farm location if available (check both farm prop and selectedFarm)
+                              const currentFarm = farm || selectedFarm;
+                              if (currentFarm?.location?.coordinates && Array.isArray(currentFarm.location.coordinates)) {
+                                const coords = currentFarm.location.coordinates;
+                                const lat = coords[1];
+                                const lng = coords[0];
+                                // Validate coordinates
+                                if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                                  return [lat, lng]; // [lat, lng] from [lng, lat]
+                                }
+                              }
+                              // Validate mapCenter before returning
+                              const [lat, lng] = mapCenter;
+                              if (!isNaN(lat) && !isNaN(lng)) {
+                                return mapCenter;
+                              }
+                              return [-1.9441, 30.0619]; // Default: Kigali, Rwanda
+                            })()}
+                            zoom={15}
+                            height="400px"
+                            tileLayer={mapTileLayer}
+                            showControls={true}
+                            className="w-full rounded-lg"
+                            boundary={(farm || selectedFarm)?.boundary || null}
+                            kmlUrl={(farm || selectedFarm)?.kmlUrl || (farm || selectedFarm)?.kmlFileUrl || null}
+                          />
+                          {/* Layer and Index Controls - Overlay on map */}
+                          <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-3 z-[1000] shadow-lg">
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2 relative z-[1001]">
+                                <Label className="text-sm text-gray-700 font-medium">Layer:</Label>
                               <Select value={mapTileLayer} onValueChange={(value) => setMapTileLayer(value as "osm" | "satellite" | "terrain")}>
-                                <SelectTrigger className={`${dashboardTheme.select} w-32`}>
+                                  <SelectTrigger className={`${dashboardTheme.select} w-32 h-8 text-sm`}>
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent className={dashboardTheme.card}>
+                                  <SelectContent className={`${dashboardTheme.card}`} style={{ zIndex: 10001 }}>
                                   <SelectItem value="satellite">Satellite</SelectItem>
                                   <SelectItem value="osm">Street</SelectItem>
                                   <SelectItem value="terrain">Terrain</SelectItem>
                               </SelectContent>
                             </Select>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Label className="text-sm text-gray-700">Index:</Label>
+                              <div className="flex items-center gap-2 relative z-[1001]">
+                                <Label className="text-sm text-gray-700 font-medium">Index:</Label>
                               <Select value={selectedIndex} onValueChange={setSelectedIndex}>
-                                <SelectTrigger className={`${dashboardTheme.select} w-48`}>
+                                  <SelectTrigger className={`${dashboardTheme.select} w-40 h-8 text-sm`}>
                                   <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent className={dashboardTheme.card}>
+                                  <SelectContent className={`${dashboardTheme.card}`} style={{ zIndex: 10001 }}>
                                   <SelectItem value="ndvi">🌱 NDVI</SelectItem>
                                   <SelectItem value="evi">🌿 EVI</SelectItem>
                                   <SelectItem value="savi">🌾 SAVI</SelectItem>
@@ -2004,27 +2077,8 @@ export default function AssessorDashboard() {
                             </div>
                           </div>
                         </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="relative">
-                          <LeafletMap
-                            center={(() => {
-                              // Use farm location if available
-                              if (selectedFarm?.location?.coordinates) {
-                                const coords = selectedFarm.location.coordinates;
-                                return [coords[1], coords[0]]; // [lat, lng] from [lng, lat]
-                              }
-                              return mapCenter;
-                            })()}
-                            zoom={15}
-                            height="400px"
-                            tileLayer={mapTileLayer}
-                            showControls={true}
-                            className="w-full rounded-lg"
-                            boundary={selectedFarm?.boundary || null}
-                          />
                           {/* Legend */}
-                          <div className="absolute bottom-4 left-4 bg-white/90 border border-gray-200 rounded-lg p-4 z-[1000]">
+                          <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-4 z-[1000] shadow-lg">
                             <p className="text-gray-900 font-medium mb-3">Vegetation Health Index</p>
                             <div className="space-y-2">
                               <div className="flex items-center gap-2">
@@ -2193,11 +2247,21 @@ export default function AssessorDashboard() {
                           <LeafletMap
                             center={(() => {
                               // Use farm location if available
-                              if (selectedFarm?.location?.coordinates) {
+                              if (selectedFarm?.location?.coordinates && Array.isArray(selectedFarm.location.coordinates)) {
                                 const coords = selectedFarm.location.coordinates;
-                                return [coords[1], coords[0]]; // [lat, lng] from [lng, lat]
+                                const lat = coords[1];
+                                const lng = coords[0];
+                                // Validate coordinates
+                                if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                                  return [lat, lng]; // [lat, lng] from [lng, lat]
+                                }
                               }
+                              // Validate mapCenter before returning
+                              const [lat, lng] = mapCenter;
+                              if (!isNaN(lat) && !isNaN(lng)) {
                               return mapCenter;
+                              }
+                              return [-1.9441, 30.0619]; // Default: Kigali, Rwanda
                             })()}
                             zoom={15}
                             height="400px"
@@ -2655,6 +2719,45 @@ export default function AssessorDashboard() {
     setSelectedFarmer(null);
   };
 
+  const handleViewFarmerDetails = async (farmer: any) => {
+    const farmerId = farmer._id || farmer.id;
+    if (!farmerId) {
+      toast({
+        title: "Error",
+        description: "Farmer ID not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setFarmerDetailLoading(true);
+    setSelectedFarmerDetail(null);
+    
+    try {
+      const response = await getUserById(farmerId);
+      const farmerData = response.data || response;
+      setSelectedFarmerDetail(farmerData);
+      setFarmerViewMode("detail");
+      
+      // Also load farmer's fields
+      await loadFarmerFields(farmerId);
+    } catch (err: any) {
+      console.error('Failed to load farmer details:', err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to load farmer details",
+        variant: "destructive",
+      });
+    } finally {
+      setFarmerDetailLoading(false);
+    }
+  };
+
+  const handleBackToFarmersList = () => {
+    setFarmerViewMode("list");
+    setSelectedFarmerDetail(null);
+  };
+
   const handleBackToFields = () => {
     setViewMode("fieldSelection");
     setSelectedField(null);
@@ -3095,15 +3198,22 @@ export default function AssessorDashboard() {
                     <LeafletMap
                       center={(() => {
                         // Use farm location if available, otherwise parse from fieldDetails
-                        if (selectedFarm?.location?.coordinates) {
+                        if (selectedFarm?.location?.coordinates && Array.isArray(selectedFarm.location.coordinates)) {
                           const coords = selectedFarm.location.coordinates;
-                          return [coords[1], coords[0]]; // [lat, lng] from [lng, lat]
+                          const lat = coords[1];
+                          const lng = coords[0];
+                          // Validate coordinates
+                          if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                            return [lat, lng]; // [lat, lng] from [lng, lat]
+                          }
                         }
-                        if (fieldDetails.location.includes(',')) {
+                        if (fieldDetails.location && fieldDetails.location.includes(',')) {
                           const parts = fieldDetails.location.split(',');
-                          const lat = parseFloat(parts[0]?.trim() || "-1.9441");
-                          const lng = parseFloat(parts[1]?.trim() || "30.0619");
+                          const lat = parseFloat(parts[0]?.trim() || "");
+                          const lng = parseFloat(parts[1]?.trim() || "");
+                          if (!isNaN(lat) && !isNaN(lng)) {
                           return [lat, lng];
+                          }
                         }
                         return [-1.9441, 30.0619]; // Default: Kigali, Rwanda
                       })()}
@@ -3112,7 +3222,8 @@ export default function AssessorDashboard() {
                       tileLayer="satellite"
                       showControls={true}
                       className="w-full"
-                      boundary={selectedFarm?.boundary || null}
+                            boundary={(farm || selectedFarm)?.boundary || null}
+                            kmlUrl={(farm || selectedFarm)?.kmlUrl || (farm || selectedFarm)?.kmlFileUrl || null}
                     />
                   </div>
                 </CardContent>
@@ -3125,7 +3236,7 @@ export default function AssessorDashboard() {
           </TabsContent>
 
           <TabsContent value="crop" className="mt-6">
-            <CropAnalysisTab fieldDetails={fieldDetails} />
+            <CropAnalysisTab fieldDetails={fieldDetails} farm={selectedFarm} />
           </TabsContent>
 
           <TabsContent value="overview" className="mt-6">
@@ -3411,61 +3522,61 @@ export default function AssessorDashboard() {
       <div className={`${sidebarCollapsed ? 'max-w-full' : 'max-w-7xl'} mx-auto px-6`}>
         {/* Summary Cards - Clean Modern Style */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow transition-shadow">
+          <Card className="bg-green-500 border-0 shadow-sm hover:shadow transition-shadow">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <p className="text-xs text-gray-500 mb-1">Total Farmers</p>
-                  <p className="text-xl font-semibold text-gray-900">{totalFarmers}</p>
-                  <p className="text-xs text-green-600 mt-1">All registered</p>
+                  <p className="text-xs text-green-50 mb-1">Total Farmers</p>
+                  <p className="text-xl font-semibold text-white">{totalFarmers}</p>
+                  <p className="text-xs text-green-100 mt-1">All registered</p>
                 </div>
                 <div className="flex items-center justify-center">
-                  <Users className="h-6 w-6 text-green-600" />
+                  <Users className="h-6 w-6 text-green-100" />
                 </div>
               </div>
           </CardContent>
         </Card>
 
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow transition-shadow">
+          <Card className="bg-emerald-500 border-0 shadow-sm hover:shadow transition-shadow">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <p className="text-xs text-gray-500 mb-1">Total Fields</p>
-                  <p className="text-xl font-semibold text-gray-900">{totalFields}</p>
-                  <p className="text-xs text-green-600 mt-1">Across all farmers</p>
+                  <p className="text-xs text-emerald-50 mb-1">Total Fields</p>
+                  <p className="text-xl font-semibold text-white">{totalFields}</p>
+                  <p className="text-xs text-emerald-100 mt-1">Across all farmers</p>
                 </div>
                 <div className="flex items-center justify-center">
-                  <Sprout className="h-6 w-6 text-green-600" />
+                  <Sprout className="h-6 w-6 text-emerald-100" />
                 </div>
               </div>
           </CardContent>
         </Card>
 
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow transition-shadow">
+          <Card className="bg-teal-500 border-0 shadow-sm hover:shadow transition-shadow">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <p className="text-xs text-gray-500 mb-1">Total Area</p>
-                  <p className="text-xl font-semibold text-gray-900">{totalArea.toFixed(1)} ha</p>
-                  <p className="text-xs text-green-600 mt-1">Cultivated area</p>
+                  <p className="text-xs text-teal-50 mb-1">Total Area</p>
+                  <p className="text-xl font-semibold text-white">{totalArea.toFixed(1)} ha</p>
+                  <p className="text-xs text-teal-100 mt-1">Cultivated area</p>
                 </div>
                 <div className="flex items-center justify-center">
-                  <MapPin className="h-6 w-6 text-green-600" />
+                  <MapPin className="h-6 w-6 text-teal-100" />
                 </div>
               </div>
           </CardContent>
         </Card>
 
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow transition-shadow">
+          <Card className="bg-lime-500 border-0 shadow-sm hover:shadow transition-shadow">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <p className="text-xs text-gray-500 mb-1">Active Assessments</p>
-                  <p className="text-xl font-semibold text-gray-900">{activeAssessments}</p>
-                  <p className="text-xs text-green-600 mt-1">In progress</p>
+                  <p className="text-xs text-lime-50 mb-1">Active Assessments</p>
+                  <p className="text-xl font-semibold text-white">{activeAssessments}</p>
+                  <p className="text-xs text-lime-100 mt-1">In progress</p>
               </div>
                 <div className="flex items-center justify-center">
-                  <Calendar className="h-6 w-6 text-green-600" />
+                  <Calendar className="h-6 w-6 text-lime-100" />
                 </div>
             </div>
           </CardContent>
@@ -3582,11 +3693,8 @@ export default function AssessorDashboard() {
           </CardHeader>
         <CardContent className="p-0">
             {loading || farmsLoading ? (
-              <div className="flex items-center justify-center py-8">
-              <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-3"></div>
-                  <p className="text-sm text-gray-600">Loading data...</p>
-              </div>
+              <div className="p-6">
+                <TableSkeleton rows={5} columns={6} />
             </div>
             ) : activeView === "farmerFields" ? (
               renderFarmerFields()
@@ -3665,7 +3773,9 @@ export default function AssessorDashboard() {
                             key={farmerIdKey}
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleViewFarmerFields(farmer);
+                              // Navigate to farmers page first, then show details
+                              setActivePage("farmers");
+                              handleViewFarmerDetails(farmer);
                             }}
                             className="hover:bg-gray-50/50 transition-all duration-150 border-b border-gray-100 cursor-pointer"
                           >
@@ -3945,6 +4055,10 @@ export default function AssessorDashboard() {
   const renderPage = () => {
     // Handle view modes within dashboard
     if (activePage === "dashboard") {
+      // Check for farmer detail view first
+      if (farmerViewMode === "detail") {
+        return renderFarmerDetail();
+      }
       switch (viewMode) {
         case "fieldDetail":
           return renderFieldDetail();
@@ -3957,13 +4071,10 @@ export default function AssessorDashboard() {
 
     // Handle other pages
     switch (activePage) {
-      case "risk-assessments": return <RiskAssessmentSystem assessments={assessments} onRefresh={loadAssessments} />;
+      case "risk-assessments": return <RiskAssessmentSystem assessments={assessments} onRefresh={loadAssessments} initialField={fieldToViewInRiskAssessment} />;
       case "loss-assessments": return <LossAssessmentSystem />;
       case "farmers": 
-        if (showFarmerFieldsView) {
-          return renderFarmerFieldsView();
-        }
-        return renderFarmersList();
+        return renderFarmersPage();
       case "crop-monitoring": return renderCropMonitoring();
       case "notifications": return <AssessorNotifications />;
       case "profile-settings": return <AssessorProfileSettings />;
@@ -3973,6 +4084,924 @@ export default function AssessorDashboard() {
         }
         return renderDashboard();
     }
+  };
+
+  const renderFarmerDetail = () => {
+    if (farmerDetailLoading) {
+      return (
+        <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+          <div className={`${sidebarCollapsed ? 'max-w-full' : 'max-w-7xl'} mx-auto px-6`}>
+            <Card className={`${dashboardTheme.card}`}>
+              <CardContent className="p-12">
+                <div className="flex items-center justify-center">
+                  <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+
+    if (!selectedFarmerDetail) {
+      return (
+        <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+          <div className={`${sidebarCollapsed ? 'max-w-full' : 'max-w-7xl'} mx-auto px-6`}>
+            <Card className={`${dashboardTheme.card}`}>
+              <CardContent className="p-6">
+                <div className="text-center text-gray-600">
+                  <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
+                  <p>Farmer details not found</p>
+                  <Button
+                    onClick={handleBackToFarmersList}
+                    className="mt-4 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to Farmers
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+
+    const farmer = selectedFarmerDetail;
+    const farmerName = 
+      farmer.name || 
+      (farmer.firstName && farmer.lastName ? `${farmer.firstName} ${farmer.lastName}`.trim() : '') ||
+      farmer.firstName || 
+      farmer.lastName || 
+      "Unknown";
+    
+    const location = 
+      farmer.location || 
+      (farmer.province && farmer.district ? `${farmer.province}, ${farmer.district}` : '') ||
+      farmer.province ||
+      farmer.district ||
+      "N/A";
+
+    const farmerFieldsList = farmerFields[farmer._id || farmer.id] || [];
+
+    return (
+      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+        <div className={`${sidebarCollapsed ? 'max-w-full' : 'max-w-7xl'} mx-auto px-6`}>
+          {/* Header */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <Button
+                onClick={handleBackToFarmersList}
+                variant="ghost"
+                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Farmers
+              </Button>
+              <Button
+                onClick={async () => {
+                  const farmerId = farmer._id || farmer.id;
+                  if (farmerId) {
+                    setLoadingFields(prev => ({ ...prev, [farmerId]: true }));
+                    try {
+                      await loadFarmerFields(farmerId);
+                      toast({
+                        title: "Success",
+                        description: "Farmer data refreshed",
+                        variant: "default",
+                      });
+                    } catch (err: any) {
+                      toast({
+                        title: "Error",
+                        description: "Failed to refresh farmer data",
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setLoadingFields(prev => ({ ...prev, [farmerId]: false }));
+                    }
+                  }
+                }}
+                variant="outline"
+                size="sm"
+                className="border-gray-300"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900">{farmerName}</h1>
+            <p className="text-gray-600 mt-1">Farmer ID: {farmer._id || farmer.id}</p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Main Details */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Personal Information */}
+              <Card className={`${dashboardTheme.card}`}>
+                <CardHeader>
+                  <CardTitle className="text-gray-900 flex items-center gap-2">
+                    <User className="h-5 w-5 text-green-600" />
+                    Personal Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-gray-600 text-sm">Full Name</Label>
+                      <p className="text-gray-900 font-medium mt-1">{farmerName}</p>
+                    </div>
+                    <div>
+                      <Label className="text-gray-600 text-sm">Email</Label>
+                      <p className="text-gray-900 font-medium mt-1">{farmer.email || "N/A"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-gray-600 text-sm">Phone Number</Label>
+                      <p className="text-gray-900 font-medium mt-1">{farmer.phoneNumber || farmer.phone || "N/A"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-gray-600 text-sm">National ID</Label>
+                      <p className="text-gray-900 font-medium mt-1">{farmer.nationalId || "N/A"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-gray-600 text-sm">Gender</Label>
+                      <p className="text-gray-900 font-medium mt-1">{farmer.sex || farmer.gender || "N/A"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-gray-600 text-sm">Status</Label>
+                      <div className="mt-1">
+                        <Badge 
+                          variant={farmer.active === false ? "destructive" : "default"}
+                          className={farmer.active === false ? "bg-red-500" : "bg-green-500"}
+                        >
+                          {farmer.active === false ? "Inactive" : "Active"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Location Information */}
+              <Card className={`${dashboardTheme.card}`}>
+                <CardHeader>
+                  <CardTitle className="text-gray-900 flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-green-600" />
+                    Location Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-gray-600 text-sm">Province</Label>
+                      <p className="text-gray-900 font-medium mt-1">{farmer.province || farmer.farmerProfile?.farmProvince || "N/A"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-gray-600 text-sm">District</Label>
+                      <p className="text-gray-900 font-medium mt-1">{farmer.district || farmer.farmerProfile?.farmDistrict || "N/A"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-gray-600 text-sm">Sector</Label>
+                      <p className="text-gray-900 font-medium mt-1">{farmer.sector || farmer.farmerProfile?.farmSector || "N/A"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-gray-600 text-sm">Cell</Label>
+                      <p className="text-gray-900 font-medium mt-1">{farmer.cell || farmer.farmerProfile?.farmCell || "N/A"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-gray-600 text-sm">Village</Label>
+                      <p className="text-gray-900 font-medium mt-1">{farmer.village || farmer.farmerProfile?.farmVillage || "N/A"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-gray-600 text-sm">Full Location</Label>
+                      <p className="text-gray-900 font-medium mt-1">{location}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Farms */}
+              <Card className={`${dashboardTheme.card}`}>
+                <CardHeader>
+                  <CardTitle className="text-gray-900 flex items-center gap-2">
+                    <Sprout className="h-5 w-5 text-green-600" />
+                    Farms ({farmerFieldsList.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {(() => {
+                    const farmerId = farmer._id || farmer.id;
+                    const isLoading = loadingFields[farmerId] || false;
+                    
+                    if (isLoading) {
+                      return (
+                        <div className="space-y-3">
+                          {[1, 2].map((i) => (
+                            <div key={i} className="p-4 bg-gray-50 border border-gray-200 rounded-lg animate-pulse">
+                              <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
+                              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }
+                    
+                    if (farmerFieldsList.length === 0) {
+                      return (
+                        <div className="text-center py-8 text-gray-500">
+                          <Sprout className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                          <p>No farms registered for this farmer</p>
+                        </div>
+                      );
+                    }
+                    
+                    return (
+                      <div className="space-y-3">
+                        {farmerFieldsList.filter((farm: any) => farm != null).map((farm: any, farmIndex: number) => {
+                          const farmId = farm.id || farm._id;
+                          const farmStatus = farm.status || 'PENDING';
+                          const isPending = farmStatus === 'PENDING';
+                          const isProcessed = farmStatus === 'PROCESSED' || farmStatus === 'Processed' || farm.boundary;
+                          const cropType = farm.cropType || farm.crop || 'N/A';
+                          const sowingDate = farm.sowingDate ? new Date(farm.sowingDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A';
+                          
+                          return (
+                            <div 
+                              key={farmId || farmIndex} 
+                              className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:border-green-300 hover:shadow-sm transition-all"
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <span className="text-sm font-medium text-gray-900">{farm.name || `Farm ${farmIndex + 1}`}</span>
+                                  <Badge 
+                                    variant={isPending ? "destructive" : "default"}
+                                    className={isPending ? "bg-yellow-500" : isProcessed ? "bg-green-500" : "bg-gray-500"}
+                                  >
+                                    {farmStatus}
+                                  </Badge>
+                                </div>
+                                <div className="text-xs text-gray-600 space-y-1">
+                                  <div><span className="font-medium">Crop:</span> {cropType}</div>
+                                  {sowingDate !== 'N/A' && <div><span className="font-medium">Sowing Date:</span> {sowingDate}</div>}
+                                  {farm.area && <div><span className="font-medium">Area:</span> {farm.area.toFixed(2)} hectares</div>}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 ml-4">
+                                {isProcessed && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      try {
+                                        const farmData = await getFarmById(farmId);
+                                        setKmlViewerFarm(farmData.data || farmData);
+                                        setShowKMLViewer(true);
+                                      } catch (err: any) {
+                                        console.error('Failed to load farm for KML view:', err);
+                                        toast({
+                                          title: "Error",
+                                          description: "Failed to load farm data for KML view",
+                                          variant: "destructive",
+                                        });
+                                      }
+                                    }}
+                                    className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                                  >
+                                    <Map className="h-4 w-4 mr-1" />
+                                    KML
+                                  </Button>
+                                )}
+                                {isPending && (
+                                  <Button
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedFieldForUpload(farm);
+                                      setKmlUploadName(farm.name || '');
+                                      setShowUploadModal(true);
+                                    }}
+                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                  >
+                                    <Upload className="h-4 w-4 mr-1" />
+                                    Upload KML
+                                  </Button>
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const fieldData: Field = {
+                                      id: farmId,
+                                      farmerName: farmerName,
+                                      crop: cropType,
+                                      area: farm.area || 0,
+                                      season: farm.season || "A",
+                                      status: farmStatus,
+                                      fieldName: farm.name || `Farm ${farmIndex + 1}`,
+                                      sowingDate: farm.sowingDate || ""
+                                    };
+                                    // Set field to view and navigate to risk assessment page
+                                    setFieldToViewInRiskAssessment(fieldData);
+                                    setActivePage("risk-assessments");
+                                  }}
+                                  className="border-green-600 text-green-600 hover:bg-green-50"
+                                >
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  View Data
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* Quick Stats */}
+              <Card className={`${dashboardTheme.card}`}>
+                <CardHeader>
+                  <CardTitle className="text-gray-900 text-sm">Quick Stats</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label className="text-gray-600 text-xs">Total Farms</Label>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{farmerFieldsList.length}</p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-600 text-xs">Total Area</Label>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">
+                      {farmerFieldsList.reduce((sum: number, farm: any) => sum + (farm.area || 0), 0).toFixed(2)} ha
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-600 text-xs">Processed Farms</Label>
+                    <p className="text-xl font-bold text-gray-900 mt-1">
+                      {farmerFieldsList.filter((farm: any) => 
+                        farm.status === 'PROCESSED' || 
+                        farm.status === 'Processed' || 
+                        farm.boundary
+                      ).length}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-600 text-xs">Registration Date</Label>
+                    <p className="text-gray-900 font-medium mt-1">
+                      {farmer.createdAt 
+                        ? new Date(farmer.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                        : "N/A"}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Actions */}
+              <Card className={`${dashboardTheme.card}`}>
+                <CardHeader>
+                  <CardTitle className="text-gray-900 text-sm">Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Button
+                    onClick={() => {
+                      const farmerId = farmer._id || farmer.id;
+                      if (farmerId) {
+                        setSelectedFarmerForFields({ id: farmerId, name: farmerName });
+                        setShowFarmerFieldsView(true);
+                        setActiveView("farmers");
+                      }
+                    }}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    variant="default"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Farms
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Render Farmers Page (similar to crop monitoring structure)
+  const renderFarmersPage = () => {
+    // Show field detail view
+    if (farmersPageViewMode === "fieldDetail" && selectedFieldForFarmersPage) {
+      return renderFarmersPageFieldDetail();
+    }
+
+    // Show farmer fields view
+    if (farmersPageViewMode === "farmerFields" && selectedFarmerForFarmersPage) {
+      const farmerId = selectedFarmerForFarmersPage._id || selectedFarmerForFarmersPage.id;
+      const farmerIdKey = farmerId || '';
+      const farmerFieldsList = farmerFields[farmerIdKey] || [];
+      const isLoadingFields = loadingFields[farmerIdKey] || false;
+      const farmerName = 
+        selectedFarmerForFarmersPage.name || 
+        (selectedFarmerForFarmersPage.firstName && selectedFarmerForFarmersPage.lastName 
+          ? `${selectedFarmerForFarmersPage.firstName} ${selectedFarmerForFarmersPage.lastName}`.trim() 
+          : '') ||
+        selectedFarmerForFarmersPage.firstName || 
+        selectedFarmerForFarmersPage.lastName || 
+        "Unknown";
+
+      // Filter fields based on search
+      const filteredFields = farmerFieldsList.filter((farm: any) => {
+        if (!farmersPageSearchQuery) return true;
+        const searchLower = farmersPageSearchQuery.toLowerCase();
+        const farmName = (farm.name || '').toLowerCase();
+        const cropType = (farm.cropType || farm.crop || '').toLowerCase();
+        return farmName.includes(searchLower) || cropType.includes(searchLower);
+      });
+
+      return (
+        <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+          <div className={`${sidebarCollapsed ? 'max-w-full' : 'max-w-7xl'} mx-auto px-6`}>
+            {/* Header */}
+            <div className="mb-6">
+              <Button
+                onClick={() => {
+                  setFarmersPageViewMode("farmers");
+                  setSelectedFarmerForFarmersPage(null);
+                  setFarmersPageSearchQuery("");
+                }}
+                variant="ghost"
+                className="mb-4 text-green-600 hover:text-green-700 hover:bg-green-50"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Farmers
+              </Button>
+              <h1 className="text-3xl font-bold text-gray-900">{farmerName} - Fields</h1>
+              <p className="text-gray-600 mt-1">View and manage farmer's fields</p>
+            </div>
+
+            {/* Search and Filter */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search fields..."
+                  value={farmersPageSearchQuery}
+                  onChange={(e) => setFarmersPageSearchQuery(e.target.value)}
+                  className="pl-10 bg-white border-gray-300"
+                />
+              </div>
+              <Button 
+                variant="outline" 
+                className="bg-white border-gray-300"
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Filter
+              </Button>
+            </div>
+
+            {/* Fields Table */}
+            <Card className={`${dashboardTheme.card}`}>
+              <CardContent className="p-0">
+                {isLoadingFields ? (
+                  <div className="p-6">
+                    <TableSkeleton rows={5} columns={7} />
+                  </div>
+                ) : filteredFields.length === 0 ? (
+                  <div className="p-12 text-center">
+                    <Sprout className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-sm font-medium text-gray-900 mb-1">No fields found</p>
+                    <p className="text-xs text-gray-500">Try adjusting your search criteria</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gray-50 border-b-2 border-gray-200">
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Field ID</th>
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Farmer</th>
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Crop</th>
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Area (ha)</th>
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Season</th>
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Status</th>
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {filteredFields.map((farm: any, index: number) => {
+                          const farmId = farm.id || farm._id;
+                          const farmStatus = farm.status || 'PENDING';
+                          const isProcessed = farmStatus === 'PROCESSED' || farmStatus === 'Processed' || farm.boundary;
+                          const cropType = farm.cropType || farm.crop || 'N/A';
+                          const area = farm.area || 0;
+                          const season = farm.season || 'A';
+                          const displayFieldId = farmId ? `FLD-${String(farmId).slice(-3).padStart(3, '0')}` : `FLD-${String(index + 1).padStart(3, '0')}`;
+                          
+                          let statusBadge = "Active";
+                          let statusClass = "bg-blue-100 text-blue-800";
+                          if (isProcessed) {
+                            statusBadge = "Processed";
+                            statusClass = "bg-green-100 text-green-800";
+                          } else if (farmStatus === 'PENDING') {
+                            statusBadge = "Pending";
+                            statusClass = "bg-yellow-100 text-yellow-800";
+                          }
+
+                          return (
+                            <tr key={farmId || index} className="hover:bg-gray-50 transition-colors">
+                              <td className="py-4 px-6 whitespace-nowrap">
+                                <div className="text-sm font-medium text-gray-900">{displayFieldId}</div>
+                              </td>
+                              <td className="py-4 px-6 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">{farmerName}</div>
+                              </td>
+                              <td className="py-4 px-6 whitespace-nowrap">
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                  <Sprout className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                  <span>{cropType}</span>
+                                </div>
+                              </td>
+                              <td className="py-4 px-6 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">{area.toFixed(1)} ha</div>
+                              </td>
+                              <td className="py-4 px-6 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">{season}</div>
+                              </td>
+                              <td className="py-4 px-6 whitespace-nowrap">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusClass}`}>
+                                  {statusBadge}
+                                </span>
+                              </td>
+                              <td className="py-4 px-6 whitespace-nowrap">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedFieldForFarmersPage(farm);
+                                    setFarmersPageViewMode("fieldDetail");
+                                  }}
+                                  className="border-green-600 text-green-600 hover:bg-green-50"
+                                >
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  View
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+
+    // Show farmers list (default view)
+    const filteredFarmers = farmers.filter((farmer: any) => {
+      if (!farmersPageSearchQuery) return true;
+      const searchLower = farmersPageSearchQuery.toLowerCase();
+      const farmerName = 
+        (farmer.name || 
+        (farmer.firstName && farmer.lastName ? `${farmer.firstName} ${farmer.lastName}`.trim() : '') ||
+        farmer.firstName || 
+        farmer.lastName || 
+        "").toLowerCase();
+      const location = 
+        (farmer.location || 
+        (farmer.province && farmer.district ? `${farmer.province}, ${farmer.district}` : '') ||
+        farmer.province ||
+        farmer.district ||
+        "").toLowerCase();
+      return farmerName.includes(searchLower) || location.includes(searchLower);
+    });
+
+    return (
+      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+        <div className={`${sidebarCollapsed ? 'max-w-full' : 'max-w-7xl'} mx-auto px-6`}>
+          {/* Header */}
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-gray-900">Farmers Management</h1>
+            <p className="text-gray-600 mt-1">View and manage farmers and their fields</p>
+          </div>
+
+          {/* Search and Filter */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search farmers..."
+                value={farmersPageSearchQuery}
+                onChange={(e) => setFarmersPageSearchQuery(e.target.value)}
+                className="pl-10 bg-white border-gray-300"
+              />
+            </div>
+            <Button 
+              variant="outline" 
+              className="bg-white border-gray-300"
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filter
+            </Button>
+          </div>
+
+          {/* Farmers Table */}
+          <Card className={`${dashboardTheme.card}`}>
+            <CardContent className="p-0">
+              {farmersLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
+                </div>
+              ) : filteredFarmers.length === 0 ? (
+                <div className="p-12 text-center">
+                  <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-sm font-medium text-gray-900 mb-1">No farmers found</p>
+                  <p className="text-xs text-gray-500">Try adjusting your search criteria</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50 border-b-2 border-gray-200">
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Farmer ID</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Farmer Name</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Location</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Total Fields</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredFarmers.map((farmer: any, index: number) => {
+                        const farmerId = farmer._id || farmer.id;
+                        const farmerIdKey = farmerId || `temp-${index}`;
+                        const farmerFieldsList = farmerFields[farmerIdKey] || [];
+                        const farmerName = 
+                          farmer.name || 
+                          (farmer.firstName && farmer.lastName ? `${farmer.firstName} ${farmer.lastName}`.trim() : '') ||
+                          farmer.firstName || 
+                          farmer.lastName || 
+                          "Unknown";
+                        const location = 
+                          farmer.location || 
+                          (farmer.province && farmer.district ? `${farmer.province}, ${farmer.district}` : '') ||
+                          farmer.province ||
+                          farmer.district ||
+                          "N/A";
+                        const displayFarmerId = farmerId ? `F-${String(farmerId).slice(-3).padStart(3, '0')}` : `F-${String(index + 1).padStart(3, '0')}`;
+
+                        return (
+                          <tr 
+                            key={farmerIdKey}
+                            onClick={() => {
+                              setSelectedFarmerForFarmersPage(farmer);
+                              setFarmersPageViewMode("farmerFields");
+                              // Load farmer fields if not already loaded
+                              if (farmerId && !farmerFields[farmerIdKey]?.length) {
+                                loadFarmerFields(farmerId);
+                              }
+                            }}
+                            className="hover:bg-gray-50/50 transition-all duration-150 border-b border-gray-100 cursor-pointer"
+                          >
+                            <td className="py-4 px-6 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">{displayFarmerId}</div>
+                            </td>
+                            <td className="py-4 px-6 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{farmerName}</div>
+                            </td>
+                            <td className="py-4 px-6 whitespace-nowrap">
+                              <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <MapPin className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                <span>{location}</span>
+                              </div>
+                            </td>
+                            <td className="py-4 px-6 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{farmerFieldsList.length} Total Fields</div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  };
+
+  // Render field detail for farmers page
+  const renderFarmersPageFieldDetail = () => {
+    const farmToUse = selectedFieldForFarmersPage;
+    const farmerToUse = selectedFarmerForFarmersPage;
+    
+    if (!farmToUse) return null;
+    
+    // If we have selectedFieldForFarmersPage, find the farmer
+    let actualFarmer = farmerToUse;
+    if (selectedFieldForFarmersPage && !farmerToUse) {
+      const fieldFarmerId = selectedFieldForFarmersPage.farmerId?._id || selectedFieldForFarmersPage.farmerId || selectedFieldForFarmersPage.farmer?._id || selectedFieldForFarmersPage.farmer;
+      actualFarmer = farmers.find((f: any) => (f._id || f.id) === fieldFarmerId) || null;
+    }
+    
+    if (!actualFarmer) {
+      // Try to get farmer name from the field data
+      const farmerName = selectedFieldForFarmersPage?.farmerName || "Unknown Farmer";
+      actualFarmer = { name: farmerName, firstName: farmerName.split(' ')[0], lastName: farmerName.split(' ').slice(1).join(' ') };
+    }
+    
+    const fieldDetails = getFieldDetailsFromFarm(farmToUse, actualFarmer);
+    const fieldId = farmToUse._id || farmToUse.id || '';
+    const displayFieldId = fieldId ? `FLD-${String(fieldId).slice(-3).padStart(3, '0')}` : 'FLD-000';
+
+    return (
+      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+        <div className={`${sidebarCollapsed ? 'max-w-full' : 'max-w-7xl'} mx-auto px-6 space-y-6`}>
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 text-sm">
+            <button 
+              onClick={() => {
+                if (selectedFieldForFarmersPage) {
+                  setFarmersPageViewMode("farmerFields");
+                  setSelectedFieldForFarmersPage(null);
+                } else {
+                  setFarmersPageViewMode("farmers");
+                  setSelectedFarmerForFarmersPage(null);
+                }
+              }}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-700"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Fields
+            </button>
+          </div>
+          
+          {/* Header */}
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              FIELD DETAIL VIEW: {displayFieldId}
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              {fieldDetails.farmer} - {fieldDetails.cropType}
+            </p>
+          </div>
+
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className={`${dashboardTheme.card} border border-gray-200`}>
+              <TabsTrigger 
+                value="basic-info" 
+                className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700"
+              >
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Basic Info
+              </TabsTrigger>
+              <TabsTrigger 
+                value="weather" 
+                className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700"
+              >
+                <CloudRain className="h-4 w-4 mr-2" />
+                Weather Analysis
+              </TabsTrigger>
+              <TabsTrigger 
+                value="crop" 
+                className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700"
+              >
+                <Leaf className="h-4 w-4 mr-2" />
+                Crop Analysis (Satellite)
+              </TabsTrigger>
+              <TabsTrigger 
+                value="overview" 
+                className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Overview
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Tab Contents */}
+            <TabsContent value="basic-info" className="mt-6">
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* Field Information */}
+                <Card className={`${dashboardTheme.card}`}>
+                  <CardHeader>
+                    <CardTitle className="text-gray-900">Field Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex justify-between items-center border-b border-gray-200 pb-3">
+                      <span className="text-gray-600">Field ID</span>
+                      <span className="text-gray-700 font-medium">{displayFieldId}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-gray-200 pb-3">
+                      <span className="text-gray-600">Field Name</span>
+                      <span className="text-gray-700 font-medium">{fieldDetails.fieldName}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-gray-200 pb-3">
+                      <span className="text-gray-600">Farmer</span>
+                      <span className="text-gray-700 font-medium">{fieldDetails.farmer}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-gray-200 pb-3">
+                      <span className="text-gray-600">Crop Type</span>
+                      <div className="flex items-center gap-2">
+                        <Leaf className="h-4 w-4 text-gray-600" />
+                        <span className="text-gray-700 font-medium">{fieldDetails.cropType}</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-gray-200 pb-3">
+                      <span className="text-gray-600">Area</span>
+                      <span className="text-gray-700 font-medium">{fieldDetails.area} hectares</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-gray-200 pb-3">
+                      <span className="text-gray-600">Season</span>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-gray-600" />
+                        <span className="text-gray-700 font-medium">Season {fieldDetails.season}</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center pb-3">
+                      <span className="text-gray-600">Location</span>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-gray-600" />
+                        <span className="text-gray-700 font-medium">{fieldDetails.location}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Map View */}
+                <Card className={`${dashboardTheme.card}`}>
+                  <CardHeader>
+                    <CardTitle className="text-gray-900">Map View</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <LeafletMap
+                        center={(() => {
+                          // Use farm location if available
+                          if (farmToUse?.location?.coordinates && Array.isArray(farmToUse.location.coordinates)) {
+                            const coords = farmToUse.location.coordinates;
+                            const lat = coords[1];
+                            const lng = coords[0];
+                            // Validate coordinates
+                            if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                              return [lat, lng]; // [lat, lng] from [lng, lat]
+                            }
+                          }
+                          // Try to parse from fieldDetails location
+                          if (fieldDetails.location && fieldDetails.location.includes(',')) {
+                            const parts = fieldDetails.location.split(',');
+                            const lat = parseFloat(parts[0]?.trim() || "");
+                            const lng = parseFloat(parts[1]?.trim() || "");
+                            if (!isNaN(lat) && !isNaN(lng)) {
+                              return [lat, lng];
+                            }
+                          }
+                          return [-1.9441, 30.0619]; // Default: Kigali, Rwanda
+                        })()}
+                        zoom={15}
+                        height="500px"
+                        tileLayer="satellite"
+                        showControls={true}
+                        className="w-full"
+                        boundary={farmToUse?.boundary || null}
+                        kmlUrl={farmToUse?.kmlUrl || farmToUse?.kmlFileUrl || null}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="weather" className="mt-6">
+              <WeatherAnalysisTab location={fieldDetails.location} />
+            </TabsContent>
+
+            <TabsContent value="crop" className="mt-6">
+              <CropAnalysisTab 
+                fieldDetails={fieldDetails} 
+                farm={farmToUse}
+              />
+            </TabsContent>
+
+            <TabsContent value="overview" className="mt-6">
+              <Card className={`${dashboardTheme.card}`}>
+                <CardHeader>
+                  <CardTitle className="text-gray-900">Overview</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-900/60">Field overview and summary will be displayed here.</p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+    );
   };
 
   const renderFarmersList = () => {
@@ -3985,10 +5014,7 @@ export default function AssessorDashboard() {
             <Card className={`${dashboardTheme.card}`}>
               <CardContent className="p-12">
                 <div className="flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading farmers...</p>
-                  </div>
+                  <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
                 </div>
               </CardContent>
             </Card>
@@ -4067,10 +5093,7 @@ export default function AssessorDashboard() {
                                 key={farmerIdKey}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  toggleFarmerExpansion(farmerIdKey);
-                                  if (!isExpanded) {
-                                    loadFarmerFields(farmerIdKey);
-                                  }
+                                  handleViewFarmerDetails(farmer);
                                 }}
                                 className="hover:bg-gray-50/50 transition-all duration-150 border-b border-gray-100 cursor-pointer"
                               >
@@ -4277,14 +5300,165 @@ export default function AssessorDashboard() {
     }
   };
 
+  // Load policies and monitoring history for crop monitoring
+  const loadCropMonitoringPolicies = async () => {
+    try {
+      setCropMonitoringLoading(true);
+      const response: any = await policiesApiService.getPolicies(1, 100);
+      const policiesData = response.data || response || [];
+      const policiesArray = Array.isArray(policiesData) ? policiesData : (policiesData.items || policiesData.results || []);
+      
+      // Filter for active policies
+      const activePolicies = policiesArray.filter((policy: any) => 
+        policy.status === 'ACTIVE' || policy.status === 'active'
+      );
+      
+      setPolicies(activePolicies);
+    } catch (err: any) {
+      console.error('Failed to load policies:', err);
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to load policies',
+        variant: 'destructive'
+      });
+    } finally {
+      setCropMonitoringLoading(false);
+    }
+  };
+
+  const loadCropMonitoringHistory = async () => {
+    try {
+      const history = await getMonitoringHistory();
+      setMonitoringHistory(Array.isArray(history) ? history : []);
+    } catch (err: any) {
+      console.error('Failed to load monitoring history:', err);
+      setMonitoringHistory([]);
+    }
+  };
+
+  // Get monitoring count for a policy
+  const getMonitoringCount = (policyId: string): number => {
+    return monitoringHistory.filter(m => m.policyId === policyId).length;
+  };
+
+  // Check if monitoring can be started (max 2 cycles)
+  const canStartMonitoring = (policyId: string): boolean => {
+    return getMonitoringCount(policyId) < 2;
+  };
+
+  // Handle start monitoring
+  const handleStartMonitoring = async () => {
+    if (!selectedPolicyId) return;
+    
+    if (!canStartMonitoring(selectedPolicyId)) {
+      toast({
+        title: 'Maximum monitoring cycles reached',
+        description: 'You can only start monitoring 2 times per policy.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setStartingMonitoring(true);
+    try {
+      await startCropMonitoring(selectedPolicyId);
+      toast({
+        title: 'Success',
+        description: 'Crop monitoring started successfully.',
+      });
+      setStartMonitoringDialogOpen(false);
+      setSelectedPolicyId(null);
+      await loadCropMonitoringHistory();
+      setCropMonitoringViewMode('monitoring');
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to start monitoring',
+        variant: 'destructive'
+      });
+    } finally {
+      setStartingMonitoring(false);
+    }
+  };
+
+  // Handle update monitoring
+  const handleUpdateMonitoring = async () => {
+    if (!selectedMonitoring) return;
+
+    setUpdatingMonitoring(true);
+    try {
+      await updateMonitoring(selectedMonitoring._id, {
+        observations: updateData.observations,
+        photoUrls: updateData.photoUrls,
+        notes: updateData.notes
+      });
+      toast({
+        title: 'Success',
+        description: 'Monitoring data updated successfully.',
+      });
+      setUpdateDialogOpen(false);
+      await loadCropMonitoringHistory();
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to update monitoring',
+        variant: 'destructive'
+      });
+    } finally {
+      setUpdatingMonitoring(false);
+    }
+  };
+
+  // Handle generate report
+  const handleGenerateReport = async (monitoringId: string) => {
+    setGenerateReportLoading(true);
+    try {
+      await generateMonitoringReport(monitoringId);
+      toast({
+        title: 'Success',
+        description: 'Monitoring report generated. Dispatched to insurer.',
+      });
+      await loadCropMonitoringHistory();
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to generate report',
+        variant: 'destructive'
+      });
+    } finally {
+      setGenerateReportLoading(false);
+    }
+  };
+
   // Load alerts and farms when crop monitoring page is shown
   useEffect(() => {
     if (activePage === "crop-monitoring") {
+      if (assessorId) {
+        loadCropMonitoringPolicies();
+        loadCropMonitoringHistory();
+      }
+      // Keep legacy loading for backward compatibility
       loadFarmers();
       loadAlerts();
       loadFarms();
     }
-  }, [activePage]);
+  }, [activePage, assessorId]);
+
+  // Clear fieldToViewInRiskAssessment after it's been used or when navigating away
+  useEffect(() => {
+    if (fieldToViewInRiskAssessment) {
+      if (activePage === "risk-assessments") {
+        // Clear after a delay to ensure RiskAssessmentSystem has processed it
+        const timer = setTimeout(() => {
+          setFieldToViewInRiskAssessment(null);
+        }, 1000);
+        return () => clearTimeout(timer);
+      } else {
+        // Clear immediately if navigating away
+        setFieldToViewInRiskAssessment(null);
+      }
+    }
+  }, [activePage, fieldToViewInRiskAssessment]);
 
   // Convert farm to Field format for detail view
   const getFarmAsField = (farm: any, farmer: any): Field => {
@@ -4335,10 +5509,26 @@ export default function AssessorDashboard() {
 
   // Render field detail view for crop monitoring
   const renderCropMonitoringFieldDetail = () => {
-    if (!selectedFarmForDetail || !selectedFarmerForDetail) return null;
+    const farmToUse = selectedFieldForCropMonitoring || selectedFarmForDetail;
+    const farmerToUse = selectedFarmerForCropMonitoring || selectedFarmerForDetail;
     
-    const fieldDetails = getFieldDetailsFromFarm(selectedFarmForDetail, selectedFarmerForDetail);
-    const fieldId = selectedFarmForDetail._id || selectedFarmForDetail.id || '';
+    if (!farmToUse) return null;
+    
+    // If we have selectedFieldForCropMonitoring, find the farmer
+    let actualFarmer = farmerToUse;
+    if (selectedFieldForCropMonitoring && !farmerToUse) {
+      const fieldFarmerId = selectedFieldForCropMonitoring.farmerId?._id || selectedFieldForCropMonitoring.farmerId || selectedFieldForCropMonitoring.farmer?._id || selectedFieldForCropMonitoring.farmer;
+      actualFarmer = farmers.find((f: any) => (f._id || f.id) === fieldFarmerId) || null;
+    }
+    
+    if (!actualFarmer) {
+      // Try to get farmer name from the field data
+      const farmerName = selectedFieldForCropMonitoring?.farmerName || "Unknown Farmer";
+      actualFarmer = { name: farmerName, firstName: farmerName.split(' ')[0], lastName: farmerName.split(' ').slice(1).join(' ') };
+    }
+    
+    const fieldDetails = getFieldDetailsFromFarm(farmToUse, actualFarmer);
+    const fieldId = farmToUse._id || farmToUse.id || '';
     const displayFieldId = fieldId ? `FLD-${String(fieldId).slice(-3).padStart(3, '0')}` : 'FLD-000';
 
     return (
@@ -4348,9 +5538,14 @@ export default function AssessorDashboard() {
           <div className="flex items-center gap-2 text-sm">
             <button 
               onClick={() => {
+                if (selectedFieldForCropMonitoring) {
+                  setCropMonitoringViewMode("farmerFields");
+                  setSelectedFieldForCropMonitoring(null);
+                } else {
                 setCropMonitoringViewMode("list");
                 setSelectedFarmerForDetail(null);
                 setSelectedFarmForDetail(null);
+                }
               }}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-700"
             >
@@ -4361,10 +5556,10 @@ export default function AssessorDashboard() {
           
           {/* Header */}
           <div>
-            <h1 className="text-4xl font-bold text-gray-900">
-              Field Detail View: {displayFieldId}
+            <h1 className="text-2xl font-semibold text-gray-900">
+              FIELD DETAIL VIEW: {displayFieldId}
             </h1>
-            <p className="text-gray-900/70 mt-2">
+            <p className="text-sm text-gray-500 mt-1">
               {fieldDetails.farmer} - {fieldDetails.cropType}
             </p>
           </div>
@@ -4474,11 +5669,39 @@ export default function AssessorDashboard() {
                   <CardHeader>
                     <CardTitle className="text-gray-900">Map View</CardTitle>
                   </CardHeader>
-                  <CardContent className="h-[500px] flex items-center justify-center bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="text-center">
-                      <MapPin className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                      <p className="text-gray-900 text-lg font-medium">Map View</p>
-                      <p className="text-sm text-gray-600 mt-2">Field: {displayFieldId}</p>
+                  <CardContent className="p-0">
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <LeafletMap
+                        center={(() => {
+                          // Use farm location if available
+                          if (farmToUse?.location?.coordinates && Array.isArray(farmToUse.location.coordinates)) {
+                            const coords = farmToUse.location.coordinates;
+                            const lat = coords[1];
+                            const lng = coords[0];
+                            // Validate coordinates
+                            if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                              return [lat, lng]; // [lat, lng] from [lng, lat]
+                            }
+                          }
+                          // Try to parse from fieldDetails location
+                          if (fieldDetails.location && fieldDetails.location.includes(',')) {
+                            const parts = fieldDetails.location.split(',');
+                            const lat = parseFloat(parts[0]?.trim() || "");
+                            const lng = parseFloat(parts[1]?.trim() || "");
+                            if (!isNaN(lat) && !isNaN(lng)) {
+                              return [lat, lng];
+                            }
+                          }
+                          return [-1.9441, 30.0619]; // Default: Kigali, Rwanda
+                        })()}
+                        zoom={15}
+                        height="500px"
+                        tileLayer="satellite"
+                        showControls={true}
+                        className="w-full"
+                        boundary={farmToUse?.boundary || null}
+                        kmlUrl={farmToUse?.kmlUrl || farmToUse?.kmlFileUrl || null}
+                      />
                     </div>
                   </CardContent>
                 </Card>
@@ -4490,7 +5713,10 @@ export default function AssessorDashboard() {
             </TabsContent>
 
             <TabsContent value="crop" className="mt-6">
-              <CropAnalysisTab fieldDetails={fieldDetails} />
+              <CropAnalysisTab 
+                fieldDetails={fieldDetails} 
+                farm={farmToUse}
+              />
             </TabsContent>
 
             <TabsContent value="overview" className="mt-6">
@@ -4510,7 +5736,741 @@ export default function AssessorDashboard() {
   };
 
   const renderCropMonitoring = () => {
-    // Show field detail if farmer/farm is selected
+    // Show field detail view
+    if (cropMonitoringViewMode === "fieldDetail" && selectedFieldForCropMonitoring) {
+      return renderCropMonitoringFieldDetail();
+    }
+
+    // Show farmer fields view
+    if (cropMonitoringViewMode === "farmerFields" && selectedFarmerForCropMonitoring) {
+      const farmerId = selectedFarmerForCropMonitoring._id || selectedFarmerForCropMonitoring.id;
+      const farmerFieldsList = farmerFields[farmerId] || [];
+      const isLoadingFields = loadingFields[farmerId] || false;
+      const farmerName = 
+        selectedFarmerForCropMonitoring.name || 
+        (selectedFarmerForCropMonitoring.firstName && selectedFarmerForCropMonitoring.lastName 
+          ? `${selectedFarmerForCropMonitoring.firstName} ${selectedFarmerForCropMonitoring.lastName}`.trim() 
+          : '') ||
+        selectedFarmerForCropMonitoring.firstName || 
+        selectedFarmerForCropMonitoring.lastName || 
+        "Unknown";
+
+      // Filter fields based on search
+      const filteredFields = farmerFieldsList.filter((farm: any) => {
+        if (!cropMonitoringSearchQuery) return true;
+        const searchLower = cropMonitoringSearchQuery.toLowerCase();
+        const farmName = (farm.name || '').toLowerCase();
+        const cropType = (farm.cropType || farm.crop || '').toLowerCase();
+        return farmName.includes(searchLower) || cropType.includes(searchLower);
+      });
+    
+    return (
+      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+          <div className={`${sidebarCollapsed ? 'max-w-full' : 'max-w-7xl'} mx-auto px-6`}>
+            {/* Header */}
+            <div className="mb-6">
+              <Button
+                onClick={() => {
+                  setCropMonitoringViewMode("farmers");
+                  setSelectedFarmerForCropMonitoring(null);
+                  setCropMonitoringSearchQuery("");
+                }}
+                variant="ghost"
+                className="mb-4 text-green-600 hover:text-green-700 hover:bg-green-50"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Farmers
+              </Button>
+              <h1 className="text-3xl font-bold text-gray-900">{farmerName} - Fields</h1>
+              <p className="text-gray-600 mt-1">Select a field for crop monitoring</p>
+            </div>
+
+            {/* Search and Filter */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search fields..."
+                  value={cropMonitoringSearchQuery}
+                  onChange={(e) => setCropMonitoringSearchQuery(e.target.value)}
+                  className="pl-10 bg-white border-gray-300"
+                />
+              </div>
+              <Button 
+                variant="outline" 
+                className="bg-white border-gray-300"
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Filter
+              </Button>
+            </div>
+
+            {/* Fields Table */}
+            <Card className={`${dashboardTheme.card}`}>
+              <CardContent className="p-0">
+                {isLoadingFields ? (
+                  <div className="p-6">
+                    <TableSkeleton rows={5} columns={7} />
+                  </div>
+                ) : filteredFields.length === 0 ? (
+                  <div className="p-12 text-center">
+                    <Sprout className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-sm font-medium text-gray-900 mb-1">No fields found</p>
+                    <p className="text-xs text-gray-500">Try adjusting your search criteria</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gray-50 border-b-2 border-gray-200">
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Field ID</th>
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Farmer</th>
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Crop</th>
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Area (ha)</th>
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Season</th>
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Status</th>
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {filteredFields.map((farm: any, index: number) => {
+                          const farmId = farm.id || farm._id;
+                          const farmStatus = farm.status || 'PENDING';
+                          const isProcessed = farmStatus === 'PROCESSED' || farmStatus === 'Processed' || farm.boundary;
+                          const cropType = farm.cropType || farm.crop || 'N/A';
+                          const area = farm.area || 0;
+                          const season = farm.season || 'A';
+                          const displayFieldId = farmId ? `FLD-${String(farmId).slice(-3).padStart(3, '0')}` : `FLD-${String(index + 1).padStart(3, '0')}`;
+                          
+                          let statusBadge = "Active";
+                          let statusClass = "bg-blue-100 text-blue-800";
+                          if (isProcessed) {
+                            statusBadge = "Healthy";
+                            statusClass = "bg-green-100 text-green-800";
+                          } else if (farmStatus === 'PENDING') {
+                            statusBadge = "Pending";
+                            statusClass = "bg-yellow-100 text-yellow-800";
+                          }
+
+                          return (
+                            <tr key={farmId || index} className="hover:bg-gray-50 transition-colors">
+                              <td className="py-4 px-6 whitespace-nowrap">
+                                <div className="text-sm font-medium text-gray-900">{displayFieldId}</div>
+                              </td>
+                              <td className="py-4 px-6 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">{farmerName}</div>
+                              </td>
+                              <td className="py-4 px-6 whitespace-nowrap">
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                  <Sprout className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                  <span>{cropType}</span>
+                                </div>
+                              </td>
+                              <td className="py-4 px-6 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">{area.toFixed(1)} ha</div>
+                              </td>
+                              <td className="py-4 px-6 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">{season}</div>
+                              </td>
+                              <td className="py-4 px-6 whitespace-nowrap">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusClass}`}>
+                                  {statusBadge}
+                                </span>
+                              </td>
+                              <td className="py-4 px-6 whitespace-nowrap">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedFieldForCropMonitoring(farm);
+                                    setCropMonitoringViewMode("fieldDetail");
+                                  }}
+                                  className="border-green-600 text-green-600 hover:bg-green-50"
+                                >
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  View
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+
+    // Show farmers list (default view)
+    const filteredFarmers = farmers.filter((farmer: any) => {
+      if (!cropMonitoringSearchQuery) return true;
+      const searchLower = cropMonitoringSearchQuery.toLowerCase();
+      const farmerName = 
+        (farmer.name || 
+        (farmer.firstName && farmer.lastName ? `${farmer.firstName} ${farmer.lastName}`.trim() : '') ||
+        farmer.firstName || 
+        farmer.lastName || 
+        "").toLowerCase();
+      const location = 
+        (farmer.location || 
+        (farmer.province && farmer.district ? `${farmer.province}, ${farmer.district}` : '') ||
+        farmer.province ||
+        farmer.district ||
+        "").toLowerCase();
+      return farmerName.includes(searchLower) || location.includes(searchLower);
+    });
+
+    return (
+      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+        <div className={`${sidebarCollapsed ? 'max-w-full' : 'max-w-7xl'} mx-auto px-6`}>
+          {/* Header */}
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-gray-900">Crop Monitoring</h1>
+            <p className="text-gray-600 mt-1">Satellite-based crop health and NDVI analysis</p>
+          </div>
+
+          {/* Search and Filter */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search farmers..."
+                value={cropMonitoringSearchQuery}
+                onChange={(e) => setCropMonitoringSearchQuery(e.target.value)}
+                className="pl-10 bg-white border-gray-300"
+              />
+            </div>
+            <Button 
+              variant="outline" 
+              className="bg-white border-gray-300"
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filter
+            </Button>
+          </div>
+
+          {/* Farmers Table */}
+            <Card className={`${dashboardTheme.card}`}>
+            <CardContent className="p-0">
+              {farmersLoading ? (
+                <div className="p-6">
+                  <TableSkeleton rows={5} columns={4} />
+                  </div>
+              ) : filteredFarmers.length === 0 ? (
+                <div className="p-12 text-center">
+                  <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-sm font-medium text-gray-900 mb-1">No farmers found</p>
+                  <p className="text-xs text-gray-500">Try adjusting your search criteria</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50 border-b-2 border-gray-200">
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Farmer ID</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Farmer Name</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Location</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Total Fields</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredFarmers.map((farmer: any, index: number) => {
+                        const farmerId = farmer._id || farmer.id;
+                        const farmerIdKey = farmerId || `temp-${index}`;
+                        const farmerFieldsList = farmerFields[farmerIdKey] || [];
+                        const farmerName = 
+                          farmer.name || 
+                          (farmer.firstName && farmer.lastName ? `${farmer.firstName} ${farmer.lastName}`.trim() : '') ||
+                          farmer.firstName || 
+                          farmer.lastName || 
+                          "Unknown";
+                        const location = 
+                          farmer.location || 
+                          (farmer.province && farmer.district ? `${farmer.province}, ${farmer.district}` : '') ||
+                          farmer.province ||
+                          farmer.district ||
+                          "N/A";
+                        const displayFarmerId = farmerId ? `F-${String(farmerId).slice(-3).padStart(3, '0')}` : `F-${String(index + 1).padStart(3, '0')}`;
+
+                        return (
+                          <tr 
+                            key={farmerIdKey}
+                            onClick={() => {
+                              setSelectedFarmerForCropMonitoring(farmer);
+                              setCropMonitoringViewMode("farmerFields");
+                              // Load farmer fields if not already loaded
+                              if (farmerId && !farmerFields[farmerIdKey]?.length) {
+                                loadFarmerFields(farmerId);
+                              }
+                            }}
+                            className="hover:bg-gray-50/50 transition-all duration-150 border-b border-gray-100 cursor-pointer"
+                          >
+                            <td className="py-4 px-6 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">{displayFarmerId}</div>
+                            </td>
+                            <td className="py-4 px-6 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{farmerName}</div>
+                            </td>
+                            <td className="py-4 px-6 whitespace-nowrap">
+                              <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <MapPin className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                <span>{location}</span>
+                              </div>
+                            </td>
+                            <td className="py-4 px-6 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{farmerFieldsList.length} Total Fields</div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              </CardContent>
+            </Card>
+        </div>
+      </div>
+    );
+  };
+
+  const renderCropMonitoringOld = () => {
+    // Show detail view if monitoring is selected
+    if (cropMonitoringViewMode === "detail" && selectedMonitoring) {
+      return (
+        <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+          <div className={`${sidebarCollapsed ? 'max-w-full' : 'max-w-7xl'} mx-auto px-6`}>
+            <div className="flex items-center gap-4 mb-6">
+              <Button
+                onClick={() => {
+                  setCropMonitoringViewMode('monitoring');
+                  setSelectedMonitoring(null);
+                }}
+                variant="outline"
+                className="border-gray-300"
+              >
+                ← Back
+              </Button>
+              <h2 className="text-2xl font-bold text-gray-900">
+                Monitoring Details #{selectedMonitoring.monitoringNumber}
+              </h2>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card className={`${dashboardTheme.card}`}>
+                <CardHeader>
+                  <CardTitle className="text-gray-900">Basic Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Monitoring ID:</span>
+                    <span className="text-gray-900 font-medium">{selectedMonitoring._id.slice(-8)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Policy ID:</span>
+                    <span className="text-gray-900 font-medium">{selectedMonitoring.policyId.slice(-8)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Farm ID:</span>
+                    <span className="text-gray-900 font-medium">{selectedMonitoring.farmId.slice(-8)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Date:</span>
+                    <span className="text-gray-900 font-medium">
+                      {new Date(selectedMonitoring.monitoringDate).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Status:</span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      selectedMonitoring.status === 'COMPLETED'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {selectedMonitoring.status}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className={`${dashboardTheme.card}`}>
+                <CardHeader>
+                  <CardTitle className="text-gray-900">Monitoring Data</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {selectedMonitoring.observations && selectedMonitoring.observations.length > 0 && (
+                    <div>
+                      <p className="text-gray-600 mb-2 font-medium">Observations:</p>
+                      <ul className="list-disc list-inside text-gray-700 space-y-1">
+                        {selectedMonitoring.observations.map((obs: string, idx: number) => (
+                          <li key={idx} className="text-sm">{obs}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {selectedMonitoring.notes && (
+                    <div>
+                      <p className="text-gray-600 mb-2 font-medium">Notes:</p>
+                      <p className="text-gray-700 text-sm">{selectedMonitoring.notes}</p>
+                    </div>
+                  )}
+                  {selectedMonitoring.photoUrls && selectedMonitoring.photoUrls.length > 0 && (
+                    <div>
+                      <p className="text-gray-600 mb-2 font-medium">Photos:</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {selectedMonitoring.photoUrls.map((url: string, idx: number) => (
+                          <img key={idx} src={url} alt={`Photo ${idx + 1}`} className="rounded border" />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {selectedMonitoring.reportGenerated && (
+                    <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
+                      <p className="text-green-800 text-sm">
+                        Report generated on {selectedMonitoring.reportGeneratedAt 
+                          ? new Date(selectedMonitoring.reportGeneratedAt).toLocaleString()
+                          : 'N/A'}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Show monitoring history view
+    if (cropMonitoringViewMode === "monitoring") {
+      return (
+        <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+          <div className={`${sidebarCollapsed ? 'max-w-full' : 'max-w-7xl'} mx-auto px-6`}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Monitoring History</h2>
+              <Button 
+                onClick={() => setCropMonitoringViewMode('policies')}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                View Policies
+              </Button>
+                  </div>
+
+            <Card className={`${dashboardTheme.card}`}>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50 border-b-2 border-gray-200">
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase">Monitoring #</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase">Policy ID</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase">Date</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase">Status</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {monitoringHistory.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-12 text-center text-gray-600">
+                            No monitoring records found.
+                          </td>
+                        </tr>
+                      ) : (
+                        monitoringHistory.map((monitoring, index) => (
+                          <tr
+                            key={monitoring._id}
+                            className="hover:bg-gray-50 transition-colors"
+                          >
+                            <td className="py-4 px-6 text-gray-900">{monitoring.monitoringNumber}</td>
+                            <td className="py-4 px-6 text-gray-900">{monitoring.policyId.slice(-8)}</td>
+                            <td className="py-4 px-6 text-gray-600">
+                              {new Date(monitoring.monitoringDate).toLocaleDateString()}
+                            </td>
+                            <td className="py-4 px-6">
+                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                monitoring.status === 'COMPLETED'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {monitoring.status}
+                              </span>
+                            </td>
+                            <td className="py-4 px-6">
+                              <div className="flex gap-2">
+                                {monitoring.status === 'IN_PROGRESS' && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedMonitoring(monitoring);
+                                        setUpdateData({
+                                          observations: monitoring.observations || [],
+                                          photoUrls: monitoring.photoUrls || [],
+                                          notes: monitoring.notes || ''
+                                        });
+                                        setUpdateDialogOpen(true);
+                                      }}
+                                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs"
+                                    >
+                                      Update
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleGenerateReport(monitoring._id)}
+                                      disabled={generateReportLoading}
+                                      className="bg-green-600 hover:bg-green-700 text-white text-xs"
+                                    >
+                                      {generateReportLoading ? 'Generating...' : 'Generate Report'}
+                                    </Button>
+                                  </>
+                                )}
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedMonitoring(monitoring);
+                                    setCropMonitoringViewMode('detail');
+                                  }}
+                                  className="bg-gray-600 hover:bg-gray-700 text-white text-xs"
+                                >
+                                  View
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+
+    // Show policies view (default)
+    return (
+      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+
+        <div className={`${sidebarCollapsed ? 'max-w-full' : 'max-w-7xl'} mx-auto px-6`}>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Active Policies</h2>
+            <Button 
+              onClick={() => setCropMonitoringViewMode('monitoring')}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              View Monitoring History
+            </Button>
+          </div>
+
+          {cropMonitoringLoading ? (
+            <Card className={`${dashboardTheme.card}`}>
+              <CardContent className="p-12">
+                <div className="flex items-center justify-center">
+                  <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
+                </div>
+              </CardContent>
+            </Card>
+          ) : policies.length === 0 ? (
+            <Card className={`${dashboardTheme.card}`}>
+              <CardContent className="p-12">
+                <div className="text-center text-gray-600">
+                  <Activity className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <p>No active policies assigned to you.</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {policies.map((policy) => {
+                const monitoringCount = getMonitoringCount(policy._id);
+                const canStart = canStartMonitoring(policy._id);
+                const farmerName = policy.farmerId?.name || policy.farmerId?.firstName || 'Unknown Farmer';
+                
+                return (
+                  <Card key={policy._id} className={`${dashboardTheme.card}`}>
+                    <CardHeader>
+                      <CardTitle className="text-gray-900 text-lg">
+                        Policy {policy.policyNumber || policy._id.slice(-8)}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Farmer:</span>
+                          <span className="text-gray-900 font-medium">{farmerName}</span>
+                  </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Crop Type:</span>
+                          <span className="text-gray-900 font-medium">{policy.cropType || 'N/A'}</span>
+                </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Monitoring Cycles:</span>
+                          <span className="text-gray-900 font-medium">{monitoringCount}/2</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Status:</span>
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            policy.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {policy.status || 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <Button
+                        onClick={() => {
+                          setSelectedPolicyId(policy._id);
+                          setStartMonitoringDialogOpen(true);
+                        }}
+                        disabled={!canStart}
+                        className={`w-full ${
+                          canStart 
+                            ? 'bg-green-600 hover:bg-green-700 text-white' 
+                            : 'bg-gray-400 text-white cursor-not-allowed'
+                        }`}
+                      >
+                        {canStart ? (
+                          <>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Start Monitoring
+                          </>
+                        ) : (
+                          <>
+                            <AlertTriangle className="h-4 w-4 mr-2" />
+                            Max Cycles Reached
+                          </>
+                        )}
+                      </Button>
+                      
+                      {!canStart && (
+                        <p className="text-xs text-yellow-600 text-center mt-2">
+                          Maximum 2 monitoring cycles completed
+                        </p>
+                      )}
+              </CardContent>
+            </Card>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Start Monitoring Dialog */}
+          <Dialog open={startMonitoringDialogOpen} onOpenChange={setStartMonitoringDialogOpen}>
+            <DialogContent className={`${dashboardTheme.card}`}>
+              <DialogHeader>
+                <DialogTitle className="text-gray-900">Start Crop Monitoring</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 mt-4">
+                <p className="text-gray-600">
+                  Are you sure you want to start a new monitoring cycle for this policy?
+                </p>
+                {selectedPolicyId && (
+                  <div className="text-sm text-gray-500">
+                    Current cycles: {getMonitoringCount(selectedPolicyId)}/2
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setStartMonitoringDialogOpen(false);
+                    setSelectedPolicyId(null);
+                  }}
+                  className="border-gray-300"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleStartMonitoring}
+                  disabled={startingMonitoring}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {startingMonitoring ? 'Starting...' : 'Start Monitoring'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Update Monitoring Dialog */}
+          <Dialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
+            <DialogContent className={`${dashboardTheme.card} max-w-2xl`}>
+              <DialogHeader>
+                <DialogTitle className="text-gray-900">Update Monitoring Data</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 mt-4">
+                <div>
+                  <Label htmlFor="observations" className="text-gray-900">Observations</Label>
+                  <Textarea
+                    id="observations"
+                    value={updateData.observations.join('\n')}
+                    onChange={(e) => setUpdateData({
+                      ...updateData,
+                      observations: e.target.value.split('\n').filter(o => o.trim())
+                    })}
+                    placeholder="Enter observations (one per line)"
+                    className="mt-1"
+                    rows={4}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="photoUrls" className="text-gray-900">Photo URLs</Label>
+                  <Textarea
+                    id="photoUrls"
+                    value={updateData.photoUrls.join('\n')}
+                    onChange={(e) => setUpdateData({
+                      ...updateData,
+                      photoUrls: e.target.value.split('\n').filter(u => u.trim())
+                    })}
+                    placeholder="Enter photo URLs (one per line)"
+                    className="mt-1"
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="notes" className="text-gray-900">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    value={updateData.notes}
+                    onChange={(e) => setUpdateData({ ...updateData, notes: e.target.value })}
+                    placeholder="Enter additional notes"
+                    className="mt-1"
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setUpdateDialogOpen(false)}
+                  className="border-gray-300"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleUpdateMonitoring}
+                  disabled={updatingMonitoring}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {updatingMonitoring ? 'Updating...' : 'Update'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+    );
+  };
+
+  // Legacy render function (keeping for backward compatibility)
+  const renderCropMonitoringLegacy = () => {
     if (cropMonitoringViewMode === "fieldDetail") {
       return renderCropMonitoringFieldDetail();
     }
@@ -4521,47 +6481,29 @@ export default function AssessorDashboard() {
     
     return (
       <div className="min-h-screen bg-gray-50 pt-6 pb-8">
-
-        {/* Main Content */}
         <div className={`${sidebarCollapsed ? 'max-w-full' : 'max-w-7xl'} mx-auto px-6`}>
-
           {/* Loading State */}
           {(alertsLoading || farmsLoading) && (
             <Card className={`${dashboardTheme.card}`}>
+              <CardHeader>
+                <CardTitle className="text-gray-900">Farmers and Farms Monitoring</CardTitle>
+              </CardHeader>
               <CardContent className="p-12">
                 <div className="flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-600 mx-auto mb-4"></div>
-                    <p className="text-sm text-gray-600">Loading data...</p>
-                  </div>
+                  <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Error State */}
-          {monitoringError && !alertsLoading && !farmsLoading && (
-            <Card className={`${dashboardTheme.card} border-green-200`}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5 text-green-500" />
-                    <p className="text-sm text-green-600">{monitoringError}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Farmers and Farms Table - Grouped by Farmer */}
-          {!alertsLoading && !farmsLoading && (
+          {!(alertsLoading || farmsLoading) && (
             <Card className={`${dashboardTheme.card}`}>
               <CardHeader>
                 <CardTitle className="text-gray-900">Farmers and Farms Monitoring</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 {farmers.length === 0 && farms.length === 0 ? (
-                  <div className="text-center py-12">
+                  <div className="p-12 text-center">
                     <Sprout className="h-16 w-16 mx-auto text-gray-400 mb-4" />
                     <p className="text-gray-600 text-lg mb-2">No farmers or farms found</p>
                     <p className="text-gray-500 text-sm">There are no farmers or farms available for monitoring</p>
@@ -4867,8 +6809,7 @@ export default function AssessorDashboard() {
               <CardContent>
                 {monitoringLoading ? (
                   <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mr-3"></div>
-                    <span className="text-sm text-gray-600">Loading monitoring data...</span>
+                    <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
                   </div>
                 ) : (
                   <div className="p-4 bg-gray-50 rounded-lg">
@@ -4963,10 +6904,7 @@ export default function AssessorDashboard() {
                   className="bg-green-600 hover:bg-green-700 text-white !rounded-none"
                 >
                   {uploadingFile ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Uploading...
-                    </>
+                    <img src="/loading.gif" alt="Loading" className="w-4 h-4" />
                   ) : (
                     <>
                       <Upload className="h-4 w-4 mr-2" />

@@ -699,10 +699,7 @@ export default function AssessorProfileSettings() {
           <Card className="bg-white border border-gray-200 shadow-sm">
             <CardContent className="p-12">
               <div className="flex items-center justify-center">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-3"></div>
-                  <p className="text-sm text-gray-600">Loading profile...</p>
-                </div>
+                <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
               </div>
             </CardContent>
           </Card>

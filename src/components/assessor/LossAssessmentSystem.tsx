@@ -387,10 +387,7 @@ export default function LossAssessmentSystem() {
           <Card className="bg-white border border-gray-200 shadow-sm">
             <CardContent className="p-12">
               <div className="flex items-center justify-center">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-3"></div>
-                  <p className="text-sm text-gray-600">Loading loss assessments...</p>
-                </div>
+                <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
               </div>
             </CardContent>
           </Card>
@@ -518,6 +515,22 @@ export default function LossAssessmentSystem() {
   );
 
   const renderDetail = () => {
+    if (loadingDetail) {
+      return (
+        <div className="min-h-screen bg-gray-900 pt-6 pb-8">
+          <div className="max-w-7xl mx-auto px-6">
+            <Card className="bg-gray-800 border border-gray-700 shadow-sm">
+              <CardContent className="p-12">
+                <div className="flex items-center justify-center">
+                  <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+    
     if (!selectedAssessment) return null;
 
     const lossData = {
@@ -541,423 +554,282 @@ export default function LossAssessmentSystem() {
     };
 
     return (
-      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
-        {/* Clean Header */}
-        <div className="max-w-7xl mx-auto px-6 mb-6">
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
-            <div className="flex items-center gap-4">
+      <div className="min-h-screen bg-gray-900 pt-6 pb-8">
+        <div className="max-w-7xl mx-auto px-6 space-y-6">
+          {/* Header */}
+          <div className="mb-6">
               <Button
                 variant="ghost"
                 onClick={handleBackToList}
-                className="text-gray-600 hover:text-gray-700 p-0 h-auto"
+              className="mb-4 text-gray-400 hover:text-gray-300 hover:bg-gray-800"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
               </Button>
+            <h1 className="text-3xl font-bold text-white">Loss Assessment</h1>
+            <p className="text-gray-400 mt-1">Document and evaluate crop loss events</p>
+          </div>
+
+          {/* Search and Filter */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search fields..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-gray-800 border-gray-700 text-white placeholder:text-gray-500"
+              />
+            </div>
+            <Button 
+              variant="outline" 
+              className="bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filter
+            </Button>
+          </div>
+
+          {/* Field Summary */}
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-white font-bold">Field Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-6 text-white">
+                <div className="border-r border-gray-700 pr-6">
+                  <p className="text-sm text-gray-400 mb-1">Farmer</p>
+                  <p className="text-white font-bold">{selectedAssessment.farmerName}</p>
+                </div>
+                <div className="border-r border-gray-700 pr-6">
+                  <p className="text-sm text-gray-400 mb-1">Field ID</p>
+                  <p className="text-white font-bold">{selectedAssessment.fieldId}</p>
+                </div>
+                <div className="border-r border-gray-700 pr-6">
+                  <p className="text-sm text-gray-400 mb-1">Crop</p>
+                  <p className="text-white font-bold">{selectedAssessment.crop}</p>
+                </div>
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900">Loss Assessment Details</h1>
-                <p className="text-sm text-gray-500 mt-1">Review and assess crop loss for {selectedAssessment.farmerName}</p>
+                  <p className="text-sm text-gray-400 mb-1">Area</p>
+                  <p className="text-white font-bold">{selectedAssessment.area}</p>
               </div>
             </div>
-          </div>
-        </div>
+            </CardContent>
+          </Card>
 
-        {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-6">
-
-        {/* Tabs for different sections */}
-        <Tabs defaultValue="details" className="space-y-6">
-          <TabsList className={`${dashboardTheme.card} border border-gray-200`}>
-            <TabsTrigger 
-              value="details" 
-              className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700"
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Loss Details
-            </TabsTrigger>
-            <TabsTrigger 
-              value="quantification" 
-              className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700"
-            >
-              <AlertTriangle className="h-4 w-4 mr-2" />
-              Quantification
-            </TabsTrigger>
-            <TabsTrigger 
-              value="decision" 
-              className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700"
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Decision Support
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Tab 1: Loss Details */}
-          <TabsContent value="details" className="space-y-6">
-            {/* Field Summary */}
-            <Card className={`${dashboardTheme.card}`}>
-              <CardHeader>
-                <CardTitle className="text-gray-900">Field Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="border-r border-gray-200 pr-4">
-                    <p className="text-sm text-gray-600 mb-1">Farmer</p>
-                    <p className="text-gray-900 font-medium">{selectedAssessment.farmerName}</p>
-                  </div>
-                  <div className="border-r border-gray-200 pr-4">
-                    <p className="text-sm text-gray-600 mb-1">Field ID</p>
-                    <p className="text-gray-900 font-medium">{selectedAssessment.fieldId}</p>
-                  </div>
-                  <div className="border-r border-gray-200 pr-4">
-                    <p className="text-sm text-gray-600 mb-1">Crop</p>
-                    <p className="text-gray-900 font-medium">{selectedAssessment.crop}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Area</p>
-                    <p className="text-gray-900 font-medium">{selectedAssessment.area}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Loss Details */}
-            <Card className={`${dashboardTheme.card}`}>
-              <CardHeader>
-                <CardTitle className="text-gray-900">Loss Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="cause" className="text-gray-700 mb-2 block">Cause</Label>
-                    <Input
-                      id="cause"
-                      value={lossData.cause}
-                      readOnly
-                      className={`${dashboardTheme.input} border-gray-300`}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="date" className="text-gray-700 mb-2 block">Date</Label>
-                    <div className="relative">
-                      <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-                      <Input
-                        id="date"
-                        value={lossData.date}
-                        readOnly
-                        className={`${dashboardTheme.input} border-gray-300 pr-10`}
-                      />
-                    </div>
-                  </div>
-                </div>
+          {/* Loss Details */}
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-white font-bold">Loss Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="description" className="text-gray-700 mb-2 block">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={lossData.description}
+                  <Label htmlFor="cause" className="text-gray-300 mb-2 block">Cause</Label>
+                  <Input
+                    id="cause"
+                    value={lossData.cause}
                     readOnly
-                    className={`${dashboardTheme.input} border-gray-300 min-h-[100px]`}
+                    className="bg-gray-900 border-gray-700 text-white"
                   />
-                </div>
+          </div>
                 <div>
-                  <Label className="text-gray-700 mb-2 block">Evidence</Label>
-                  <Button 
-                    variant="outline" 
-                    className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                  >
-                    <Paperclip className="h-4 w-4 mr-2" />
-                    View Attachments ({lossData.evidenceFiles} files)
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Tab 2: Quantification */}
-          <TabsContent value="quantification" className="space-y-6">
-            {/* Assessment Form */}
-            <Card className={`${dashboardTheme.card}`}>
-              <CardHeader>
-                <CardTitle className="text-gray-900">Update Assessment</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label className="text-gray-700 mb-2 block">Visit Date *</Label>
-                  <Input
-                    type="date"
-                    value={claimAssessmentForm.visitDate}
-                    onChange={(e) => setClaimAssessmentForm({ ...claimAssessmentForm, visitDate: e.target.value })}
-                    className={`${dashboardTheme.input} border-gray-300`}
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-gray-700 mb-2 block">Observations</Label>
-                  <div className="flex gap-2 mb-2">
+                  <Label htmlFor="date" className="text-gray-300 mb-2 block">Date</Label>
+                  <div className="relative">
+                    <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                      value={claimAssessmentForm.observationInput}
-                      onChange={(e) => setClaimAssessmentForm({ ...claimAssessmentForm, observationInput: e.target.value })}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          addObservation();
-                        }
-                      }}
-                      placeholder="Enter an observation and press Enter"
-                      className={`${dashboardTheme.input} border-gray-300`}
+                      id="date"
+                      value={lossData.date}
+                      readOnly
+                      className="bg-gray-900 border-gray-700 text-white pr-10"
                     />
-                    <Button
-                      onClick={addObservation}
-                      variant="outline"
-                      className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    {claimAssessmentForm.observations.map((obs, index) => (
-                      <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded border border-gray-200">
-                        <span className="text-gray-700 text-sm">{obs}</span>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => removeObservation(index)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
+        </div>
                 </div>
-
-                <div>
-                  <Label className="text-gray-700 mb-2 block">Damage Area (ha) - Optional</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={claimAssessmentForm.damageArea}
-                    onChange={(e) => setClaimAssessmentForm({ ...claimAssessmentForm, damageArea: e.target.value })}
-                    placeholder="Leave empty to auto-calculate"
-                    className={`${dashboardTheme.input} border-gray-300`}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Leave empty to let backend calculate from NDVI</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-gray-700 mb-2 block">NDVI Before - Optional</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={claimAssessmentForm.ndviBefore}
-                      onChange={(e) => setClaimAssessmentForm({ ...claimAssessmentForm, ndviBefore: e.target.value })}
-                      placeholder="Auto-calculated if empty"
-                      className={`${dashboardTheme.input} border-gray-300`}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-gray-700 mb-2 block">NDVI After - Optional</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={claimAssessmentForm.ndviAfter}
-                      onChange={(e) => setClaimAssessmentForm({ ...claimAssessmentForm, ndviAfter: e.target.value })}
-                      placeholder="Auto-calculated if empty"
-                      className={`${dashboardTheme.input} border-gray-300`}
-                    />
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500">NDVI values will be automatically calculated by backend if not provided</p>
-
-                <div>
-                  <Label className="text-gray-700 mb-2 block">Assessment Report *</Label>
-                  <Textarea
-                    value={claimAssessmentForm.reportText}
-                    onChange={(e) => setClaimAssessmentForm({ ...claimAssessmentForm, reportText: e.target.value })}
-                    placeholder="Enter detailed assessment report..."
-                    className={`${dashboardTheme.input} border-gray-300 min-h-[120px]`}
-                  />
-                </div>
-
-                <div className="flex gap-3 pt-2">
-                  <Button
-                    onClick={handleUpdateAssessment}
-                    disabled={isUpdatingAssessment || !claimAssessmentForm.visitDate || !claimAssessmentForm.reportText}
-                    className="bg-teal-500 hover:bg-teal-600 text-gray-900"
-                  >
-                    {isUpdatingAssessment ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        Updating...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4 mr-2" />
-                        Save Assessment
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    onClick={handleSubmitAssessment}
-                    disabled={isSubmittingAssessment || isUpdatingAssessment || !claimAssessmentForm.visitDate || !claimAssessmentForm.reportText || selectedAssessment?.status?.toLowerCase() === 'assessed'}
-                    className="bg-green-500 hover:bg-green-600 text-gray-900"
-                  >
-                    {isSubmittingAssessment ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="h-4 w-4 mr-2" />
-                        Submit Assessment
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Loss Quantification */}
-            <Card className={`${dashboardTheme.card}`}>
-              <CardHeader>
-                <CardTitle className="text-gray-900">Loss Quantification</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 gap-6">
-                  <div className="bg-orange-950/30 border border-orange-900/50 rounded-lg p-6">
-                    <p className="text-3xl font-bold text-orange-400 mb-1">
-                      {lossData.affectedArea}
-                    </p>
-                    <p className="text-sm text-gray-900/80">Affected Area</p>
-                    <p className="text-xs text-orange-400 mt-1">({lossData.affectedPercentage}%)</p>
-                  </div>
-                  <div className="bg-orange-950/30 border border-orange-900/50 rounded-lg p-6">
-                    <p className="text-3xl font-bold text-orange-400 mb-1">
-                      {lossData.severity}
-                    </p>
-                    <p className="text-sm text-gray-900/80">Severity</p>
-                  </div>
-                  <div className="bg-orange-950/30 border border-orange-900/50 rounded-lg p-6">
-                    <p className="text-3xl font-bold text-orange-400 mb-1">
-                      {lossData.yieldImpact}%
-                    </p>
-                    <p className="text-sm text-gray-900/80">Yield Impact</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Map Visualization */}
-            <Card className={`${dashboardTheme.card}`}>
-              <CardHeader>
-                <CardTitle className="text-gray-900">Map Visualization</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="relative border border-gray-200 rounded-lg overflow-hidden">
-                  <LeafletMap
-                    center={(() => {
-                      // Try to parse location from assessment
-                      const location = selectedAssessment.location || "";
-                      if (location.includes(',')) {
-                        const parts = location.split(',');
-                        const lat = parseFloat(parts[0]?.trim() || "-1.9441");
-                        const lng = parseFloat(parts[1]?.trim() || "30.0619");
-                        return [lat, lng];
-                      }
-                      return [-1.9441, 30.0619]; // Default: Kigali, Rwanda
-                    })()}
-                    zoom={15}
-                    height="500px"
-                    tileLayer="satellite"
-                    showControls={true}
-                    className="w-full"
-                  />
-                  {/* Legend */}
-                  <div className="absolute bottom-4 right-4 bg-white/90 border border-gray-200 rounded-lg p-3 z-[1000]">
-                    <p className="text-gray-900 font-medium mb-2 text-sm">Legend</p>
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-4 h-4 bg-orange-500 rounded"></div>
-                      <span className="text-gray-900/70 text-xs">Affected Area</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 bg-green-500 rounded"></div>
-                      <span className="text-gray-900/70 text-xs">Normal Area</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Tab 3: Decision Support */}
-          <TabsContent value="decision" className="space-y-6">
-            {/* Decision Support */}
-            <Card className={`${dashboardTheme.card}`}>
-              <CardHeader>
-                <CardTitle className="text-gray-900">Decision Support</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="bg-yellow-950/20 border border-yellow-900/30 rounded-lg p-6">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                      <p className="text-gray-900 font-medium">Policy Threshold</p>
-                    </div>
-                    <p className="text-4xl font-bold text-gray-900 mb-1">
-                      {decisionSupport.policyThreshold}%
-                    </p>
-                    <p className="text-sm text-gray-900/60">Minimum affected area</p>
-                  </div>
-
-                  <div className={`${decisionSupport.meetsCondition ? 'bg-green-950/20 border-green-900/30' : 'bg-red-950/20 border-red-900/30'} rounded-lg p-6`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle className={`h-5 w-5 ${decisionSupport.meetsCondition ? 'text-green-500' : 'text-red-500'}`} />
-                      <p className="text-gray-900 font-medium">Meets Condition</p>
-                    </div>
-                    <p className={`text-4xl font-bold mb-1 ${decisionSupport.meetsCondition ? 'text-green-500' : 'text-red-500'}`}>
-                      {decisionSupport.meetsCondition ? 'YES' : 'NO'}
-                    </p>
-                    <p className="text-sm text-gray-900/60">
-                      {decisionSupport.meetsCondition 
-                        ? `Exceeds threshold by ${decisionSupport.thresholdExcess}%`
-                        : `Below threshold by ${decisionSupport.thresholdExcess}%`
-                      }
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-teal-950/20 border border-teal-900/30 rounded-lg p-6">
-                  <p className="text-gray-900 font-medium mb-2">Recommendation</p>
-                  <p className="text-gray-900/80">{decisionSupport.recommendation}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Assessor Notes */}
-            <Card className={`${dashboardTheme.card}`}>
-              <CardHeader>
-                <CardTitle className="text-gray-900">Assessor Notes</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+              </div>
+              <div>
+                <Label htmlFor="description" className="text-gray-300 mb-2 block">Description</Label>
                 <Textarea
-                  value={assessmentNotes}
-                  onChange={(e) => setAssessmentNotes(e.target.value)}
-                  placeholder="Add your assessment notes here..."
-                  className={`${dashboardTheme.input} border-gray-300 min-h-[120px]`}
+                  id="description"
+                  value={lossData.description}
+                  readOnly
+                  className="bg-gray-900 border-gray-700 text-white min-h-[100px]"
                 />
-                <Button className={`${dashboardTheme.card} text-gray-900 hover:bg-gray-800 border border-gray-300`}>
-                  <FileDown className="h-4 w-4 mr-2" />
-                  Generate Report PDF
+              </div>
+              <div>
+                <Label className="text-gray-300 mb-2 block">Evidence</Label>
+                <Button 
+                  variant="outline" 
+                  className="bg-gray-900 border-gray-700 text-gray-300 hover:bg-gray-800"
+                >
+                  <Paperclip className="h-4 w-4 mr-2" />
+                  View Attachments ({lossData.evidenceFiles} files)
                 </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Loss Quantification */}
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-white font-bold">Loss Quantification</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-6">
+                <div className="bg-red-900/30 border border-red-800/50 rounded-lg p-6">
+                  <p className="text-sm text-gray-300 mb-1">Affected Area</p>
+                  <p className="text-3xl font-bold text-orange-400 mb-1">
+                    {lossData.affectedArea}
+                  </p>
+                  <p className="text-sm text-orange-400">({lossData.affectedPercentage}%)</p>
+                </div>
+                <div className="bg-yellow-900/30 border border-yellow-800/50 rounded-lg p-6">
+                  <p className="text-sm text-gray-300 mb-1">Severity</p>
+                  <p className="text-3xl font-bold text-orange-400 mb-1">
+                    {lossData.severity}
+                  </p>
+                </div>
+                <div className="bg-red-900/30 border border-red-800/50 rounded-lg p-6">
+                  <p className="text-sm text-gray-300 mb-1">Yield Impact</p>
+                  <p className="text-3xl font-bold text-orange-400 mb-1">
+                    {lossData.yieldImpact}%
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Map Visualization */}
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-white font-bold">Map Visualization</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="relative border border-gray-700 rounded-lg overflow-hidden bg-gray-900" style={{ height: "500px" }}>
+                <LeafletMap
+                  center={(() => {
+                    const location = selectedAssessment.location || "";
+                    if (location.includes(',')) {
+                      const parts = location.split(',');
+                      const lat = parseFloat(parts[0]?.trim() || "-1.9441");
+                      const lng = parseFloat(parts[1]?.trim() || "30.0619");
+                      return [lat, lng];
+                    }
+                    return [-1.9441, 30.0619];
+                  })()}
+                  zoom={15}
+                  height="500px"
+                  tileLayer="satellite"
+                  showControls={true}
+                  className="w-full"
+                />
+                {/* Legend */}
+                <div className="absolute bottom-4 right-4 bg-gray-800/90 border border-gray-700 rounded-lg p-3 z-[1000]">
+                  <p className="text-white font-medium mb-2 text-sm">Legend</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-4 h-4 bg-orange-500 rounded"></div>
+                    <span className="text-gray-300 text-xs">Affected Area</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-green-500 rounded"></div>
+                    <span className="text-gray-300 text-xs">Normal Area</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Decision Support */}
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-white font-bold">Decision Support</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="bg-gray-700 border border-gray-600 rounded-lg p-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="h-5 w-5 text-orange-500" />
+                    <p className="text-white font-medium">Policy Threshold</p>
+                  </div>
+                  <p className="text-4xl font-bold text-white mb-1">
+                    {decisionSupport.policyThreshold}%
+                  </p>
+                  <p className="text-sm text-gray-400">Minimum affected area</p>
+                </div>
+
+                <div className={`${decisionSupport.meetsCondition ? 'bg-green-900/30 border-green-800/50' : 'bg-red-900/30 border-red-800/50'} rounded-lg p-6`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className={`h-5 w-5 ${decisionSupport.meetsCondition ? 'text-green-500' : 'text-red-500'}`} />
+                    <p className="text-white font-medium">Meets Condition</p>
+                  </div>
+                  <p className={`text-4xl font-bold mb-1 ${decisionSupport.meetsCondition ? 'text-green-500' : 'text-red-500'}`}>
+                    {decisionSupport.meetsCondition ? 'YES' : 'NO'}
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    {decisionSupport.meetsCondition 
+                      ? `Exceeds threshold by ${decisionSupport.thresholdExcess}%`
+                      : `Below threshold by ${Math.abs(decisionSupport.thresholdExcess)}%`
+                    }
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-blue-900/30 border border-blue-800/50 rounded-lg p-6">
+                <p className="text-white font-medium mb-2">Recommendation</p>
+                <p className="text-white/80">{decisionSupport.recommendation}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Assessor Notes */}
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-white font-bold">Assessor Notes</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Textarea
+                value={assessmentNotes}
+                onChange={(e) => setAssessmentNotes(e.target.value)}
+                placeholder="Add your assessment notes here..."
+                className="bg-gray-900 border-gray-700 text-white min-h-[120px] placeholder:text-gray-500"
+              />
+              <div className="flex gap-3">
+                <Button 
+                  onClick={handleUpdateAssessment}
+                  disabled={isUpdatingAssessment || !claimAssessmentForm.visitDate || !claimAssessmentForm.reportText}
+                  className="bg-teal-600 hover:bg-teal-700 text-white"
+                >
+                  {isUpdatingAssessment ? (
+                    <img src="/loading.gif" alt="Loading" className="w-4 h-4" />
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Assessment
+                    </>
+                  )}
+                </Button>
+                <Button
+                  onClick={handleSubmitAssessment}
+                  disabled={isSubmittingAssessment || isUpdatingAssessment}
+                  className="bg-gray-700 hover:bg-gray-600 text-white"
+                >
+                  {isSubmittingAssessment ? (
+                    <img src="/loading.gif" alt="Loading" className="w-4 h-4" />
+                  ) : (
+                    <>
+                      <FileDown className="h-4 w-4 mr-2" />
+                      Generate Report PDF
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
   };
+
+  // Old tabs structure removed - using new single-page layout matching the UI design
 
   if (viewMode === "detail") {
     return renderDetail();

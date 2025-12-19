@@ -91,7 +91,7 @@ export default function DashboardLayout({
   const getUserIcon = () => {
     switch (userType) {
       case "farmer": return <User className="h-6 w-6" />;
-      case "assessor": return <Shield className="h-6 w-6" />;
+      case "assessor": return <img src="/assessor.webp" alt="Assessor" className="h-6 w-6 object-contain" />;
       case "insurer": return <Building2 className="h-6 w-6" />;
       case "admin": return <Settings className="h-6 w-6" />;
       case "government": return <BarChart3 className="h-6 w-6" />;
@@ -120,10 +120,23 @@ export default function DashboardLayout({
     return "";
   };
 
-  const getNavigationColors = () => {
-    // Use primary color for all user types
+  const getNavigationColors = (itemIndex?: number) => {
+    // Use consistent green color for assessor active state
+    if (userType === "assessor") {
+      return {
+        activeBg: "bg-green-600",
+        activeText: "text-white",
+        activeBorder: "border-0",
+        activeIcon: "text-green-100",
+        hover: "hover:bg-green-50 hover:text-green-700"
+      };
+    }
+    // Use primary color for other user types
     return {
-      active: "bg-[rgba(20,40,75,0.1)] text-[rgba(15,30,56,1)]",
+      activeBg: "bg-[rgba(20,40,75,0.1)]",
+      activeText: "text-[rgba(15,30,56,1)]",
+      activeBorder: "border-0",
+      activeIcon: "text-[rgba(20,40,75,1)]",
       hover: "hover:text-[rgba(20,40,75,1)]"
     };
   };
@@ -160,11 +173,15 @@ export default function DashboardLayout({
             {!sidebarCollapsed && (
               <div className="flex-1 min-w-0 lg:block hidden">
                 <div className="flex items-center space-x-3 p-3 rounded-xl">
-                  <div className={`w-10 h-10 ${getUserColor()} rounded-full flex items-center justify-center flex-shrink-0`}>
-                    <div className="text-white">
-                      {getUserIcon()}
+                  {userType === "assessor" ? (
+                    <img src="/assessor.webp" alt="Assessor" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                  ) : (
+                    <div className={`w-10 h-10 ${getUserColor()} rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden`}>
+                      <div className="text-white">
+                        {getUserIcon()}
+                      </div>
                     </div>
-                  </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-900 truncate">{userName}</p>
                     <p className="text-xs text-gray-600 truncate">{getUserLabel()}</p>
@@ -174,11 +191,15 @@ export default function DashboardLayout({
             )}
             {sidebarCollapsed && (
               <div className="flex items-center justify-center gap-2 w-full lg:block hidden">
-                <div className={`w-10 h-10 ${getUserColor()} rounded-full flex items-center justify-center`}>
-                  <div className="text-white">
-                    {getUserIcon()}
+                {userType === "assessor" ? (
+                  <img src="/assessor.webp" alt="Assessor" className="w-10 h-10 rounded-full object-cover" />
+                ) : (
+                  <div className={`w-10 h-10 ${getUserColor()} rounded-full flex items-center justify-center overflow-hidden`}>
+                    <div className="text-white">
+                      {getUserIcon()}
+                    </div>
                   </div>
-                </div>
+                )}
                 {/* Desktop Toggle Button - Next to icon when collapsed */}
                 <Button
                   variant="ghost"
@@ -219,11 +240,15 @@ export default function DashboardLayout({
           {/* User Info - Mobile Only */}
           <div className="p-4 border-b border-gray-200 lg:hidden">
             <div className="flex items-center space-x-3 p-3 rounded-xl">
-              <div className={`w-10 h-10 ${getUserColor()} rounded-full flex items-center justify-center`}>
-                <div className="text-white">
-                  {getUserIcon()}
+              {userType === "assessor" ? (
+                <img src="/assessor.webp" alt="Assessor" className="w-10 h-10 rounded-full object-cover" />
+              ) : (
+                <div className={`w-10 h-10 ${getUserColor()} rounded-full flex items-center justify-center overflow-hidden`}>
+                  <div className="text-white">
+                    {getUserIcon()}
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-900 truncate">{userName}</p>
                 <p className="text-xs text-gray-600 truncate">{getUserLabel()}</p>
@@ -237,10 +262,10 @@ export default function DashboardLayout({
             className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           >
             <div className="h-full">
-            {navigationItems.map((item) => {
+            {navigationItems.map((item, index) => {
               const Icon = item.icon;
               const isActive = activePage === item.id;
-              const colors = getNavigationColors();
+              const colors = getNavigationColors(index);
               
               return (
                 <button
@@ -251,15 +276,15 @@ export default function DashboardLayout({
                   }}
                   className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'justify-between px-4'} py-4 text-sm font-medium transition-all duration-300 ease-in-out group relative ${
                     isActive
-                      ? `bg-[rgba(20,40,75,0.1)] text-[rgba(15,30,56,1)] shadow-sm ${sidebarCollapsed ? 'border-l-2' : 'border-l-4'} border-l-[rgba(20,40,75,0.75)]`
-                      : `text-gray-700 hover:bg-[rgba(20,40,75,0.1)] hover:text-[rgba(15,30,56,1)] ${colors.hover}`
+                      ? `${colors.activeBg} ${colors.activeText} shadow-sm ${colors.activeBorder}`
+                      : `text-gray-700 ${colors.hover}`
                   }`}
                   title={sidebarCollapsed ? item.label : undefined}
                 >
                   {sidebarCollapsed ? (
                     // Collapsed: Only icon
                     <div className="flex items-center justify-center relative">
-                      <Icon className={`h-5 w-5 ${isActive ? 'text-[rgba(20,40,75,1)]' : 'text-gray-600'}`} />
+                      <Icon className={`h-5 w-5 ${isActive ? colors.activeIcon : 'text-gray-600'}`} />
                       {item.badge && item.badge > 0 && (
                         <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
                       )}
@@ -268,13 +293,13 @@ export default function DashboardLayout({
                     // Expanded: Icon + label + badge
                     <>
                       <div className="flex items-center space-x-3">
-                        <Icon className={`h-5 w-5 flex-shrink-0 ${isActive ? 'text-green-600' : 'text-gray-600'}`} />
+                        <Icon className={`h-5 w-5 flex-shrink-0 ${isActive ? colors.activeIcon : 'text-gray-600'}`} />
                         <span>{item.label}</span>
                       </div>
                       {item.badge && item.badge > 0 && (
                         <Badge variant="secondary" className={`text-xs ${
                           isActive 
-                            ? 'bg-[rgba(20,40,75,1)] text-white' 
+                            ? `${colors.activeBg} text-white`
                             : 'bg-[rgba(20,40,75,0.15)] text-[rgba(15,30,56,1)]'
                         }`}>
                           {item.badge}

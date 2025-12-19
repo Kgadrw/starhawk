@@ -19,6 +19,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { dashboardTheme } from "@/utils/dashboardTheme";
+import { StatsGridSkeleton, TableSkeleton, CardSkeleton, ChartSkeleton } from "@/components/ui/skeletons";
+import { ModernTable, StatusBadge } from "@/components/ui/ModernTable";
 import { 
   BarChart as RechartsBarChart,
   Bar,
@@ -881,97 +883,85 @@ export const AdminDashboard = () => {
       )}
 
       {/* Header Stats - Compact Design */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className={`${dashboardTheme.card} p-4 hover:shadow-md transition-shadow`}>
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Total Users</p>
-              <div className="flex items-baseline gap-2">
-                {statsLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-                ) : (
+      {statsLoading ? (
+        <StatsGridSkeleton count={4} />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card className={`${dashboardTheme.card} p-4 hover:shadow-md transition-shadow`}>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Total Users</p>
+                <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-bold text-gray-900">
                     {(systemStats?.totalUsers || userStats.total || 0).toLocaleString()}
                   </span>
-                )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1.5">
+                  <span className="font-medium text-gray-600">{userStats.newThisMonth || 0}</span> new this month
+                </p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                <Users className="h-5 w-5 text-blue-600" />
+              </div>
             </div>
-              <p className="text-xs text-gray-500 mt-1.5">
-                <span className="font-medium text-gray-600">{userStats.newThisMonth || 0}</span> new this month
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-              <Users className="h-5 w-5 text-blue-600" />
-            </div>
-          </div>
-        </Card>
+          </Card>
 
-        <Card className={`${dashboardTheme.card} p-4 hover:shadow-md transition-shadow`}>
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Total Policies</p>
-              <div className="flex items-baseline gap-2">
-                {statsLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-                ) : (
+          <Card className={`${dashboardTheme.card} p-4 hover:shadow-md transition-shadow`}>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Total Policies</p>
+                <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-bold text-gray-900">
                     {(policyOverview?.total || 0).toLocaleString()}
                   </span>
-                )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1.5">
+                  <span className="font-medium text-gray-600">{policyOverview?.active || 0}</span> active
+                </p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
+                <FileCheck className="h-5 w-5 text-green-600" />
+              </div>
             </div>
-              <p className="text-xs text-gray-500 mt-1.5">
-                <span className="font-medium text-gray-600">{policyOverview?.active || 0}</span> active
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-              <FileCheck className="h-5 w-5 text-green-600" />
-            </div>
-          </div>
-        </Card>
+          </Card>
 
-        <Card className={`${dashboardTheme.card} p-4 hover:shadow-md transition-shadow`}>
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Total Claims</p>
-              <div className="flex items-baseline gap-2">
-                {statsLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-                ) : (
+          <Card className={`${dashboardTheme.card} p-4 hover:shadow-md transition-shadow`}>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Total Claims</p>
+                <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-bold text-gray-900">
                     {(claimStats?.total || 0).toLocaleString()}
                   </span>
-                )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1.5">
+                  <span className="font-medium text-gray-600">{claimStats?.pending || 0}</span> pending
+                </p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
+                <AlertCircle className="h-5 w-5 text-purple-600" />
+              </div>
             </div>
-              <p className="text-xs text-gray-500 mt-1.5">
-                <span className="font-medium text-gray-600">{claimStats?.pending || 0}</span> pending
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
-              <AlertCircle className="h-5 w-5 text-purple-600" />
-            </div>
-          </div>
-        </Card>
+          </Card>
 
-        <Card className={`${dashboardTheme.card} p-4 hover:shadow-md transition-shadow`}>
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Farmers</p>
-              <div className="flex items-baseline gap-2">
-                {statsLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-                ) : (
+          <Card className={`${dashboardTheme.card} p-4 hover:shadow-md transition-shadow`}>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Farmers</p>
+                <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-bold text-gray-900">
                     {(systemStats?.totalFarmers || userStats.farmers || 0).toLocaleString()}
                   </span>
-                )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1.5">Registered</p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center">
+                <Users className="h-5 w-5 text-orange-600" />
+              </div>
             </div>
-              <p className="text-xs text-gray-500 mt-1.5">Registered</p>
-            </div>
-            <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center">
-              <Users className="h-5 w-5 text-orange-600" />
-            </div>
-          </div>
-        </Card>
-      </div>
+          </Card>
+        </div>
+      )}
 
       {/* Quick Stats Overview */}
       <div className="grid gap-6 md:grid-cols-2">
@@ -1046,10 +1036,7 @@ export const AdminDashboard = () => {
         </CardHeader>
         <CardContent className="p-6">
           {healthLoading ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-3" />
-              <p className="text-sm text-gray-600">Loading health status...</p>
-                </div>
+            <CardSkeleton lines={4} />
           ) : healthError ? (
             <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
               <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" />
@@ -2019,12 +2006,11 @@ export const AdminDashboard = () => {
             </div>
           </div>
           {usersLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="text-center">
-                <Loader2 className="h-10 w-10 animate-spin text-red-500 mx-auto mb-4" />
-                <p className="text-gray-600">Loading users...</p>
-              </div>
-            </div>
+            <Card className={dashboardTheme.card}>
+              <CardContent className="p-0">
+                <TableSkeleton rows={5} columns={5} />
+              </CardContent>
+            </Card>
           ) : filteredUsers.length === 0 ? (
             <div className="flex items-center justify-center py-16">
               <div className="text-center">
@@ -2182,8 +2168,7 @@ export const AdminDashboard = () => {
       {statsLoading && (
         <Card className={dashboardTheme.card}>
           <CardContent className="p-8 text-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-gray-900 mx-auto mb-4" />
-            <p className="text-gray-900/60">Loading financial data...</p>
+            <img src="/loading.gif" alt="Loading" className="w-16 h-16 mx-auto" />
           </CardContent>
         </Card>
       )}
@@ -2681,18 +2666,6 @@ export const AdminDashboard = () => {
           <p className="text-sm text-gray-600 mt-1">Deep insights into platform performance and usage</p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            onClick={() => {
-              loadAdminStatistics();
-              loadAnalyticsData();
-            }}
-            variant="outline"
-            className="border-gray-300 text-gray-900 hover:bg-gray-100"
-            disabled={statsLoading || analyticsLoading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${(statsLoading || analyticsLoading) ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
           <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-100">
             <Calendar className="h-4 w-4 mr-2" />
             Last 30 Days
@@ -2708,8 +2681,7 @@ export const AdminDashboard = () => {
       {statsLoading && (
         <Card className={dashboardTheme.card}>
           <CardContent className="p-8 text-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-gray-900 mx-auto mb-4" />
-            <p className="text-gray-900/60">Loading analytics...</p>
+            <img src="/loading.gif" alt="Loading" className="w-16 h-16 mx-auto" />
           </CardContent>
         </Card>
       )}
@@ -2860,7 +2832,7 @@ export const AdminDashboard = () => {
           <div className="h-80">
             {analyticsLoading ? (
               <div className="flex items-center justify-center h-full">
-                <RefreshCw className="h-8 w-8 animate-spin text-gray-600" />
+                <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -3734,15 +3706,6 @@ export const AdminDashboard = () => {
             <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
             <p className="text-sm text-gray-600 mt-1">Configure your admin preferences</p>
         </div>
-          <Button
-            onClick={loadAdminProfile}
-            variant="outline"
-            className="border-gray-300 text-gray-700 hover:bg-gray-100"
-            disabled={adminProfileLoading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${adminProfileLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
       </div>
 
         {/* Error State */}
@@ -3772,8 +3735,7 @@ export const AdminDashboard = () => {
         {adminProfileLoading && !adminProfile && (
           <Card className={dashboardTheme.card}>
             <CardContent className="p-8 text-center">
-              <RefreshCw className="h-8 w-8 animate-spin text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-600">Loading profile...</p>
+              <img src="/loading.gif" alt="Loading" className="w-16 h-16 mx-auto" />
             </CardContent>
           </Card>
         )}
@@ -3982,8 +3944,7 @@ export const AdminDashboard = () => {
             <div className="mt-4">
               {loginHistoryLoading ? (
                 <div className="flex items-center justify-center py-8">
-                  <RefreshCw className="h-6 w-6 animate-spin text-gray-600 mr-2" />
-                  <p className="text-gray-600">Loading login history...</p>
+                  <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
                 </div>
               ) : loginHistory.length === 0 ? (
                 <div className="text-center py-8">
@@ -4057,8 +4018,7 @@ export const AdminDashboard = () => {
       {statsLoading && (
         <Card className={dashboardTheme.card}>
           <CardContent className="p-8 text-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-gray-900 mx-auto mb-4" />
-            <p className="text-gray-900/60">Loading commission data...</p>
+            <img src="/loading.gif" alt="Loading" className="w-16 h-16 mx-auto" />
           </CardContent>
         </Card>
       )}
@@ -4569,29 +4529,6 @@ export const AdminDashboard = () => {
             <p className="text-sm text-gray-600 mt-1">Manage all insurance policies</p>
           </div>
           <div className="flex gap-2">
-            <Button 
-              onClick={loadPolicies}
-              variant="outline"
-              className="border-gray-300 text-gray-900 hover:bg-gray-100"
-              disabled={policiesLoading}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${policiesLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-            <Button 
-              onClick={async () => {
-                resetPolicyForm();
-                // Ensure users are loaded before opening dialog
-                if (systemUsers.length === 0) {
-                  await loadUsers(true); // Force load users even if not on users page
-                }
-                setShowPolicyDialog(true);
-              }}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create Policy
-            </Button>
           </div>
         </div>
 
@@ -4629,9 +4566,8 @@ export const AdminDashboard = () => {
         {/* Loading State */}
         {policiesLoading && (
           <Card className={dashboardTheme.card}>
-            <CardContent className="p-8 text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-900 mx-auto mb-4" />
-              <p className="text-gray-900/60">Loading policies...</p>
+            <CardContent className="p-0">
+              <TableSkeleton rows={5} columns={6} />
             </CardContent>
           </Card>
         )}
@@ -4667,83 +4603,114 @@ export const AdminDashboard = () => {
                 Policies ({filteredPolicies.length})
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-300">
-                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Policy ID</th>
-                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Farmer</th>
-                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Crop Type</th>
-                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Coverage</th>
-                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Premium</th>
-                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Status</th>
-                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredPolicies.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="py-8 text-center text-gray-900/60">
-                          No policies found
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredPolicies.filter(policy => policy != null).map((policy) => (
-                        <tr key={policy?._id || policy?.id || 'unknown'} className="border-b border-gray-800 hover:bg-gray-100/50">
-                          <td className="py-3 px-4 text-gray-900 font-medium">
-                            {policy?._id?.toString().substring(0, 8) || policy?.id || "N/A"}
-                          </td>
-                          <td className="py-3 px-4 text-gray-900">
-                            {policy.farmerId?.toString().substring(0, 8) || "N/A"}
-                          </td>
-                          <td className="py-3 px-4 text-gray-900">{policy.cropType || "N/A"}</td>
-                          <td className="py-3 px-4 text-gray-900">
-                            RWF {policy.coverageAmount?.toLocaleString() || "0"}
-                          </td>
-                          <td className="py-3 px-4 text-gray-900">
-                            RWF {policy.premium?.toLocaleString() || "0"}
-                          </td>
-                          <td className="py-3 px-4">{getStatusBadge(policy.status)}</td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-blue-400 hover:text-blue-300"
-                                onClick={() => openEditPolicy(policy)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-400 hover:text-red-300"
-                                onClick={() => setDeletingPolicyId(policy._id || policy.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+            <CardContent className="p-6">
+              <ModernTable
+                columns={[
+                  {
+                    key: "policyId",
+                    label: "Policy ID",
+                    render: (_, row) => (
+                      <span className="font-medium text-gray-900">
+                        {row?._id?.toString().substring(0, 8) || row?.id || "N/A"}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "farmer",
+                    label: "Farmer",
+                    render: (_, row) => row.farmerId?.toString().substring(0, 8) || "N/A",
+                  },
+                  {
+                    key: "cropType",
+                    label: "Crop Type",
+                    render: (value) => value || "N/A",
+                  },
+                  {
+                    key: "coverage",
+                    label: "Coverage",
+                    render: (_, row) => (
+                      <span className="text-gray-900">
+                        RWF {row.coverageAmount?.toLocaleString() || "0"}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "premium",
+                    label: "Premium",
+                    render: (_, row) => (
+                      <span className="text-gray-900">
+                        RWF {row.premium?.toLocaleString() || "0"}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "status",
+                    label: "Status",
+                    render: (value) => <StatusBadge status={value || "Unknown"} />,
+                  },
+                  {
+                    key: "actions",
+                    label: "Actions",
+                    render: (_, row) => (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-gray-600 hover:text-blue-600 hover:bg-blue-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditPolicy(row);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-gray-600 hover:text-red-600 hover:bg-red-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingPolicyId(row._id || row.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ),
+                  },
+                ]}
+                data={filteredPolicies.filter((p) => p != null).map((policy) => ({
+                  ...policy,
+                  policyId: policy._id || policy.id,
+                  farmer: policy.farmerId?.toString().substring(0, 8) || "N/A",
+                  cropType: policy.cropType || "N/A",
+                  coverage: policy.coverageAmount,
+                  premium: policy.premium,
+                  status: policy.status || "Unknown",
+                }))}
+                searchPlaceholder="Search by policy ID, farmer, or crop type..."
+                searchKeys={["policyId", "farmer", "cropType", "status"]}
+                emptyMessage="No policies found"
+              />
             </CardContent>
           </Card>
         )}
 
-        {/* Create/Edit Policy Dialog */}
-        <Dialog open={showPolicyDialog} onOpenChange={setShowPolicyDialog}>
+        {/* Edit Policy Dialog - Only editing allowed, creation restricted to insurers */}
+        <Dialog open={showPolicyDialog && !!editingPolicy} onOpenChange={(open) => {
+          if (!open) {
+            setShowPolicyDialog(false);
+            setEditingPolicy(null);
+            resetPolicyForm();
+          }
+        }}>
           <DialogContent className="max-w-2xl bg-white border-gray-300">
             <DialogHeader>
               <DialogTitle className="text-gray-900">
-                {editingPolicy ? "Edit Policy" : "Create New Policy"}
+                Edit Policy
               </DialogTitle>
               <DialogDescription className="text-gray-900/60">
-                {editingPolicy ? "Update policy information" : "Fill in the details to create a new policy"}
+                Update policy information. Policy creation is only available to insurers.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 mt-4">
@@ -4918,11 +4885,12 @@ export const AdminDashboard = () => {
                   Cancel
                 </Button>
                 <Button
-                  onClick={() => editingPolicy ? handleUpdatePolicy(editingPolicy._id || editingPolicy.id) : handleCreatePolicy()}
+                  onClick={() => editingPolicy && handleUpdatePolicy(editingPolicy._id || editingPolicy.id)}
                   className="bg-red-600 hover:bg-red-700"
+                  disabled={!editingPolicy}
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {editingPolicy ? "Update" : "Create"} Policy
+                  Update Policy
                 </Button>
               </div>
             </div>
@@ -4991,15 +4959,6 @@ export const AdminDashboard = () => {
           </div>
           <div className="flex gap-2">
             <Button 
-              onClick={loadClaims}
-              variant="outline"
-              className="border-gray-300 text-gray-900 hover:bg-gray-100"
-              disabled={claimsLoading}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${claimsLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-            <Button 
               onClick={() => {
                 resetClaimForm();
                 setShowClaimDialog(true);
@@ -5047,8 +5006,7 @@ export const AdminDashboard = () => {
         {claimsLoading && (
           <Card className={dashboardTheme.card}>
             <CardContent className="p-8 text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-900 mx-auto mb-4" />
-              <p className="text-gray-900/60">Loading claims...</p>
+              <img src="/loading.gif" alt="Loading" className="w-16 h-16 mx-auto" />
             </CardContent>
           </Card>
         )}
@@ -5084,68 +5042,91 @@ export const AdminDashboard = () => {
                 Claims ({filteredClaims.length})
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-300">
-                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Claim ID</th>
-                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Farmer</th>
-                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Crop Type</th>
-                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Damage Type</th>
-                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Amount</th>
-                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Status</th>
-                      <th className="text-left py-3 px-4 text-gray-900/80 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredClaims.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="py-8 text-center text-gray-900/60">
-                          No claims found
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredClaims.filter(claim => claim != null).map((claim) => (
-                        <tr key={claim?._id || claim?.id || 'unknown'} className="border-b border-gray-800 hover:bg-gray-100/50">
-                          <td className="py-3 px-4 text-gray-900 font-medium">
-                            {claim?._id?.toString().substring(0, 8) || claim?.id || "N/A"}
-                          </td>
-                          <td className="py-3 px-4 text-gray-900">
-                            {claim.farmerId?.toString().substring(0, 8) || "N/A"}
-                          </td>
-                          <td className="py-3 px-4 text-gray-900">{claim.cropType || "N/A"}</td>
-                          <td className="py-3 px-4 text-gray-900">{claim.damageType || "N/A"}</td>
-                          <td className="py-3 px-4 text-gray-900">
-                            RWF {claim.amount?.toLocaleString() || "0"}
-                          </td>
-                          <td className="py-3 px-4">{getStatusBadge(claim.status)}</td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-blue-400 hover:text-blue-300"
-                                onClick={() => openEditClaim(claim)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-400 hover:text-red-300"
-                                onClick={() => setDeletingClaimId(claim._id || claim.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+            <CardContent className="p-6">
+              <ModernTable
+                columns={[
+                  {
+                    key: "claimId",
+                    label: "Claim ID",
+                    render: (_, row) => (
+                      <span className="font-medium text-gray-900">
+                        {row?._id?.toString().substring(0, 8) || row?.id || "N/A"}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "farmer",
+                    label: "Farmer",
+                    render: (_, row) => row.farmerId?.toString().substring(0, 8) || "N/A",
+                  },
+                  {
+                    key: "cropType",
+                    label: "Crop Type",
+                    render: (value) => value || "N/A",
+                  },
+                  {
+                    key: "damageType",
+                    label: "Damage Type",
+                    render: (value) => value || "N/A",
+                  },
+                  {
+                    key: "amount",
+                    label: "Amount",
+                    render: (_, row) => (
+                      <span className="text-gray-900">
+                        RWF {row.amount?.toLocaleString() || "0"}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "status",
+                    label: "Status",
+                    render: (value) => <StatusBadge status={value || "Unknown"} />,
+                  },
+                  {
+                    key: "actions",
+                    label: "Actions",
+                    render: (_, row) => (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-gray-600 hover:text-blue-600 hover:bg-blue-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditClaim(row);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-gray-600 hover:text-red-600 hover:bg-red-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingClaimId(row._id || row.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ),
+                  },
+                ]}
+                data={filteredClaims.filter((c) => c != null).map((claim) => ({
+                  ...claim,
+                  claimId: claim._id || claim.id,
+                  farmer: claim.farmerId?.toString().substring(0, 8) || "N/A",
+                  cropType: claim.cropType || "N/A",
+                  damageType: claim.damageType || "N/A",
+                  amount: claim.amount,
+                  status: claim.status || "Unknown",
+                }))}
+                searchPlaceholder="Search by claim ID, farmer, crop type, or damage type..."
+                searchKeys={["claimId", "farmer", "cropType", "damageType", "status"]}
+                emptyMessage="No claims found"
+              />
             </CardContent>
           </Card>
         )}
@@ -5762,25 +5743,12 @@ export const AdminDashboard = () => {
                 <CardTitle className="text-lg font-semibold text-gray-900">Pending Farms</CardTitle>
                 <p className="text-sm text-gray-600 mt-1">Farms awaiting assessment assignment</p>
               </div>
-              <Button
-                onClick={loadPendingFarms}
-                disabled={pendingFarmsLoading}
-                variant="outline"
-                size="sm"
-                className="border-gray-300 text-gray-900 hover:bg-gray-100"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${pendingFarmsLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
             </div>
           </CardHeader>
           <CardContent className="p-0">
             {pendingFarmsLoading ? (
               <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-green-600 mx-auto mb-2" />
-                  <p className="text-gray-600 text-sm">Loading pending farms...</p>
-                </div>
+                <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
               </div>
             ) : pendingFarmsError ? (
               <div className="flex items-center justify-center py-8 px-4">
@@ -5979,15 +5947,6 @@ export const AdminDashboard = () => {
               <SelectItem value="submitted">Submitted</SelectItem>
             </SelectContent>
           </Select>
-          <Button
-            onClick={loadAssessments}
-            disabled={assessmentsLoading}
-            variant="outline"
-            className="border-gray-300 text-gray-900 hover:bg-gray-100"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${assessmentsLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
         </div>
 
         {/* Assessments Table */}
@@ -5995,10 +5954,7 @@ export const AdminDashboard = () => {
           <CardContent className="p-0">
             {assessmentsLoading ? (
               <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <Loader2 className="h-12 w-12 animate-spin text-red-500 mx-auto mb-4" />
-                  <p className="text-gray-900/60">Loading assessments...</p>
-                </div>
+                <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
               </div>
             ) : filteredAssessments.length === 0 ? (
               <div className="flex items-center justify-center py-12">
@@ -6262,8 +6218,7 @@ export const AdminDashboard = () => {
                 >
                   {issuingPolicy ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Issuing...
+                      <img src="/loading.gif" alt="Loading" className="w-4 h-4" />
                     </>
                   ) : (
                     <>
@@ -6398,8 +6353,7 @@ export const AdminDashboard = () => {
                 >
                   {assigningAssessor ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Assigning...
+                      <img src="/loading.gif" alt="Loading" className="w-4 h-4" />
                     </>
                   ) : (
                     <>
@@ -6523,8 +6477,7 @@ export const AdminDashboard = () => {
                 >
                   {creatingAssessment ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Creating...
+                      <img src="/loading.gif" alt="Loading" className="w-4 h-4" />
                     </>
                   ) : (
                     <>
