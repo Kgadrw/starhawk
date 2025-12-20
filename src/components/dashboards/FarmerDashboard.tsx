@@ -1030,6 +1030,9 @@ export default function FarmerDashboard() {
       const createdFarm = responseData.data || responseData;
       upsertCreatedFarm(createdFarm);
       
+      // Stop the creating loading state immediately after successful creation
+      setIsCreating(false);
+      
       toast({
         title: 'Success',
         description: 'Farm created successfully!',
@@ -1039,16 +1042,17 @@ export default function FarmerDashboard() {
         cropType: "",
         sowingDate: ""
       });
+      
+      // Load farms separately (it has its own loading state)
       await loadFarms();
     } catch (err: any) {
       console.error('Failed to create farm:', err);
+      setIsCreating(false);
       toast({
         title: 'Error creating farm',
         description: err.message || 'Failed to create farm',
         variant: 'destructive'
       });
-    } finally {
-      setIsCreating(false);
     }
   };
 

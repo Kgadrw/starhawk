@@ -704,8 +704,37 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
   };
 
   const handleFieldClick = async (field: Field) => {
+    // Check if field is processed before allowing access to field detail
+    // Find the original farm from farms array
+    const farm = farms.find((f: any) => (f._id || f.id) === field.id);
+    
+    // Check if farm is processed
+    const isProcessed = farm && (
+      farm.boundary || 
+      farm.kmlUrl || 
+      farm.kmlFileUrl || 
+      farm.status === "Processed" || 
+      farm.status === "processed"
+    );
+    
+    if (!isProcessed) {
+      // Field is not processed - prevent access to field detail
+      toast({
+        title: "Field Not Processed",
+        description: "Please process this field by uploading a KML file before viewing details in risk assessment.",
+        variant: "default",
+      });
+      return;
+    }
+    
+    // Field is processed - allow access to field detail
     setSelectedField(field);
     setViewMode("fieldDetail");
+    
+    // Use farm from farms array if it has boundary data (most up-to-date)
+    if (farm && (farm.boundary || farm.kmlUrl || farm.kmlFileUrl)) {
+      setSelectedFarmForDetail(farm);
+    }
     
     // Load full assessment details
     if (selectedAssessment?.id) {
@@ -715,7 +744,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
         const assessmentData = assessment.data || assessment;
         setAssessmentDetails(assessmentData);
         
-        // Load farm details if farmId is available
+        // Load farm details if farmId is available (to get latest data including boundary)
         if (assessmentData.farmId) {
           const farmId = typeof assessmentData.farmId === 'string' 
             ? assessmentData.farmId 
@@ -723,11 +752,29 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
           if (farmId) {
             try {
               const farmData = await getFarmById(farmId);
-              setSelectedFarmForDetail(farmData.data || farmData);
+              const fetchedFarm = farmData.data || farmData;
+              
+              // Merge with existing farm data from farms array if available
+              const mergedFarm = farm ? { ...farm, ...fetchedFarm } : fetchedFarm;
+              setSelectedFarmForDetail(mergedFarm);
+              
+              console.log('✅ Loaded farm for detail view:', {
+                id: mergedFarm._id || mergedFarm.id,
+                hasBoundary: !!mergedFarm.boundary,
+                hasKmlUrl: !!(mergedFarm.kmlUrl || mergedFarm.kmlFileUrl),
+                status: mergedFarm.status
+              });
             } catch (err) {
               console.error('Failed to load farm details:', err);
+              // If fetch fails, keep the farm from farms array if available
+              if (farm) {
+                setSelectedFarmForDetail(farm);
+              }
             }
           }
+        } else if (farm) {
+          // No assessment farmId, but we have farm from farms array
+          setSelectedFarmForDetail(farm);
         }
       } catch (err: any) {
         console.error('Failed to load assessment details:', err);
@@ -736,9 +783,16 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
           description: "Failed to load assessment details",
           variant: "destructive",
         });
+        // If assessment load fails, still use farm from farms array if available
+        if (farm) {
+          setSelectedFarmForDetail(farm);
+        }
       } finally {
         setLoadingAssessmentDetails(false);
       }
+    } else if (farm) {
+      // No assessment selected, use farm from farms array
+      setSelectedFarmForDetail(farm);
     }
   };
 
@@ -1744,6 +1798,7 @@ export default function RiskAssessmentSystem({ assessments: propAssessments, onR
                       showControls={true}
                       className="w-full"
                       boundary={selectedFarmForDetail?.boundary || null}
+                      kmlUrl={selectedFarmForDetail?.kmlUrl || selectedFarmForDetail?.kmlFileUrl || null}
                     />
                   </div>
 

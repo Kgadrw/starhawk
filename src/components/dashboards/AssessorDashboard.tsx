@@ -217,9 +217,12 @@ export default function AssessorDashboard() {
   const [fieldMethod, setFieldMethod] = useState<"upload" | "draw">("upload");
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const [selectedFieldForUpload, setSelectedFieldForUpload] = useState<any | null>(null);
+  const [selectedFieldsForProcessing, setSelectedFieldsForProcessing] = useState<Set<string>>(new Set());
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [kmlUploadName, setKmlUploadName] = useState<string>('');
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [processingFields, setProcessingFields] = useState<Set<string>>(new Set());
+  const [fieldProcessingStatus, setFieldProcessingStatus] = useState<Record<string, { status: 'processing' | 'success' | 'error'; message?: string }>>({});
   
   // API state
   const [assessments, setAssessments] = useState<AssessmentSummary[]>([]);
@@ -242,6 +245,7 @@ export default function AssessorDashboard() {
   const [expandedFarmers, setExpandedFarmers] = useState<Set<string>>(new Set());
   const [farmerFields, setFarmerFields] = useState<Record<string, any[]>>({});
   const [loadingFields, setLoadingFields] = useState<Record<string, boolean>>({});
+  const [assignedFarmIds, setAssignedFarmIds] = useState<Set<string>>(new Set());
   const [selectedFarmerForFields, setSelectedFarmerForFields] = useState<{id: string; name: string} | null>(null);
   const [showFarmerFieldsView, setShowFarmerFieldsView] = useState(false);
   const [farmerViewMode, setFarmerViewMode] = useState<"list" | "detail">("list");
@@ -388,6 +392,7 @@ export default function AssessorDashboard() {
       loadFarms();
     } else if (activePage === "farmers" && assessorId) {
       loadFarmers();
+      loadAssessments(); // Load assessments to mark assigned farms
     } else if (activePage === "crop-monitoring" && assessorId) {
       loadFarmers();
       loadFarms();
@@ -412,9 +417,11 @@ export default function AssessorDashboard() {
     setFarmersLoading(true);
     setFarmersError(null);
     try {
-      // Use the new API method: GET /assessments/farmers/list
+      // IMPORTANT: This API endpoint returns ONLY farmers assigned to the current assessor
+      // The backend filters based on the assessor's authentication token
+      // Endpoint: GET /assessments/farmers/list
       const responseData = await assessmentsApiService.getAssignedFarmers();
-      console.log('✅ Assigned farmers API response:', responseData);
+      console.log('Assigned farmers API response:', responseData);
       
       // Handle response - it might be in response.data or directly in response
       let farmersList = responseData.data || responseData.items || responseData || [];
@@ -424,8 +431,64 @@ export default function AssessorDashboard() {
         farmersList = [];
       }
       
-      const farmersArray = Array.isArray(farmersList) ? farmersList : [];
-      console.log(`✅ Loaded ${farmersArray.length} assigned farmers with farms`);
+      let farmersArray = Array.isArray(farmersList) ? farmersList : [];
+      console.log(`Loaded ${farmersArray.length} farmers from API`);
+      
+      // CLIENT-SIDE FILTERING: Ensure we only show farmers assigned to this assessor
+      // Get assessments to identify which farmers are assigned to this assessor
+      let assignedFarmerIds = new Set<string>();
+      
+      try {
+        // Load assessments for this assessor to get assigned farmers
+        // Use getAllAssessments to get all assessments (not paginated)
+        const assessmentsResponse = await assessmentsApiService.getAllAssessments();
+        const assessmentsData = assessmentsResponse.data || assessmentsResponse.items || assessmentsResponse || [];
+        
+        if (Array.isArray(assessmentsData)) {
+          assessmentsData.forEach((assessment: any) => {
+            // Extract farmerId from assessment
+            let farmerId = '';
+            if (assessment.farmerId) {
+              farmerId = typeof assessment.farmerId === 'object' 
+                ? (assessment.farmerId._id || assessment.farmerId.id || '')
+                : assessment.farmerId;
+            } else if (assessment.farm?.farmerId) {
+              farmerId = typeof assessment.farm.farmerId === 'object'
+                ? (assessment.farm.farmerId._id || assessment.farm.farmerId.id || '')
+                : assessment.farm.farmerId;
+            } else if (assessment.farmId) {
+              // If farmId is an object with farmerId
+              if (typeof assessment.farmId === 'object' && assessment.farmId.farmerId) {
+                farmerId = typeof assessment.farmId.farmerId === 'object'
+                  ? (assessment.farmId.farmerId._id || assessment.farmId.farmerId.id || '')
+                  : assessment.farmId.farmerId;
+              }
+            }
+            
+            if (farmerId) {
+              assignedFarmerIds.add(String(farmerId));
+            }
+          });
+        }
+        
+        console.log(`Found ${assignedFarmerIds.size} unique assigned farmers from assessments`);
+      } catch (assessmentError) {
+        console.warn('Could not load assessments for filtering, using API response as-is:', assessmentError);
+      }
+      
+      // Filter farmers to only include those assigned to this assessor
+      if (assignedFarmerIds.size > 0) {
+        const beforeCount = farmersArray.length;
+        farmersArray = farmersArray.filter((farmer: any) => {
+          const farmerId = String(farmer._id || farmer.id || '');
+          return assignedFarmerIds.has(farmerId);
+        });
+        console.log(`Filtered farmers: ${beforeCount} -> ${farmersArray.length} (only assigned farmers)`);
+      } else {
+        console.warn('No assigned farmers found in assessments. Showing all farmers from API (this may be a backend issue).');
+      }
+      
+      console.log(`Final count: ${farmersArray.length} assigned farmers with farms`);
       
       // Extract fields from each farmer if they exist in the response
       const fieldsMap: Record<string, any[]> = {};
@@ -700,13 +763,29 @@ export default function AssessorDashboard() {
 
       console.log(`✅ Found ${farmerFarms.length} farms for farmer ${farmerId}`);
       if (farmerFarms.length > 0) {
-        console.log('Sample farm:', {
+        // Log all farms with their status to help debug (using the helper function)
+        console.log('📋 All farms for this farmer:', farmerFarms.map((f: any) => ({
+          id: f._id || f.id,
+          name: f.name,
+          status: f.status || 'NO STATUS',
+          hasValidKML: hasValidKML(f),
+          boundary: f.boundary,
+          kmlUrl: f.kmlUrl,
+          kmlFileUrl: f.kmlFileUrl,
+          cropType: f.cropType || f.crop
+        })));
+        console.log('Sample farm (detailed):', {
           name: farmerFarms[0].name,
           cropType: farmerFarms[0].cropType,
           farmerId: farmerFarms[0].farmerId,
           farmer: farmerFarms[0].farmer,
           _id: farmerFarms[0]?._id,
-          id: farmerFarms[0].id
+          id: farmerFarms[0].id,
+          status: farmerFarms[0].status,
+          hasValidKML: hasValidKML(farmerFarms[0]),
+          boundary: farmerFarms[0].boundary,
+          kmlUrl: farmerFarms[0].kmlUrl,
+          kmlFileUrl: farmerFarms[0].kmlFileUrl
         });
       } else {
         console.warn(`⚠️ No farms found for farmer ${farmerId} after filtering ${allFarms.length} total farms`);
@@ -720,6 +799,7 @@ export default function AssessorDashboard() {
         })));
       }
 
+      // Ensure we're storing ALL farms, not filtering by status
       setFarmerFields(prev => ({ ...prev, [farmerId]: farmerFarms }));
     } catch (err: any) {
       console.error(`❌ Failed to load fields for farmer ${farmerId}:`, err);
@@ -781,6 +861,18 @@ export default function AssessorDashboard() {
     const farmerIdKey = selectedFarmerForFields.id;
     const farmerFieldsList = farmerFields[farmerIdKey] || [];
     const isLoadingFields = loadingFields[farmerIdKey] || false;
+    
+    // Debug: Log all fields to ensure we're seeing everything
+    console.log(`🔍 Rendering fields for farmer ${farmerIdKey}:`, {
+      totalFields: farmerFieldsList.length,
+      fields: farmerFieldsList.map((f: any) => ({
+        id: f._id || f.id,
+        name: f.name,
+        status: f.status,
+        hasBoundary: !!(f.boundary || f.kmlUrl || f.kmlFileUrl),
+        cropType: f.cropType || f.crop
+      }))
+    });
 
     return (
       <div className="min-h-screen bg-gray-50 pt-6 pb-8">
@@ -805,7 +897,21 @@ export default function AssessorDashboard() {
           {/* Fields Table */}
           <Card className={`${dashboardTheme.card}`}>
             <CardHeader>
-              <CardTitle className="text-gray-900">Fields</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-gray-900">Fields</CardTitle>
+                {selectedFieldsForProcessing.size > 0 && (
+                  <Button
+                    onClick={() => {
+                      setSelectedFieldForUpload(null);
+                      setShowUploadModal(true);
+                    }}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Process Selected ({selectedFieldsForProcessing.size})
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               {isLoadingFields ? (
@@ -822,6 +928,49 @@ export default function AssessorDashboard() {
                   <table className="w-full">
                     <thead>
                       <tr className="bg-gray-50 border-b-2 border-gray-200">
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider w-12">
+                          <input
+                            type="checkbox"
+                            checked={farmerFieldsList.length > 0 && farmerFieldsList.filter((f: any) => {
+                              const fStatus = f.status || '';
+                              const hasBoundary = f.boundary || f.kmlUrl || f.kmlFileUrl;
+                              const isProcessed = hasBoundary || 
+                                                fStatus === 'PROCESSED' || 
+                                                fStatus === 'Processed' || 
+                                                (fStatus && 
+                                                 fStatus !== 'PENDING' && 
+                                                 fStatus !== 'Processing Needed' && 
+                                                 fStatus !== '' &&
+                                                 fStatus.toLowerCase() !== 'pending');
+                              return !isProcessed;
+                            }).every((f: any) => {
+                              const fid = (f._id || f.id)?.toString() || '';
+                              return selectedFieldsForProcessing.has(fid);
+                            })}
+                            onChange={(e) => {
+                              const unprocessedFields = farmerFieldsList.filter((f: any) => {
+                                const fStatus = f.status || '';
+                                const hasBoundary = f.boundary || f.kmlUrl || f.kmlFileUrl;
+                                const isProcessed = hasBoundary || 
+                                                  fStatus === 'PROCESSED' || 
+                                                  fStatus === 'Processed' || 
+                                                  (fStatus && 
+                                                   fStatus !== 'PENDING' && 
+                                                   fStatus !== 'Processing Needed' && 
+                                                   fStatus !== '' &&
+                                                   fStatus.toLowerCase() !== 'pending');
+                                return !isProcessed;
+                              });
+                              if (e.target.checked) {
+                                const fieldIds = unprocessedFields.map((f: any) => (f._id || f.id)?.toString() || '').filter(Boolean);
+                                setSelectedFieldsForProcessing(new Set(fieldIds));
+                              } else {
+                                setSelectedFieldsForProcessing(new Set());
+                              }
+                            }}
+                            className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                          />
+                        </th>
                         <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Field ID</th>
                         <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Farmer</th>
                         <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Crop</th>
@@ -832,17 +981,53 @@ export default function AssessorDashboard() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
+                      {/* Display ALL fields regardless of processing status */}
                       {farmerFieldsList.map((field, fieldIndex) => {
                         const fieldId = field._id || field.id || '';
                         const displayFieldId = fieldId ? `FLD-${String(fieldId).slice(-3).padStart(3, '0')}` : 'Not processed';
-                        const isProcessed = field.status && field.status !== 'PENDING' && field.status !== 'Processing Needed' && field.status !== '';
+                        // More comprehensive status check - a field is processed if it has a boundary or status is PROCESSED/Processed
+                        // Otherwise, it's not processed (PENDING, Processing Needed, empty, or any other status)
+                        const fieldStatus = field.status || '';
+                        const hasBoundary = field.boundary || field.kmlUrl || field.kmlFileUrl;
+                        const isProcessed = hasBoundary || 
+                                          fieldStatus === 'PROCESSED' || 
+                                          fieldStatus === 'Processed' || 
+                                          (fieldStatus && 
+                                           fieldStatus !== 'PENDING' && 
+                                           fieldStatus !== 'Processing Needed' && 
+                                           fieldStatus !== '' &&
+                                           fieldStatus.toLowerCase() !== 'pending');
                         const season = field.season || field.seasonType || 'N/A';
+                        
+                        const fieldIdStr = fieldId.toString();
+                        const isSelected = selectedFieldsForProcessing.has(fieldIdStr);
+                        const isProcessing = processingFields.has(fieldIdStr);
+                        const processingStatus = fieldProcessingStatus[fieldIdStr];
                         
                         return (
                           <tr
                             key={field._id || field.id || fieldIndex}
-                            className="hover:bg-gray-50/50 transition-all duration-150"
+                            className={`hover:bg-gray-50/50 transition-all duration-150 ${isSelected ? 'bg-green-50' : ''}`}
                           >
+                            <td className="py-4 px-6 whitespace-nowrap">
+                              {!isProcessed && (
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={(e) => {
+                                    const newSet = new Set(selectedFieldsForProcessing);
+                                    if (e.target.checked) {
+                                      newSet.add(fieldIdStr);
+                                    } else {
+                                      newSet.delete(fieldIdStr);
+                                    }
+                                    setSelectedFieldsForProcessing(newSet);
+                                  }}
+                                  className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                                  disabled={isProcessing}
+                                />
+                              )}
+                            </td>
                             <td className="py-4 px-6 whitespace-nowrap">
                               <div className={`text-sm font-medium ${isProcessed ? 'text-gray-900' : 'text-gray-400'}`}>
                                 {displayFieldId}
@@ -866,7 +1051,20 @@ export default function AssessorDashboard() {
                               <div className="text-sm text-gray-600">{season}</div>
                             </td>
                             <td className="py-4 px-6 whitespace-nowrap">
-                              {isProcessed ? (
+                              {isProcessing ? (
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-500 text-white border border-blue-600">
+                                  <img src="/loading.gif" alt="Loading" className="w-3 h-3 mr-1" />
+                                  Processing...
+                                </span>
+                              ) : processingStatus?.status === 'success' ? (
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-500 text-white border border-green-600">
+                                  Processed
+                                </span>
+                              ) : processingStatus?.status === 'error' ? (
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-500 text-white border border-red-600">
+                                  Error
+                                </span>
+                              ) : isProcessed ? (
                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-500 text-white border border-green-600">
                                   Processed
                                 </span>
@@ -989,6 +1187,25 @@ export default function AssessorDashboard() {
         
         return farmerName || 'Unknown Farmer';
       };
+      
+      // Extract assigned farm IDs for marking farms
+      const farmIds = new Set<string>();
+      assessmentsData.forEach((item: any) => {
+        // Extract farmId from assessment
+        let farmId = '';
+        if (item.farmId) {
+          farmId = typeof item.farmId === 'object' 
+            ? (item.farmId._id || item.farmId.id || '')
+            : item.farmId;
+        } else if (item.farm?._id || item.farm?.id) {
+          farmId = item.farm._id || item.farm.id;
+        }
+        if (farmId) {
+          farmIds.add(String(farmId));
+        }
+      });
+      setAssignedFarmIds(farmIds);
+      console.log(`Marked ${farmIds.size} farms as assigned to this assessor`);
       
       // Map assessments - extract data directly from API response (no async calls needed)
       const mappedAssessments = assessmentsData.map((item: any) => {
@@ -1301,16 +1518,26 @@ export default function AssessorDashboard() {
       farm.farmer?._id === assessment.farmerId
     );
     
-    return relevantFarms.filter(farm => farm != null).map((farm: any) => ({
-      id: farm?._id || farm?.id || '',
-      farmerName: farm.farmerName || farm.farmer?.name || assessment.farmerName,
-      crop: farm.cropType || 'Unknown',
-      area: farm.area || 0,
-      season: farm.season || 'N/A',
-      status: farm.status || 'Active',
-      fieldName: farm.name || 'Unnamed Field',
-      sowingDate: farm.sowingDate || farm.createdAt ? new Date(farm.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-    }));
+    return relevantFarms.filter(farm => farm != null).map((farm: any) => {
+      // Determine if processed based on boundary or status
+      const hasBoundary = !!(farm.boundary || farm.kmlUrl || farm.kmlFileUrl);
+      const farmStatus = farm.status?.toLowerCase() || '';
+      const isProcessed = hasBoundary || 
+                         farmStatus === 'processed' || 
+                         (farmStatus && farmStatus !== 'pending' && farmStatus !== 'processing needed');
+      
+      return {
+        id: farm?._id || farm?.id || '',
+        farmerName: farm.farmerName || farm.farmer?.name || assessment.farmerName,
+        crop: farm.cropType || 'Unknown',
+        area: farm.area || 0,
+        season: farm.season || 'N/A',
+        status: isProcessed ? 'Processed' : 'Processing Needed',
+        fieldName: farm.name || 'Unnamed Field',
+        sowingDate: farm.sowingDate || farm.createdAt ? new Date(farm.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        rawFarm: farm // Include rawFarm for boundary checking
+      };
+    });
   };
 
   const getFieldDetails = (field: Field): FieldDetail => {
@@ -2524,8 +2751,9 @@ export default function AssessorDashboard() {
     setFieldStatus("Ready to Sync");
   };
 
-  const handleKMLUpload = async (file: File, farmName?: string) => {
-    if (!selectedFieldForUpload) {
+  const handleKMLUpload = async (file: File, farmName?: string, field?: any) => {
+    const targetField = field || selectedFieldForUpload;
+    if (!targetField) {
       toast({
         title: "Error",
         description: "No field selected for upload",
@@ -2534,11 +2762,27 @@ export default function AssessorDashboard() {
       return;
     }
 
-    const farmId = selectedFieldForUpload.id || selectedFieldForUpload._id;
-    if (!farmId) {
+    // Try multiple ways to get the farm ID - rawFarm might have _id or id
+    let farmId = targetField._id || targetField.id || targetField.farmId;
+    
+    // Convert to string and check if it's valid
+    if (farmId) {
+      farmId = String(farmId);
+    }
+    
+    // Check if farmId is missing or is a temporary ID
+    if (!farmId || farmId === 'undefined' || farmId === 'null' || farmId.startsWith('temp-')) {
+      console.error('❌ Farm ID extraction failed:', {
+        targetField,
+        extractedId: farmId,
+        has_id: !!targetField._id,
+        hasId: !!targetField.id,
+        hasFarmId: !!targetField.farmId,
+        rawKeys: Object.keys(targetField || {})
+      });
       toast({
         title: "Error",
-        description: "Farm ID not found",
+        description: "Farm ID not found. The farm must exist in the system before uploading KML. Please contact support if this issue persists.",
         variant: "destructive",
       });
       return;
@@ -2566,29 +2810,251 @@ export default function AssessorDashboard() {
       return;
     }
 
-    setUploadingFile(true);
+    const fieldId = farmId.toString();
+    setProcessingFields(prev => new Set(prev).add(fieldId));
+    setFieldProcessingStatus(prev => ({
+      ...prev,
+      [fieldId]: { status: 'processing', message: 'Uploading KML...' }
+    }));
+
     try {
-      console.log('📤 Starting KML upload for farm:', farmId);
-      console.log('📄 File details:', { name: file.name, size: file.size, type: file.type });
-      console.log('📝 Farm name:', farmName || kmlUploadName);
+      console.log('Starting KML upload for farm:', farmId);
+      console.log('File details:', { name: file.name, size: file.size, type: file.type });
+      console.log('Farm name:', farmName || kmlUploadName);
       
-      await uploadKML(file, farmId, farmName || kmlUploadName);
+      const uploadResult = await uploadKML(file, farmId, farmName || kmlUploadName);
       
-      console.log('✅ KML upload successful');
-      toast({
-        title: "Success",
-        description: "KML uploaded successfully. EOSDA field created.",
+      // Check if there was an EOSDA warning but upload succeeded
+      const hasEosdaWarning = uploadResult?.eosdaWarning === true;
+      const successMessage = hasEosdaWarning 
+        ? 'KML uploaded successfully (external processing disabled)'
+        : 'KML uploaded successfully';
+      
+      console.log('KML upload successful', hasEosdaWarning ? '(EOSDA disabled)' : '');
+      console.log('Upload result:', uploadResult);
+      
+      // Immediately update the field status in farmerFields state (optimistic update)
+      setFarmerFields((prev: Record<string, any[]>) => {
+        const updated: Record<string, any[]> = { ...prev };
+        Object.keys(updated).forEach((farmerIdKey) => {
+          const fields = updated[farmerIdKey] || [];
+          const fieldIndex = fields.findIndex((f: any) => {
+            const fId = f._id || f.id;
+            return fId === farmId;
+          });
+          
+          if (fieldIndex !== -1) {
+            // Update the field immediately with KML info from upload result
+            updated[farmerIdKey] = fields.map((f: any, idx: number) => {
+              if (idx === fieldIndex) {
+                return {
+                  ...f,
+                  kmlUrl: uploadResult?.kmlUrl || uploadResult?.kmlFileUrl || f.kmlUrl,
+                  kmlFileUrl: uploadResult?.kmlFileUrl || uploadResult?.kmlUrl || f.kmlFileUrl,
+                  boundary: uploadResult?.boundary || f.boundary,
+                  status: 'Processed'
+                };
+              }
+              return f;
+            });
+          }
+        });
+        return updated;
       });
       
+      // Fetch the updated farm data to get the boundary and status
+      let updatedFarm = null;
+      try {
+        const farmResponse = await getFarmById(farmId);
+        updatedFarm = farmResponse.data || farmResponse;
+        console.log('Fetched updated farm data:', updatedFarm);
+        
+        // Ensure KML URL is set from upload result if not in updatedFarm
+        if (updatedFarm && !updatedFarm.kmlUrl && !updatedFarm.kmlFileUrl) {
+          updatedFarm.kmlUrl = uploadResult?.kmlUrl || uploadResult?.kmlFileUrl;
+          updatedFarm.kmlFileUrl = uploadResult?.kmlFileUrl || uploadResult?.kmlUrl;
+        }
+        
+        // Update the farm in the farms array with the latest data
+        if (updatedFarm) {
+          setFarms((prevFarms: any[]) => {
+            const updated = prevFarms.map((f: any) => {
+              const fId = f._id || f.id;
+              if (fId === farmId || fId === updatedFarm._id || fId === updatedFarm.id) {
+                // Merge the updated farm data
+                return {
+                  ...f,
+                  ...updatedFarm,
+                  boundary: updatedFarm.boundary || f.boundary,
+                  kmlUrl: updatedFarm.kmlUrl || f.kmlUrl,
+                  kmlFileUrl: updatedFarm.kmlFileUrl || f.kmlFileUrl,
+                  status: updatedFarm.status || 'Processed'
+                };
+              }
+              return f;
+            });
+            
+            // If farm not found in array, add it
+            const exists = updated.some((f: any) => {
+              const fId = f._id || f.id;
+              return fId === farmId || fId === updatedFarm._id || fId === updatedFarm.id;
+            });
+            
+            if (!exists && updatedFarm) {
+              updated.push(updatedFarm);
+            }
+            
+            return updated;
+          });
+        }
+      } catch (fetchErr: any) {
+        console.warn('⚠️ Failed to fetch updated farm data:', fetchErr);
+      }
+      
+      // Always update farm status to "Processed" after successful KML upload
+      try {
+        await updateFarm(farmId, { status: 'Processed' });
+        console.log('✅ Farm status updated to Processed');
+      } catch (updateErr: any) {
+        console.warn('⚠️ Failed to update farm status via API:', updateErr);
+        // Continue - we'll update locally anyway
+      }
+      
+      // Update the farm in the farms array to ensure status is "Processed"
+      setFarms((prevFarms: any[]) => {
+        const updated = prevFarms.map((f: any) => {
+          const fId = f._id || f.id;
+          if (fId === farmId || (updatedFarm && (fId === updatedFarm._id || fId === updatedFarm.id))) {
+            // Merge updated farm data and ensure status is "Processed"
+            return {
+              ...f,
+              ...(updatedFarm || {}),
+              boundary: updatedFarm?.boundary || f.boundary,
+              kmlUrl: updatedFarm?.kmlUrl || f.kmlUrl,
+              kmlFileUrl: updatedFarm?.kmlFileUrl || f.kmlFileUrl,
+              status: 'Processed' // Always set to Processed after KML upload
+            };
+          }
+          return f;
+        });
+        
+        // If farm not found, add it with Processed status
+        const exists = updated.some((f: any) => {
+          const fId = f._id || f.id;
+          return fId === farmId || (updatedFarm && (fId === updatedFarm._id || fId === updatedFarm.id));
+        });
+        
+        if (!exists && updatedFarm) {
+          updated.push({
+            ...updatedFarm,
+            status: 'Processed'
+          });
+        }
+        
+        return updated;
+      });
+      
+      setFieldProcessingStatus(prev => ({
+        ...prev,
+        [fieldId]: { status: 'success', message: successMessage }
+      }));
+      
+      // Reload farms to get updated boundary data
+      await loadFarms();
       // Reload farmers to update farm status
       await loadFarmers();
       // Reload farmer fields for all expanded farmers
       for (const farmerId of expandedFarmers) {
         await loadFarmerFields(farmerId);
       }
-      setShowUploadModal(false);
-      setSelectedFieldForUpload(null);
-      setKmlUploadName('');
+      // Reload farmer fields for selected farmer in farmers page if applicable
+      if (selectedFarmerForFarmersPage) {
+        const selectedFarmerId = selectedFarmerForFarmersPage._id || selectedFarmerForFarmersPage.id;
+        if (selectedFarmerId) {
+          // Immediately update the field in farmerFields state before reloading
+          setFarmerFields((prev: Record<string, any[]>) => {
+            const farmerFieldsList = prev[selectedFarmerId] || [];
+            const updatedFields = farmerFieldsList.map((f: any) => {
+              const fId = f._id || f.id;
+              if (fId === farmId || (updatedFarm && (fId === updatedFarm._id || fId === updatedFarm.id))) {
+                // Update with the latest farm data including KML
+                return {
+                  ...f,
+                  ...(updatedFarm || {}),
+                  boundary: updatedFarm?.boundary || f.boundary,
+                  kmlUrl: updatedFarm?.kmlUrl || f.kmlUrl,
+                  kmlFileUrl: updatedFarm?.kmlFileUrl || f.kmlFileUrl,
+                  status: 'Processed'
+                };
+              }
+              return f;
+            });
+            return { ...prev, [selectedFarmerId]: updatedFields };
+          });
+          // Then reload to get any additional updates
+          await loadFarmerFields(selectedFarmerId);
+        }
+      }
+      
+      // Also update farmerFields for all farmers that might have this field
+      setFarmerFields((prev: Record<string, any[]>) => {
+        const updated: Record<string, any[]> = { ...prev };
+        Object.keys(updated).forEach((farmerIdKey) => {
+          const fields = updated[farmerIdKey] || [];
+          const fieldIndex = fields.findIndex((f: any) => {
+            const fId = f._id || f.id;
+            return fId === farmId || (updatedFarm && (fId === updatedFarm._id || fId === updatedFarm.id));
+          });
+          
+          if (fieldIndex !== -1) {
+            // Update the field immediately
+            updated[farmerIdKey] = fields.map((f: any, idx: number) => {
+              if (idx === fieldIndex) {
+                return {
+                  ...f,
+                  ...(updatedFarm || {}),
+                  boundary: updatedFarm?.boundary || f.boundary,
+                  kmlUrl: updatedFarm?.kmlUrl || f.kmlUrl,
+                  kmlFileUrl: updatedFarm?.kmlFileUrl || f.kmlFileUrl,
+                  status: 'Processed'
+                };
+              }
+              return f;
+            });
+          }
+        });
+        return updated;
+      });
+      
+      // Update selectedFieldForFarmersPage if it's the same field that was uploaded
+      if (selectedFieldForFarmersPage) {
+        const selectedFieldId = selectedFieldForFarmersPage._id || selectedFieldForFarmersPage.id;
+        if (selectedFieldId === farmId || (updatedFarm && (selectedFieldId === updatedFarm._id || selectedFieldId === updatedFarm.id))) {
+          // Update the selected field with the latest data including KML
+          setSelectedFieldForFarmersPage({
+            ...selectedFieldForFarmersPage,
+            ...(updatedFarm || {}),
+            boundary: updatedFarm?.boundary || selectedFieldForFarmersPage.boundary,
+            kmlUrl: updatedFarm?.kmlUrl || uploadResult?.kmlUrl || uploadResult?.kmlFileUrl || selectedFieldForFarmersPage.kmlUrl,
+            kmlFileUrl: updatedFarm?.kmlFileUrl || uploadResult?.kmlFileUrl || uploadResult?.kmlUrl || selectedFieldForFarmersPage.kmlFileUrl,
+            status: 'Processed'
+          });
+        }
+      }
+      
+      if (!field) {
+        // Single field processing - close modal
+        setShowUploadModal(false);
+        setSelectedFieldForUpload(null);
+        setKmlUploadName('');
+        const toastMessage = uploadResult?.eosdaWarning 
+          ? "KML uploaded successfully. Field boundary processed. (External processing currently disabled)"
+          : "KML uploaded successfully. Field boundary processed.";
+        toast({
+          title: "Success",
+          description: toastMessage,
+        });
+      }
     } catch (err: any) {
       console.error('❌ Failed to upload KML:', err);
       console.error('❌ Error details:', {
@@ -2597,21 +3063,111 @@ export default function AssessorDashboard() {
         farmId: farmId,
         fileName: file.name
       });
+      
+      // Handle EOSDA-related errors gracefully (EOSDA is currently disabled)
+      const errorMessage = err.message || 'Upload failed';
+      let userFriendlyMessage = errorMessage;
+      let userFriendlyTitle = "Upload Failed";
+      
+      if (errorMessage.includes('requests limit exceeded') || errorMessage.includes('EOSDA API error') || errorMessage.includes('EOSDA')) {
+        // EOSDA is currently disabled, but KML upload should still work
+        // If we get an EOSDA error, the backend might be trying to use it
+        userFriendlyTitle = "Processing Error";
+        userFriendlyMessage = "The KML file was uploaded but there was an issue with external processing. The boundary should still be saved. Please refresh and check if the field was processed correctly.";
+      }
+      
+      setFieldProcessingStatus(prev => ({
+        ...prev,
+        [fieldId]: { status: 'error', message: userFriendlyMessage }
+      }));
+      if (!field) {
+        toast({
+          title: userFriendlyTitle,
+          description: userFriendlyMessage,
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setProcessingFields(prev => {
+        const next = new Set(prev);
+        next.delete(fieldId);
+        return next;
+      });
+    }
+  };
+
+  // Process multiple fields simultaneously
+  const handleProcessMultipleFields = async (files: FileList | null) => {
+    if (!files || files.length === 0) {
       toast({
-        title: "Upload Failed",
-        description: err.message || 'Failed to upload KML file. Please check the console for details.',
+        title: "Error",
+        description: "Please select at least one file",
         variant: "destructive",
       });
-    } finally {
-      setUploadingFile(false);
+      return;
+    }
+
+    if (selectedFieldsForProcessing.size === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one field to process",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const selectedFieldsArray = Array.from(selectedFieldsForProcessing);
+    const filesArray = Array.from(files);
+    const farmerIdKey = selectedFarmerForFields?.id || '';
+    const fieldsList = farmerFields[farmerIdKey] || [];
+
+    // Match files to fields (one file per field, or use first file for all if only one file)
+    const processingPromises = selectedFieldsArray.map(async (fieldId) => {
+      const field = fieldsList.find(
+        (f: any) => (f._id || f.id)?.toString() === fieldId
+      );
+      
+      if (!field) return;
+
+      // Find corresponding file or use first file
+      const fileIndex = selectedFieldsArray.indexOf(fieldId);
+      const file = filesArray[fileIndex] || filesArray[0];
+      const farmName = field.name || field.cropType || `Field ${fieldId}`;
+      
+      return handleKMLUpload(file, farmName, field);
+    });
+
+    try {
+      await Promise.all(processingPromises);
+      toast({
+        title: "Success",
+        description: `Processing ${selectedFieldsArray.length} field(s) simultaneously...`,
+      });
+      
+      // Clear selection after processing
+      setSelectedFieldsForProcessing(new Set());
+      setShowUploadModal(false);
+    } catch (err: any) {
+      console.error('Failed to process fields:', err);
+      toast({
+        title: "Processing Error",
+        description: "Some fields failed to process. Check individual status.",
+        variant: "destructive",
+      });
     }
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    await handleKMLUpload(file, kmlUploadName);
+    // If multiple fields are selected, process them simultaneously
+    if (selectedFieldsForProcessing.size > 0) {
+      await handleProcessMultipleFields(files);
+    } else if (selectedFieldForUpload) {
+      // Single field processing
+      await handleKMLUpload(files[0], kmlUploadName);
+    }
     // Reset input
     e.target.value = '';
   };
@@ -2698,7 +3254,141 @@ export default function AssessorDashboard() {
     }
   };
 
-  const handleFieldClick = (field: Field) => {
+  // Helper function to get field status color based on API status
+  const getFieldStatusColor = (status: string) => {
+    const statusLower = (status || '').toLowerCase();
+    switch (statusLower) {
+      case "processed":
+        return "bg-green-100 text-green-800";
+      case "pending":
+      case "awaiting processing":
+        return "bg-orange-100 text-orange-800";
+      case "processing":
+        return "bg-blue-100 text-blue-800";
+      case "error":
+      case "failed":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  // Helper function to check if a field is processed based on API status
+  const isFieldProcessedByStatus = (field: any): boolean => {
+    const status = (field?.status || '').toLowerCase();
+    return status === 'processed';
+  };
+
+  // Helper function to check if a farm/field has valid KML file (processed)
+  const hasValidKML = (farm: any): boolean => {
+    if (!farm) return false;
+    
+    // Check for boundary - must have valid coordinates
+    if (farm.boundary) {
+      // If boundary is an object with coordinates array
+      if (farm.boundary.coordinates && Array.isArray(farm.boundary.coordinates) && farm.boundary.coordinates.length > 0) {
+        return true;
+      }
+      // If boundary is a GeoJSON Feature or FeatureCollection
+      if (farm.boundary.type === 'Feature' || farm.boundary.type === 'FeatureCollection') {
+        return true;
+      }
+      // If boundary is a Polygon with coordinates
+      if (farm.boundary.type === 'Polygon' && farm.boundary.coordinates && Array.isArray(farm.boundary.coordinates) && farm.boundary.coordinates.length > 0) {
+        return true;
+      }
+      // If boundary is an array of coordinates (direct polygon)
+      if (Array.isArray(farm.boundary) && farm.boundary.length > 0) {
+        return true;
+      }
+    }
+    
+    // Check for kmlUrl - must be a non-empty string
+    if (farm.kmlUrl && typeof farm.kmlUrl === 'string' && farm.kmlUrl.trim().length > 0) {
+      return true;
+    }
+    
+    // Check for kmlFileUrl - must be a non-empty string
+    if (farm.kmlFileUrl && typeof farm.kmlFileUrl === 'string' && farm.kmlFileUrl.trim().length > 0) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  // Helper function to check if a field is processed
+  const isFieldProcessed = (field: Field & { rawFarm?: any }): boolean => {
+    // Check rawFarm for KML first (most reliable indicator)
+    if (field.rawFarm) {
+      if (hasValidKML(field.rawFarm)) {
+        return true;
+      }
+    }
+    
+    // Check status
+    const status = field.status?.toLowerCase();
+    if (status === 'processed') {
+      return true;
+    }
+    
+    // If status indicates it needs processing, it's not processed
+    if (status === 'processing needed' || status === 'pending') {
+      return false;
+    }
+    
+    // If no status or unclear status, default to not processed (conservative approach)
+    // This ensures fields without clear processing status require KML upload
+    return false;
+  };
+
+  const handleFieldClick = async (field: Field & { rawFarm?: any }) => {
+    // Check if field is processed before allowing access to field detail
+    // First check the field object, then try to get fresh data from farms array
+    let isProcessed = isFieldProcessed(field);
+    
+    // If field appears unprocessed, double-check by fetching the farm data from farms array
+    if (!isProcessed && farms && farms.length > 0) {
+      try {
+        const farm = farms.find((f: any) => (f._id || f.id) === field.id);
+        if (farm) {
+          // Re-check with fresh farm data
+          const hasBoundary = farm.boundary || farm.kmlUrl || farm.kmlFileUrl;
+          const farmStatus = farm.status?.toLowerCase();
+          isProcessed = hasBoundary || farmStatus === 'processed';
+          
+          // Update field with latest farm data if found
+          if (farm && !field.rawFarm) {
+            field.rawFarm = farm;
+          }
+        }
+      } catch (err) {
+        console.warn('Could not check farm status:', err);
+      }
+    }
+    
+    if (!isProcessed) {
+      // Field is not processed - open upload modal instead
+      toast({
+        title: "Field Not Processed",
+        description: "Please upload a KML file to process this field before viewing details.",
+        variant: "default",
+      });
+      
+      // Set the field for upload and open modal
+      // Try to get rawFarm from field, or create a minimal farm object
+      const farmData = field.rawFarm || {
+        _id: field.id,
+        id: field.id,
+        name: field.fieldName || 'Field'
+      };
+      
+      setSelectedFieldForUpload(farmData);
+      setKmlUploadName(field.fieldName || farmData.name || '');
+      setShowUploadModal(true);
+      return;
+    }
+    
+    // Field is processed - allow access to field detail
     setSelectedField(field);
     setViewMode("fieldDetail");
   };
@@ -2734,8 +3424,10 @@ export default function AssessorDashboard() {
     setSelectedFarmerDetail(null);
     
     try {
-      const response = await getUserById(farmerId);
-      const farmerData = response.data || response;
+      // Use the farmer data that's already available (from getAssignedFarmers API)
+      // This avoids calling the admin-only getUserById endpoint
+      // The farmer object already contains all necessary information
+      const farmerData = farmer;
       setSelectedFarmerDetail(farmerData);
       setFarmerViewMode("detail");
       
@@ -2932,14 +3624,15 @@ export default function AssessorDashboard() {
                             <Button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedFarmerForProcessing(field.farmerName);
-                                setShowDrawField(true);
+                                setSelectedFieldForUpload(field.rawFarm);
+                                setKmlUploadName(field.rawFarm?.name || '');
+                                setShowUploadModal(true);
                               }}
                               size="sm"
                               className="bg-green-600 hover:bg-green-700 text-white h-8 !rounded-none"
                             >
-                              <Edit className="h-3.5 w-3.5 mr-1.5" />
-                              Process
+                              <Upload className="h-3.5 w-3.5 mr-1.5" />
+                              Upload KML
                             </Button>
                           )}
                         </td>
@@ -3194,7 +3887,7 @@ export default function AssessorDashboard() {
                   <CardTitle className="text-gray-900">Field Map</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="w-full h-[500px] border border-gray-200 rounded-lg overflow-hidden">
                     <LeafletMap
                       center={(() => {
                         // Use farm location if available, otherwise parse from fieldDetails
@@ -3218,10 +3911,10 @@ export default function AssessorDashboard() {
                         return [-1.9441, 30.0619]; // Default: Kigali, Rwanda
                       })()}
                       zoom={15}
-                      height="500px"
+                      height="100%"
                       tileLayer="satellite"
                       showControls={true}
-                      className="w-full"
+                      className="w-full h-full"
                             boundary={(farm || selectedFarm)?.boundary || null}
                             kmlUrl={(farm || selectedFarm)?.kmlUrl || (farm || selectedFarm)?.kmlFileUrl || null}
                     />
@@ -4316,6 +5009,7 @@ export default function AssessorDashboard() {
                     
                     return (
                       <div className="space-y-3">
+                        {/* Display ALL fields regardless of processing status */}
                         {farmerFieldsList.filter((farm: any) => farm != null).map((farm: any, farmIndex: number) => {
                           const farmId = farm.id || farm._id;
                           const farmStatus = farm.status || 'PENDING';
@@ -4490,19 +5184,19 @@ export default function AssessorDashboard() {
     );
   };
 
-  // Render Farmers Page (similar to crop monitoring structure)
+  // Render Farmers Page - Clean Rebuild
   const renderFarmersPage = () => {
-    // Show field detail view
+    // Field Detail View
     if (farmersPageViewMode === "fieldDetail" && selectedFieldForFarmersPage) {
       return renderFarmersPageFieldDetail();
     }
 
-    // Show farmer fields view
+    // Farmer Fields View
     if (farmersPageViewMode === "farmerFields" && selectedFarmerForFarmersPage) {
       const farmerId = selectedFarmerForFarmersPage._id || selectedFarmerForFarmersPage.id;
       const farmerIdKey = farmerId || '';
-      const farmerFieldsList = farmerFields[farmerIdKey] || [];
-      const isLoadingFields = loadingFields[farmerIdKey] || false;
+      const fieldsList = farmerFields[farmerIdKey] || [];
+      const isLoading = loadingFields[farmerIdKey] || false;
       const farmerName = 
         selectedFarmerForFarmersPage.name || 
         (selectedFarmerForFarmersPage.firstName && selectedFarmerForFarmersPage.lastName 
@@ -4512,19 +5206,18 @@ export default function AssessorDashboard() {
         selectedFarmerForFarmersPage.lastName || 
         "Unknown";
 
-      // Filter fields based on search
-      const filteredFields = farmerFieldsList.filter((farm: any) => {
+      // Filter fields by search query
+      const filteredFields = fieldsList.filter((field: any) => {
         if (!farmersPageSearchQuery) return true;
         const searchLower = farmersPageSearchQuery.toLowerCase();
-        const farmName = (farm.name || '').toLowerCase();
-        const cropType = (farm.cropType || farm.crop || '').toLowerCase();
-        return farmName.includes(searchLower) || cropType.includes(searchLower);
+        const cropType = (field.cropType || '').toLowerCase();
+        const fieldId = (field._id || field.id || '').toString().toLowerCase();
+        return cropType.includes(searchLower) || fieldId.includes(searchLower);
       });
 
       return (
         <div className="min-h-screen bg-gray-50 pt-6 pb-8">
           <div className={`${sidebarCollapsed ? 'max-w-full' : 'max-w-7xl'} mx-auto px-6`}>
-            {/* Header */}
             <div className="mb-6">
               <Button
                 onClick={() => {
@@ -4542,7 +5235,6 @@ export default function AssessorDashboard() {
               <p className="text-gray-600 mt-1">View and manage farmer's fields</p>
             </div>
 
-            {/* Search and Filter */}
             <div className="flex items-center gap-3 mb-6">
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -4553,100 +5245,203 @@ export default function AssessorDashboard() {
                   className="pl-10 bg-white border-gray-300"
                 />
               </div>
-              <Button 
-                variant="outline" 
-                className="bg-white border-gray-300"
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                Filter
-              </Button>
             </div>
 
-            {/* Fields Table */}
             <Card className={`${dashboardTheme.card}`}>
               <CardContent className="p-0">
-                {isLoadingFields ? (
+                {isLoading ? (
                   <div className="p-6">
-                    <TableSkeleton rows={5} columns={7} />
+                    <TableSkeleton rows={5} columns={6} />
                   </div>
                 ) : filteredFields.length === 0 ? (
                   <div className="p-12 text-center">
                     <Sprout className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                     <p className="text-sm font-medium text-gray-900 mb-1">No fields found</p>
-                    <p className="text-xs text-gray-500">Try adjusting your search criteria</p>
+                    <p className="text-xs text-gray-500">This farmer has no fields yet</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
                         <tr className="bg-gray-50 border-b-2 border-gray-200">
-                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Field ID</th>
-                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Farmer</th>
-                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Crop</th>
-                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Area (ha)</th>
-                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Season</th>
-                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Status</th>
-                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Actions</th>
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase">Field ID</th>
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase">Crop Type</th>
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase">Sowing Date</th>
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase">Status</th>
+                          <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredFields.map((farm: any, index: number) => {
-                          const farmId = farm.id || farm._id;
-                          const farmStatus = farm.status || 'PENDING';
-                          const isProcessed = farmStatus === 'PROCESSED' || farmStatus === 'Processed' || farm.boundary;
-                          const cropType = farm.cropType || farm.crop || 'N/A';
-                          const area = farm.area || 0;
-                          const season = farm.season || 'A';
-                          const displayFieldId = farmId ? `FLD-${String(farmId).slice(-3).padStart(3, '0')}` : `FLD-${String(index + 1).padStart(3, '0')}`;
+                        {filteredFields.map((field: any, index: number) => {
+                          const fieldId = field._id || field.id;
+                          const fieldIdString = String(fieldId || '');
+                          const isAssigned = assignedFarmIds.has(fieldIdString);
+                          const displayFieldId = fieldId ? `FLD-${String(fieldId).slice(-6).padStart(6, '0')}` : `FLD-${String(index + 1).padStart(3, '0')}`;
+                          const cropType = field.cropType || 'N/A';
+                          const sowingDate = field.sowingDate ? new Date(field.sowingDate).toLocaleDateString() : 'N/A';
                           
-                          let statusBadge = "Active";
-                          let statusClass = "bg-blue-100 text-blue-800";
-                          if (isProcessed) {
-                            statusBadge = "Processed";
-                            statusClass = "bg-green-100 text-green-800";
-                          } else if (farmStatus === 'PENDING') {
-                            statusBadge = "Pending";
-                            statusClass = "bg-yellow-100 text-yellow-800";
-                          }
+                          // Use API status field
+                          const fieldStatus = field.status || 'Pending';
+                          const isProcessed = isFieldProcessedByStatus(field);
+                          const statusBadge = fieldStatus;
+                          const statusClass = getFieldStatusColor(fieldStatus);
 
                           return (
-                            <tr key={farmId || index} className="hover:bg-gray-50 transition-colors">
+                            <tr 
+                              key={fieldId || index} 
+                              className={`hover:bg-gray-50 transition-colors ${isProcessed ? 'cursor-pointer' : ''} ${isAssigned ? 'bg-green-50/30' : ''}`}
+                              onClick={isProcessed ? async () => {
+                                // First, check if cached field has KML URL - if so, use it directly
+                                const cachedKmlUrl = field?.kmlFileUrl || field?.kmlUrl;
+                                const cachedBoundary = field?.boundary;
+                                    
+                                // If cached field has KML URL or boundary, use it directly (API doesn't return KML URL)
+                                if (cachedKmlUrl || (cachedBoundary && Object.keys(cachedBoundary).length > 0)) {
+                                  console.log('✅ Using cached field data with KML URL/boundary:', {
+                                    hasKmlUrl: !!cachedKmlUrl,
+                                    hasBoundary: !!(cachedBoundary && Object.keys(cachedBoundary).length > 0)
+                                  });
+                                  setSelectedFieldForFarmersPage(field);
+                                  setFarmersPageViewMode("fieldDetail");
+                                  return;
+                                }
+                                
+                                // Otherwise, try to fetch fresh field data
+                                try {
+                                  const fieldId = field._id || field.id;
+                                  if (fieldId) {
+                                    const freshFieldResponse = await getFarmById(fieldId);
+                                    console.log('📥 Raw API response from getFarmById:', freshFieldResponse);
+                                    
+                                    // Handle different API response structures
+                                    // API typically returns { success, message, data } or just the data
+                                    let freshField = null;
+                                    if (freshFieldResponse) {
+                                      // Check if response is wrapped in data property (most common)
+                                      if (freshFieldResponse.data) {
+                                        freshField = freshFieldResponse.data;
+                                        console.log('✅ Using freshFieldResponse.data');
+                                      } else if (freshFieldResponse.farm) {
+                                        freshField = freshFieldResponse.farm;
+                                        console.log('✅ Using freshFieldResponse.farm');
+                                      } else if (freshFieldResponse.success !== undefined || freshFieldResponse.message) {
+                                        // It's a wrapped response but data might be missing, use the whole response
+                                        freshField = freshFieldResponse;
+                                        console.log('✅ Using freshFieldResponse (wrapped structure)');
+                                      } else {
+                                        // Direct response
+                                        freshField = freshFieldResponse;
+                                        console.log('✅ Using freshFieldResponse directly');
+                                      }
+                                    }
+                                    
+                                    if (freshField) {
+                                      // Preserve KML URL and boundary from cached field if API doesn't return them
+                                      if (cachedKmlUrl && !freshField.kmlFileUrl && !freshField.kmlUrl) {
+                                        freshField.kmlFileUrl = cachedKmlUrl;
+                                        freshField.kmlUrl = cachedKmlUrl;
+                                        console.log('✅ Preserved KML URL from cached field:', cachedKmlUrl);
+                                      }
+                                      if (cachedBoundary && !freshField.boundary) {
+                                        freshField.boundary = cachedBoundary;
+                                        console.log('✅ Preserved boundary from cached field');
+                                      }
+                                      
+                                      // Log the full response structure
+                                      console.log('✅ Fetched fresh field data (full JSON):', JSON.stringify(freshField, null, 2));
+                                      console.log('✅ Fetched fresh field data (summary):', {
+                                        hasKmlFileUrl: !!freshField.kmlFileUrl,
+                                        hasKmlUrl: !!freshField.kmlUrl,
+                                        kmlFileUrl: freshField.kmlFileUrl,
+                                        kmlUrl: freshField.kmlUrl,
+                                        status: freshField.status,
+                                        allKeys: Object.keys(freshField || {})
+                                      });
+                                      // Store the full response (including wrapper) so we can extract data later
+                                      setSelectedFieldForFarmersPage(freshField);
+                                    } else {
+                                      setSelectedFieldForFarmersPage(field);
+                                    }
+                                  } else {
+                                    setSelectedFieldForFarmersPage(field);
+                                  }
+                                } catch (err) {
+                                  console.warn('Failed to fetch fresh field data, using cached:', err);
+                                  setSelectedFieldForFarmersPage(field);
+                                }
+                                setFarmersPageViewMode("fieldDetail");
+                              } : undefined}
+                            >
                               <td className="py-4 px-6 whitespace-nowrap">
-                                <div className="text-sm font-medium text-gray-900">{displayFieldId}</div>
-                              </td>
-                              <td className="py-4 px-6 whitespace-nowrap">
-                                <div className="text-sm text-gray-900">{farmerName}</div>
+                                <div className="flex items-center gap-2">
+                                  {isAssigned && (
+                                    <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" title="Assigned to you" />
+                                  )}
+                                  <div className={`text-sm font-medium ${isAssigned ? 'text-green-900 font-semibold' : 'text-gray-900'}`}>
+                                    {displayFieldId}
+                                  </div>
+                                </div>
                               </td>
                               <td className="py-4 px-6 whitespace-nowrap">
                                 <div className="flex items-center gap-2 text-sm text-gray-600">
-                                  <Sprout className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                  <Sprout className="h-4 w-4 text-green-500" />
                                   <span>{cropType}</span>
                                 </div>
                               </td>
                               <td className="py-4 px-6 whitespace-nowrap">
-                                <div className="text-sm text-gray-900">{area.toFixed(1)} ha</div>
+                                <div className="text-sm text-gray-900">{sowingDate}</div>
                               </td>
                               <td className="py-4 px-6 whitespace-nowrap">
-                                <div className="text-sm text-gray-900">{season}</div>
+                                <div className="flex items-center gap-2">
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusClass}`}>
+                                    {statusBadge}
+                                  </span>
+                                  {isAssigned && (
+                                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300 text-xs">
+                                      Assigned
+                                    </Badge>
+                                  )}
+                                </div>
                               </td>
                               <td className="py-4 px-6 whitespace-nowrap">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusClass}`}>
-                                  {statusBadge}
-                                </span>
-                              </td>
-                              <td className="py-4 px-6 whitespace-nowrap">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setSelectedFieldForFarmersPage(farm);
-                                    setFarmersPageViewMode("fieldDetail");
-                                  }}
-                                  className="border-green-600 text-green-600 hover:bg-green-50"
-                                >
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  View
-                                </Button>
+                                {isProcessed ? (
+                                  <Button
+                                    size="sm"
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      try {
+                                        const id = field._id || field.id;
+                                        if (id) {
+                                          const freshField = await getFarmById(id);
+                                          setSelectedFieldForFarmersPage(freshField || field);
+                                        } else {
+                                          setSelectedFieldForFarmersPage(field);
+                                        }
+                                      } catch (err) {
+                                        setSelectedFieldForFarmersPage(field);
+                                      }
+                                      setFarmersPageViewMode("fieldDetail");
+                                    }}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                                  >
+                                    <Eye className="h-4 w-4 mr-1" />
+                                    View
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedFieldForUpload(field);
+                                      setKmlUploadName(field.name || `Field ${displayFieldId}`);
+                                      setShowUploadModal(true);
+                                    }}
+                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                  >
+                                    <Upload className="h-4 w-4 mr-1" />
+                                    Process
+                                  </Button>
+                                )}
                               </td>
                             </tr>
                           );
@@ -4662,7 +5457,8 @@ export default function AssessorDashboard() {
       );
     }
 
-    // Show farmers list (default view)
+    // Farmers List (Default View)
+    // Note: The 'farmers' array already contains only assigned farmers from getAssignedFarmers() API
     const filteredFarmers = farmers.filter((farmer: any) => {
       if (!farmersPageSearchQuery) return true;
       const searchLower = farmersPageSearchQuery.toLowerCase();
@@ -4684,13 +5480,11 @@ export default function AssessorDashboard() {
     return (
       <div className="min-h-screen bg-gray-50 pt-6 pb-8">
         <div className={`${sidebarCollapsed ? 'max-w-full' : 'max-w-7xl'} mx-auto px-6`}>
-          {/* Header */}
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900">Farmers Management</h1>
             <p className="text-gray-600 mt-1">View and manage farmers and their fields</p>
           </div>
 
-          {/* Search and Filter */}
           <div className="flex items-center gap-3 mb-6">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -4701,16 +5495,8 @@ export default function AssessorDashboard() {
                 className="pl-10 bg-white border-gray-300"
               />
             </div>
-            <Button 
-              variant="outline" 
-              className="bg-white border-gray-300"
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              Filter
-            </Button>
           </div>
 
-          {/* Farmers Table */}
           <Card className={`${dashboardTheme.card}`}>
             <CardContent className="p-0">
               {farmersLoading ? (
@@ -4728,17 +5514,17 @@ export default function AssessorDashboard() {
                   <table className="w-full">
                     <thead>
                       <tr className="bg-gray-50 border-b-2 border-gray-200">
-                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Farmer ID</th>
-                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Farmer Name</th>
-                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Location</th>
-                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase tracking-wider">Total Fields</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase">Farmer ID</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase">Farmer Name</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase">Location</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase">Total Fields</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {filteredFarmers.map((farmer: any, index: number) => {
                         const farmerId = farmer._id || farmer.id;
                         const farmerIdKey = farmerId || `temp-${index}`;
-                        const farmerFieldsList = farmerFields[farmerIdKey] || [];
+                        const fieldsList = farmerFields[farmerIdKey] || [];
                         const farmerName = 
                           farmer.name || 
                           (farmer.firstName && farmer.lastName ? `${farmer.firstName} ${farmer.lastName}`.trim() : '') ||
@@ -4751,7 +5537,7 @@ export default function AssessorDashboard() {
                           farmer.province ||
                           farmer.district ||
                           "N/A";
-                        const displayFarmerId = farmerId ? `F-${String(farmerId).slice(-3).padStart(3, '0')}` : `F-${String(index + 1).padStart(3, '0')}`;
+                        const displayFarmerId = farmerId ? `F-${String(farmerId).slice(-6).padStart(6, '0')}` : `F-${String(index + 1).padStart(3, '0')}`;
 
                         return (
                           <tr 
@@ -4759,7 +5545,6 @@ export default function AssessorDashboard() {
                             onClick={() => {
                               setSelectedFarmerForFarmersPage(farmer);
                               setFarmersPageViewMode("farmerFields");
-                              // Load farmer fields if not already loaded
                               if (farmerId && !farmerFields[farmerIdKey]?.length) {
                                 loadFarmerFields(farmerId);
                               }
@@ -4774,12 +5559,12 @@ export default function AssessorDashboard() {
                             </td>
                             <td className="py-4 px-6 whitespace-nowrap">
                               <div className="flex items-center gap-2 text-sm text-gray-600">
-                                <MapPin className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                <MapPin className="h-4 w-4 text-green-500" />
                                 <span>{location}</span>
                               </div>
                             </td>
                             <td className="py-4 px-6 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{farmerFieldsList.length} Total Fields</div>
+                              <div className="text-sm text-gray-900">{fieldsList.length} Fields</div>
                             </td>
                           </tr>
                         );
@@ -4795,29 +5580,115 @@ export default function AssessorDashboard() {
     );
   };
 
-  // Render field detail for farmers page
+  // Render field detail for farmers page - Clean Rebuild
   const renderFarmersPageFieldDetail = () => {
-    const farmToUse = selectedFieldForFarmersPage;
-    const farmerToUse = selectedFarmerForFarmersPage;
+    const field = selectedFieldForFarmersPage;
+    if (!field) return null;
     
-    if (!farmToUse) return null;
+    // The API response is wrapped in { success, message, data } structure
+    // Extract the actual field data from the wrapper
+    const actualField = field?.data || field?.farm || field;
     
-    // If we have selectedFieldForFarmersPage, find the farmer
-    let actualFarmer = farmerToUse;
-    if (selectedFieldForFarmersPage && !farmerToUse) {
-      const fieldFarmerId = selectedFieldForFarmersPage.farmerId?._id || selectedFieldForFarmersPage.farmerId || selectedFieldForFarmersPage.farmer?._id || selectedFieldForFarmersPage.farmer;
-      actualFarmer = farmers.find((f: any) => (f._id || f.id) === fieldFarmerId) || null;
+    const fieldId = actualField._id || actualField.id || field._id || field.id;
+    const displayFieldId = fieldId ? `FLD-${String(fieldId).slice(-6).padStart(6, '0')}` : 'FLD-000';
+    const cropType = actualField.cropType || field.cropType || 'N/A';
+    const sowingDate = (actualField.sowingDate || field.sowingDate) ? new Date(actualField.sowingDate || field.sowingDate).toLocaleDateString() : 'N/A';
+    const status = actualField.status || field.status || 'Pending';
+    
+    // Get farmer info
+    const farmerId = actualField.farmerId?._id || actualField.farmerId || field.farmerId?._id || field.farmerId || '';
+    const farmer = farmers.find((f: any) => (f._id || f.id) === farmerId) || selectedFarmerForFarmersPage;
+    const farmerName = 
+      farmer?.name || 
+      (farmer?.firstName && farmer?.lastName ? `${farmer.firstName} ${farmer.lastName}`.trim() : '') ||
+      farmer?.firstName || 
+      farmer?.lastName || 
+      "Unknown Farmer";
+    
+    // Get KML URL and boundary
+    // actualField is already declared above, use it here
+    console.log('🔍 Field structure in detail view (full object):', JSON.stringify(field, null, 2));
+    console.log('🔍 Actual field data extracted:', JSON.stringify(actualField, null, 2));
+    console.log('🔍 Boundary property:', JSON.stringify(actualField?.boundary, null, 2));
+    console.log('🔍 Field structure summary:', {
+      fieldId,
+      hasDataWrapper: !!field?.data,
+      hasKmlFileUrl: !!actualField?.kmlFileUrl,
+      hasKmlUrl: !!actualField?.kmlUrl,
+      kmlFileUrl: actualField?.kmlFileUrl,
+      kmlUrl: actualField?.kmlUrl,
+      allFieldKeys: Object.keys(actualField || {}),
+      fieldStatus: actualField?.status,
+      hasBoundary: !!actualField?.boundary,
+      boundaryType: typeof actualField?.boundary,
+      boundaryKeys: actualField?.boundary ? Object.keys(actualField.boundary) : []
+    });
+    
+    // Try multiple possible property names for KML URL
+    // Check direct properties first (on the actual field data, not the wrapper)
+    let kmlUrlToUse = actualField?.kmlFileUrl || actualField?.kmlUrl || null;
+    
+    // If not found, check other possible nested structures
+    if (!kmlUrlToUse) {
+      kmlUrlToUse = 
+        actualField?.kmlFile?.url ||
+        actualField?.kml?.url ||
+        actualField?.kmlFile?.fileUrl ||
+        actualField?.fileUrl ||
+        actualField?.shapefileUrl ||
+        actualField?.boundaryFileUrl ||
+        null;
     }
     
-    if (!actualFarmer) {
-      // Try to get farmer name from the field data
-      const farmerName = selectedFieldForFarmersPage?.farmerName || "Unknown Farmer";
-      actualFarmer = { name: farmerName, firstName: farmerName.split(' ')[0], lastName: farmerName.split(' ').slice(1).join(' ') };
+    // Check if boundary contains a URL (some APIs store KML URL in boundary object)
+    if (!kmlUrlToUse && actualField?.boundary) {
+      if (typeof actualField.boundary === 'string') {
+        // Boundary might be a URL string
+        kmlUrlToUse = actualField.boundary;
+      } else if (actualField.boundary.url) {
+        kmlUrlToUse = actualField.boundary.url;
+      } else if (actualField.boundary.kmlUrl) {
+        kmlUrlToUse = actualField.boundary.kmlUrl;
+      } else if (actualField.boundary.kmlFileUrl) {
+        kmlUrlToUse = actualField.boundary.kmlFileUrl;
+      } else if (actualField.boundary.fileUrl) {
+        kmlUrlToUse = actualField.boundary.fileUrl;
+      }
     }
     
-    const fieldDetails = getFieldDetailsFromFarm(farmToUse, actualFarmer);
-    const fieldId = farmToUse._id || farmToUse.id || '';
-    const displayFieldId = fieldId ? `FLD-${String(fieldId).slice(-3).padStart(3, '0')}` : 'FLD-000';
+    // If still no KML URL, try constructing it from the field ID
+    // Some APIs store KML files at a predictable path
+    if (!kmlUrlToUse && fieldId) {
+      // Try common KML file paths
+      const possibleKmlPaths = [
+        `/farms/${fieldId}/kml`,
+        `/farms/${fieldId}/kml-file`,
+        `/farms/${fieldId}/boundary.kml`,
+        `/api/v1/farms/${fieldId}/kml`,
+        `/api/v1/farms/${fieldId}/kml-file`,
+        `/api/v1/farms/${fieldId}/boundary.kml`
+      ];
+      
+      // Note: We won't try these automatically, but log them for debugging
+      console.log('💡 Possible KML URL paths to try:', possibleKmlPaths);
+    }
+    
+    console.log('📍 KML URL to use:', kmlUrlToUse);
+    if (!kmlUrlToUse) {
+      console.warn('⚠️ No KML URL found in field object. Available properties:', Object.keys(actualField || {}));
+      console.warn('⚠️ Boundary structure:', actualField?.boundary);
+      console.log('✅ Will use boundary GeoJSON instead (if available)');
+    }
+    
+    const hasBoundary = (actualField?.boundary || field?.boundary) && (
+      ((actualField?.boundary || field?.boundary).coordinates && Array.isArray((actualField?.boundary || field?.boundary).coordinates) && (actualField?.boundary || field?.boundary).coordinates.length > 0) ||
+      (actualField?.boundary || field?.boundary).type === 'Feature' ||
+      (actualField?.boundary || field?.boundary).type === 'FeatureCollection' ||
+      (actualField?.boundary || field?.boundary).type === 'Polygon'
+    );
+    
+    // Get field details using helper function (use actualField)
+    const fieldDetails = getFieldDetailsFromFarm(actualField || field, farmer || { name: farmerName });
 
     return (
       <div className="min-h-screen bg-gray-50 pt-6 pb-8">
@@ -4898,38 +5769,44 @@ export default function AssessorDashboard() {
                       <span className="text-gray-700 font-medium">{displayFieldId}</span>
                     </div>
                     <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                      <span className="text-gray-600">Field Name</span>
-                      <span className="text-gray-700 font-medium">{fieldDetails.fieldName}</span>
-                    </div>
-                    <div className="flex justify-between items-center border-b border-gray-200 pb-3">
                       <span className="text-gray-600">Farmer</span>
-                      <span className="text-gray-700 font-medium">{fieldDetails.farmer}</span>
+                      <span className="text-gray-700 font-medium">{farmerName}</span>
                     </div>
                     <div className="flex justify-between items-center border-b border-gray-200 pb-3">
                       <span className="text-gray-600">Crop Type</span>
                       <div className="flex items-center gap-2">
                         <Leaf className="h-4 w-4 text-gray-600" />
-                        <span className="text-gray-700 font-medium">{fieldDetails.cropType}</span>
+                        <span className="text-gray-700 font-medium">{cropType}</span>
                       </div>
                     </div>
                     <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                      <span className="text-gray-600">Area</span>
-                      <span className="text-gray-700 font-medium">{fieldDetails.area} hectares</span>
-                    </div>
-                    <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                      <span className="text-gray-600">Season</span>
+                      <span className="text-gray-600">Sowing Date</span>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-gray-600" />
-                        <span className="text-gray-700 font-medium">Season {fieldDetails.season}</span>
+                        <span className="text-gray-700 font-medium">{sowingDate}</span>
                       </div>
                     </div>
-                    <div className="flex justify-between items-center pb-3">
-                      <span className="text-gray-600">Location</span>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-gray-600" />
-                        <span className="text-gray-700 font-medium">{fieldDetails.location}</span>
-                      </div>
+                    <div className="flex justify-between items-center border-b border-gray-200 pb-3">
+                      <span className="text-gray-600">Status</span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getFieldStatusColor(status)}`}>
+                        {status}
+                      </span>
                     </div>
+                    {field.area && (
+                      <div className="flex justify-between items-center border-b border-gray-200 pb-3">
+                        <span className="text-gray-600">Area</span>
+                        <span className="text-gray-700 font-medium">{field.area} hectares</span>
+                      </div>
+                    )}
+                    {fieldDetails.location && (
+                      <div className="flex justify-between items-center pb-3">
+                        <span className="text-gray-600">Location</span>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-gray-600" />
+                          <span className="text-gray-700 font-medium">{fieldDetails.location}</span>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -4942,14 +5819,13 @@ export default function AssessorDashboard() {
                     <div className="border border-gray-200 rounded-lg overflow-hidden">
                       <LeafletMap
                         center={(() => {
-                          // Use farm location if available
-                          if (farmToUse?.location?.coordinates && Array.isArray(farmToUse.location.coordinates)) {
-                            const coords = farmToUse.location.coordinates;
+                          // Use field location if available
+                          if (field?.location?.coordinates && Array.isArray(field.location.coordinates)) {
+                            const coords = field.location.coordinates;
                             const lat = coords[1];
                             const lng = coords[0];
-                            // Validate coordinates
                             if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                              return [lat, lng]; // [lat, lng] from [lng, lat]
+                              return [lat, lng];
                             }
                           }
                           // Try to parse from fieldDetails location
@@ -4968,8 +5844,9 @@ export default function AssessorDashboard() {
                         tileLayer="satellite"
                         showControls={true}
                         className="w-full"
-                        boundary={farmToUse?.boundary || null}
-                        kmlUrl={farmToUse?.kmlUrl || farmToUse?.kmlFileUrl || null}
+                        boundary={hasBoundary ? (actualField?.boundary || field?.boundary) : null}
+                        kmlUrl={kmlUrlToUse}
+                        key={`farmers-page-map-${fieldId}-${kmlUrlToUse || 'no-kml'}-${hasBoundary ? 'boundary' : 'no-boundary'}`}
                       />
                     </div>
                   </CardContent>
@@ -4984,7 +5861,7 @@ export default function AssessorDashboard() {
             <TabsContent value="crop" className="mt-6">
               <CropAnalysisTab 
                 fieldDetails={fieldDetails} 
-                farm={farmToUse}
+                farm={field}
               />
             </TabsContent>
 
@@ -4994,7 +5871,22 @@ export default function AssessorDashboard() {
                   <CardTitle className="text-gray-900">Overview</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-900/60">Field overview and summary will be displayed here.</p>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-600">Created At</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {field.createdAt ? new Date(field.createdAt).toLocaleString() : 'N/A'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Updated At</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {field.updatedAt ? new Date(field.updatedAt).toLocaleString() : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -5130,16 +6022,28 @@ export default function AssessorDashboard() {
                                       <div className="space-y-2">
                                         {farmerFieldsList.filter((farm: any) => farm != null).map((farm: any, farmIndex: number) => {
                                           const farmId = farm.id || farm._id;
+                                          const farmIdString = String(farmId || '');
+                                          const isAssigned = assignedFarmIds.has(farmIdString);
                                           const farmStatus = farm.status || 'PENDING';
                                           const isPending = farmStatus === 'PENDING';
                                           const cropType = farm.cropType || 'N/A';
                                           const sowingDate = farm.sowingDate ? new Date(farm.sowingDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A';
                                           
                                           return (
-                                            <div key={farmId || farmIndex} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
+                                            <div key={farmId || farmIndex} className={`flex items-center justify-between p-3 bg-white border rounded-lg ${isAssigned ? 'border-green-500 border-2' : 'border-gray-200'}`}>
                                               <div className="flex-1">
                                                 <div className="flex items-center gap-3">
-                                                  <span className="text-sm font-medium text-gray-900">{farm.name || `Farm ${farmIndex + 1}`}</span>
+                                                  {isAssigned && (
+                                                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" title="Assigned to you" />
+                                                  )}
+                                                  <span className={`text-sm font-medium ${isAssigned ? 'text-green-900' : 'text-gray-900'}`}>
+                                                    {farm.name || `Farm ${farmIndex + 1}`}
+                                                  </span>
+                                                  {isAssigned && (
+                                                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300 text-xs">
+                                                      Assigned
+                                                    </Badge>
+                                                  )}
                                                   <Badge 
                                                     variant={isPending ? "destructive" : "default"}
                                                     className={isPending ? "bg-yellow-500" : "bg-green-500"}
@@ -5756,12 +6660,27 @@ export default function AssessorDashboard() {
         "Unknown";
 
       // Filter fields based on search
+      // Filter fields based on search ONLY - show ALL fields regardless of processing status
       const filteredFields = farmerFieldsList.filter((farm: any) => {
+        // Only filter by search query, NOT by status - show all fields (processed and unprocessed)
         if (!cropMonitoringSearchQuery) return true;
         const searchLower = cropMonitoringSearchQuery.toLowerCase();
         const farmName = (farm.name || '').toLowerCase();
         const cropType = (farm.cropType || farm.crop || '').toLowerCase();
         return farmName.includes(searchLower) || cropType.includes(searchLower);
+      });
+      
+      // Debug: Log all fields to ensure we're showing everything
+      console.log(`🔍 renderCropMonitoring - Fields for farmer ${farmerIdKey}:`, {
+        totalFields: farmerFieldsList.length,
+        filteredFields: filteredFields.length,
+        fields: farmerFieldsList.map((f: any) => ({
+          id: f._id || f.id,
+          name: f.name,
+          status: f.status || 'NO STATUS',
+          hasBoundary: !!(f.boundary || f.kmlUrl || f.kmlFileUrl),
+          cropType: f.cropType || f.crop
+        }))
       });
     
     return (
@@ -5906,6 +6825,7 @@ export default function AssessorDashboard() {
     }
 
     // Show farmers list (default view)
+    // Note: The 'farmers' array already contains only assigned farmers from getAssignedFarmers() API
     const filteredFarmers = farmers.filter((farmer: any) => {
       if (!cropMonitoringSearchQuery) return true;
       const searchLower = cropMonitoringSearchQuery.toLowerCase();
@@ -6274,7 +7194,7 @@ export default function AssessorDashboard() {
               <CardContent className="p-12">
                 <div className="flex items-center justify-center">
                   <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
-                </div>
+                  </div>
               </CardContent>
             </Card>
           ) : policies.length === 0 ? (
@@ -6358,7 +7278,7 @@ export default function AssessorDashboard() {
             </Card>
                 );
               })}
-            </div>
+                  </div>
           )}
 
           {/* Start Monitoring Dialog */}
@@ -6868,9 +7788,15 @@ export default function AssessorDashboard() {
         <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Upload Field Contours</DialogTitle>
+              <DialogTitle>
+                {selectedFieldsForProcessing.size > 0 
+                  ? `Upload Field Contours (${selectedFieldsForProcessing.size} field${selectedFieldsForProcessing.size > 1 ? 's' : ''})`
+                  : "Upload Field Contours"}
+              </DialogTitle>
               <DialogDescription>
-                Upload KML or KMZ file with field boundaries for {selectedFieldForUpload.cropType || "this field"}
+                {selectedFieldsForProcessing.size > 0
+                  ? `Upload KML or KMZ files for ${selectedFieldsForProcessing.size} selected field${selectedFieldsForProcessing.size > 1 ? 's' : ''}. Files will be processed simultaneously.`
+                  : `Upload KML or KMZ file with field boundaries for ${selectedFieldForUpload?.cropType || "this field"}`}
               </DialogDescription>
             </DialogHeader>
             <div className="mt-4 space-y-4">
@@ -6888,27 +7814,36 @@ export default function AssessorDashboard() {
               </div>
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-green-500 transition-colors">
                 <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-700 mb-2 font-medium">Drag-and-drop here or select files</p>
-                <p className="text-sm text-gray-500 mb-4">with the field contours for the upload to start</p>
+                <p className="text-gray-700 mb-2 font-medium">
+                  {selectedFieldsForProcessing.size > 0 
+                    ? `Drag-and-drop here or select ${selectedFieldsForProcessing.size} file${selectedFieldsForProcessing.size > 1 ? 's' : ''}`
+                    : "Drag-and-drop here or select files"}
+                </p>
+                <p className="text-sm text-gray-500 mb-4">
+                  {selectedFieldsForProcessing.size > 0
+                    ? `with field contours for ${selectedFieldsForProcessing.size} selected field${selectedFieldsForProcessing.size > 1 ? 's' : ''}. Files will be processed simultaneously.`
+                    : "with the field contours for the upload to start"}
+                </p>
                 <input
                   type="file"
                   id="kml-upload"
                   className="hidden"
                   accept=".kml,.kmz"
+                  multiple={selectedFieldsForProcessing.size > 0}
                   onChange={handleFileSelect}
-                  disabled={uploadingFile}
+                  disabled={uploadingFile || processingFields.size > 0}
                 />
                 <Button
                   onClick={() => document.getElementById('kml-upload')?.click()}
-                  disabled={uploadingFile}
+                  disabled={uploadingFile || processingFields.size > 0}
                   className="bg-green-600 hover:bg-green-700 text-white !rounded-none"
                 >
-                  {uploadingFile ? (
+                  {uploadingFile || processingFields.size > 0 ? (
                     <img src="/loading.gif" alt="Loading" className="w-4 h-4" />
                   ) : (
                     <>
                       <Upload className="h-4 w-4 mr-2" />
-                      SELECT FILES
+                      {selectedFieldsForProcessing.size > 0 ? `SELECT FILES (${selectedFieldsForProcessing.size} field${selectedFieldsForProcessing.size > 1 ? 's' : ''})` : 'SELECT FILES'}
                     </>
                   )}
                 </Button>
@@ -6968,3 +7903,4 @@ export default function AssessorDashboard() {
     </DashboardLayout>
   );
 }
+
