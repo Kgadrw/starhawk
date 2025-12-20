@@ -2832,6 +2832,15 @@ export default function AssessorDashboard() {
       
       console.log('KML upload successful', hasEosdaWarning ? '(EOSDA disabled)' : '');
       console.log('Upload result:', uploadResult);
+      console.log('📦 Upload result boundary check:', {
+        hasBoundary: !!uploadResult?.boundary,
+        boundaryType: typeof uploadResult?.boundary,
+        boundaryValue: uploadResult?.boundary,
+        boundaryKeys: uploadResult?.boundary ? Object.keys(uploadResult.boundary) : [],
+        hasCoordinates: !!(uploadResult?.boundary?.coordinates),
+        coordinatesLength: uploadResult?.boundary?.coordinates?.length,
+        boundaryTypeValue: uploadResult?.boundary?.type
+      });
       
       // Immediately update the field status in farmerFields state (optimistic update)
       setFarmerFields((prev: Record<string, any[]>) => {
@@ -2844,15 +2853,21 @@ export default function AssessorDashboard() {
           });
           
           if (fieldIndex !== -1) {
-            // Update the field immediately with KML info from upload result
+            // Update the field immediately with boundary GeoJSON from upload result
+            // The API returns boundary as GeoJSON (not KML URL) - this is the correct data structure
             updated[farmerIdKey] = fields.map((f: any, idx: number) => {
               if (idx === fieldIndex) {
                 return {
                   ...f,
-                  kmlUrl: uploadResult?.kmlUrl || uploadResult?.kmlFileUrl || f.kmlUrl,
-                  kmlFileUrl: uploadResult?.kmlFileUrl || uploadResult?.kmlUrl || f.kmlFileUrl,
+                  // Store boundary GeoJSON from upload response (this is what the API returns)
                   boundary: uploadResult?.boundary || f.boundary,
-                  status: 'Processed'
+                  // Also store location and area if provided
+                  location: uploadResult?.location || f.location,
+                  area: uploadResult?.area || f.area,
+                  // Status changes to REGISTERED after KML upload (per workflow)
+                  status: uploadResult?.status || 'REGISTERED',
+                  // Store name if provided
+                  name: uploadResult?.name || f.name
                 };
               }
               return f;
@@ -2869,10 +2884,18 @@ export default function AssessorDashboard() {
         updatedFarm = farmResponse.data || farmResponse;
         console.log('Fetched updated farm data:', updatedFarm);
         
-        // Ensure KML URL is set from upload result if not in updatedFarm
-        if (updatedFarm && !updatedFarm.kmlUrl && !updatedFarm.kmlFileUrl) {
-          updatedFarm.kmlUrl = uploadResult?.kmlUrl || uploadResult?.kmlFileUrl;
-          updatedFarm.kmlFileUrl = uploadResult?.kmlFileUrl || uploadResult?.kmlUrl;
+        // Ensure boundary GeoJSON is preserved from upload result if not in updatedFarm
+        // The API processes KML and returns boundary as GeoJSON - this is the correct format
+        if (updatedFarm && uploadResult?.boundary) {
+          // Prioritize boundary from upload result (most recent)
+          updatedFarm.boundary = uploadResult.boundary;
+        }
+        // Also preserve location and area from upload result
+        if (updatedFarm && uploadResult?.location) {
+          updatedFarm.location = uploadResult.location;
+        }
+        if (updatedFarm && uploadResult?.area) {
+          updatedFarm.area = uploadResult.area;
         }
         
         // Update the farm in the farms array with the latest data
@@ -2881,14 +2904,15 @@ export default function AssessorDashboard() {
             const updated = prevFarms.map((f: any) => {
               const fId = f._id || f.id;
               if (fId === farmId || fId === updatedFarm._id || fId === updatedFarm.id) {
-                // Merge the updated farm data
+                // Merge the updated farm data, prioritizing boundary from upload result
                 return {
                   ...f,
                   ...updatedFarm,
-                  boundary: updatedFarm.boundary || f.boundary,
-                  kmlUrl: updatedFarm.kmlUrl || f.kmlUrl,
-                  kmlFileUrl: updatedFarm.kmlFileUrl || f.kmlFileUrl,
-                  status: updatedFarm.status || 'Processed'
+                  // Boundary GeoJSON is the key data - use from upload result if available
+                  boundary: uploadResult?.boundary || updatedFarm.boundary || f.boundary,
+                  location: uploadResult?.location || updatedFarm.location || f.location,
+                  area: uploadResult?.area || updatedFarm.area || f.area,
+                  status: uploadResult?.status || updatedFarm.status || 'REGISTERED'
                 };
               }
               return f;
@@ -3030,14 +3054,16 @@ export default function AssessorDashboard() {
       if (selectedFieldForFarmersPage) {
         const selectedFieldId = selectedFieldForFarmersPage._id || selectedFieldForFarmersPage.id;
         if (selectedFieldId === farmId || (updatedFarm && (selectedFieldId === updatedFarm._id || selectedFieldId === updatedFarm.id))) {
-          // Update the selected field with the latest data including KML
+          // Update the selected field with the latest data including boundary GeoJSON
+          // According to workflow: API processes KML and returns boundary as GeoJSON (not KML URL)
           setSelectedFieldForFarmersPage({
             ...selectedFieldForFarmersPage,
             ...(updatedFarm || {}),
-            boundary: updatedFarm?.boundary || selectedFieldForFarmersPage.boundary,
-            kmlUrl: updatedFarm?.kmlUrl || uploadResult?.kmlUrl || uploadResult?.kmlFileUrl || selectedFieldForFarmersPage.kmlUrl,
-            kmlFileUrl: updatedFarm?.kmlFileUrl || uploadResult?.kmlFileUrl || uploadResult?.kmlUrl || selectedFieldForFarmersPage.kmlFileUrl,
-            status: 'Processed'
+            // Prioritize boundary GeoJSON from upload result (most recent and accurate)
+            boundary: uploadResult?.boundary || updatedFarm?.boundary || selectedFieldForFarmersPage.boundary,
+            location: uploadResult?.location || updatedFarm?.location || selectedFieldForFarmersPage.location,
+            area: uploadResult?.area || updatedFarm?.area || selectedFieldForFarmersPage.area,
+            status: uploadResult?.status || updatedFarm?.status || 'REGISTERED'
           });
         }
       }
@@ -4748,10 +4774,6 @@ export default function AssessorDashboard() {
   const renderPage = () => {
     // Handle view modes within dashboard
     if (activePage === "dashboard") {
-      // Check for farmer detail view first
-      if (farmerViewMode === "detail") {
-        return renderFarmerDetail();
-      }
       switch (viewMode) {
         case "fieldDetail":
           return renderFieldDetail();
@@ -4767,6 +4789,10 @@ export default function AssessorDashboard() {
       case "risk-assessments": return <RiskAssessmentSystem assessments={assessments} onRefresh={loadAssessments} initialField={fieldToViewInRiskAssessment} />;
       case "loss-assessments": return <LossAssessmentSystem />;
       case "farmers": 
+        // Check for farmer detail view on farmers page
+        if (farmerViewMode === "detail") {
+          return renderFarmerDetail();
+        }
         return renderFarmersPage();
       case "crop-monitoring": return renderCropMonitoring();
       case "notifications": return <AssessorNotifications />;
@@ -5294,22 +5320,32 @@ export default function AssessorDashboard() {
                                 // First, check if cached field has KML URL - if so, use it directly
                                 const cachedKmlUrl = field?.kmlFileUrl || field?.kmlUrl;
                                 const cachedBoundary = field?.boundary;
+                                const cachedSowingDate = field?.sowingDate || field?.plantingDate;
                                     
                                 // If cached field has KML URL or boundary, use it directly (API doesn't return KML URL)
+                                // Also preserve sowing date from cached field
                                 if (cachedKmlUrl || (cachedBoundary && Object.keys(cachedBoundary).length > 0)) {
                                   console.log('✅ Using cached field data with KML URL/boundary:', {
                                     hasKmlUrl: !!cachedKmlUrl,
-                                    hasBoundary: !!(cachedBoundary && Object.keys(cachedBoundary).length > 0)
+                                    hasBoundary: !!(cachedBoundary && Object.keys(cachedBoundary).length > 0),
+                                    hasSowingDate: !!cachedSowingDate,
+                                    sowingDate: cachedSowingDate
                                   });
                                   setSelectedFieldForFarmersPage(field);
                                   setFarmersPageViewMode("fieldDetail");
                                   return;
                                 }
                                 
+                                // If cached field has sowing date but we're fetching fresh data, preserve it
+                                const fieldWithSowingDate = cachedSowingDate ? { ...field, sowingDate: cachedSowingDate } : field;
+                                
                                 // Otherwise, try to fetch fresh field data
                                 try {
                                   const fieldId = field._id || field.id;
                                   if (fieldId) {
+                                    // Preserve sowing date from cached field before fetching
+                                    const cachedSowingDate = field?.sowingDate || field?.plantingDate;
+                                    
                                     const freshFieldResponse = await getFarmById(fieldId);
                                     console.log('📥 Raw API response from getFarmById:', freshFieldResponse);
                                     
@@ -5347,6 +5383,12 @@ export default function AssessorDashboard() {
                                         console.log('✅ Preserved boundary from cached field');
                                       }
                                       
+                                      // Preserve sowing date from cached field if API doesn't return it
+                                      if (cachedSowingDate && !freshField.sowingDate && !freshField.plantingDate) {
+                                        freshField.sowingDate = cachedSowingDate;
+                                        console.log('✅ Preserved sowing date from cached field:', cachedSowingDate);
+                                      }
+                                      
                                       // Log the full response structure
                                       console.log('✅ Fetched fresh field data (full JSON):', JSON.stringify(freshField, null, 2));
                                       console.log('✅ Fetched fresh field data (summary):', {
@@ -5355,6 +5397,7 @@ export default function AssessorDashboard() {
                                         kmlFileUrl: freshField.kmlFileUrl,
                                         kmlUrl: freshField.kmlUrl,
                                         status: freshField.status,
+                                        sowingDate: freshField.sowingDate || freshField.plantingDate,
                                         allKeys: Object.keys(freshField || {})
                                       });
                                       // Store the full response (including wrapper) so we can extract data later
@@ -5592,7 +5635,56 @@ export default function AssessorDashboard() {
     const fieldId = actualField._id || actualField.id || field._id || field.id;
     const displayFieldId = fieldId ? `FLD-${String(fieldId).slice(-6).padStart(6, '0')}` : 'FLD-000';
     const cropType = actualField.cropType || field.cropType || 'N/A';
-    const sowingDate = (actualField.sowingDate || field.sowingDate) ? new Date(actualField.sowingDate || field.sowingDate).toLocaleDateString() : 'N/A';
+    
+    // Extract sowing date - try multiple property names and formats
+    // Check in order: actualField (unwrapped), field (original), and nested structures
+    const sowingDateRaw = 
+      actualField?.sowingDate || 
+      actualField?.plantingDate || 
+      field?.sowingDate || 
+      field?.plantingDate ||
+      actualField?.data?.sowingDate ||
+      actualField?.data?.plantingDate ||
+      field?.data?.sowingDate ||
+      field?.data?.plantingDate ||
+      null;
+    
+    let sowingDate = 'N/A';
+    if (sowingDateRaw) {
+      try {
+        if (sowingDateRaw instanceof Date) {
+          sowingDate = sowingDateRaw.toLocaleDateString();
+        } else if (typeof sowingDateRaw === 'string') {
+          // Try parsing the date string
+          const dateObj = new Date(sowingDateRaw);
+          if (!isNaN(dateObj.getTime())) {
+            sowingDate = dateObj.toLocaleDateString();
+          } else {
+            // If parsing fails, try ISO format or other formats
+            console.warn('⚠️ Could not parse sowing date string:', sowingDateRaw);
+            sowingDate = sowingDateRaw; // Use raw string as fallback
+          }
+        } else {
+          sowingDate = String(sowingDateRaw);
+        }
+      } catch (error) {
+        console.error('❌ Error formatting sowing date:', error, sowingDateRaw);
+        sowingDate = String(sowingDateRaw); // Use raw value as fallback
+      }
+    }
+    
+    // Log sowing date extraction for debugging
+    console.log('📅 Sowing date extraction:', {
+      actualFieldSowingDate: actualField?.sowingDate,
+      actualFieldPlantingDate: actualField?.plantingDate,
+      fieldSowingDate: field?.sowingDate,
+      fieldPlantingDate: field?.plantingDate,
+      sowingDateRaw,
+      sowingDateFormatted: sowingDate,
+      actualFieldKeys: Object.keys(actualField || {}),
+      fieldKeys: Object.keys(field || {})
+    });
+    
     const status = actualField.status || field.status || 'Pending';
     
     // Get farmer info
@@ -5621,8 +5713,36 @@ export default function AssessorDashboard() {
       fieldStatus: actualField?.status,
       hasBoundary: !!actualField?.boundary,
       boundaryType: typeof actualField?.boundary,
-      boundaryKeys: actualField?.boundary ? Object.keys(actualField.boundary) : []
+      boundaryValue: actualField?.boundary,
+      boundaryKeys: actualField?.boundary ? Object.keys(actualField.boundary) : [],
+      boundaryCoordinates: actualField?.boundary?.coordinates,
+      boundaryTypeValue: actualField?.boundary?.type
     });
+    
+    // Check if boundary exists in farmerFields cache (might have been stored after upload)
+    if (farmerId) {
+      const cachedFields = farmerFields[farmerId] || [];
+      const cachedField = cachedFields.find((f: any) => {
+        const fId = f._id || f.id;
+        return fId === fieldId;
+      });
+      if (cachedField?.boundary) {
+        console.log('✅ Found boundary in cached field data:', {
+          hasBoundary: !!cachedField.boundary,
+          boundaryType: typeof cachedField.boundary,
+          boundaryTypeValue: cachedField.boundary?.type,
+          boundaryKeys: cachedField.boundary ? Object.keys(cachedField.boundary) : [],
+          boundaryCoordinates: cachedField.boundary?.coordinates
+        });
+        // Use cached boundary if actualField doesn't have it
+        if (!actualField.boundary) {
+          actualField.boundary = cachedField.boundary;
+          console.log('✅ Using cached boundary data');
+        }
+      } else {
+        console.log('⚠️ No boundary found in cached field data for field:', fieldId);
+      }
+    }
     
     // Try multiple possible property names for KML URL
     // Check direct properties first (on the actual field data, not the wrapper)
@@ -5656,36 +5776,27 @@ export default function AssessorDashboard() {
       }
     }
     
-    // If still no KML URL, try constructing it from the field ID
-    // Some APIs store KML files at a predictable path
-    if (!kmlUrlToUse && fieldId) {
-      // Try common KML file paths
-      const possibleKmlPaths = [
-        `/farms/${fieldId}/kml`,
-        `/farms/${fieldId}/kml-file`,
-        `/farms/${fieldId}/boundary.kml`,
-        `/api/v1/farms/${fieldId}/kml`,
-        `/api/v1/farms/${fieldId}/kml-file`,
-        `/api/v1/farms/${fieldId}/boundary.kml`
-      ];
-      
-      // Note: We won't try these automatically, but log them for debugging
-      console.log('💡 Possible KML URL paths to try:', possibleKmlPaths);
-    }
-    
-    console.log('📍 KML URL to use:', kmlUrlToUse);
-    if (!kmlUrlToUse) {
-      console.warn('⚠️ No KML URL found in field object. Available properties:', Object.keys(actualField || {}));
-      console.warn('⚠️ Boundary structure:', actualField?.boundary);
-      console.log('✅ Will use boundary GeoJSON instead (if available)');
-    }
-    
+    // Check if boundary GeoJSON is available
+    // According to the workflow documentation:
+    // The API processes KML files and returns boundary as GeoJSON (not a KML URL)
+    // The boundary GeoJSON is the correct data structure to use for displaying on the map
     const hasBoundary = (actualField?.boundary || field?.boundary) && (
       ((actualField?.boundary || field?.boundary).coordinates && Array.isArray((actualField?.boundary || field?.boundary).coordinates) && (actualField?.boundary || field?.boundary).coordinates.length > 0) ||
       (actualField?.boundary || field?.boundary).type === 'Feature' ||
       (actualField?.boundary || field?.boundary).type === 'FeatureCollection' ||
       (actualField?.boundary || field?.boundary).type === 'Polygon'
     );
+    
+    // Log boundary availability
+    console.log('📍 Boundary GeoJSON available:', !!hasBoundary);
+    console.log('📍 Boundary structure:', actualField?.boundary);
+    if (!hasBoundary) {
+      console.warn('⚠️ No boundary GeoJSON found in field object. Available properties:', Object.keys(actualField || {}));
+      console.warn('⚠️ This field may not have had KML uploaded yet, or the boundary was not processed.');
+      console.warn('⚠️ According to workflow: API processes KML and returns boundary as GeoJSON - no KML URL is returned.');
+    } else {
+      console.log('✅ Boundary GeoJSON found - will display on map');
+    }
     
     // Get field details using helper function (use actualField)
     const fieldDetails = getFieldDetailsFromFarm(actualField || field, farmer || { name: farmerName });
@@ -5817,22 +5928,41 @@ export default function AssessorDashboard() {
                   </CardHeader>
                   <CardContent className="p-0">
                     <div className="border border-gray-200 rounded-lg overflow-hidden">
-                      <LeafletMap
-                        center={(() => {
-                          // Use field location if available
-                          if (field?.location?.coordinates && Array.isArray(field.location.coordinates)) {
-                            const coords = field.location.coordinates;
-                            const lat = coords[1];
-                            const lng = coords[0];
-                            if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                              return [lat, lng];
+                      {!hasBoundary ? (
+                        <div className="border border-gray-200 rounded-lg p-8 bg-gray-50">
+                          <div className="text-center">
+                            <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Boundary Data Not Available</h3>
+                            <p className="text-sm text-gray-600 mb-4">
+                              The boundary geometry (GeoJSON) is not available for this field. According to the platform workflow:
+                            </p>
+                            <ul className="text-sm text-gray-600 text-left max-w-md mx-auto mb-4 space-y-1">
+                              <li>• The API processes KML files and returns boundary as GeoJSON</li>
+                              <li>• No KML file URL is returned - only the processed boundary geometry</li>
+                              <li>• This field may not have had KML uploaded yet, or processing failed</li>
+                            </ul>
+                            <p className="text-xs text-gray-500">
+                              Please upload a KML file for this field. The API will process it and return the boundary geometry.
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <LeafletMap
+                          center={(() => {
+                            // Use field location if available
+                            if (field?.location?.coordinates && Array.isArray(field.location.coordinates)) {
+                              const coords = field.location.coordinates;
+                              const lat = coords[1];
+                              const lng = coords[0];
+                              if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                                return [lat, lng];
+                              }
                             }
-                          }
-                          // Try to parse from fieldDetails location
-                          if (fieldDetails.location && fieldDetails.location.includes(',')) {
-                            const parts = fieldDetails.location.split(',');
-                            const lat = parseFloat(parts[0]?.trim() || "");
-                            const lng = parseFloat(parts[1]?.trim() || "");
+                            // Try to parse from fieldDetails location
+                            if (fieldDetails.location && fieldDetails.location.includes(',')) {
+                              const parts = fieldDetails.location.split(',');
+                              const lat = parseFloat(parts[0]?.trim() || "");
+                              const lng = parseFloat(parts[1]?.trim() || "");
                             if (!isNaN(lat) && !isNaN(lng)) {
                               return [lat, lng];
                             }
@@ -5848,6 +5978,7 @@ export default function AssessorDashboard() {
                         kmlUrl={kmlUrlToUse}
                         key={`farmers-page-map-${fieldId}-${kmlUrlToUse || 'no-kml'}-${hasBoundary ? 'boundary' : 'no-boundary'}`}
                       />
+                      )}
                     </div>
                   </CardContent>
                 </Card>
