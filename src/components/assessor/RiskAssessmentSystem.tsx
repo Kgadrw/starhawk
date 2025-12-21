@@ -1,3442 +1,1269 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { dashboardTheme } from "@/utils/dashboardTheme";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Slider } from "@/components/ui/slider";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from "recharts";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import LeafletMap from "@/components/common/LeafletMap";
 import assessmentsApiService from "@/services/assessmentsApi";
-import { getFarms, getAllFarms, getFarmById, getWeatherForecast, getHistoricalWeather, getAccumulatedWeather, getVegetationStats, getNDVITimeSeries, getFieldTrend } from "@/services/farmsApi";
-import { getUserById } from "@/services/usersAPI";
-import { getUserId } from "@/services/authAPI";
-import { API_BASE_URL, getAuthToken } from "@/config/api";
+import { getFarms, uploadKML, getWeatherForecast, getHistoricalWeather, getAccumulatedWeather, getVegetationStats, getNDVITimeSeries } from "@/services/farmsApi";
 import { useToast } from "@/hooks/use-toast";
 import { 
   MapPin,
   Search,
-  Plus,
+  Upload,
   FileText,
   Shield,
   CloudRain,
   Leaf,
   FileSpreadsheet,
-  Sun,
-  Wind,
-  Users,
-  BarChart3,
-  TrendingUp,
   Activity,
-  Droplets,
-  Thermometer,
-  Clock,
+  CheckCircle,
   AlertTriangle,
   Calendar,
-  Cloud,
-  Upload,
-  Download,
-  CheckCircle,
-  Star,
-  Map,
-  Eye,
-  Filter,
+  User,
   ArrowLeft,
   Sprout,
-  Edit,
-  User,
-  ArrowUp,
   Save,
-  AlertCircle
+  BarChart3,
+  TrendingUp,
+  Download,
+  Eye,
+  Map
 } from "lucide-react";
 
-interface AssessmentSummary {
+interface Farmer {
   id: string;
-  farmerName: string;
-  location: string;
-  type: string;
-  status: string;
-  date: string;
-}
-
-interface Field {
-  id: string;
-  farmerName: string;
-  crop: string;
-  area: number;
-  season: string;
-  status: string;
-  fieldName: string;
-  sowingDate: string;
-}
-
-interface FieldDetail {
-  fieldId: string;
-  fieldName: string;
-  farmer: string;
-  cropType: string;
-  area: number;
-  season: string;
-  sowingDate: string;
-  location: string;
-}
-
-interface WeatherData {
-  current: {
-    temperature: number;
-    summary: string;
-    humidity: number;
-    windSpeed: number;
-    windDir: string;
-    pressure: number;
-    cloudCover: number;
-    precipitation: number;
-    precipitationType: string;
-    icon: string;
-    iconNum: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+  farmerProfile: {
+    farmProvince: string;
+    farmDistrict: string;
+    farmSector: string;
   };
-  hourly: Array<{
-    time: Date;
-    temperature: number;
-    summary: string;
-    weather: string;
-    icon: number;
-    windSpeed: number;
-    windDir: string;
-    precipitation: number;
-    humidity: number;
-  }>;
-  daily: Array<{
-    date: Date;
-    summary: string;
-    weather: string;
-    icon: number;
-    maxTemp: number;
-    minTemp: number;
-    precipitation: number;
-    humidity: number;
-    windSpeed: number;
-    windDir: string;
-    sunrise: string;
-    sunset: string;
-  }>;
+  farms: Farm[];
 }
 
-interface RiskAssessmentSystemProps {
-  assessments?: AssessmentSummary[];
-  onRefresh?: () => void;
-  initialField?: Field | null;
+interface Farm {
+  id: string;
+  cropType: string;
+  sowingDate: string;
+  status: "PENDING" | "REGISTERED";
+  name: string | null;
 }
 
-export default function RiskAssessmentSystem({ assessments: propAssessments, onRefresh, initialField }: RiskAssessmentSystemProps): JSX.Element {
+interface Assessment {
+  _id: string;
+  farmId: {
+    _id: string;
+    name: string;
+    cropType: string;
+    eosdaFieldId: string;
+  };
+  assessorId: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+  };
+  status: string;
+  riskScore: number | null;
+  observations: any[];
+  photoUrls: string[];
+  reportText: string | null;
+  droneAnalysisPdfUrl: string | null;
+  droneAnalysisData: any;
+  comprehensiveNotes: string | null;
+  reportGenerated: boolean;
+}
+
+export default function RiskAssessmentSystem(): JSX.Element {
   const { toast } = useToast();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [fieldSearchQuery, setFieldSearchQuery] = useState("");
-  const [selectedAssessment, setSelectedAssessment] = useState<AssessmentSummary | null>(null);
-  const [selectedField, setSelectedField] = useState<Field | null>(null);
-  const [viewMode, setViewMode] = useState<"list" | "fieldSelection" | "fieldDetail">("list");
-  const [activeTab, setActiveTab] = useState("basic-info");
-  
-  // State for API data
-  const [internalAssessments, setInternalAssessments] = useState<AssessmentSummary[]>([]);
+  const [viewMode, setViewMode] = useState<"farmers" | "assessment">("farmers");
+  const [farmers, setFarmers] = useState<Farmer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [farms, setFarms] = useState<any[]>([]);
-  const [loadingFarms, setLoadingFarms] = useState(false);
-  const [farmers, setFarmers] = useState<Record<string, any>>({});
-  const [farmersList, setFarmersList] = useState<any[]>([]);
-  const [loadingFarmers, setLoadingFarmers] = useState(false);
-  const [selectedFarmerForDetail, setSelectedFarmerForDetail] = useState<any | null>(null);
-  const [selectedFarmForDetail, setSelectedFarmForDetail] = useState<any | null>(null);
-  const [dashboardViewMode, setDashboardViewMode] = useState<"list" | "fieldDetail">("list");
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [assessmentDetails, setAssessmentDetails] = useState<any | null>(null);
-  const [loadingAssessmentDetails, setLoadingAssessmentDetails] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedFarmer, setSelectedFarmer] = useState<Farmer | null>(null);
+  const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
+  const [assessment, setAssessment] = useState<Assessment | null>(null);
+  const [loadingAssessment, setLoadingAssessment] = useState(false);
+  
+  // KML Upload State
+  const [uploadingKML, setUploadingKML] = useState(false);
+  const [selectedKMLFile, setSelectedKMLFile] = useState<File | null>(null);
+  const [farmName, setFarmName] = useState("");
+  const [showKMLUpload, setShowKMLUpload] = useState<string | null>(null);
+  
+  // Assessment State
+  const [riskScore, setRiskScore] = useState<number | null>(null);
+  const [calculatingRisk, setCalculatingRisk] = useState(false);
+  const [comprehensiveNotes, setComprehensiveNotes] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [generatingReport, setGeneratingReport] = useState(false);
+  const [selectedPDFFile, setSelectedPDFFile] = useState<File | null>(null);
+  const [uploadingPDF, setUploadingPDF] = useState(false);
+  
+  // Data State
+  const [fieldStatistics, setFieldStatistics] = useState<any>(null);
+  const [weatherData, setWeatherData] = useState<any>(null);
+  const [loadingData, setLoadingData] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
 
-  // Use prop assessments if provided, otherwise use internal state
-  const assessments = propAssessments || internalAssessments;
-
-  // Get logged-in assessor ID
-  const assessorId = getUserId() || "";
-
-  // Load assessments from API only if not provided via props
+  // Load assigned farmers
   useEffect(() => {
-    if (!propAssessments) {
-    loadAssessments();
-    } else {
-      setLoading(false);
-    }
-  }, [propAssessments]);
-
-  // Handle initial field prop - navigate to field detail view if provided
-  useEffect(() => {
-    if (initialField) {
-      setSelectedField(initialField);
-      setViewMode("fieldDetail");
-    }
-  }, [initialField]);
-
-  // Load farms when component mounts or when assessment is selected
-  useEffect(() => {
-    if (selectedAssessment && viewMode === "fieldSelection") {
-      loadFarmsForAssessment(selectedAssessment);
-    }
-  }, [selectedAssessment, viewMode]);
-
-  // Also ensure we have all farms loaded for farmer field counts
-  useEffect(() => {
-    if (viewMode === "list" && farms.length === 0) {
-      loadAllFarms();
-    }
-  }, [viewMode]);
-
-  // Load farmers when component mounts or when assessments are loaded
-  useEffect(() => {
-    loadFarmersList();
+    loadFarmers();
   }, []);
 
-  const loadAssessments = async () => {
+  const loadFarmers = async () => {
     setLoading(true);
-    setError(null);
     try {
-      console.log('🔍 RiskAssessmentSystem: Loading assessments');
-      console.log('📍 API Endpoint: GET /api/v1/assessments');
-      console.log('👤 Assessor ID:', assessorId);
-      
-      const response: any = await assessmentsApiService.getAllAssessments();
-      console.log('📥 RiskAssessmentSystem API raw response:', response);
-      
-      // Handle different response structures
-      let assessmentsData: any[] = [];
-      if (Array.isArray(response)) {
-        assessmentsData = response;
-      } else if (response && typeof response === 'object') {
-        // Try different possible data locations
-        assessmentsData = response.data || response.assessments || response.items || response.results || [];
-        // If still not an array, check for nested data
-        if (!Array.isArray(assessmentsData) && typeof assessmentsData === 'object') {
-          assessmentsData = assessmentsData.items || assessmentsData.results || [];
-        }
-      }
-      
-      // Ensure we have an array
-      if (!Array.isArray(assessmentsData)) {
-        console.warn('⚠️ Assessment data is not an array:', assessmentsData);
-        assessmentsData = [];
-      }
-      
-      console.log('📊 Extracted assessments data:', assessmentsData);
-      console.log('📊 Total assessments from API:', assessmentsData.length);
-      
-      // Filter assessments assigned to this assessor
-      const filteredAssessments = assessmentsData.filter((assessment: any) => {
-        if (!assessorId) return false;
-        const assessmentAssessorId = assessment.assessorId || assessment.assessor?._id || assessment.assessor?.id;
-        return assessmentAssessorId === assessorId || assessmentAssessorId === assessorId.toString();
-      });
-      
-      console.log('📊 Assessments assigned to this assessor:', filteredAssessments.length);
-      
-      if (filteredAssessments.length === 0 && assessmentsData.length > 0) {
-        console.warn('⚠️ No assessments assigned to assessor:', assessorId);
-        console.warn('⚠️ Available assessor IDs in data:', 
-          assessmentsData.map(a => a.assessorId || a.assessor?._id || a.assessor?.id)
-        );
-      }
-
-      // Helper function to get farmer name directly from assessment API response
-      const getFarmerName = (assessment: any): string => {
-        // Try all possible paths in the assessment response (API should populate farmer data)
-        const farmerName = 
-          assessment.farmerName || 
-          assessment.farmer?.name || 
-          assessment.farm?.farmerName ||
-          assessment.farm?.farmer?.name ||
-          assessment.farm?.farmerId?.name ||
-          (assessment.farmer?.firstName && assessment.farmer?.lastName 
-            ? `${assessment.farmer.firstName} ${assessment.farmer.lastName}`.trim()
-            : '') ||
-          (assessment.farm?.farmerId?.firstName && assessment.farm?.farmerId?.lastName
-            ? `${assessment.farm.farmerId.firstName} ${assessment.farm.farmerId.lastName}`.trim()
-            : '') ||
-          assessment.farmer?.firstName || 
-          assessment.farmer?.lastName ||
-          assessment.farm?.farmerId?.firstName ||
-          assessment.farm?.farmerId?.lastName ||
-          assessment.farm?.farmerId?.email ||
-          assessment.farm?.farmerId?.phoneNumber ||
-          '';
-        
-        return farmerName || 'Unknown Farmer';
-      };
-
-      // Helper function to get location directly from assessment API response
-      const getLocation = (assessment: any): string => {
-        let location = '';
-        
-        // Check direct location field
-        if (assessment.location) {
-          if (typeof assessment.location === 'string') {
-            location = assessment.location;
-          } else if (assessment.location.coordinates && Array.isArray(assessment.location.coordinates)) {
-            // Format coordinates as "lat, lng"
-            location = `${assessment.location.coordinates[1]?.toFixed(4)}, ${assessment.location.coordinates[0]?.toFixed(4)}`;
-          } else if (assessment.location.address) {
-            location = assessment.location.address;
-          }
-        }
-        
-        // Check farm location (API should populate farm data)
-        if (!location && assessment.farm) {
-            if (assessment.farm.location) {
-              if (typeof assessment.farm.location === 'string') {
-                location = assessment.farm.location;
-              } else if (assessment.farm.location.coordinates && Array.isArray(assessment.farm.location.coordinates)) {
-              // Format coordinates as "lat, lng" (coordinates are [lng, lat] in GeoJSON)
-                location = `${assessment.farm.location.coordinates[1]?.toFixed(4)}, ${assessment.farm.location.coordinates[0]?.toFixed(4)}`;
-            } else if (assessment.farm.location.address) {
-              location = assessment.farm.location.address;
-            }
-          }
-          if (!location && assessment.farm.address) {
-            location = assessment.farm.address;
-          }
-        }
-        
-        // Check farmId object location (if farmId is populated)
-        if (!location && assessment.farmId && typeof assessment.farmId === 'object') {
-          if (assessment.farmId.location) {
-            if (typeof assessment.farmId.location === 'string') {
-              location = assessment.farmId.location;
-            } else if (assessment.farmId.location.coordinates && Array.isArray(assessment.farmId.location.coordinates)) {
-              location = `${assessment.farmId.location.coordinates[1]?.toFixed(4)}, ${assessment.farmId.location.coordinates[0]?.toFixed(4)}`;
-            } else if (assessment.farmId.location.address) {
-              location = assessment.farmId.location.address;
-            }
-          }
-          if (!location && assessment.farmId.address) {
-            location = assessment.farmId.address;
-          }
-        }
-        
-        return location || 'Location not available';
-      };
-
-      // Map API response to AssessmentSummary interface - extract directly from response
-      const mappedAssessments: AssessmentSummary[] = filteredAssessments.map((assessment: any) => {
-        // Extract farmerId
-        const farmerId = 
-          assessment.farm?.farmerId?._id || 
-          assessment.farm?.farmerId?.id ||
-          (typeof assessment.farm?.farmerId === 'string' ? assessment.farm?.farmerId : '') ||
-          assessment.farmerId?._id ||
-          assessment.farmerId?.id ||
-          (typeof assessment.farmerId === 'string' ? assessment.farmerId : '') ||
-          '';
-
-          return {
-            id: assessment._id || assessment.id || `RISK-${assessment.assessmentId || 'UNKNOWN'}`,
-          farmerId,
-          farmerName: getFarmerName(assessment),
-          location: getLocation(assessment),
-            type: assessment.type || "Risk Assessment",
-            status: assessment.status || "Pending",
-            date: assessment.createdAt || assessment.assessmentDate || assessment.date || new Date().toISOString().split('T')[0]
-          };
-      });
-
-      console.log('✅ RiskAssessmentSystem: Mapped assessments:', mappedAssessments);
-      setInternalAssessments(mappedAssessments);
-      
-      if (mappedAssessments.length > 0) {
-        toast({
-          title: "Assessments Loaded",
-          description: `Successfully loaded ${mappedAssessments.length} assessment(s)`,
-        });
-      }
+      const response = await assessmentsApiService.getAssignedFarmers();
+      const farmersData = response.data || response || [];
+      setFarmers(Array.isArray(farmersData) ? farmersData : []);
     } catch (err: any) {
-      console.error('❌ RiskAssessmentSystem: Failed to load assessments:', err);
-      setError(err.message || 'Failed to load assessments');
+      console.error('Failed to load farmers:', err);
       toast({
-        title: 'Error loading assessments',
-        description: err.message || 'Failed to load assessments',
-        variant: 'destructive'
+        title: "Error",
+        description: err.message || "Failed to load assigned farmers",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const loadAllFarms = async () => {
-    setLoadingFarms(true);
-    try {
-      // Try different pagination strategies to handle API inconsistencies
-      let response: any = null;
-      let farmsArray: any[] = [];
-      
-      // Strategy 1: Try page 1 first (API seems to use 1-based indexing based on response)
-      console.log('RiskAssessmentSystem: Trying page 1...');
-      response = await getFarms(1, 100);
-      console.log('Farms API Response (page 1):', response);
-      
-      // Extract farms from response
-      if (response?.success && response?.data?.items) {
-        farmsArray = Array.isArray(response.data.items) ? response.data.items : [];
-        console.log('Extracted farms from response.data.items (page 1):', farmsArray);
-      } else if (Array.isArray(response)) {
-        farmsArray = response;
-      } else if (Array.isArray(response?.data)) {
-        farmsArray = response.data;
-      } else if (Array.isArray(response?.items)) {
-        farmsArray = response.items;
-      } else if (Array.isArray(response?.results)) {
-        farmsArray = response.results;
-      } else if (Array.isArray(response?.farms)) {
-        farmsArray = response.farms;
-      }
-      
-      // Strategy 2: If page 1 returned empty items but totalItems > 0, try page 0 (0-based indexing)
-      if (farmsArray.length === 0 && response?.data?.totalItems > 0) {
-        console.log('Page 1 returned empty items but totalItems > 0, trying page 0...');
-        response = await getFarms(0, 100);
-        console.log('Farms API Response (page 0):', response);
-        
-        if (response?.success && response?.data?.items) {
-          farmsArray = Array.isArray(response.data.items) ? response.data.items : [];
-          console.log('Extracted farms from page 0:', farmsArray);
-        } else if (Array.isArray(response)) {
-          farmsArray = response;
-        } else if (Array.isArray(response?.data)) {
-          farmsArray = response.data;
-        }
-      }
-      
-      // Strategy 3: Try with larger page size if still empty
-      if (farmsArray.length === 0 && response?.data?.totalItems > 0) {
-        console.log('Trying with larger page size (500)...');
-        response = await getFarms(0, 500);
-        console.log('Farms API Response (page 0, size 500):', response);
-        
-        if (response?.success && response?.data?.items) {
-          farmsArray = Array.isArray(response.data.items) ? response.data.items : [];
-          console.log('Extracted farms with larger size:', farmsArray);
-        }
-      }
-      
-      // Strategy 4: Try without pagination parameters
-      if (farmsArray.length === 0 && response?.data?.totalItems > 0) {
-        console.log('Trying to fetch all farms without pagination...');
-        try {
-          const noPaginationResponse: any = await getAllFarms();
-          console.log('Response without pagination:', noPaginationResponse);
-          
-          if (noPaginationResponse?.success && noPaginationResponse?.data?.items) {
-            farmsArray = Array.isArray(noPaginationResponse.data.items) ? noPaginationResponse.data.items : [];
-          } else if (Array.isArray(noPaginationResponse)) {
-            farmsArray = noPaginationResponse;
-          } else if (Array.isArray(noPaginationResponse?.data)) {
-            farmsArray = noPaginationResponse.data;
-          } else if (Array.isArray(noPaginationResponse?.items)) {
-            farmsArray = noPaginationResponse.items;
-          }
-          
-          if (farmsArray.length > 0) {
-            console.log('Successfully fetched farms without pagination:', farmsArray);
-          }
-        } catch (err) {
-          console.warn('Failed to fetch without pagination:', err);
-        }
-      }
-      
-      // Strategy 5: Check if data structure has farms at a different location
-      if (farmsArray.length === 0 && response?.data?.totalItems > 0) {
-        console.warn(`⚠️ API reports ${response.data.totalItems} total items but returned empty array.`);
-        
-        // Check if data structure has farms at a different location
-        if (response?.data && typeof response.data === 'object') {
-          // Check all possible locations for farm data
-          const possibleKeys = ['farms', 'results', 'content', 'data'];
-          for (const key of possibleKeys) {
-            if (Array.isArray(response.data[key])) {
-              farmsArray = response.data[key];
-              console.log(`Found farms array at response.data.${key}:`, farmsArray);
-              break;
-            }
-          }
-        }
-      }
-      
-      console.log('Final extracted farms array:', farmsArray);
-      setFarms(farmsArray);
-    } catch (err: any) {
-      console.error('Failed to load farms:', err);
+  // Handle KML file selection
+  const handleKMLFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.name.toLowerCase().endsWith('.kml')) {
       toast({
-        title: 'Error loading farms',
-        description: err.message || 'Failed to load farms',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoadingFarms(false);
-    }
-  };
-
-  const loadFarmsForAssessment = async (assessment: AssessmentSummary) => {
-    setLoadingFarms(true);
-    try {
-      // Get all farms and filter by farmer
-      const response: any = await getAllFarms();
-      let farmsData: any[] = [];
-      
-      if (Array.isArray(response)) {
-        farmsData = response;
-      } else if (response && typeof response === 'object') {
-        farmsData = response.data || response.farms || response.items || response.results || [];
-      }
-      
-      if (!Array.isArray(farmsData)) {
-        farmsData = [];
-      }
-
-      // Filter farms by the farmer ID from assessment
-      const relevantFarms = farmsData.filter((farm: any) => {
-        const farmFarmerId = farm.farmerId?._id || farm.farmerId || farm.farmer?._id || farm.farmer?.id || '';
-        return farmFarmerId === assessment.farmerId || 
-               (typeof farmFarmerId === 'string' && typeof assessment.farmerId === 'string' && farmFarmerId === assessment.farmerId) ||
-               farm.farmerName === assessment.farmerName;
-      });
-
-      setFarms(relevantFarms);
-
-      // Load farmer info if needed
-      if (assessment.farmerId && !farmers[assessment.farmerId]) {
-        try {
-          const farmerData: any = await getUserById(assessment.farmerId);
-          const farmer = farmerData.data || farmerData;
-          setFarmers(prev => ({ ...prev, [assessment.farmerId]: farmer }));
-        } catch (err) {
-          console.error('Failed to load farmer info:', err);
-        }
-      }
-    } catch (err: any) {
-      console.error('Failed to load farms:', err);
-      toast({
-        title: 'Error loading farms',
-        description: err.message || 'Failed to load farms',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoadingFarms(false);
-    }
-  };
-
-  // Load farmers list from API (same logic as AssessorDashboard)
-  const loadFarmersList = async () => {
-    setLoadingFarmers(true);
-    try {
-      const token = getAuthToken();
-      
-      // Try the assessments/farmers/list endpoint first
-      let farmersUrl = `${API_BASE_URL}/assessments/farmers/list`;
-      let response = await fetch(farmersUrl, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` })
-        }
-      });
-
-      // If that fails, try getting all users and filtering by role
-      if (!response.ok) {
-        console.log(`⚠️ RiskAssessment: Assessments farmers endpoint returned ${response.status}, trying users endpoint...`);
-        try {
-          farmersUrl = `${API_BASE_URL}/users`;
-          response = await fetch(farmersUrl, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token && { Authorization: `Bearer ${token}` })
-            }
-          });
-        } catch (fallbackErr) {
-          console.error('RiskAssessment: Fallback to users endpoint also failed:', fallbackErr);
-          throw new Error(`Failed to load farmers: ${response.status}`);
-        }
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: `HTTP error! status: ${response.status}` }));
-        throw new Error(errorData.message || errorData.error || `Failed to load farmers: ${response.status}`);
-      }
-
-      const responseData = await response.json();
-      console.log('✅ RiskAssessment: Farmers list API response:', responseData);
-      console.log('📋 RiskAssessment: Full response structure:', JSON.stringify(responseData, null, 2));
-      
-      // Handle response - it might be in response.data or directly in response
-      let farmersList = responseData.data || responseData.items || responseData || [];
-      
-      // If we got all users, filter by role "farmer"
-      if (Array.isArray(farmersList) && farmersList.length > 0 && farmersList[0].role) {
-        farmersList = farmersList.filter((user: any) => 
-          user.role?.toLowerCase() === 'farmer' || 
-          user.role?.toLowerCase() === 'farmers'
-        );
-      }
-      
-      const farmersArray = Array.isArray(farmersList) ? farmersList : [];
-      console.log(`✅ RiskAssessment: Loaded ${farmersArray.length} farmers`);
-      
-      // Extract fields from each farmer if they exist in the response
-      farmersArray.forEach((farmer: any, index: number) => {
-        const farmerId = farmer._id || farmer.id;
-        if (farmerId) {
-          // Log the structure of the first farmer for debugging
-          if (index === 0) {
-            console.log('🔍 RiskAssessment: Sample farmer structure:', {
-              _id: farmer._id,
-              id: farmer.id,
-              name: farmer.name,
-              hasFarms: !!farmer.farms,
-              hasFields: !!farmer.fields,
-              hasFarm: !!farmer.farm,
-              farmerKeys: Object.keys(farmer)
-            });
-          }
-          
-          // Check for fields in various possible locations
-          let fields: any[] = [];
-          
-          // Try different field locations
-          if (farmer.farms && Array.isArray(farmer.farms)) {
-            fields = farmer.farms;
-          } else if (farmer.fields && Array.isArray(farmer.fields)) {
-            fields = farmer.fields;
-          } else if (farmer.farm) {
-            // Could be single object or array
-            fields = Array.isArray(farmer.farm) ? farmer.farm : [farmer.farm];
-          } else if (farmer.farmList && Array.isArray(farmer.farmList)) {
-            fields = farmer.farmList;
-          } else if (farmer.farmDetails && Array.isArray(farmer.farmDetails)) {
-            fields = farmer.farmDetails;
-          }
-          
-          // Also check nested structures
-          if (fields.length === 0 && farmer.profile) {
-            if (farmer.profile.farms && Array.isArray(farmer.profile.farms)) {
-              fields = farmer.profile.farms;
-            } else if (farmer.profile.fields && Array.isArray(farmer.profile.fields)) {
-              fields = farmer.profile.fields;
-            }
-          }
-          
-          if (fields && fields.length > 0) {
-            // Store fields in the farmer object for later use
-            farmer._fields = fields;
-            console.log(`  📦 RiskAssessment: Farmer ${farmerId} (${farmer.name || 'Unnamed'}) has ${fields.length} fields from API`);
-            if (index === 0) {
-              console.log('  📋 RiskAssessment: Sample field structure:', {
-                name: fields[0].name,
-                cropType: fields[0].cropType,
-                area: fields[0].area,
-                fieldKeys: Object.keys(fields[0] || {})
-              });
-            }
-          } else {
-            console.log(`  ⚠️ RiskAssessment: Farmer ${farmerId} (${farmer.name || 'Unnamed'}) has no fields in API response`);
-          }
-        }
-      });
-      
-      setFarmersList(farmersArray);
-    } catch (err: any) {
-      console.error('RiskAssessment: Failed to load farmers:', err);
-      toast({
-        title: 'Error loading farmers',
-        description: err.message || 'Failed to load farmers',
-        variant: 'destructive'
-      });
-      setFarmersList([]);
-    } finally {
-      setLoadingFarmers(false);
-    }
-  };
-
-  const getFieldsForAssessment = (assessment: AssessmentSummary): Field[] => {
-    if (!farms || farms.length === 0) return [];
-
-    // Map farms to Field interface
-    return farms.map((farm: any, index: number) => {
-      const farmer = farmers[assessment.farmerId] || {};
-      const farmerName = farmer.firstName && farmer.lastName
-        ? `${farmer.firstName} ${farmer.lastName}`
-        : assessment.farmerName;
-
-      // Determine status - "Healthy" for processed/active, "Active" for others
-      let statusDisplay = "Active";
-      if (farm.status === "Processed" || farm.status === "processed" || (farm.boundary && farm.boundary.coordinates)) {
-        statusDisplay = "Healthy";
-      } else if (farm.status) {
-        statusDisplay = farm.status;
-      }
-
-      return {
-        id: farm._id || farm.id || `temp-${index}`,
-        farmerName,
-        crop: farm.cropType || farm.crop || "Unknown",
-        area: farm.area || farm.size || 0,
-        season: farm.season || (index % 2 === 0 ? "A" : "B"),
-        status: statusDisplay,
-        fieldName: farm.name || "Unnamed Farm",
-        sowingDate: farm.sowingDate || farm.plantingDate || new Date().toISOString().split('T')[0]
-      };
-    });
-  };
-
-
-  const handleAssessmentClick = (assessment: AssessmentSummary) => {
-    setSelectedAssessment(assessment);
-    setViewMode("fieldSelection");
-  };
-
-  const handleFieldClick = async (field: Field) => {
-    // Check if field is processed before allowing access to field detail
-    // Find the original farm from farms array
-    const farm = farms.find((f: any) => (f._id || f.id) === field.id);
-    
-    // Check if farm is processed
-    const isProcessed = farm && (
-      farm.boundary || 
-      farm.kmlUrl || 
-      farm.kmlFileUrl || 
-      farm.status === "Processed" || 
-      farm.status === "processed"
-    );
-    
-    if (!isProcessed) {
-      // Field is not processed - prevent access to field detail
-      toast({
-        title: "Field Not Processed",
-        description: "Please process this field by uploading a KML file before viewing details in risk assessment.",
-        variant: "default",
+        title: "Invalid File Type",
+        description: "Please select a .kml file",
+        variant: "destructive",
       });
       return;
     }
-    
-    // Field is processed - allow access to field detail
-    setSelectedField(field);
-    setViewMode("fieldDetail");
-    
-    // Use farm from farms array if it has boundary data (most up-to-date)
-    if (farm && (farm.boundary || farm.kmlUrl || farm.kmlFileUrl)) {
-      setSelectedFarmForDetail(farm);
+
+    // Validate file size (1MB max)
+    if (file.size > 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "File size must be less than 1MB",
+        variant: "destructive",
+      });
+      return;
     }
-    
-    // Load full assessment details
-    if (selectedAssessment?.id) {
-      setLoadingAssessmentDetails(true);
-      try {
-        const assessment = await assessmentsApiService.getAssessmentById(selectedAssessment.id);
-        const assessmentData = assessment.data || assessment;
-        setAssessmentDetails(assessmentData);
+
+    setSelectedKMLFile(file);
+  };
+
+  // Handle KML upload
+  const handleUploadKML = async (farmId: string) => {
+    if (!selectedKMLFile || !farmName.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a KML file and enter a farm name",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploadingKML(true);
+    try {
+      const result = await uploadKML(selectedKMLFile, farmId, farmName.trim());
+      
+      toast({
+        title: "Success",
+        description: "KML uploaded successfully. EOSDA field created.",
+      });
+      
+      // Reset form
+      setSelectedKMLFile(null);
+      setFarmName("");
+      setShowKMLUpload(null);
+      
+      // Reload farmers to get updated status
+      await loadFarmers();
+      
+      // Navigate to assessment if farm is now REGISTERED
+      if (result.status === "REGISTERED") {
+        // Find or create assessment for this farm
+        await loadAssessmentForFarm(farmId);
+      }
+    } catch (err: any) {
+      console.error('Failed to upload KML:', err);
+      toast({
+        title: "Upload Failed",
+        description: err.message || "Failed to upload KML file",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingKML(false);
+    }
+  };
+
+  // Load assessment for a farm
+  const loadAssessmentForFarm = async (farmId: string) => {
+    setLoadingAssessment(true);
+    try {
+      // First, try to get existing assessment
+      const assessments = await assessmentsApiService.getAssessments();
+      const assessmentsData = assessments.data || assessments.items || assessments || [];
+      const existingAssessment = Array.isArray(assessmentsData) 
+        ? assessmentsData.find((a: any) => a.farmId?._id === farmId || a.farmId === farmId)
+        : null;
+
+      if (existingAssessment) {
+        const assessmentDetails = await assessmentsApiService.getAssessmentById(
+          existingAssessment._id || existingAssessment.id
+        );
+        const assessmentData = assessmentDetails.data || assessmentDetails;
+        setAssessment(assessmentData);
         
-        // Load farm details if farmId is available (to get latest data including boundary)
-        if (assessmentData.farmId) {
-          const farmId = typeof assessmentData.farmId === 'string' 
-            ? assessmentData.farmId 
-            : assessmentData.farmId._id || assessmentData.farmId.id;
-          if (farmId) {
-            try {
-              const farmData = await getFarmById(farmId);
-              const fetchedFarm = farmData.data || farmData;
-              
-              // Merge with existing farm data from farms array if available
-              const mergedFarm = farm ? { ...farm, ...fetchedFarm } : fetchedFarm;
-              setSelectedFarmForDetail(mergedFarm);
-              
-              console.log('✅ Loaded farm for detail view:', {
-                id: mergedFarm._id || mergedFarm.id,
-                hasBoundary: !!mergedFarm.boundary,
-                hasKmlUrl: !!(mergedFarm.kmlUrl || mergedFarm.kmlFileUrl),
-                status: mergedFarm.status
-              });
-            } catch (err) {
-              console.error('Failed to load farm details:', err);
-              // If fetch fails, keep the farm from farms array if available
-              if (farm) {
-                setSelectedFarmForDetail(farm);
-              }
-            }
-          }
-        } else if (farm) {
-          // No assessment farmId, but we have farm from farms array
-          setSelectedFarmForDetail(farm);
+        // Safely set risk score - ensure it's a number or null
+        const riskScoreValue = assessmentData.riskScore;
+        if (riskScoreValue !== null && riskScoreValue !== undefined && typeof riskScoreValue === 'number') {
+          setRiskScore(riskScoreValue);
+        } else {
+          setRiskScore(null);
         }
-      } catch (err: any) {
-        console.error('Failed to load assessment details:', err);
+        
+        setComprehensiveNotes(assessmentData.comprehensiveNotes || "");
+        setViewMode("assessment");
+        
+        // Load field data
+        await loadFieldData(farmId);
+      } else {
+        // Create new assessment or show message
         toast({
-          title: "Error",
-          description: "Failed to load assessment details",
+          title: "No Assessment Found",
+          description: "Please create an assessment for this farm first",
+        });
+      }
+    } catch (err: any) {
+      console.error('Failed to load assessment:', err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to load assessment",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingAssessment(false);
+    }
+  };
+
+  // Load field statistics and weather data
+  const loadFieldData = async (farmId: string) => {
+    if (!farmId) return;
+    
+    setLoadingData(true);
+    try {
+      const today = new Date();
+      const startDate = new Date();
+      startDate.setFullYear(today.getFullYear() - 3); // 3 years of data
+      
+      const startDateStr = startDate.toISOString().split('T')[0];
+      const endDateStr = today.toISOString().split('T')[0];
+      
+      // Load field statistics
+      try {
+        const stats = await getVegetationStats(farmId, startDateStr, endDateStr, 'NDVI,MSAVI,NDMI,EVI');
+        setFieldStatistics(stats.data || stats);
+      } catch (err: any) {
+        // Handle EOSDA-specific errors gracefully
+        const errorMessage = err?.message || '';
+        if (errorMessage.includes('EOSDA') || errorMessage.includes('requests limit exceeded')) {
+          // Silently handle EOSDA errors - these are expected when limits are exceeded or farm not registered
+          console.log('EOSDA data not available (limit exceeded or farm not registered)');
+        } else if (errorMessage.includes('EOSDA field ID') || errorMessage.includes('register the farm')) {
+          // Farm not registered with EOSDA yet
+          console.log('Farm not registered with EOSDA yet');
+        } else {
+          console.warn('Failed to load field statistics:', err);
+        }
+        // Don't set fieldStatistics to null, keep it as is or set to empty
+        setFieldStatistics(null);
+      }
+      
+      // Load weather data
+      try {
+        const weather = await getHistoricalWeather(farmId, startDateStr, endDateStr);
+        setWeatherData(weather.data || weather);
+      } catch (err: any) {
+        // Handle EOSDA-specific errors gracefully
+        const errorMessage = err?.message || '';
+        if (errorMessage.includes('EOSDA') || errorMessage.includes('requests limit exceeded')) {
+          // Silently handle EOSDA errors
+          console.log('EOSDA weather data not available (limit exceeded or farm not registered)');
+        } else if (errorMessage.includes('EOSDA field ID') || errorMessage.includes('register the farm')) {
+          // Farm not registered with EOSDA yet
+          console.log('Farm not registered with EOSDA yet - weather data unavailable');
+        } else {
+          console.warn('Failed to load weather data:', err);
+        }
+        // Don't set weatherData to null, keep it as is or set to empty
+        setWeatherData(null);
+      }
+    } catch (err: any) {
+      console.error('Failed to load field data:', err);
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  // Calculate risk score
+  const handleCalculateRiskScore = async () => {
+    if (!assessment?._id) {
+      toast({
+        title: "Error",
+        description: "Assessment not loaded",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Prevent multiple simultaneous calls
+    if (calculatingRisk) {
+      console.log('⚠️ Risk calculation already in progress, ignoring duplicate call');
+      return;
+    }
+
+    setCalculatingRisk(true);
+    try {
+      console.log('🔄 Starting risk score calculation for assessment:', assessment._id);
+      const score = await assessmentsApiService.calculateRiskScore(assessment._id);
+      const scoreValue = typeof score === 'number' ? score : (score?.data || score?.riskScore || score);
+      
+      console.log('📊 Risk score response:', { score, scoreValue });
+      
+      // Ensure scoreValue is a valid number
+      if (scoreValue !== null && scoreValue !== undefined && typeof scoreValue === 'number') {
+        setRiskScore(scoreValue);
+        
+        // Reload assessment
+        try {
+          const updated = await assessmentsApiService.getAssessmentById(assessment._id);
+          const updatedData = updated.data || updated;
+          setAssessment(updatedData);
+        } catch (reloadErr) {
+          console.warn('⚠️ Failed to reload assessment after risk calculation:', reloadErr);
+          // Continue even if reload fails
+        }
+        
+        toast({
+          title: "Success",
+          description: `Risk score calculated: ${scoreValue.toFixed(1)}`,
+        });
+      } else {
+        throw new Error('Invalid risk score returned from API');
+      }
+    } catch (err: any) {
+      console.error('❌ Failed to calculate risk score:', err);
+      
+      // Handle 404 specifically - endpoint might not be implemented yet
+      const errorMessage = err.message || '';
+      if (errorMessage.includes('404') || errorMessage.includes('not found') || errorMessage.includes('Cannot POST')) {
+        toast({
+          title: "Feature Not Available",
+          description: "Risk score calculation endpoint is not yet available on the server. Please contact support or try again later.",
           variant: "destructive",
         });
-        // If assessment load fails, still use farm from farms array if available
-        if (farm) {
-          setSelectedFarmForDetail(farm);
-        }
-      } finally {
-        setLoadingAssessmentDetails(false);
+      } else {
+        toast({
+          title: "Calculation Failed",
+          description: err.message || "Failed to calculate risk score. Please try again later.",
+          variant: "destructive",
+        });
       }
-    } else if (farm) {
-      // No assessment selected, use farm from farms array
-      setSelectedFarmForDetail(farm);
+    } finally {
+      // Always reset the loading state, even if there was an error
+      console.log('✅ Resetting calculatingRisk state');
+      setCalculatingRisk(false);
+      
+      // Extra safeguard: force reset after a short delay if somehow it didn't reset
+      setTimeout(() => {
+        setCalculatingRisk(false);
+      }, 100);
     }
   };
 
-  const handleBackToList = () => {
-    setViewMode("list");
-    setSelectedAssessment(null);
-    setSelectedField(null);
-  };
+  // Upload drone PDF
+  const handleUploadPDF = async () => {
+    if (!selectedPDFFile || !assessment?._id) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a PDF file",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  const handleBackToFields = () => {
-    setViewMode("fieldSelection");
-    setSelectedField(null);
-  };
+    setUploadingPDF(true);
+    try {
+      console.log('📤 Uploading drone PDF...', {
+        assessmentId: assessment._id,
+        fileName: selectedPDFFile.name,
+        fileSize: selectedPDFFile.size
+      });
 
-  const getFieldDetails = (field: Field): FieldDetail => {
-    return {
-      fieldId: field.id,
-      fieldName: field.fieldName,
-      farmer: field.farmerName,
-      cropType: field.crop,
-      area: field.area,
-      season: field.season,
-      sowingDate: field.sowingDate,
-      location: assessments.find(a => a.farmerName === field.farmerName)?.location || ""
-    };
-  };
-
-  const renderFieldSelection = () => {
-    if (!selectedAssessment) return null;
-    
-    if (loadingFarms) {
-      return (
-        <div className="space-y-4 bg-gray-50 min-h-screen p-4">
-          <Button
-            variant="ghost"
-              onClick={handleBackToList}
-            className="text-gray-600 hover:text-gray-700 mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Farmers
-          </Button>
-          <div className="mb-4">
-            <h1 className="text-2xl font-bold text-gray-900">{selectedAssessment.farmerName} - Fields</h1>
-            <p className="text-sm text-gray-600 mt-1">Select a field for risk assessment</p>
-          </div>
-          <Card className="bg-white border border-gray-200 shadow-sm">
-            <CardContent className="p-8">
-              <div className="flex items-center justify-center">
-                <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      const result = await assessmentsApiService.uploadDronePDF(assessment._id, selectedPDFFile);
+      console.log('📥 PDF upload API response:', JSON.stringify(result, null, 2));
+      
+      // Extract data from response - handle different response structures
+      const responseData = result.data || result;
+      const extractedData = responseData?.droneAnalysisData || null;
+      const pdfUrl = responseData?.droneAnalysisPdfUrl || responseData?.droneAnalysisPdfUrl || null;
+      
+      console.log('✅ Extracted drone analysis data:', JSON.stringify(extractedData, null, 2));
+      
+      // Update assessment immediately with extracted data
+      if (extractedData || pdfUrl) {
+        setAssessment({
+          ...assessment,
+          droneAnalysisPdfUrl: pdfUrl || assessment.droneAnalysisPdfUrl,
+          droneAnalysisData: extractedData || assessment.droneAnalysisData
+        });
+      }
+      
+      // Reload assessment to get the latest data from the API (ensures consistency)
+      try {
+        const updated = await assessmentsApiService.getAssessmentById(assessment._id);
+        const updatedData = updated.data || updated;
+        
+        // Use the latest data from API, but prefer extracted data if it's more complete
+        const latestDroneData = updatedData?.droneAnalysisData || extractedData;
+        
+        setAssessment({
+          ...updatedData,
+          droneAnalysisData: latestDroneData || updatedData?.droneAnalysisData
+        });
+        
+        console.log('✅ Assessment reloaded with drone data:', {
+          hasDroneAnalysisData: !!latestDroneData,
+          hasPdfUrl: !!updatedData?.droneAnalysisPdfUrl,
+          droneAnalysisData: latestDroneData
+        });
+      } catch (reloadErr) {
+        console.warn('⚠️ Failed to reload assessment, using upload result:', reloadErr);
+        // Continue with the data we extracted from the upload response
+      }
+      
+      // Show success message based on whether data was extracted
+      const hasExtractedData = extractedData && (
+        extractedData.cropHealth || 
+        extractedData.coverage !== undefined || 
+        (extractedData.anomalies && extractedData.anomalies.length > 0)
       );
+      
+      toast({
+        title: "Upload Successful",
+        description: hasExtractedData 
+          ? "Drone PDF uploaded and analyzed successfully. Extracted data is displayed below."
+          : "Drone PDF uploaded successfully. Analysis data will be available shortly.",
+      });
+      
+      setSelectedPDFFile(null);
+    } catch (err: any) {
+      console.error('❌ Failed to upload PDF:', err);
+      toast({
+        title: "Upload Failed",
+        description: err.message || "Failed to upload drone PDF",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingPDF(false);
+    }
+  };
+
+  // Save comprehensive notes
+  const handleSaveNotes = async () => {
+    if (!assessment?._id) {
+      toast({
+        title: "Error",
+        description: "Assessment not loaded",
+        variant: "destructive",
+      });
+      return;
     }
 
-    const fields = getFieldsForAssessment(selectedAssessment);
-    
-    // Filter fields by search query
-    const filteredFields = fields.filter(field => {
-      return fieldSearchQuery === "" ||
-        field.fieldName.toLowerCase().includes(fieldSearchQuery.toLowerCase()) ||
-        field.id.toLowerCase().includes(fieldSearchQuery.toLowerCase()) ||
-        field.crop.toLowerCase().includes(fieldSearchQuery.toLowerCase());
-    });
-    
+    setSavingNotes(true);
+    try {
+      await assessmentsApiService.updateAssessment(assessment._id, {
+        comprehensiveNotes: comprehensiveNotes,
+      });
+      
+      // Reload assessment
+      const updated = await assessmentsApiService.getAssessmentById(assessment._id);
+      setAssessment(updated.data || updated);
+      
+      toast({
+        title: "Success",
+        description: "Comprehensive notes saved successfully",
+      });
+    } catch (err: any) {
+      console.error('Failed to save notes:', err);
+      toast({
+        title: "Save Failed",
+        description: err.message || "Failed to save notes",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingNotes(false);
+    }
+  };
+
+  // Generate report
+  const handleGenerateReport = async () => {
+    if (!assessment?._id) {
+      toast({
+        title: "Error",
+        description: "Assessment not loaded",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validation
+    if (riskScore === null || riskScore === undefined || typeof riskScore !== 'number') {
+      toast({
+        title: "Validation Error",
+        description: "Please calculate risk score before generating report",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!comprehensiveNotes || comprehensiveNotes.trim().length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please add comprehensive notes before generating report",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGeneratingReport(true);
+    try {
+      await assessmentsApiService.generateReport(assessment._id);
+      
+      // Reload assessment
+      const updated = await assessmentsApiService.getAssessmentById(assessment._id);
+      setAssessment(updated.data || updated);
+      
+      toast({
+        title: "Success",
+        description: "Report generated. Insurer has been notified.",
+      });
+    } catch (err: any) {
+      console.error('Failed to generate report:', err);
+      toast({
+        title: "Generation Failed",
+        description: err.message || "Failed to generate report",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
+  // Get risk score color
+  const getRiskScoreColor = (score: number | null | undefined) => {
+    if (score === null || score === undefined || typeof score !== 'number') return 'bg-gray-500';
+    if (score <= 30) return 'bg-green-600';
+    if (score <= 70) return 'bg-yellow-500';
+    return 'bg-red-500';
+  };
+
+  // Get risk score label
+  const getRiskScoreLabel = (score: number | null | undefined) => {
+    if (score === null || score === undefined || typeof score !== 'number') return 'Not Calculated';
+    if (score <= 30) return 'Low Risk';
+    if (score <= 70) return 'Medium Risk';
+    return 'High Risk';
+  };
+
+  // Filter farmers
+  const filteredFarmers = farmers.filter(farmer => {
+    const query = searchQuery.toLowerCase();
     return (
-      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
-        {/* Clean Header */}
-        <div className="max-w-7xl mx-auto px-6 mb-6">
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-            onClick={handleBackToList}
-                className="text-gray-600 hover:text-gray-700 p-0 h-auto"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
+      farmer.firstName.toLowerCase().includes(query) ||
+      farmer.lastName.toLowerCase().includes(query) ||
+      farmer.email.toLowerCase().includes(query) ||
+      farmer.phoneNumber.includes(query) ||
+      farmer.farmerProfile.farmProvince.toLowerCase().includes(query) ||
+      farmer.farmerProfile.farmDistrict.toLowerCase().includes(query)
+    );
+  });
+
+  // Render Farmers List View
+  if (viewMode === "farmers") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200 shadow-sm">
+          <div className="max-w-7xl mx-auto px-6 py-6">
+            <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900">Field Selection</h1>
-                <p className="text-sm text-gray-500 mt-1">Select a field for {selectedAssessment.farmerName} to perform risk assessment</p>
+                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                  <Shield className="h-8 w-8 text-green-600" />
+                  Risk Assessment
+                </h1>
+                <p className="text-sm text-gray-500 mt-1">Manage assigned farms and assessments</p>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search farmers..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 w-64 bg-white border-gray-300"
+                />
               </div>
             </div>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-6">
-
-          {/* Search Bar */}
-          <div className="mb-6">
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search something here.."
-                value={fieldSearchQuery}
-                onChange={(e) => setFieldSearchQuery(e.target.value)}
-                className="pl-10 bg-gray-50 border-gray-200 text-sm"
-              />
-            </div>
-          </div>
-
-          {/* Fields Table - Professional Dashboard Style */}
-          <Card className="bg-white border border-gray-200 shadow-sm">
-            <CardHeader className="border-b border-gray-200 bg-gray-50">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-semibold text-gray-900">Available Fields</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs border-gray-200 hover:bg-gray-50"
-                >
-                  Export
-                </Button>
-              </div>
-            </CardHeader>
-          <CardContent className="p-0">
-              {filteredFields.length === 0 ? (
-              <div className="p-12 text-center">
-                  <Leaf className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-sm font-medium text-gray-900 mb-1">No fields found</p>
-                  <p className="text-xs text-gray-500">Try adjusting your search criteria</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                      <tr className="bg-gray-50 border-b border-gray-200">
-                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Field ID</th>
-                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Farmer</th>
-                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Crop</th>
-                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Area (ha)</th>
-                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Season</th>
-                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Status</th>
-                        <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Actions</th>
-                    </tr>
-                  </thead>
-                    <tbody className="bg-white divide-y divide-gray-100">
-                      {filteredFields.map((field, index) => {
-                        const fieldId = field.id ? `FLD-${String(field.id).slice(-3).padStart(3, '0')}` : `FLD-${String(index + 1).padStart(3, '0')}`;
-                        const statusText = field.status === "Processed" || field.status === "Active" ? "Healthy" : field.status;
-                        const isHealthy = statusText === "Healthy" || field.status === "Processed" || field.status === "Active";
-                        
-                        return (
-                      <tr
-                        key={field.id}
-                          className="hover:bg-green-600/30 transition-colors"
-                      >
-                          <td className="py-3.5 px-6 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">{fieldId}</div>
-                        </td>
-                          <td className="py-3.5 px-6 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{field.farmerName}</div>
-                          </td>
-                          <td className="py-3.5 px-6 whitespace-nowrap">
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                              <Sprout className="h-4 w-4 text-gray-400" />
-                            <span>{field.crop}</span>
-                          </div>
-                        </td>
-                          <td className="py-3.5 px-6 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{field.area.toFixed(1)} ha</div>
-                        </td>
-                          <td className="py-3.5 px-6 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{field.season}</div>
-                        </td>
-                          <td className="py-3.5 px-6 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-medium ${
-                              isHealthy
-                                ? "bg-green-50 text-green-600 border border-green-600"
-                                : "bg-blue-50 text-blue-700 border border-blue-200"
-                            }`}>
-                              {statusText}
-                          </span>
-                        </td>
-                          <td className="py-3.5 px-6 whitespace-nowrap">
-                            <Button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleFieldClick(field);
-                              }}
-                              size="sm"
-                              className="bg-green-600 hover:bg-green-700 text-white text-xs h-8 px-4"
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          {loading ? (
+            <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
+              <CardContent className="p-16">
+                <div className="flex flex-col items-center justify-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mb-4"></div>
+                  <p className="text-sm text-gray-600">Loading farmers...</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : filteredFarmers.length === 0 ? (
+            <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
+              <CardContent className="p-16 text-center">
+                <User className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-base font-semibold text-gray-900 mb-1">No farmers found</p>
+                <p className="text-sm text-gray-500">Try adjusting your search criteria</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-6">
+              {filteredFarmers.map((farmer) => (
+                <Card key={farmer.id} className="bg-white border border-gray-200 shadow-lg rounded-xl overflow-hidden">
+                  <CardHeader className="bg-gradient-to-r from-green-50 to-white border-b border-gray-200 px-6 py-5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-xl font-bold text-gray-900">
+                          {farmer.firstName} {farmer.lastName}
+                        </CardTitle>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {farmer.email} • {farmer.phoneNumber}
+                        </p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          <MapPin className="h-3 w-3 inline mr-1" />
+                          {farmer.farmerProfile.farmProvince}, {farmer.farmerProfile.farmDistrict}, {farmer.farmerProfile.farmSector}
+                        </p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Farms</h3>
+                      {farmer.farms.length === 0 ? (
+                        <p className="text-sm text-gray-500">No farms assigned</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {farmer.farms.map((farm) => (
+                            <div
+                              key={farm.id}
+                              className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
                             >
-                              <Eye className="h-3.5 w-3.5 mr-1.5" />
-                              View
-                            </Button>
-                        </td>
-                      </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3">
+                                  <Sprout className="h-5 w-5 text-green-600" />
+                                  <div>
+                                    <p className="text-sm font-semibold text-gray-900">
+                                      {farm.name || `Farm - ${farm.cropType}`}
+                                    </p>
+                                    <p className="text-xs text-gray-600">
+                                      {farm.cropType} • Sown: {new Date(farm.sowingDate).toLocaleDateString()}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <Badge
+                                  className={
+                                    farm.status === "PENDING"
+                                      ? "bg-yellow-100 text-yellow-800 border-yellow-300"
+                                      : "bg-green-100 text-green-800 border-green-300"
+                                  }
+                                >
+                                  {farm.status}
+                                </Badge>
+                                {farm.status === "PENDING" ? (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedFarm(farm);
+                                      setSelectedFarmer(farmer);
+                                      setShowKMLUpload(farm.id);
+                                    }}
+                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                  >
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    Upload KML
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setSelectedFarm(farm);
+                                      setSelectedFarmer(farmer);
+                                      loadAssessmentForFarm(farm.id);
+                                    }}
+                                    className="border-green-600 text-green-600 hover:bg-green-50"
+                                  >
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View Assessment
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* KML Upload Dialog */}
+        {showKMLUpload && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <Card className="bg-white w-full max-w-md mx-4">
+              <CardHeader>
+                <CardTitle>Upload KML File</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Farm Name</Label>
+                  <Input
+                    value={farmName}
+                    onChange={(e) => setFarmName(e.target.value)}
+                    placeholder="Enter farm name"
+                  />
+                </div>
+                <div>
+                  <Label>KML File (.kml, max 1MB)</Label>
+                  <Input
+                    type="file"
+                    accept=".kml"
+                    onChange={handleKMLFileChange}
+                  />
+                  {selectedKMLFile && (
+                    <p className="text-sm text-gray-600 mt-2">
+                      Selected: {selectedKMLFile.name} ({(selectedKMLFile.size / 1024).toFixed(2)} KB)
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => handleUploadKML(showKMLUpload)}
+                    disabled={!selectedKMLFile || !farmName.trim() || uploadingKML}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {uploadingKML ? "Uploading..." : "Upload"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowKMLUpload(null);
+                      setSelectedKMLFile(null);
+                      setFarmName("");
+                    }}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Render Assessment View
+  if (!assessment || !selectedFarm) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading assessment...</p>
         </div>
       </div>
     );
-  };
+  }
 
-  // Weather Analysis Component - Using new weather APIs
-  const WeatherAnalysisTab = ({ location, farmId }: { location: string; farmId?: string }) => {
-    const [weatherData, setWeatherData] = useState<any>(null);
-    const [indicesData, setIndicesData] = useState<any>(null);
-    const [weatherLoading, setWeatherLoading] = useState(false);
-    const [weatherError, setWeatherError] = useState<string | null>(null);
-
-    useEffect(() => {
-      const loadWeather = async () => {
-        if (!farmId) {
-          return;
-        }
-        
-        setWeatherLoading(true);
-        setWeatherError(null);
-        try {
-          const today = new Date();
-          const endDate = new Date();
-          endDate.setDate(today.getDate() + 7);
-          
-          const startDateStr = today.toISOString().split('T')[0];
-          const endDateStr = endDate.toISOString().split('T')[0];
-          
-          // Helper function to handle API errors gracefully
-          const handleApiError = (err: any, apiName: string) => {
-            if (err?.message?.includes('EOSDA') || err?.message?.includes('register the farm')) {
-              return null;
-            }
-            console.warn(`${apiName} error:`, err);
-            return null;
-          };
-          
-          // Load all weather APIs
-          const [forecast, historical, accumulated] = await Promise.all([
-            getWeatherForecast(farmId, startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'Weather forecast')),
-            getHistoricalWeather(farmId, startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'Historical weather')),
-            getAccumulatedWeather(farmId, startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'Accumulated weather'))
-          ]);
-
-          // Load all indices APIs
-          const [indicesStats, ndviTimeSeries, fieldTrend] = await Promise.all([
-            getVegetationStats(farmId, startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'Vegetation indices statistics')),
-            getNDVITimeSeries(farmId, startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'NDVI time series')),
-            getFieldTrend(farmId, 'NDVI', startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'Field trend'))
-          ]);
-
-          setWeatherData({ forecast, historical, accumulated });
-          setIndicesData({ indicesStats, ndviTimeSeries, fieldTrend });
-      } catch (err: any) {
-          if (!err?.message?.includes('EOSDA') && !err?.message?.includes('register the farm')) {
-        console.error('Failed to load weather data:', err);
-          setWeatherError(err.message || 'Failed to load weather data');
-          }
-      } finally {
-          setWeatherLoading(false);
-        }
-      };
-
-      loadWeather();
-    }, [farmId]);
-
-    if (weatherLoading) {
-      return (
-        <Card className="bg-white border border-gray-200 shadow-sm">
-          <CardContent className="p-12">
-            <div className="flex items-center justify-center">
-              <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
-            </div>
-          </CardContent>
-        </Card>
-      );
-    }
-
-    if (weatherError) {
-      return (
-        <Card className="bg-white border border-red-200 shadow-sm">
-          <CardContent className="p-4">
-            <div className="text-center text-red-600">
-              <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
-              <p>{weatherError}</p>
-            </div>
-          </CardContent>
-        </Card>
-      );
-    }
-
-    // Prepare weather forecast data
-    const forecastData = weatherData?.forecast?.data || weatherData?.forecast || [];
-    const forecastChartData = Array.isArray(forecastData) ? forecastData.map((item: any) => ({
-      date: item.date || item.timestamp || item.time || item.datetime || '',
-      temperature: item.temperature || item.temp || item.maxTemp || 0,
-      minTemp: item.minTemp || item.temperatureMin || 0,
-      rainfall: item.rainfall || item.precipitation || item.precip || item.precipitationAmount || 0,
-      humidity: item.humidity || 0,
-      windSpeed: item.windSpeed || item.wind || 0
-    })) : [];
-
-    // Prepare accumulated weather data
-    const accumulatedData = weatherData?.accumulated || {};
-
-    return (
-      <div className="space-y-6">
-        {/* Weather Forecast */}
-        {forecastChartData.length > 0 && (
-          <Card className="bg-gradient-to-br from-blue-900/90 to-cyan-900/90 border border-blue-700/30 shadow-xl">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Cloud className="h-5 w-5" />
-                Weather Forecast
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Forecast Chart */}
-                <ResponsiveContainer width="100%" height={250}>
-                  <ComposedChart data={forecastChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.2)" />
-                    <XAxis 
-                      dataKey="date" 
-                      tick={{ fill: 'white', fontSize: 12 }}
-                      angle={-45}
-                      textAnchor="end"
-                      height={80}
-                    />
-                    <YAxis yAxisId="left" tick={{ fill: 'white', fontSize: 12 }} />
-                    <YAxis yAxisId="right" orientation="right" tick={{ fill: 'white', fontSize: 12 }} />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: '8px', color: 'white' }}
-                    />
-                    <Legend wrapperStyle={{ color: 'white' }} />
-                    <Bar yAxisId="right" dataKey="rainfall" fill="#60a5fa" name="Rainfall (mm)" />
-                    <Line 
-                      yAxisId="left"
-                      type="monotone" 
-                      dataKey="temperature" 
-                      stroke="#fbbf24" 
-                      strokeWidth={2}
-                      name="Temperature (°C)"
-                      dot={{ r: 4, fill: '#fbbf24' }}
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
-                
-                {/* Forecast Summary Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-                  {forecastChartData.slice(0, 4).map((day: any, index: number) => (
-                    <div key={index} className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                      <p className="text-white/80 text-xs mb-1">{day.date || `Day ${index + 1}`}</p>
-                      <p className="text-white text-lg font-bold">{day.temperature}°C</p>
-                      {day.rainfall > 0 && (
-                        <p className="text-blue-200 text-xs mt-1 flex items-center gap-1">
-                          <Droplets className="h-3 w-3" />
-                          {day.rainfall}mm
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Accumulated Weather Data */}
-        {accumulatedData && Object.keys(accumulatedData).length > 0 && (
-          <Card className="bg-white border border-gray-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-gray-900">Accumulated Weather Data</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {accumulatedData.gdd && (
-                  <div className="bg-green-50 border border-green-600 rounded-lg p-4">
-                    <p className="text-xs text-gray-600 mb-1">Growing Degree Days (GDD)</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {typeof accumulatedData.gdd === 'number' ? accumulatedData.gdd.toFixed(1) : accumulatedData.gdd || 'N/A'}
-                    </p>
-                  </div>
-                )}
-                {accumulatedData.seasonalRainfall && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-xs text-gray-600 mb-1">Seasonal Rainfall</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {typeof accumulatedData.seasonalRainfall === 'number' ? accumulatedData.seasonalRainfall.toFixed(1) : accumulatedData.seasonalRainfall || 'N/A'} mm
-                    </p>
-                  </div>
-                )}
-                {accumulatedData.averageTemperature && (
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                    <p className="text-xs text-gray-600 mb-1">Average Temperature</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {typeof accumulatedData.averageTemperature === 'number' ? accumulatedData.averageTemperature.toFixed(1) : accumulatedData.averageTemperature || 'N/A'} °C
-                    </p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex items-center gap-4 mb-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setViewMode("farmers");
+                setAssessment(null);
+                setSelectedFarm(null);
+                setSelectedFarmer(null);
+              }}
+              className="text-gray-600 hover:text-gray-900"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Farmers
+            </Button>
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Risk Assessment</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              {selectedFarmer?.firstName} {selectedFarmer?.lastName} • {selectedFarm.cropType} • {selectedFarm.name || "Farm"}
+            </p>
+          </div>
+        </div>
       </div>
-    );
-  };
 
-  // Crop Analysis Component
-  const CropAnalysisTab = ({ fieldDetails, assessmentId }: { fieldDetails: FieldDetail; assessmentId?: string }) => {
-    const [dataSource, setDataSource] = useState<string>("drone");
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [uploadingPDF, setUploadingPDF] = useState(false);
-    const [flightDate, setFlightDate] = useState<string>("2025-10-22");
-    const [assessorNotes, setAssessorNotes] = useState<string>("Weed clusters in north. Pest minimal.");
-    const [comprehensiveNotes, setComprehensiveNotes] = useState<string>("");
-    const [savingNotes, setSavingNotes] = useState(false);
-    const [generatingReport, setGeneratingReport] = useState(false);
-    const [riskScore, setRiskScore] = useState<number | null>(null);
-    const [mapTileLayer, setMapTileLayer] = useState<"osm" | "satellite" | "terrain">("satellite");
-    const [selectedIndex, setSelectedIndex] = useState<string>("ndvi");
-    const [vegetationStats, setVegetationStats] = useState<any>(null);
-    const [loadingVegetation, setLoadingVegetation] = useState(false);
-    
-    // Default map center (Kigali, Rwanda coordinates)
-    const mapCenter: [number, number] = [-1.9441, 30.0619];
-    
-    // Load vegetation stats when field is available
-    useEffect(() => {
-      const loadVegetationData = async () => {
-        const farmId = fieldDetails.fieldId;
-        if (!farmId) return;
-        
-        setLoadingVegetation(true);
-        try {
-          const today = new Date();
-          const startDate = new Date();
-          startDate.setDate(today.getDate() - 30);
-          
-          const startDateStr = startDate.toISOString().split('T')[0];
-          const endDateStr = today.toISOString().split('T')[0];
-          
-          const stats = await getVegetationStats(farmId, startDateStr, endDateStr, 'NDVI,MSAVI,EVI,NDMI');
-          setVegetationStats(stats.data || stats);
-        } catch (err: any) {
-          // Silently handle errors for missing EOSDA field ID
-          if (!err?.message?.includes('EOSDA') && !err?.message?.includes('register the farm')) {
-            console.error('Failed to load vegetation stats:', err);
-          }
-        } finally {
-          setLoadingVegetation(false);
-        }
-      };
-      
-      loadVegetationData();
-    }, [fieldDetails.fieldId]);
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="bg-white border border-gray-200 shadow-sm inline-flex h-12 items-center justify-center rounded-xl p-1.5 gap-1">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-green-600 data-[state=active]:text-white px-5 py-2.5 rounded-lg text-sm font-medium">
+              <FileText className="h-4 w-4 mr-2" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="field-data" className="data-[state=active]:bg-green-600 data-[state=active]:text-white px-5 py-2.5 rounded-lg text-sm font-medium">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Field Data
+            </TabsTrigger>
+            <TabsTrigger value="weather" className="data-[state=active]:bg-green-600 data-[state=active]:text-white px-5 py-2.5 rounded-lg text-sm font-medium">
+              <CloudRain className="h-4 w-4 mr-2" />
+              Weather
+            </TabsTrigger>
+          </TabsList>
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file && file.type === "application/pdf") {
-        setSelectedFile(file);
-      } else {
-        toast({
-          title: "Invalid file type",
-          description: "Please upload a PDF file.",
-          variant: "destructive"
-        });
-      }
-    };
-
-    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      const file = e.dataTransfer.files[0];
-      if (file && file.type === "application/pdf") {
-        setSelectedFile(file);
-      } else {
-        toast({
-          title: "Invalid file type",
-          description: "Please upload a PDF file.",
-          variant: "destructive"
-        });
-      }
-    };
-
-    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-    };
-
-    // Load assessment data on mount
-    useEffect(() => {
-      const loadAssessmentData = async () => {
-        if (!assessmentId) return;
-        
-        try {
-          const assessment = await assessmentsApiService.getAssessmentById(assessmentId);
-          const assessmentData = assessment.data || assessment;
-          
-          if (assessmentData.comprehensiveNotes) {
-            setComprehensiveNotes(assessmentData.comprehensiveNotes);
-          }
-          if (assessmentData.riskScore !== null && assessmentData.riskScore !== undefined) {
-            setRiskScore(assessmentData.riskScore);
-          }
-        } catch (err: any) {
-          console.error('Failed to load assessment data:', err);
-        }
-      };
-      
-      loadAssessmentData();
-    }, [assessmentId]);
-
-    // Handle upload drone PDF
-    const handleUploadDronePDF = async () => {
-      if (!selectedFile || !assessmentId) {
-        toast({
-          title: "Validation Error",
-          description: "Please select a PDF file and ensure assessment is loaded.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setUploadingPDF(true);
-      try {
-        await assessmentsApiService.uploadDronePDF(assessmentId, selectedFile);
-        toast({
-          title: "Success",
-          description: "Drone PDF uploaded successfully.",
-        });
-        setSelectedFile(null);
-      } catch (err: any) {
-        console.error('Failed to upload drone PDF:', err);
-        toast({
-          title: "Upload Failed",
-          description: err.message || 'Failed to upload drone PDF',
-          variant: "destructive",
-        });
-      } finally {
-        setUploadingPDF(false);
-      }
-    };
-
-    // Handle save comprehensive notes
-    const handleSaveNotes = async () => {
-      if (!assessmentId) {
-        toast({
-          title: "Error",
-          description: "Assessment ID not available.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setSavingNotes(true);
-      try {
-        await assessmentsApiService.updateAssessment(assessmentId, {
-          comprehensiveNotes: comprehensiveNotes,
-        });
-        toast({
-          title: "Success",
-          description: "Comprehensive notes saved successfully.",
-        });
-      } catch (err: any) {
-        console.error('Failed to save notes:', err);
-        toast({
-          title: "Save Failed",
-          description: err.message || 'Failed to save comprehensive notes',
-          variant: "destructive",
-        });
-      } finally {
-        setSavingNotes(false);
-      }
-    };
-
-    // Handle calculate risk score
-    const handleCalculateRiskScore = async () => {
-      if (!assessmentId) {
-        toast({
-          title: "Error",
-          description: "Assessment ID not available.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      try {
-        const score = await assessmentsApiService.calculateRiskScore(assessmentId);
-        const riskScoreValue = typeof score === 'number' ? score : (score.data || score.riskScore || score);
-        setRiskScore(riskScoreValue);
-        toast({
-          title: "Success",
-          description: `Risk score calculated: ${riskScoreValue}`,
-        });
-      } catch (err: any) {
-        console.error('Failed to calculate risk score:', err);
-        toast({
-          title: "Calculation Failed",
-          description: err.message || 'Failed to calculate risk score',
-          variant: "destructive",
-        });
-      }
-    };
-
-    // Handle generate report
-    const handleGenerateReport = async () => {
-      if (!assessmentId) {
-        toast({
-          title: "Error",
-          description: "Assessment ID not available.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Validation
-      if (riskScore === null || riskScore === undefined) {
-        toast({
-          title: "Validation Error",
-          description: "Please calculate risk score before generating report.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!comprehensiveNotes || comprehensiveNotes.trim().length === 0) {
-        toast({
-          title: "Validation Error",
-          description: "Please add comprehensive notes before generating report.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setGeneratingReport(true);
-      try {
-        await assessmentsApiService.generateReport(assessmentId);
-        toast({
-          title: "Success",
-          description: "Report generated successfully. Insurer has been notified.",
-        });
-        // Refresh assessments if callback available
-        if (onRefresh) {
-          onRefresh();
-        }
-      } catch (err: any) {
-        console.error('Failed to generate report:', err);
-        toast({
-          title: "Generation Failed",
-          description: err.message || 'Failed to generate report',
-          variant: "destructive",
-        });
-      } finally {
-        setGeneratingReport(false);
-      }
-    };
-
-    const handleSave = () => {
-      toast({
-        title: "Analysis saved",
-        description: "Crop analysis data has been saved successfully.",
-      });
-    };
-
-    const handleDownload = () => {
-      const data = {
-        fieldId: fieldDetails.fieldId,
-        farmer: fieldDetails.farmer,
-        crop: fieldDetails.cropType,
-        area: fieldDetails.area,
-        flightDate: flightDate,
-        metrics: {
-          healthyArea: 2.80,
-          plantStress: 17.6,
-          potentialStress: 0,
-          fieldArea: fieldDetails.area,
-          growingStage: "N/A"
-        },
-        notes: assessorNotes
-      };
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `crop-analysis-${fieldDetails.fieldId}-${flightDate}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast({
-        title: "Download started",
-        description: "Summary JSON file is being downloaded.",
-      });
-    };
-
-    const formatDate = (dateString: string) => {
-      const date = new Date(dateString);
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
-    };
-
-    return (
-      <div className="space-y-4">
-        {/* Field Summary & Data Source */}
-        <Card className="bg-white border border-gray-200 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-gray-900">Field Summary & Data Source</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Field Summary */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Field Information</h3>
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Farmer: <span className="text-gray-900 font-medium">{fieldDetails.farmer}</span></p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Crop: <span className="text-gray-900 font-medium">{fieldDetails.cropType}</span></p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Area: <span className="text-gray-900 font-medium">{Number(fieldDetails.area).toFixed(2)} ha</span></p>
-                </div>
-              </div>
-              
-              {/* Data Source */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Data Source</h3>
-                <div className="flex gap-2">
-                  <Button
-                    variant={dataSource === "drone" ? "default" : "outline"}
-                    onClick={() => setDataSource("drone")}
-                    className={`flex items-center gap-2 ${
-                      dataSource === "drone" 
-                        ? "bg-gray-800 hover:bg-gray-900 text-white" 
-                        : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                    }`}
-                  >
-                    <Upload className="h-4 w-4" />
-                    Drone Upload
-                  </Button>
-                  <Button
-                    variant={dataSource === "manual" ? "default" : "outline"}
-                    onClick={() => setDataSource("manual")}
-                    className={`flex items-center gap-2 ${
-                      dataSource === "manual" 
-                        ? "bg-gray-800 hover:bg-gray-900 text-white" 
-                        : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                    }`}
-                  >
-                    <User className="h-4 w-4" />
-                    Manual Check
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Upload Drone Report Section - Only show when drone is selected */}
-        {dataSource === "drone" && (
-          <>
-            {/* Two Column Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Left Column: Upload & Flight Date Combined */}
-              <div className="space-y-4">
-                <Card className="bg-white border border-gray-200 shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="text-gray-900 flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      Upload Drone Data
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div
-                      onDrop={handleDrop}
-                      onDragOver={handleDragOver}
-                      className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors cursor-pointer"
-                      onClick={() => document.getElementById('pdf-upload')?.click()}
-                    >
-                      <ArrowUp className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-                      <p className="text-gray-900 text-base font-medium mb-1">Upload PDF Report</p>
-                      <p className="text-xs text-gray-600 mb-4">Supports plant stress analysis reports (Agremo format)</p>
-                      <input
-                        type="file"
-                        id="pdf-upload"
-                        className="hidden"
-                        accept=".pdf"
-                        onChange={handleFileChange}
-                      />
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          document.getElementById('pdf-upload')?.click();
-                        }}
-                        className="bg-gray-800 hover:bg-gray-900 text-white"
-                        size="sm"
-                      >
-                        Select PDF File
-                      </Button>
-                      {selectedFile && (
-                        <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                          <p className="text-sm text-gray-700">Selected: {selectedFile.name}</p>
-                          <p className="text-xs text-gray-500 mt-1">{(selectedFile.size / 1024).toFixed(2)} KB</p>
-                          {assessmentId && (
-                            <Button
-                              onClick={handleUploadDronePDF}
-                              disabled={uploadingPDF}
-                              className="mt-3 bg-green-600 hover:bg-green-700 text-white"
-                              size="sm"
-                            >
-                              {uploadingPDF ? (
-                                <img src="/loading.gif" alt="Loading" className="w-4 h-4" />
-                              ) : (
-                                <>
-                                  <Upload className="h-4 w-4 mr-2" />
-                                  Upload PDF
-                                </>
-                              )}
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Flight Date */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-900">Flight Date</Label>
-                      <div className="flex items-center gap-3">
-                        <Input
-                          type="date"
-                          value={flightDate}
-                          onChange={(e) => setFlightDate(e.target.value)}
-                          className="flex-1 border-gray-300"
-                        />
-                        <span className="text-sm text-gray-700 whitespace-nowrap">{formatDate(flightDate)}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Assessor Notes */}
-                <Card className="bg-white border border-gray-200 shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="text-gray-900">Assessor Notes</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Textarea
-                      value={assessorNotes}
-                      onChange={(e) => setAssessorNotes(e.target.value)}
-                      className="min-h-[100px] border-gray-300"
-                      placeholder="Enter your notes here..."
-                    />
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Right Column: Drone Metrics */}
-              <div className="space-y-4">
-                <Card className="bg-white border border-gray-200 shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="text-gray-900">Drone Metrics</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 gap-4">
-                      <div className="bg-green-50 border-0 rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-green-100 rounded-lg p-2">
-                            <Leaf className="h-5 w-5 text-green-600" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-xs text-gray-600 mb-1 font-medium">Healthy Area (Fine)</p>
-                            <p className="text-xl font-bold text-gray-900">2.80 ha</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="bg-yellow-50 border-0 rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-yellow-100 rounded-lg p-2">
-                            <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-xs text-gray-600 mb-1 font-medium">Plant Stress</p>
-                            <p className="text-xl font-bold text-gray-900">17.6%</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="bg-gray-50 border-0 rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-gray-100 rounded-lg p-2">
-                            <TrendingUp className="h-5 w-5 text-gray-600" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-xs text-gray-600 mb-1 font-medium">Potential Stress</p>
-                            <p className="text-xl font-bold text-gray-900">0%</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="bg-blue-50 border-0 rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-blue-100 rounded-lg p-2">
-                            <Map className="h-5 w-5 text-blue-600" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-xs text-gray-600 mb-1 font-medium">Field Area</p>
-                            <p className="text-xl font-bold text-gray-900">{Number(fieldDetails.area).toFixed(2)} ha</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="bg-purple-50 border-0 rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-purple-100 rounded-lg p-2">
-                            <Sprout className="h-5 w-5 text-purple-600" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-xs text-gray-600 mb-1 font-medium">Growing Stage</p>
-                            <p className="text-xl font-bold text-gray-900">N/A</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
-            {/* Field Visualization */}
-            <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-gray-900">Field Visualization</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 w-8 p-0 border-gray-300"
-                    >
-                      <span className="text-lg">+</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 w-8 p-0 border-gray-300"
-                    >
-                      <span className="text-lg">−</span>
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {/* Map Controls */}
-                  <div className="flex items-center justify-between flex-wrap gap-4">
-                    <div className="flex items-center gap-2">
-                      <Label className="text-sm text-gray-700">Layer:</Label>
-                      <Select value={mapTileLayer} onValueChange={(value) => setMapTileLayer(value as "osm" | "satellite" | "terrain")}>
-                        <SelectTrigger className="w-32 h-9 border-gray-300">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="satellite">Satellite</SelectItem>
-                          <SelectItem value="osm">Street</SelectItem>
-                          <SelectItem value="terrain">Terrain</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Label className="text-sm text-gray-700">Index:</Label>
-                      <Select value={selectedIndex} onValueChange={setSelectedIndex}>
-                        <SelectTrigger className="w-48 h-9 border-gray-300">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ndvi">🌱 NDVI</SelectItem>
-                          <SelectItem value="evi">🌿 EVI</SelectItem>
-                          <SelectItem value="savi">🌾 SAVI</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Map Container */}
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
-                    <LeafletMap
-                      center={(() => {
-                        // Use farm location if available
-                        if (selectedFarmForDetail?.location?.coordinates) {
-                          const coords = selectedFarmForDetail.location.coordinates;
-                          return [coords[1], coords[0]]; // [lat, lng] from [lng, lat]
-                        }
-                        // Try parsing from fieldDetails location
-                        if (fieldDetails.location.includes(',')) {
-                          const parts = fieldDetails.location.split(',');
-                          const lat = parseFloat(parts[0]?.trim() || "-1.9441");
-                          const lng = parseFloat(parts[1]?.trim() || "30.0619");
-                          return [lat, lng];
-                        }
-                        return mapCenter;
-                      })()}
-                      zoom={15}
-                      height="500px"
-                      tileLayer={mapTileLayer}
-                      showControls={true}
-                      className="w-full"
-                      boundary={selectedFarmForDetail?.boundary || null}
-                      kmlUrl={selectedFarmForDetail?.kmlUrl || selectedFarmForDetail?.kmlFileUrl || null}
-                    />
-                  </div>
-
-                  {/* Vegetation Health Index Legend - Enhanced */}
-                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-5 border border-gray-200 shadow-sm">
-                    <div className="flex items-center gap-2 mb-3">
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="mt-6 space-y-6">
+            {/* Risk Score Card */}
+            <Card className="bg-gradient-to-br from-white to-green-50/30 border-2 border-green-200 shadow-lg rounded-xl">
+              <CardHeader className="bg-gradient-to-r from-green-50 to-white border-b border-green-200 px-6 py-5">
+                <CardTitle className="text-xl font-bold text-gray-900 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-green-100 rounded-lg">
                       <Activity className="h-5 w-5 text-green-600" />
-                      <Label className="text-base font-semibold text-gray-900">Vegetation Health Index</Label>
+                    </div>
+                    <span>Risk Assessment Score</span>
+                  </div>
+                  {riskScore !== null && riskScore !== undefined && typeof riskScore === 'number' && (
+                    <Badge className={`${getRiskScoreColor(riskScore)} text-white`}>
+                      {getRiskScoreLabel(riskScore)}
+                    </Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                {riskScore !== null && riskScore !== undefined && typeof riskScore === 'number' ? (
+                  <div className="text-center py-6">
+                    <div className={`inline-flex items-center justify-center w-32 h-32 rounded-full ${getRiskScoreColor(riskScore)} text-white text-4xl font-bold mb-4`}>
+                      {riskScore.toFixed(1)}
+                    </div>
+                    <p className="text-gray-600">{getRiskScoreLabel(riskScore)}</p>
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <p className="text-gray-600 mb-4">Risk score has not been calculated yet.</p>
+                    <Button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (!calculatingRisk && assessment?._id) {
+                          handleCalculateRiskScore();
+                        }
+                      }}
+                      disabled={calculatingRisk || !assessment?._id}
+                      className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {calculatingRisk ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Calculating...
+                        </>
+                      ) : (
+                        <>
+                          <Activity className="h-4 w-4 mr-2" />
+                          Calculate Risk Score
+                        </>
+                      )}
+                    </Button>
+                    <p className="text-xs text-gray-500 mt-3">
+                      Note: If calculation fails, the endpoint may not be available yet on the server.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Drone PDF Upload */}
+            <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
+              <CardHeader className="bg-gradient-to-r from-purple-50 to-white border-b border-gray-200 px-6 py-5">
+                <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Upload className="h-5 w-5 text-purple-600" />
+                  </div>
+                  Drone Analysis PDF
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                {assessment.droneAnalysisPdfUrl ? (
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <p className="text-sm font-medium text-green-900">PDF uploaded successfully</p>
+                    </div>
+                    <a
+                      href={assessment.droneAnalysisPdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-green-700 hover:text-green-900 hover:underline flex items-center gap-1"
+                    >
+                      <Download className="h-4 w-4" />
+                      View PDF
+                    </a>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <Input
+                      type="file"
+                      accept=".pdf"
+                      onChange={(e) => setSelectedPDFFile(e.target.files?.[0] || null)}
+                    />
+                    {selectedPDFFile && (
+                      <p className="text-sm text-gray-600">Selected: {selectedPDFFile.name}</p>
+                    )}
+                    <Button
+                      onClick={handleUploadPDF}
+                      disabled={!selectedPDFFile || uploadingPDF}
+                      className="bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                      {uploadingPDF ? "Uploading..." : "Upload PDF"}
+                    </Button>
+                  </div>
+                )}
+                
+                {/* Display extracted drone data - Automatically shown after upload */}
+                {assessment.droneAnalysisData && (
+                  <div className="mt-6 p-5 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl animate-in fade-in duration-300 shadow-md">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 bg-green-200 rounded-full">
+                        <CheckCircle className="h-5 w-5 text-green-700" />
+                      </div>
+                      <p className="text-base font-bold text-gray-900">Extracted Analysis Data</p>
+                      <Badge variant="outline" className="ml-auto bg-green-100 text-green-700 border-green-400 font-semibold">
+                        Auto-extracted
+                      </Badge>
                     </div>
                     <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-medium text-gray-700 w-12">Low</span>
-                        <div className="flex-1 h-6 bg-gradient-to-r from-red-500 via-yellow-500 to-green-600 rounded-lg shadow-inner relative overflow-hidden">
-                          <div className="absolute inset-0 bg-gradient-to-r from-red-400/20 via-yellow-400/20 to-green-500/20 animate-pulse"></div>
+                      {assessment.droneAnalysisData.cropHealth && (
+                        <div className="bg-white p-4 rounded-lg border-2 border-gray-200 shadow-sm">
+                          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Crop Health</p>
+                          <div className="flex items-center gap-2">
+                            <Leaf className="h-5 w-5 text-green-600" />
+                            <p className="text-base font-bold text-gray-900">{assessment.droneAnalysisData.cropHealth}</p>
+                          </div>
                         </div>
-                        <span className="text-xs font-medium text-gray-700 w-12 text-right">High</span>
-                      </div>
-                      <div className="grid grid-cols-5 gap-2 mt-2">
-                        <div className="text-center">
-                          <div className="h-3 w-full bg-red-500 rounded mb-1"></div>
-                          <span className="text-xs text-gray-600">0.0-0.2</span>
+                      )}
+                      {assessment.droneAnalysisData.coverage !== undefined && (
+                        <div className="bg-white p-4 rounded-lg border-2 border-gray-200 shadow-sm">
+                          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Coverage</p>
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 bg-gray-200 rounded-full h-3 shadow-inner">
+                              <div
+                                className="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full transition-all duration-500 shadow-sm"
+                                style={{ width: `${assessment.droneAnalysisData.coverage}%` }}
+                              />
+                            </div>
+                            <span className="text-base font-bold text-gray-900 min-w-[3rem] text-right">
+                              {assessment.droneAnalysisData.coverage}%
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-center">
-                          <div className="h-3 w-full bg-orange-500 rounded mb-1"></div>
-                          <span className="text-xs text-gray-600">0.2-0.4</span>
+                      )}
+                      {assessment.droneAnalysisData.anomalies && Array.isArray(assessment.droneAnalysisData.anomalies) && assessment.droneAnalysisData.anomalies.length > 0 && (
+                        <div className="bg-white p-4 rounded-lg border-2 border-gray-200 shadow-sm">
+                          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">Anomalies Detected</p>
+                          <ul className="space-y-2">
+                            {assessment.droneAnalysisData.anomalies.map((anomaly: string, index: number) => (
+                              <li key={index} className="text-sm text-gray-900 flex items-start gap-2 p-2 bg-amber-50 rounded border border-amber-200">
+                                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                                <span>{anomaly}</span>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
-                        <div className="text-center">
-                          <div className="h-3 w-full bg-yellow-500 rounded mb-1"></div>
-                          <span className="text-xs text-gray-600">0.4-0.6</span>
-                        </div>
-                        <div className="text-center">
-                          <div className="h-3 w-full bg-lime-500 rounded mb-1"></div>
-                          <span className="text-xs text-gray-600">0.6-0.8</span>
-                        </div>
-                        <div className="text-center">
-                          <div className="h-3 w-full bg-green-600 rounded mb-1"></div>
-                          <span className="text-xs text-gray-600">0.8-1.0</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-300">
-                        <span className="text-xs text-gray-600">Health Status: <span className="font-semibold text-green-600">Good</span></span>
-                        <span className="text-xs text-gray-600">Current Index: <span className="font-semibold text-gray-900">0.72</span></span>
-                      </div>
+                      )}
+                      {/* Display any additional fields from the extracted data */}
+                      {Object.keys(assessment.droneAnalysisData).some(key => 
+                        !['cropHealth', 'coverage', 'anomalies'].includes(key)
+                      ) && (
+                        <details className="bg-white p-4 rounded-lg border-2 border-gray-200 shadow-sm">
+                          <summary className="text-xs font-semibold text-gray-600 cursor-pointer hover:text-gray-900 mb-2">
+                            View All Extracted Data
+                          </summary>
+                          <pre className="text-xs bg-gray-50 p-3 rounded border border-gray-200 overflow-auto mt-2 max-h-48">
+                            {JSON.stringify(assessment.droneAnalysisData, null, 2)}
+                          </pre>
+                        </details>
+                      )}
                     </div>
                   </div>
-                </div>
+                )}
+                
+                {/* Show message if PDF uploaded but analysis data is still processing */}
+                {assessment.droneAnalysisPdfUrl && !assessment.droneAnalysisData && !uploadingPDF && (
+                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg animate-pulse">
+                    <div className="flex items-center gap-2">
+                      <Activity className="h-5 w-5 text-blue-600" />
+                      <p className="text-sm font-medium text-blue-900">
+                        Drone PDF uploaded. Analysis data is being processed...
+                      </p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
             {/* Comprehensive Notes */}
-            {assessmentId && (
-              <Card className="bg-white border border-gray-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-gray-900">Comprehensive Assessment Notes *</CardTitle>
-                  <p className="text-sm text-gray-600 mt-1">Required for report generation</p>
-                </CardHeader>
-                <CardContent>
-                  <Textarea
-                    value={comprehensiveNotes}
-                    onChange={(e) => setComprehensiveNotes(e.target.value)}
-                    className="min-h-[150px] border-gray-300"
-                    placeholder="Enter comprehensive assessment notes here..."
-                  />
+            <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b border-gray-200 px-6 py-5">
+                <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <FileText className="h-5 w-5 text-blue-600" />
+                  </div>
+                  Comprehensive Assessment Notes
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                <Textarea
+                  value={comprehensiveNotes}
+                  onChange={(e) => setComprehensiveNotes(e.target.value)}
+                  placeholder="Enter comprehensive assessment notes here..."
+                  className="min-h-[200px] border-gray-300"
+                />
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-gray-500">{comprehensiveNotes.length} characters</p>
                   <Button
                     onClick={handleSaveNotes}
                     disabled={savingNotes}
-                    className="mt-3 bg-green-600 hover:bg-green-700 text-white"
-                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     {savingNotes ? (
-                      <img src="/loading.gif" alt="Loading" className="w-4 h-4" />
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Saving...
+                      </>
                     ) : (
                       <>
-                        <CheckCircle className="h-4 w-4 mr-2" />
+                        <Save className="h-4 w-4 mr-2" />
                         Save Notes
                       </>
                     )}
                   </Button>
-                </CardContent>
-              </Card>
-            )}
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* Risk Score & Report Generation */}
-            {assessmentId && (
-              <Card className="bg-white border border-gray-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-gray-900">Risk Assessment & Report Generation</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Risk Score */}
-                  <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                    <div>
-                      <p className="text-sm text-gray-600">Risk Score</p>
-                      <p className={`text-2xl font-bold ${riskScore !== null ? 
-                        riskScore <= 30 ? 'text-green-600' : 
-                        riskScore <= 70 ? 'text-yellow-600' : 'text-red-600' 
-                        : 'text-gray-400'}`}>
-                        {riskScore !== null ? riskScore.toFixed(1) : 'Not calculated'}
-                      </p>
-                    </div>
-                    <Button
-                      onClick={handleCalculateRiskScore}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      <Activity className="h-4 w-4 mr-2" />
-                      Calculate Risk Score
-                    </Button>
+            {/* Generate Report */}
+            <Card className="bg-gradient-to-br from-amber-50 to-orange-50/30 border-2 border-amber-200 shadow-lg rounded-xl">
+              <CardHeader className="bg-gradient-to-r from-amber-50 to-white border-b border-amber-200 px-6 py-5">
+                <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <div className="p-2 bg-amber-100 rounded-lg">
+                    <FileText className="h-5 w-5 text-amber-600" />
                   </div>
-
-                  {/* Generate Report Button */}
-                  <Button
-                    onClick={handleGenerateReport}
-                    disabled={generatingReport || riskScore === null || !comprehensiveNotes || comprehensiveNotes.trim().length === 0}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white"
-                    size="lg"
-                  >
-                    {generatingReport ? (
-                      <img src="/loading.gif" alt="Loading" className="w-4 h-4" />
+                  Generate Full Assessment Report
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                <div className="space-y-2">
+                  <div className={`flex items-center gap-2 p-2 rounded ${riskScore !== null && riskScore !== undefined && typeof riskScore === 'number' ? 'bg-green-50' : 'bg-gray-50'}`}>
+                    {riskScore !== null && riskScore !== undefined && typeof riskScore === 'number' ? (
+                      <CheckCircle className="h-4 w-4 text-green-600" />
                     ) : (
-                      <>
-                        <FileText className="h-4 w-4 mr-2" />
-                        Generate Full Report
-                      </>
+                      <AlertTriangle className="h-4 w-4 text-gray-400" />
                     )}
-                  </Button>
-                  {(!comprehensiveNotes || comprehensiveNotes.trim().length === 0) && (
-                    <p className="text-sm text-yellow-600">Please add comprehensive notes before generating report.</p>
-                  )}
-                  {riskScore === null && (
-                    <p className="text-sm text-yellow-600">Please calculate risk score before generating report.</p>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-4">
-                    <Button
-                      onClick={handleSave}
-                className="bg-gray-800 hover:bg-gray-900 text-white flex-1"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Save Analysis
-                    </Button>
-                    <Button
-                      onClick={handleDownload}
-                      variant="outline"
-                className="border-gray-300 text-gray-700 hover:bg-gray-50 flex-1"
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Download Summary JSON
-                    </Button>
+                    <span className={`text-sm ${riskScore !== null && riskScore !== undefined && typeof riskScore === 'number' ? 'text-green-900' : 'text-gray-600'}`}>
+                      Risk score calculated {riskScore !== null && riskScore !== undefined && typeof riskScore === 'number' ? '✓' : '✗'}
+                    </span>
                   </div>
-          </>
-        )}
+                  <div className={`flex items-center gap-2 p-2 rounded ${comprehensiveNotes.trim().length > 0 ? 'bg-green-50' : 'bg-gray-50'}`}>
+                    {comprehensiveNotes.trim().length > 0 ? (
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4 text-gray-400" />
+                    )}
+                    <span className={`text-sm ${comprehensiveNotes.trim().length > 0 ? 'text-green-900' : 'text-gray-600'}`}>
+                      Comprehensive notes added {comprehensiveNotes.trim().length > 0 ? '✓' : '✗'}
+                    </span>
+                  </div>
                 </div>
-    );
-  };
-
-  // Overview Tab Component with Risk Score, Notes, and Report Generation
-  const OverviewTab = ({ 
-    assessmentDetails, 
-    assessmentId, 
-    fieldDetails,
-    onRefresh 
-  }: { 
-    assessmentDetails: any | null; 
-    assessmentId?: string;
-    fieldDetails: FieldDetail;
-    onRefresh: () => void;
-  }) => {
-    const [riskScore, setRiskScore] = useState<number | null>(assessmentDetails?.riskScore ?? null);
-    const [calculatingRisk, setCalculatingRisk] = useState(false);
-    const [comprehensiveNotes, setComprehensiveNotes] = useState(assessmentDetails?.comprehensiveNotes || '');
-    const [savingNotes, setSavingNotes] = useState(false);
-    const [generatingReport, setGeneratingReport] = useState(false);
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [uploadingPDF, setUploadingPDF] = useState(false);
-    const [droneAnalysisData, setDroneAnalysisData] = useState<any>(assessmentDetails?.droneAnalysisData || null);
-
-    // Update state when assessmentDetails changes
-    useEffect(() => {
-      if (assessmentDetails) {
-        setRiskScore(assessmentDetails.riskScore ?? null);
-        setComprehensiveNotes(assessmentDetails.comprehensiveNotes || '');
-        setDroneAnalysisData(assessmentDetails.droneAnalysisData || null);
-      }
-    }, [assessmentDetails]);
-
-    const handleCalculateRiskScore = async () => {
-      if (!assessmentId) {
-        toast({
-          title: "Error",
-          description: "Assessment ID not available.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setCalculatingRisk(true);
-      try {
-        const score = await assessmentsApiService.calculateRiskScore(assessmentId);
-        const riskScoreValue = typeof score === 'number' ? score : (score?.data || score?.riskScore || score);
-        setRiskScore(riskScoreValue);
-        toast({
-          title: "Success",
-          description: `Risk score calculated: ${riskScoreValue}`,
-        });
-        // Refresh assessment details
-        if (onRefresh) onRefresh();
-      } catch (err: any) {
-        console.error('Failed to calculate risk score:', err);
-        toast({
-          title: "Calculation Failed",
-          description: err.message || 'Failed to calculate risk score',
-          variant: "destructive",
-        });
-      } finally {
-        setCalculatingRisk(false);
-      }
-    };
-
-    const handleSaveNotes = async () => {
-      if (!assessmentId) {
-        toast({
-          title: "Error",
-          description: "Assessment ID not available.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setSavingNotes(true);
-      try {
-        await assessmentsApiService.updateAssessment(assessmentId, {
-          comprehensiveNotes: comprehensiveNotes,
-        });
-        toast({
-          title: "Success",
-          description: "Comprehensive notes saved successfully.",
-        });
-        if (onRefresh) onRefresh();
-      } catch (err: any) {
-        console.error('Failed to save notes:', err);
-        toast({
-          title: "Save Failed",
-          description: err.message || 'Failed to save comprehensive notes',
-          variant: "destructive",
-        });
-      } finally {
-        setSavingNotes(false);
-      }
-    };
-
-    const handleUploadDronePDF = async () => {
-      if (!selectedFile || !assessmentId) {
-        toast({
-          title: "Validation Error",
-          description: "Please select a PDF file.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setUploadingPDF(true);
-      try {
-        const result = await assessmentsApiService.uploadDronePDF(assessmentId, selectedFile);
-        setDroneAnalysisData(result?.droneAnalysisData || result?.data?.droneAnalysisData || null);
-        toast({
-          title: "Success",
-          description: "Drone PDF uploaded successfully.",
-        });
-        setSelectedFile(null);
-        if (onRefresh) onRefresh();
-      } catch (err: any) {
-        console.error('Failed to upload drone PDF:', err);
-        toast({
-          title: "Upload Failed",
-          description: err.message || 'Failed to upload drone PDF',
-          variant: "destructive",
-        });
-      } finally {
-        setUploadingPDF(false);
-      }
-    };
-
-    const handleGenerateReport = async () => {
-      if (!assessmentId) {
-        toast({
-          title: "Error",
-          description: "Assessment ID not available.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Validation
-      if (riskScore === null || riskScore === undefined) {
-        toast({
-          title: "Validation Error",
-          description: "Please calculate risk score before generating report.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!comprehensiveNotes || comprehensiveNotes.trim().length === 0) {
-        toast({
-          title: "Validation Error",
-          description: "Please add comprehensive notes before generating report.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setGeneratingReport(true);
-      try {
-        await assessmentsApiService.generateReport(assessmentId);
-        toast({
-          title: "Success",
-          description: "Report generated successfully. Insurer has been notified.",
-        });
-        if (onRefresh) onRefresh();
-        if (onRefresh) {
-          onRefresh();
-        }
-      } catch (err: any) {
-        console.error('Failed to generate report:', err);
-        toast({
-          title: "Generation Failed",
-          description: err.message || 'Failed to generate report',
-          variant: "destructive",
-        });
-      } finally {
-        setGeneratingReport(false);
-      }
-    };
-
-    const getRiskScoreColor = (score: number | null) => {
-      if (score === null || score === undefined) return 'bg-gray-500';
-      if (score <= 30) return 'bg-green-600';
-      if (score <= 70) return 'bg-yellow-500';
-      return 'bg-red-500';
-    };
-
-    const getRiskScoreLabel = (score: number | null) => {
-      if (score === null || score === undefined) return 'Not Calculated';
-      if (score <= 30) return 'Low Risk';
-      if (score <= 70) return 'Medium Risk';
-      return 'High Risk';
-    };
-
-    return (
-      <div className="space-y-6">
-        {/* Risk Score Card */}
-        <Card className="bg-white border border-gray-200 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-gray-900 flex items-center justify-between">
-              <span>Risk Score</span>
-              {riskScore !== null && (
-                <Badge className={`${getRiskScoreColor(riskScore)} text-white`}>
-                  {getRiskScoreLabel(riskScore)}
-                </Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {riskScore !== null ? (
-              <div className="text-center py-6">
-                <div className={`inline-flex items-center justify-center w-32 h-32 rounded-full ${getRiskScoreColor(riskScore)} text-white text-4xl font-bold mb-4`}>
-                  {riskScore.toFixed(1)}
-                </div>
-                <p className="text-gray-600">{getRiskScoreLabel(riskScore)}</p>
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <p className="text-gray-600 mb-4">Risk score has not been calculated yet.</p>
                 <Button
-                  onClick={handleCalculateRiskScore}
-                  disabled={calculatingRisk || !assessmentId}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  onClick={handleGenerateReport}
+                  disabled={generatingReport || riskScore === null || riskScore === undefined || typeof riskScore !== 'number' || comprehensiveNotes.trim().length === 0}
+                  className="w-full bg-amber-600 hover:bg-amber-700 text-white h-12 font-semibold"
                 >
-                  {calculatingRisk ? (
-                    <img src="/loading.gif" alt="Loading" className="w-4 h-4" />
+                  {generatingReport ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Generating Report...
+                    </>
                   ) : (
                     <>
-                      <Activity className="h-4 w-4 mr-2" />
-                      Calculate Risk Score
+                      <FileText className="h-5 w-5 mr-2" />
+                      Generate & Send Report to Insurer
                     </>
                   )}
                 </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Comprehensive Notes Card */}
-        <Card className="bg-white border border-gray-200 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-gray-900">Comprehensive Assessment Notes</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Textarea
-              value={comprehensiveNotes}
-              onChange={(e) => setComprehensiveNotes(e.target.value)}
-              placeholder="Enter comprehensive assessment notes here..."
-              className="min-h-[200px] border-gray-300"
-            />
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-500">
-                {comprehensiveNotes.length} characters
-              </p>
-              <Button
-                onClick={handleSaveNotes}
-                disabled={savingNotes || !assessmentId}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                {savingNotes ? (
-                  <img src="/loading.gif" alt="Loading" className="w-4 h-4" />
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Notes
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Drone PDF Upload Card */}
-        <Card className="bg-white border border-gray-200 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-gray-900">Drone Analysis PDF</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {assessmentDetails?.droneAnalysisPdfUrl ? (
-              <div className="p-4 bg-green-50 border border-green-600 rounded-lg">
-                <p className="text-sm text-green-600 mb-2">PDF uploaded successfully</p>
-                <a 
-                  href={assessmentDetails.droneAnalysisPdfUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-sm text-green-600 hover:underline"
-                >
-                  View PDF
-                </a>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                  <p className="text-gray-700 mb-2">Upload Drone Analysis PDF</p>
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                    className="hidden"
-                    id="drone-pdf-upload"
-                  />
-                  <Button
-                    onClick={() => document.getElementById('drone-pdf-upload')?.click()}
-                    variant="outline"
-                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Select PDF File
-                  </Button>
-                  {selectedFile && (
-                    <p className="text-sm text-gray-600 mt-2">Selected: {selectedFile.name}</p>
-                  )}
-                </div>
-                {selectedFile && (
-                  <Button
-                    onClick={handleUploadDronePDF}
-                    disabled={uploadingPDF || !assessmentId}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    {uploadingPDF ? (
-                      <img src="/loading.gif" alt="Loading" className="w-4 h-4" />
-                    ) : (
-                      <>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload PDF
-                      </>
-                    )}
-                  </Button>
-                )}
-              </div>
-            )}
-            {droneAnalysisData && (
-              <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                <p className="text-sm font-medium text-gray-900 mb-2">Extracted Data:</p>
-                <pre className="text-xs bg-white p-3 rounded border border-gray-200 overflow-auto">
-                  {JSON.stringify(droneAnalysisData, null, 2)}
-                </pre>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Generate Report Card */}
-        <Card className="bg-white border border-gray-200 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-gray-900">Generate Full Report</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                {riskScore !== null ? (
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                ) : (
-                  <AlertCircle className="h-5 w-5 text-gray-400" />
-                )}
-                <span className={`text-sm ${riskScore !== null ? 'text-gray-900' : 'text-gray-500'}`}>
-                  Risk score calculated {riskScore !== null ? '✓' : '✗'}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                {comprehensiveNotes && comprehensiveNotes.trim().length > 0 ? (
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                ) : (
-                  <AlertCircle className="h-5 w-5 text-gray-400" />
-                )}
-                <span className={`text-sm ${comprehensiveNotes && comprehensiveNotes.trim().length > 0 ? 'text-gray-900' : 'text-gray-500'}`}>
-                  Comprehensive notes added {comprehensiveNotes && comprehensiveNotes.trim().length > 0 ? '✓' : '✗'}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                <span className="text-sm text-gray-900">
-                  Weather analysis done ✓
-                </span>
-              </div>
-            </div>
-            <Button
-              onClick={handleGenerateReport}
-              disabled={generatingReport || riskScore === null || !comprehensiveNotes || comprehensiveNotes.trim().length === 0 || !assessmentId}
-              className="w-full bg-green-600 hover:bg-green-700 text-white"
-            >
-              {generatingReport ? (
-                <img src="/loading.gif" alt="Loading" className="w-4 h-4" />
-              ) : (
-                <>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Generate Full Report
-                </>
-              )}
-            </Button>
-            {assessmentDetails?.reportGenerated && (
-              <div className="p-4 bg-green-50 border border-green-600 rounded-lg">
-                <p className="text-sm text-green-600">
-                  Report generated on {assessmentDetails.reportGeneratedAt 
-                    ? new Date(assessmentDetails.reportGeneratedAt).toLocaleString() 
-                    : 'N/A'}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    );
-  };
-
-  const renderFieldDetail = () => {
-    if (!selectedField) return null;
-    const fieldDetails = getFieldDetails(selectedField);
-
-    // Generate Field ID in FLD-XXX format
-    const fieldId = selectedField.id ? `FLD-${String(selectedField.id).slice(-3).padStart(3, '0')}` : fieldDetails.fieldId;
-
-    return (
-      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
-        {/* Clean Header */}
-        <div className="max-w-7xl mx-auto px-6 mb-6">
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
-                  <div>
-              <h1 className="text-2xl font-semibold text-gray-900">Field Detail View</h1>
-              <p className="text-sm text-gray-500 mt-1">{fieldId} • {fieldDetails.farmer} • {fieldDetails.cropType}</p>
-                        </div>
-                        </div>
-                      </div>
-
-        {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-            <TabsList className="bg-white border border-gray-200 inline-flex h-10 items-center justify-center rounded-lg p-1">
-            <TabsTrigger 
-              value="basic-info" 
-                className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-gray-700 px-4 py-2 rounded text-sm"
-            >
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Basic Info
-            </TabsTrigger>
-            <TabsTrigger 
-              value="weather" 
-                className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-gray-700 px-4 py-2 rounded text-sm"
-            >
-              <CloudRain className="h-4 w-4 mr-2" />
-              Weather Analysis
-            </TabsTrigger>
-            <TabsTrigger 
-              value="crop" 
-                className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-gray-700 px-4 py-2 rounded text-sm"
-            >
-              <Leaf className="h-4 w-4 mr-2" />
-                Crop Analysis (Drone)
-              </TabsTrigger>
-              <TabsTrigger 
-                value="overview" 
-                className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-gray-700 px-4 py-2 rounded text-sm"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Overview
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="basic-info" className="mt-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              {/* Left Panel - Field Information */}
-              <Card className="bg-white border border-gray-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-gray-900">Field Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex justify-between items-center border-b border-gray-200 pb-2.5">
-                    <span className="text-sm text-gray-600">Field ID:</span>
-                    <span className="text-sm font-medium text-gray-900">{fieldId}</span>
-                        </div>
-                  <div className="flex justify-between items-center border-b border-gray-200 pb-2.5">
-                    <span className="text-sm text-gray-600">Field Name:</span>
-                    <span className="text-sm font-medium text-gray-900">{fieldDetails.fieldName}</span>
-                        </div>
-                  <div className="flex justify-between items-center border-b border-gray-200 pb-2.5">
-                    <span className="text-sm text-gray-600">Farmer:</span>
-                    <span className="text-sm font-medium text-gray-900">{fieldDetails.farmer}</span>
-                      </div>
-                  <div className="flex justify-between items-center border-b border-gray-200 pb-2.5">
-                    <span className="text-sm text-gray-600">Crop Type:</span>
-                    <div className="flex items-center gap-1.5">
-                      <Sprout className="h-3.5 w-3.5 text-green-600" />
-                      <span className="text-sm font-medium text-gray-900">{fieldDetails.cropType}</span>
-                        </div>
-                        </div>
-                  <div className="flex justify-between items-center border-b border-gray-200 pb-2.5">
-                    <span className="text-sm text-gray-600">Area:</span>
-                    <span className="text-sm font-medium text-gray-900">{fieldDetails.area} hectares</span>
-                      </div>
-                  <div className="flex justify-between items-center border-b border-gray-200 pb-2.5">
-                    <span className="text-sm text-gray-600">Season:</span>
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 text-gray-500" />
-                      <span className="text-sm font-medium text-gray-900">Season {fieldDetails.season}</span>
-                        </div>
-                        </div>
-                  <div className="flex justify-between items-center pb-2.5">
-                    <span className="text-sm text-gray-600">Location:</span>
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5 text-teal-500" />
-                      <span className="text-sm font-medium text-gray-900">{fieldDetails.location}</span>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-2 pt-3 border-t border-gray-200 mt-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                    >
-                      <Edit className="h-3.5 w-3.5 mr-1.5" />
-                      Edit Info
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                    >
-                      <FileText className="h-3.5 w-3.5 mr-1.5" />
-                      View History
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Right Panel - Map View */}
-              <Card className="bg-white border border-gray-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-gray-900">Map View</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
-                    <LeafletMap
-                      center={(() => {
-                        // Use farm location if available
-                        if (selectedFarmForDetail?.location?.coordinates && Array.isArray(selectedFarmForDetail.location.coordinates)) {
-                          const coords = selectedFarmForDetail.location.coordinates;
-                          const lat = coords[1];
-                          const lng = coords[0];
-                          // Validate coordinates
-                          if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                            return [lat, lng]; // [lat, lng] from [lng, lat]
-                          }
-                        }
-                        // Try parsing from fieldDetails location
-                        if (fieldDetails.location && fieldDetails.location.includes(',')) {
-                          const parts = fieldDetails.location.split(',');
-                          const lat = parseFloat(parts[0]?.trim() || "");
-                          const lng = parseFloat(parts[1]?.trim() || "");
-                          if (!isNaN(lat) && !isNaN(lng)) {
-                          return [lat, lng];
-                          }
-                        }
-                        return [-1.9441, 30.0619];
-                      })()}
-                      zoom={15}
-                      height="500px"
-                      tileLayer="satellite"
-                      showControls={true}
-                      className="w-full"
-                      boundary={selectedFarmForDetail?.boundary || null}
-                      kmlUrl={selectedFarmForDetail?.kmlUrl || selectedFarmForDetail?.kmlFileUrl || null}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-                </div>
-              </TabsContent>
-
-          <TabsContent value="weather" className="mt-4">
-            <WeatherAnalysisTabWithAPI 
-              fieldDetails={fieldDetails} 
-              farmId={(() => {
-                // Extract farmId from assessmentDetails or selectedField
-                if (assessmentDetails?.farmId) {
-                  return typeof assessmentDetails.farmId === 'string' 
-                    ? assessmentDetails.farmId 
-                    : assessmentDetails.farmId._id || assessmentDetails.farmId.id;
-                }
-                return selectedField?.id || '';
-              })()} 
-            />
-          </TabsContent>
-
-          <TabsContent value="crop" className="mt-4">
-            <CropAnalysisTab 
-              fieldDetails={fieldDetails} 
-              assessmentId={(() => {
-                // Use assessmentDetails _id if available, otherwise use selectedAssessment id
-                if (assessmentDetails?._id) return assessmentDetails._id;
-                if (assessmentDetails?.id) return assessmentDetails.id;
-                return selectedAssessment?.id || '';
-              })()}
-            />
-          </TabsContent>
-
-          <TabsContent value="overview" className="mt-4">
-            <OverviewTab 
-              assessmentDetails={assessmentDetails}
-              assessmentId={(() => {
-                // Use assessmentDetails _id if available, otherwise use selectedAssessment id
-                if (assessmentDetails?._id) return assessmentDetails._id;
-                if (assessmentDetails?.id) return assessmentDetails.id;
-                return selectedAssessment?.id || '';
-              })()}
-              fieldDetails={fieldDetails}
-              onRefresh={() => {
-                if (selectedAssessment?.id && selectedField) {
-                  handleFieldClick(selectedField);
-                }
-              }}
-            />
-          </TabsContent>
-        </Tabs>
-        </div>
-      </div>
-    );
-  };
-
-  // Get status color based on status value
-  const getStatusColor = (status: string) => {
-    const statusLower = status.toLowerCase();
-    switch (statusLower) {
-      case "approved":
-      case "completed":
-        return "bg-green-600 text-white border-green-600";
-      case "pending":
-        return "bg-yellow-500 text-white border-yellow-600";
-      case "submitted":
-        return "bg-blue-500 text-white border-blue-600";
-      case "under review":
-      case "processing":
-        return "bg-orange-500 text-white border-orange-600";
-      case "rejected":
-        return "bg-red-500 text-white border-red-600";
-      default:
-        return "bg-gray-500 text-white border-gray-600";
-    }
-  };
-
-  // Helper function to get field details from farm
-  const getFieldDetailsFromFarm = (farm: any, farmer: any): FieldDetail => {
-    const farmerName = 
-      farmer?.name || 
-      (farmer?.firstName && farmer?.lastName ? `${farmer.firstName} ${farmer.lastName}`.trim() : '') ||
-      farmer?.firstName || 
-      farmer?.lastName || 
-      "Unknown Farmer";
-    
-    return {
-      fieldId: farm._id || farm.id || '',
-      fieldName: farm.name || "Unnamed Farm",
-      farmer: farmerName,
-      cropType: farm.cropType || farm.crop || "Unknown",
-      area: farm.area || farm.size || 0,
-      season: farm.season || "A",
-      sowingDate: farm.sowingDate || farm.plantingDate || new Date().toISOString().split('T')[0],
-      location: farmer?.location || 
-        (farmer?.province && farmer?.district ? `${farmer.province}, ${farmer.district}` : '') ||
-        farmer?.province ||
-        farmer?.district ||
-        "Unknown Location"
-    };
-  };
-
-  // Render field detail view for dashboard mode
-  const renderDashboardFieldDetail = () => {
-    if (!selectedFarmForDetail || !selectedFarmerForDetail) return null;
-    
-    const fieldDetails = getFieldDetailsFromFarm(selectedFarmForDetail, selectedFarmerForDetail);
-    const fieldId = selectedFarmForDetail._id || selectedFarmForDetail.id || '';
-    const displayFieldId = fieldId ? `FLD-${String(fieldId).slice(-3).padStart(3, '0')}` : 'FLD-000';
-
-    return (
-      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
-        <div className="max-w-7xl mx-auto px-6 space-y-6">
-          {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm">
-          <button 
-              onClick={() => {
-                setDashboardViewMode("list");
-                setSelectedFarmerForDetail(null);
-                setSelectedFarmForDetail(null);
-              }}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-700"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Field List
-          </button>
-        </div>
-        
-          {/* Header */}
-        <div>
-          <h1 className="text-sm font-normal text-gray-900">
-              Field Detail View: {displayFieldId}
-          </h1>
-            <p className="text-gray-900/70 mt-2">
-              {fieldDetails.farmer} - {fieldDetails.cropType}
-          </p>
-        </div>
-
-          {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="bg-white border border-gray-200 inline-flex h-10 items-center justify-center rounded-lg p-1">
-            <TabsTrigger 
-              value="basic-info" 
-                className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700 px-4 py-2 rounded text-sm"
-            >
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Basic Info
-            </TabsTrigger>
-            <TabsTrigger 
-              value="weather" 
-                className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700 px-4 py-2 rounded text-sm"
-            >
-              <CloudRain className="h-4 w-4 mr-2" />
-              Weather Analysis
-            </TabsTrigger>
-            <TabsTrigger 
-              value="crop" 
-                className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700 px-4 py-2 rounded text-sm"
-            >
-              <Leaf className="h-4 w-4 mr-2" />
-                Crop Analysis (Satellite)
-              </TabsTrigger>
-              <TabsTrigger 
-                value="overview" 
-                className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700 px-4 py-2 rounded text-sm"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Overview
-            </TabsTrigger>
-          </TabsList>
-
-            {/* Tab Contents */}
-          <TabsContent value="basic-info" className="mt-6">
-            <div className="grid gap-6 md:grid-cols-2">
-                {/* Field Information */}
-                <Card className="bg-white border border-gray-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-gray-900">Field Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                    <span className="text-gray-600">Field ID</span>
-                      <span className="text-gray-700 font-medium">{displayFieldId}</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                    <span className="text-gray-600">Field Name</span>
-                    <span className="text-gray-700 font-medium">{fieldDetails.fieldName}</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                    <span className="text-gray-600">Farmer</span>
-                    <span className="text-gray-700 font-medium">{fieldDetails.farmer}</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                    <span className="text-gray-600">Crop Type</span>
+                {assessment.reportGenerated && (
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex items-center gap-2">
-                      <Leaf className="h-4 w-4 text-gray-600" />
-                      <span className="text-gray-700 font-medium">{fieldDetails.cropType}</span>
+                      <CheckCircle className="h-5 w-5 text-green-700" />
+                      <p className="text-sm font-semibold text-green-900">
+                        Report generated successfully
+                      </p>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                    <span className="text-gray-600">Area</span>
-                    <span className="text-gray-700 font-medium">{fieldDetails.area} hectares</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                    <span className="text-gray-600">Season</span>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-gray-600" />
-                        <span className="text-gray-700 font-medium">Season {fieldDetails.season}</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center pb-3">
-                    <span className="text-gray-600">Location</span>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-gray-600" />
-                      <span className="text-gray-700 font-medium">{fieldDetails.location}</span>
-                    </div>
-                  </div>
-                    <div className="flex gap-2 pt-3 border-t border-gray-200 mt-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                      >
-                        <Edit className="h-3.5 w-3.5 mr-1.5" />
-                        Edit Info
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                      >
-                        <FileText className="h-3.5 w-3.5 mr-1.5" />
-                        View History
-                      </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-                {/* Map View */}
-                <Card className="bg-white border border-gray-200 shadow-sm">
-                <CardHeader>
-                    <CardTitle className="text-gray-900">Map View</CardTitle>
-                </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="border border-gray-200 rounded-lg overflow-hidden">
-                      <LeafletMap
-                        center={(() => {
-                          // Use farm location if available
-                          if (selectedFarmForDetail?.location?.coordinates) {
-                            const coords = selectedFarmForDetail.location.coordinates;
-                            return [coords[1], coords[0]]; // [lat, lng] from [lng, lat]
-                          }
-                          // Try parsing from fieldDetails location string
-                          if (fieldDetails.location.includes(',')) {
-                            const parts = fieldDetails.location.split(',');
-                            const lat = parseFloat(parts[0]?.trim() || "-1.9441");
-                            const lng = parseFloat(parts[1]?.trim() || "30.0619");
-                            return [lat, lng];
-                          }
-                          return [-1.9441, 30.0619]; // Default: Kigali, Rwanda
-                        })()}
-                        zoom={15}
-                        height="500px"
-                        tileLayer="satellite"
-                        showControls={true}
-                        className="w-full"
-                        boundary={selectedFarmForDetail?.boundary || null}
-                      />
-                    </div>
-                  </CardContent>
-              </Card>
-            </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
-          <TabsContent value="weather" className="mt-6">
-              <WeatherAnalysisTabWithAPI fieldDetails={fieldDetails} farmId={fieldId} />
-          </TabsContent>
-
-          <TabsContent value="crop" className="mt-6">
-            <CropAnalysisTab fieldDetails={fieldDetails} assessmentId={selectedAssessment?.id} />
-          </TabsContent>
-
-            <TabsContent value="overview" className="mt-6">
-              <OverviewTab 
-                assessmentDetails={assessmentDetails}
-                assessmentId={selectedAssessment?.id}
-                fieldDetails={fieldDetails}
-                onRefresh={() => {
-                  if (selectedAssessment?.id) {
-                    handleFieldClick(selectedField!);
-                  }
-                }}
-              />
-          </TabsContent>
-        </Tabs>
-        </div>
-      </div>
-    );
-  };
-
-  // Weather Analysis Tab with API integration (using all available weather and indices APIs)
-  const WeatherAnalysisTabWithAPI = ({ fieldDetails, farmId }: { fieldDetails: FieldDetail; farmId: string }) => {
-    const [weatherData, setWeatherData] = useState<any>(null);
-    const [indicesData, setIndicesData] = useState<any>(null);
-    const [weatherLoading, setWeatherLoading] = useState(false);
-    const [weatherError, setWeatherError] = useState<string | null>(null);
-
-    useEffect(() => {
-      const loadWeather = async () => {
-        if (!farmId) return;
-        
-        setWeatherLoading(true);
-        setWeatherError(null);
-        try {
-          const today = new Date();
-          const endDate = new Date();
-          endDate.setDate(today.getDate() + 7);
-          
-          const startDateStr = today.toISOString().split('T')[0];
-          const endDateStr = endDate.toISOString().split('T')[0];
-          
-          // Helper function to handle API errors gracefully
-          const handleApiError = (err: any, apiName: string) => {
-            // Silently handle 400 errors for missing EOSDA field ID
-            if (err?.message?.includes('EOSDA') || err?.message?.includes('register the farm')) {
-              return null;
-            }
-            console.warn(`${apiName} error:`, err);
-            return null;
-          };
-          
-          // Load all weather APIs
-          const [forecast, historical, accumulated] = await Promise.all([
-            getWeatherForecast(farmId, startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'Weather forecast')),
-            getHistoricalWeather(farmId, startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'Historical weather')),
-            getAccumulatedWeather(farmId, startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'Accumulated weather'))
-          ]);
-
-          // Load all indices APIs
-          const [indicesStats, ndviTimeSeries, fieldTrend] = await Promise.all([
-            getVegetationStats(farmId, startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'Vegetation indices statistics')),
-            getNDVITimeSeries(farmId, startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'NDVI time series')),
-            getFieldTrend(farmId, 'NDVI', startDateStr, endDateStr).catch((err: any) => handleApiError(err, 'Field trend'))
-          ]);
-
-          setWeatherData({ forecast, historical, accumulated });
-          setIndicesData({ indicesStats, ndviTimeSeries, fieldTrend });
-        } catch (err: any) {
-          // Only show error if it's not an expected EOSDA error
-          if (!err?.message?.includes('EOSDA') && !err?.message?.includes('register the farm')) {
-            console.error('Failed to load weather data:', err);
-            setWeatherError(err.message || 'Failed to load weather data');
-          }
-        } finally {
-          setWeatherLoading(false);
-        }
-      };
-
-      loadWeather();
-    }, [farmId]);
-
-    if (weatherLoading) {
-      return (
-        <Card className="bg-white border border-gray-200 shadow-sm">
-          <CardContent className="p-12">
-            <div className="flex items-center justify-center">
-              <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
-            </div>
-          </CardContent>
-        </Card>
-      );
-    }
-
-    if (weatherError) {
-      return (
-        <Card className="bg-white border border-red-200 shadow-sm">
-          <CardContent className="p-4">
-            <div className="text-center text-red-600">
-              <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
-              <p>{weatherError}</p>
-            </div>
-          </CardContent>
-        </Card>
-      );
-    }
-
-    // Prepare NDVI chart data
-    const ndviChartData = indicesData?.ndviTimeSeries?.data || indicesData?.ndviTimeSeries || [];
-    const ndviChartFormatted = Array.isArray(ndviChartData) ? ndviChartData.map((item: any) => ({
-      date: item.date || item.timestamp || item.time || '',
-      ndvi: item.ndvi || item.value || 0
-    })) : [];
-
-    // Prepare weather history chart data
-    const weatherHistoryData = weatherData?.historical?.data || weatherData?.historical || [];
-    const weatherChartData = Array.isArray(weatherHistoryData) ? weatherHistoryData.map((item: any) => ({
-      date: item.date || item.timestamp || item.time || '',
-      temperature: item.temperature || item.temp || 0,
-      rainfall: item.rainfall || item.precipitation || item.precip || 0
-    })) : [];
-
-    // Prepare weather forecast data
-    const forecastData = weatherData?.forecast?.data || weatherData?.forecast || [];
-    const forecastChartData = Array.isArray(forecastData) ? forecastData.map((item: any) => ({
-      date: item.date || item.timestamp || item.time || item.datetime || '',
-      temperature: item.temperature || item.temp || item.maxTemp || 0,
-      minTemp: item.minTemp || item.temperatureMin || 0,
-      rainfall: item.rainfall || item.precipitation || item.precip || item.precipitationAmount || 0,
-      humidity: item.humidity || 0,
-      windSpeed: item.windSpeed || item.wind || 0
-    })) : [];
-
-    // Prepare accumulated weather data
-    const accumulatedData = weatherData?.accumulated || {};
-
-    return (
-      <div className="space-y-6">
-        {/* Weather Forecast */}
-        {forecastChartData.length > 0 && (
-          <Card className="bg-gradient-to-br from-blue-900/90 to-cyan-900/90 border border-blue-700/30 shadow-xl">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Cloud className="h-5 w-5" />
-                Weather Forecast
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Forecast Chart */}
-                <ResponsiveContainer width="100%" height={250}>
-                  <ComposedChart data={forecastChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.2)" />
-                    <XAxis 
-                      dataKey="date" 
-                      tick={{ fill: 'white', fontSize: 12 }}
-                      angle={-45}
-                      textAnchor="end"
-                      height={80}
-                    />
-                    <YAxis yAxisId="left" tick={{ fill: 'white', fontSize: 12 }} />
-                    <YAxis yAxisId="right" orientation="right" tick={{ fill: 'white', fontSize: 12 }} />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: '8px', color: 'white' }}
-                    />
-                    <Legend wrapperStyle={{ color: 'white' }} />
-                    <Bar yAxisId="right" dataKey="rainfall" fill="#60a5fa" name="Rainfall (mm)" />
-                    <Line 
-                      yAxisId="left"
-                      type="monotone" 
-                      dataKey="temperature" 
-                      stroke="#fbbf24" 
-                      strokeWidth={2}
-                      name="Temperature (°C)"
-                      dot={{ r: 4, fill: '#fbbf24' }}
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
-                
-                {/* Forecast Summary Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-                  {forecastChartData.slice(0, 4).map((day: any, index: number) => (
-                    <div key={index} className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                      <p className="text-white/80 text-xs mb-1">{day.date || `Day ${index + 1}`}</p>
-                      <p className="text-white text-lg font-bold">{day.temperature}°C</p>
-                      {day.rainfall > 0 && (
-                        <p className="text-blue-200 text-xs mt-1 flex items-center gap-1">
-                          <Droplets className="h-3 w-3" />
-                          {day.rainfall}mm
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Accumulated Weather Data */}
-        {accumulatedData && Object.keys(accumulatedData).length > 0 && (
-          <Card className="bg-white border border-gray-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-gray-900">Accumulated Weather Data</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {accumulatedData.gdd && (
-                  <div className="bg-green-50 border border-green-600 rounded-lg p-4">
-                    <p className="text-xs text-gray-600 mb-1">Growing Degree Days (GDD)</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {typeof accumulatedData.gdd === 'number' ? accumulatedData.gdd.toFixed(1) : accumulatedData.gdd || 'N/A'}
-                    </p>
+          {/* Field Data Tab */}
+          <TabsContent value="field-data" className="mt-6">
+            <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
+              <CardHeader className="bg-gradient-to-r from-green-50 to-white border-b border-gray-200 px-6 py-5">
+                <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <BarChart3 className="h-5 w-5 text-green-600" />
                   </div>
-                )}
-                {accumulatedData.seasonalRainfall && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-xs text-gray-600 mb-1">Seasonal Rainfall</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {typeof accumulatedData.seasonalRainfall === 'number' ? accumulatedData.seasonalRainfall.toFixed(1) : accumulatedData.seasonalRainfall || 'N/A'} mm
-                    </p>
-                  </div>
-                )}
-                {accumulatedData.averageTemperature && (
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                    <p className="text-xs text-gray-600 mb-1">Average Temperature</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {typeof accumulatedData.averageTemperature === 'number' ? accumulatedData.averageTemperature.toFixed(1) : accumulatedData.averageTemperature || 'N/A'} °C
-                    </p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-        
-        {/* NDVI Chart */}
-        {ndviChartFormatted.length > 0 && (
-          <Card className="bg-white border border-gray-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-gray-900">NDVI Time Series</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={ndviChartFormatted}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="date" 
-                    tick={{ fontSize: 12 }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={80}
-                  />
-                  <YAxis 
-                    domain={[0, 1]}
-                    tick={{ fontSize: 12 }}
-                  />
-                  <Tooltip />
-                  <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="ndvi" 
-                    stroke="rgba(20, 40, 75, 1)" 
-                    strokeWidth={2}
-                    name="NDVI"
-                    dot={{ r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Weather History Chart */}
-        {weatherChartData.length > 0 && (
-          <Card className="bg-white border border-gray-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-gray-900">Weather History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <ComposedChart data={weatherChartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="date" 
-                    tick={{ fontSize: 12 }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={80}
-                  />
-                  <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
-                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar yAxisId="right" dataKey="rainfall" fill="#3b82f6" name="Rainfall (mm)" />
-                  <Line 
-                    yAxisId="left"
-                    type="monotone" 
-                    dataKey="temperature" 
-                    stroke="#ef4444" 
-                    strokeWidth={2}
-                    name="Temperature (°C)"
-                    dot={{ r: 4 }}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Vegetation Statistics Summary */}
-        {indicesData?.indicesStats && (
-          <Card className="bg-white border border-gray-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-gray-900">Vegetation Indices Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {indicesData.indicesStats.NDVI && (
-                  <div className="bg-green-50 border border-green-600 rounded-lg p-4">
-                    <p className="text-xs text-gray-600 mb-1">NDVI Average</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {indicesData.indicesStats.NDVI.average?.toFixed(2) || 
-                       indicesData.indicesStats.NDVI.mean?.toFixed(2) || 
-                       'N/A'}
-                    </p>
-                  </div>
-                )}
-                {indicesData.indicesStats.MSAVI && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-xs text-gray-600 mb-1">MSAVI Average</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {indicesData.indicesStats.MSAVI.average?.toFixed(2) || 
-                       indicesData.indicesStats.MSAVI.mean?.toFixed(2) || 
-                       'N/A'}
-                    </p>
-                  </div>
-                )}
-                {indicesData.indicesStats.EVI && (
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                    <p className="text-xs text-gray-600 mb-1">EVI Average</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {indicesData.indicesStats.EVI.average?.toFixed(2) || 
-                       indicesData.indicesStats.EVI.mean?.toFixed(2) || 
-                       'N/A'}
-                    </p>
-                  </div>
-                )}
-                {indicesData.indicesStats.NDMI && (
-                  <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
-                    <p className="text-xs text-gray-600 mb-1">NDMI Average</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {indicesData.indicesStats.NDMI.average?.toFixed(2) || 
-                       indicesData.indicesStats.NDMI.mean?.toFixed(2) || 
-                       'N/A'}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    );
-  };
-
-  const renderDashboard = () => {
-    // Use farmers from API if available, otherwise fall back to assessments
-    let farmerData: any[] = [];
-    
-    if (farmersList && farmersList.length > 0) {
-      // Build farmer data from API farmers list
-      farmerData = farmersList.map((farmer: any) => {
-        const farmerId = farmer._id || farmer.id;
-        const farmerName = 
-          farmer.name || 
-          (farmer.firstName && farmer.lastName ? `${farmer.firstName} ${farmer.lastName}`.trim() : '') ||
-          farmer.firstName || 
-          farmer.lastName || 
-          "Unknown Farmer";
-        const location = 
-          farmer.location || 
-          (farmer.province && farmer.district ? `${farmer.province}, ${farmer.district}` : '') ||
-          farmer.province ||
-          farmer.district ||
-          "Unknown Location";
-        
-        // Count fields for this farmer
-        // First, try to get fields from farmersList (which has _fields populated from API)
-        const farmerFromList = farmersList.find((f: any) => {
-          const fId = f._id || f.id;
-          const fIdStr = fId?.toString() || '';
-          const targetFarmerIdStr = farmerId?.toString() || '';
-          return fIdStr === targetFarmerIdStr;
-        });
-        
-        let fieldCount = 0;
-        if (farmerFromList && farmerFromList._fields && Array.isArray(farmerFromList._fields)) {
-          // Use fields from API response
-          fieldCount = farmerFromList._fields.length;
-        } else {
-          // Fallback: Count from farms array
-          const farmerFarms = Array.isArray(farms) 
-            ? farms.filter(farm => {
-                const farmFarmerId = farm.farmerId?._id || farm.farmerId || farm.farmer?._id || farm.farmer?.id || farm.farmer || '';
-                const farmFarmerIdStr = farmFarmerId?.toString() || '';
-                const targetFarmerIdStr = farmerId?.toString() || '';
-                return farmFarmerIdStr === targetFarmerIdStr;
-              })
-            : [];
-          fieldCount = farmerFarms.length || 0;
-        }
-        
-        return {
-          farmerId: `F-${String(farmerId).slice(-3).padStart(3, '0')}`,
-          farmerName,
-          location,
-          totalFields: fieldCount,
-          originalFarmerId: farmerId
-        };
-      });
-    } else {
-      // Fallback: Get unique farmers from assessments
-      const uniqueFarmerIds = new Set(assessments.map(a => a.farmerId).filter(Boolean));
-      
-      farmerData = Array.from(uniqueFarmerIds).map(farmerId => {
-        const farmerAssessments = assessments.filter(a => a.farmerId === farmerId);
-        const farmerName = farmerAssessments[0]?.farmerName || "Unknown Farmer";
-        const location = farmerAssessments[0]?.location || "Unknown Location";
-        
-        // Count fields for this farmer
-        // First, try to get fields from farmersList (which has _fields populated from API)
-        const farmerFromList = farmersList.find((f: any) => {
-          const fId = f._id || f.id;
-          return fId === farmerId || fId?.toString() === farmerId?.toString();
-        });
-        
-        let fieldCount = 0;
-        if (farmerFromList && farmerFromList._fields && Array.isArray(farmerFromList._fields)) {
-          // Use fields from API response
-          fieldCount = farmerFromList._fields.length;
-        } else {
-          // Fallback: Count from farms array
-          const farmerFarms = Array.isArray(farms) 
-            ? farms.filter(farm => {
-                const farmFarmerId = farm.farmerId?._id || farm.farmerId || farm.farmer?._id || farm.farmer?.id || '';
-                return farmFarmerId === farmerId || 
-                       (typeof farmFarmerId === 'string' && typeof farmerId === 'string' && farmFarmerId === farmerId) ||
-                       farm.farmerName === farmerName;
-              })
-            : [];
-          fieldCount = farmerFarms.length || 0;
-        }
-        
-        return {
-          farmerId: `F-${String(farmerId).slice(-3).padStart(3, '0')}`,
-          farmerName,
-          location,
-          totalFields: fieldCount,
-          originalFarmerId: farmerId
-        };
-      });
-    }
-
-    // Filter farmers by search query
-    const filteredFarmers = farmerData.filter(farmer => {
-      return searchQuery === "" ||
-        farmer.farmerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        farmer.farmerId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        farmer.location.toLowerCase().includes(searchQuery.toLowerCase());
-    });
-
-    // Handle farmer click - show field detail view
-    const handleFarmerClick = (farmer: typeof farmerData[0]) => {
-      // Find the farmer in farmersList
-      const farmerObj = farmersList.find(f => (f._id || f.id) === farmer.originalFarmerId);
-      if (!farmerObj) {
-        // Fallback: try to find in assessments
-        const farmerAssessment = assessments.find(a => a.farmerId === farmer.originalFarmerId);
-        if (farmerAssessment) {
-          handleAssessmentClick(farmerAssessment);
-        }
-        return;
-      }
-      
-      // Get fields for this farmer - prefer _fields from API, fallback to farms array
-      let farmerFarms: any[] = [];
-      
-      if (farmerObj._fields && Array.isArray(farmerObj._fields) && farmerObj._fields.length > 0) {
-        // Use fields from API response
-        farmerFarms = farmerObj._fields;
-      } else {
-        // Fallback: Get from farms array
-        farmerFarms = Array.isArray(farms) 
-          ? farms.filter(farm => {
-              const farmFarmerId = farm.farmerId?._id || farm.farmerId || farm.farmer?._id || farm.farmer?.id || farm.farmer || '';
-              const farmFarmerIdStr = farmFarmerId?.toString() || '';
-              const targetFarmerIdStr = farmer.originalFarmerId?.toString() || '';
-              return farmFarmerIdStr === targetFarmerIdStr;
-            })
-          : [];
-      }
-      
-      if (farmerFarms.length > 0) {
-        setSelectedFarmerForDetail(farmerObj);
-        setSelectedFarmForDetail(farmerFarms[0]);
-        setDashboardViewMode("fieldDetail");
-        setActiveTab("basic-info");
-      } else {
-        toast({
-          title: 'No fields found',
-          description: 'This farmer has no fields available.',
-          variant: 'destructive'
-        });
-      }
-    };
-
-    return (
-      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
-        {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-6">
-        {/* Loading State */}
-          {(loading || loadingFarms || loadingFarmers) && (
-            <Card className="bg-white border border-gray-200 shadow-sm">
-            <CardContent className="p-12">
-              <div className="flex items-center justify-center">
-                <img src="/loading.gif" alt="Loading" className="w-16 h-16" />
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Error State */}
-        {error && !loading && (
-            <Card className="bg-white border border-red-200 shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5 text-red-500" />
-                    <p className="text-sm text-red-600">{error}</p>
-                  </div>
-                <Button 
-                  onClick={loadAssessments} 
-                    size="sm"
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  Retry
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-          {/* Farmers Management Table - Clean Professional Style */}
-          {!loading && !loadingFarms && !loadingFarmers && !error && (
-            <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardHeader className="border-b border-gray-200 bg-white px-6 py-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base font-semibold text-gray-900">Farmers Management</CardTitle>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-green-600 hover:bg-green-700 text-white border-green-600 h-8 px-3 text-xs"
-                  >
-                    <Download className="h-3.5 w-3.5 mr-1.5" />
-                    Export
-                  </Button>
-                </div>
+                  Field Statistics (NDVI, MSAVI, NDMI, EVI)
+                </CardTitle>
               </CardHeader>
-            <CardContent className="p-0">
-                {filteredFarmers.length === 0 ? (
-                <div className="p-12 text-center">
-                    <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-sm font-medium text-gray-900 mb-1">No farmers found</p>
-                    <p className="text-xs text-gray-500">Try adjusting your search criteria</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                        <tr className="bg-gray-50 border-b border-gray-200">
-                          <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Farmer ID</th>
-                          <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Farmer Name</th>
-                          <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Location</th>
-                          <th className="text-left py-3 px-6 font-medium text-gray-700 text-xs">Total Fields</th>
-                      </tr>
-                    </thead>
-                      <tbody className="bg-white divide-y divide-gray-100">
-                        {filteredFarmers.map((farmer, index) => (
-                        <tr
-                            key={farmer.farmerId}
-                            className="hover:bg-green-50/30 transition-colors cursor-pointer"
-                            onClick={() => handleFarmerClick(farmer)}
-                        >
-                            <td className="py-3.5 px-6 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900 bg-green-50 px-2 py-1 rounded inline-block">{farmer.farmerId}</div>
-                          </td>
-                            <td className="py-3.5 px-6 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{farmer.farmerName}</div>
-                          </td>
-                            <td className="py-3.5 px-6 whitespace-nowrap">
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                                <MapPin className="h-4 w-4 text-gray-400" />
-                                <span>{farmer.location}</span>
-                            </div>
-                          </td>
-                            <td className="py-3.5 px-6 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{farmer.totalFields} fields</div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-        </div>
+              <CardContent className="p-6">
+                {loadingData ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading field statistics...</p>
+                  </div>
+                ) : fieldStatistics ? (
+                  <div className="space-y-4">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={fieldStatistics}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line type="monotone" dataKey="ndvi" stroke="#8884d8" name="NDVI" />
+                        <Line type="monotone" dataKey="msavi" stroke="#82ca9d" name="MSAVI" />
+                        <Line type="monotone" dataKey="ndmi" stroke="#ffc658" name="NDMI" />
+                        <Line type="monotone" dataKey="evi" stroke="#ff7300" name="EVI" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <BarChart3 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-sm font-medium text-gray-900 mb-1">Field Statistics Not Available</p>
+                    <p className="text-xs text-gray-500 mb-3">
+                      EOSDA data is currently unavailable. This may be due to:
+                    </p>
+                    <ul className="text-xs text-gray-500 text-left max-w-md mx-auto space-y-1 mb-4">
+                      <li>• API request limit exceeded</li>
+                      <li>• Farm not yet registered with EOSDA</li>
+                      <li>• Data processing in progress</li>
+                    </ul>
+                    <p className="text-xs text-gray-600">
+                      Field statistics will be available once the farm is fully registered with EOSDA.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Weather Tab */}
+          <TabsContent value="weather" className="mt-6">
+            <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b border-gray-200 px-6 py-5">
+                <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <CloudRain className="h-5 w-5 text-blue-600" />
+                  </div>
+                  Historical Weather Data
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                {loadingData ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading weather data...</p>
+                  </div>
+                ) : weatherData ? (
+                  <div className="space-y-4">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={weatherData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line type="monotone" dataKey="temperature" stroke="#8884d8" name="Temperature (°C)" />
+                        <Line type="monotone" dataKey="precipitation" stroke="#82ca9d" name="Precipitation (mm)" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <CloudRain className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-sm font-medium text-gray-900 mb-1">Weather Data Not Available</p>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Historical weather data requires the farm to be registered with EOSDA.
+                    </p>
+                    <ul className="text-xs text-gray-500 text-left max-w-md mx-auto space-y-1 mb-4">
+                      <li>• Farm must have EOSDA field ID</li>
+                      <li>• KML file must be uploaded and processed</li>
+                      <li>• EOSDA registration must be completed</li>
+                    </ul>
+                    <p className="text-xs text-gray-600">
+                      Weather data will be available once the farm is fully registered with EOSDA.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
-    );
-  };
-
-  // Render view based on mode
-  if (viewMode === "fieldSelection") {
-    return renderFieldSelection();
-  }
-
-  if (viewMode === "fieldDetail") {
-    return renderFieldDetail();
-  }
-
-  // Check if we're in dashboard field detail mode
-  if (dashboardViewMode === "fieldDetail") {
-    return renderDashboardFieldDetail();
-  }
-
-  return renderDashboard();
+    </div>
+  );
 }
+

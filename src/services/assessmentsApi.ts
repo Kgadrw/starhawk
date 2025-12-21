@@ -340,6 +340,7 @@ class AssessmentsApiService {
   }
 
   // Upload Drone PDF (Assessor Only)
+  // Endpoint: POST /assessments/:id/upload-drone-pdf
   async uploadDronePDF(assessmentId: string, file: File) {
     const formData = new FormData();
     formData.append('file', file);
@@ -349,15 +350,19 @@ class AssessmentsApiService {
     if (token) {
       headers.Authorization = `Bearer ${token}`;
     }
-    // Don't set Content-Type for FormData - let the browser set it
+    // Don't set Content-Type for FormData - let the browser set it with boundary
     
     const url = `${this.baseURL}/${assessmentId}/upload-drone-pdf`;
+    console.log('📤 Uploading drone PDF to:', url);
+    console.log('📄 File:', file.name, file.size, 'bytes', 'type:', file.type);
     
     const response = await fetch(url, {
       method: 'POST',
       headers,
       body: formData,
     });
+    
+    console.log('📥 Drone PDF upload response status:', response.status);
     
     if (response.status === 401) {
       localStorage.removeItem('token');
@@ -371,10 +376,18 @@ class AssessmentsApiService {
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: `HTTP error! status: ${response.status}` }));
+      console.error('❌ Drone PDF upload failed:', errorData);
       throw new Error(errorData.message || errorData.error || `Failed to upload drone PDF: ${response.status}`);
     }
     
-    return response.json();
+    const responseData = await response.json();
+    console.log('✅ Drone PDF upload successful:', {
+      hasDroneAnalysisData: !!responseData?.droneAnalysisData,
+      hasPdfUrl: !!responseData?.droneAnalysisPdfUrl,
+      droneAnalysisData: responseData?.droneAnalysisData
+    });
+    
+    return responseData;
   }
 
   // Generate Full Report (Assessor Only)

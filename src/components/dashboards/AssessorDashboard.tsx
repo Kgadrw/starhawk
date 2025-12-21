@@ -209,7 +209,6 @@ export default function AssessorDashboard() {
   const [selectedField, setSelectedField] = useState<Field | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "fieldSelection" | "fieldDetail">("list");
   const [activeTab, setActiveTab] = useState("basic-info");
-  const [fieldToViewInRiskAssessment, setFieldToViewInRiskAssessment] = useState<Field | null>(null);
   const [selectedFarmerForProcessing, setSelectedFarmerForProcessing] = useState<string | null>(null);
   const [showDrawField, setShowDrawField] = useState(false);
   const [calculatedArea, setCalculatedArea] = useState<string>("");
@@ -4786,7 +4785,7 @@ export default function AssessorDashboard() {
 
     // Handle other pages
     switch (activePage) {
-      case "risk-assessments": return <RiskAssessmentSystem assessments={assessments} onRefresh={loadAssessments} initialField={fieldToViewInRiskAssessment} />;
+      case "risk-assessments": return <RiskAssessmentSystem />;
       case "loss-assessments": return <LossAssessmentSystem />;
       case "farmers": 
         // Check for farmer detail view on farmers page
@@ -5121,8 +5120,7 @@ export default function AssessorDashboard() {
                                       fieldName: farm.name || `Farm ${farmIndex + 1}`,
                                       sowingDate: farm.sowingDate || ""
                                     };
-                                    // Set field to view and navigate to risk assessment page
-                                    setFieldToViewInRiskAssessment(fieldData);
+                                    // Navigate to risk assessment page
                                     setActivePage("risk-assessments");
                                   }}
                                   className="border-green-600 text-green-600 hover:bg-green-50"
@@ -5843,27 +5841,6 @@ export default function AssessorDashboard() {
                 <FileSpreadsheet className="h-4 w-4 mr-2" />
                 Basic Info
               </TabsTrigger>
-              <TabsTrigger 
-                value="weather" 
-                className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700"
-              >
-                <CloudRain className="h-4 w-4 mr-2" />
-                Weather Analysis
-              </TabsTrigger>
-              <TabsTrigger 
-                value="crop" 
-                className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700"
-              >
-                <Leaf className="h-4 w-4 mr-2" />
-                Crop Analysis (Satellite)
-              </TabsTrigger>
-              <TabsTrigger 
-                value="overview" 
-                className="data-[state=active]:bg-gray-200 data-[state=active]:text-gray-900 text-gray-700"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Overview
-              </TabsTrigger>
             </TabsList>
 
             {/* Tab Contents */}
@@ -5983,43 +5960,6 @@ export default function AssessorDashboard() {
                   </CardContent>
                 </Card>
               </div>
-            </TabsContent>
-
-            <TabsContent value="weather" className="mt-6">
-              <WeatherAnalysisTab location={fieldDetails.location} />
-            </TabsContent>
-
-            <TabsContent value="crop" className="mt-6">
-              <CropAnalysisTab 
-                fieldDetails={fieldDetails} 
-                farm={field}
-              />
-            </TabsContent>
-
-            <TabsContent value="overview" className="mt-6">
-              <Card className={`${dashboardTheme.card}`}>
-                <CardHeader>
-                  <CardTitle className="text-gray-900">Overview</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-gray-600">Created At</p>
-                        <p className="text-sm font-medium text-gray-900">
-                          {field.createdAt ? new Date(field.createdAt).toLocaleString() : 'N/A'}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Updated At</p>
-                        <p className="text-sm font-medium text-gray-900">
-                          {field.updatedAt ? new Date(field.updatedAt).toLocaleString() : 'N/A'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </TabsContent>
           </Tabs>
         </div>
@@ -6479,21 +6419,6 @@ export default function AssessorDashboard() {
     }
   }, [activePage, assessorId]);
 
-  // Clear fieldToViewInRiskAssessment after it's been used or when navigating away
-  useEffect(() => {
-    if (fieldToViewInRiskAssessment) {
-      if (activePage === "risk-assessments") {
-        // Clear after a delay to ensure RiskAssessmentSystem has processed it
-        const timer = setTimeout(() => {
-          setFieldToViewInRiskAssessment(null);
-        }, 1000);
-        return () => clearTimeout(timer);
-      } else {
-        // Clear immediately if navigating away
-        setFieldToViewInRiskAssessment(null);
-      }
-    }
-  }, [activePage, fieldToViewInRiskAssessment]);
 
   // Convert farm to Field format for detail view
   const getFarmAsField = (farm: any, farmer: any): Field => {
