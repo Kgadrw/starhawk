@@ -2,7 +2,10 @@
 // Using centralized API configuration
 import { API_BASE_URL, API_ENDPOINTS, getAuthToken } from '@/config/api';
 
-const ASSESSMENTS_BASE_URL = `${API_BASE_URL}${API_ENDPOINTS.ASSESSMENTS.BASE}`;
+// Use proxy in development to avoid CORS issues, full URL in production
+const ASSESSMENTS_BASE_URL = import.meta.env.DEV 
+  ? `/api/v1${API_ENDPOINTS.ASSESSMENTS.BASE}` // Use proxy: /api/v1/assessments -> proxied to backend
+  : `${API_BASE_URL}${API_ENDPOINTS.ASSESSMENTS.BASE}`; // Production: full URL
 
 interface CreateAssessmentRequest {
   farmId: string;
@@ -354,6 +357,14 @@ class AssessmentsApiService {
     
     const url = `${this.baseURL}/${assessmentId}/upload-drone-pdf`;
     console.log('📤 Uploading drone PDF to:', url);
+    console.log('📤 Environment:', import.meta.env.DEV ? 'Development (using Vite proxy - no CORS!)' : 'Production');
+    console.log('📤 Full URL breakdown:', {
+      baseURL: this.baseURL,
+      assessmentId: assessmentId,
+      finalUrl: url,
+      isDev: import.meta.env.DEV,
+      usingProxy: import.meta.env.DEV
+    });
     console.log('📄 File:', file.name, file.size, 'bytes', 'type:', file.type);
     
     const response = await fetch(url, {
@@ -375,17 +386,131 @@ class AssessmentsApiService {
     }
     
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: `HTTP error! status: ${response.status}` }));
-      console.error('❌ Drone PDF upload failed:', errorData);
-      throw new Error(errorData.message || errorData.error || `Failed to upload drone PDF: ${response.status}`);
+      let errorData;
+      try {
+        const text = await response.text();
+        try {
+          errorData = JSON.parse(text);
+        } catch {
+          errorData = { message: text || `HTTP error! status: ${response.status}` };
+        }
+      } catch {
+        errorData = { message: `HTTP error! status: ${response.status}` };
+      }
+      
+      console.error('❌ Drone PDF upload failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: url,
+        error: errorData,
+        is404: response.status === 404,
+        is500: response.status === 500,
+        is401: response.status === 401,
+        is403: response.status === 403
+      });
+      
+      // Provide specific error messages to help diagnose
+      if (response.status === 404) {
+        throw new Error(`API endpoint not found (404). The endpoint ${url} may not be implemented on the server. This is likely an API issue.`);
+      } else if (response.status === 500) {
+        throw new Error(`Server error (500). The API endpoint exists but encountered an error: ${errorData.message || 'Internal server error'}. This is an API issue.`);
+      } else if (response.status === 401) {
+        throw new Error('Authentication required. Please log in again.');
+      } else if (response.status === 403) {
+        throw new Error('Permission denied. You may not have access to upload drone PDFs.');
+      } else {
+        throw new Error(errorData.message || errorData.error || `Failed to upload drone PDF: ${response.status} ${response.statusText}`);
+      }
     }
     
-    const responseData = await response.json();
-    console.log('✅ Drone PDF upload successful:', {
+    let responseData;
+    try {
+      responseData = await response.json();
+    } catch (e) {
+      const text = await response.text();
+      console.error('❌ Failed to parse JSON response:', text);
+      throw new Error(`Invalid JSON response: ${text}`);
+    }
+    
+    // Log full response structure for debugging
+    console.log('✅ Drone PDF upload successful - Full Response:', JSON.stringify(responseData, null, 2));
+    console.log('📊 Response Structure Analysis:', {
+      responseType: typeof responseData,
+      isArray: Array.isArray(responseData),
+      keys: Object.keys(responseData || {}),
+      hasData: !!responseData?.data,
       hasDroneAnalysisData: !!responseData?.droneAnalysisData,
+      hasDroneAnalysisDataInData: !!responseData?.data?.droneAnalysisData,
       hasPdfUrl: !!responseData?.droneAnalysisPdfUrl,
-      droneAnalysisData: responseData?.droneAnalysisData
+      hasPdfUrlInData: !!responseData?.data?.droneAnalysisPdfUrl,
+      droneAnalysisDataType: typeof responseData?.droneAnalysisData,
+      droneAnalysisDataKeys: responseData?.droneAnalysisData ? Object.keys(responseData.droneAnalysisData) : [],
+      fullResponse: responseData
     });
+    
+    return responseData;
+  }
+
+  // Delete Drone PDF (Assessor Only)
+  // Endpoint: DELETE /assessments/:id/drone-pdf
+  async deleteDronePDF(assessmentId: string) {
+    const url = `${this.baseURL}/${assessmentId}/drone-pdf`;
+    const token = this.getToken();
+    const headers: HeadersInit = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers,
+    });
+    
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('role');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('phoneNumber');
+      localStorage.removeItem('email');
+      throw new Error('Authentication required. Please log in again.');
+    }
+    
+    if (!response.ok) {
+      let errorData;
+      try {
+        const text = await response.text();
+        try {
+          errorData = JSON.parse(text);
+        } catch {
+          errorData = { message: text || `HTTP error! status: ${response.status}` };
+        }
+      } catch {
+        errorData = { message: `HTTP error! status: ${response.status}` };
+      }
+      
+      if (response.status === 404) {
+        // If delete endpoint doesn't exist, try updating assessment to remove PDF URL
+        return this.updateAssessment(assessmentId, {
+          droneAnalysisPdfUrl: null,
+          droneAnalysisData: null
+        });
+      }
+      
+      throw new Error(errorData.message || errorData.error || `Failed to delete drone PDF: ${response.status} ${response.statusText}`);
+    }
+    
+    let responseData;
+    try {
+      const text = await response.text();
+      if (text) {
+        responseData = JSON.parse(text);
+      } else {
+        responseData = {};
+      }
+    } catch (e) {
+      responseData = {};
+    }
     
     return responseData;
   }

@@ -368,11 +368,11 @@ export default function DashboardLayout({
         </div>
 
          {/* Page Content */}
-         <main className="flex-1 overflow-auto bg-gray-50 lg:pl-6">
-          <CustomScrollbar className="h-full">
-            {children}
-          </CustomScrollbar>
-        </main>
+         <main className="flex-1 overflow-auto bg-gray-50">
+           <CustomScrollbar className="h-full">
+             {children}
+           </CustomScrollbar>
+         </main>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import LeafletMap from "@/components/common/LeafletMap";
 import assessmentsApiService from "@/services/assessmentsApi";
@@ -25,6 +26,7 @@ import {
   AlertTriangle,
   Calendar,
   User,
+  Users,
   ArrowLeft,
   Sprout,
   Save,
@@ -32,7 +34,9 @@ import {
   TrendingUp,
   Download,
   Eye,
-  Map
+  Map,
+  Clock,
+  Trash2
 } from "lucide-react";
 
 interface Farmer {
@@ -91,6 +95,19 @@ export default function RiskAssessmentSystem(): JSX.Element {
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [loadingAssessment, setLoadingAssessment] = useState(false);
+  const [pdfModalOpen, setPdfModalOpen] = useState(false);
+  
+  // Helper function to get full PDF URL
+  const getFullPdfUrl = (pdfUrl: string | null): string => {
+    if (!pdfUrl) return '';
+    // If URL is already absolute, return as is
+    if (pdfUrl.startsWith('http://') || pdfUrl.startsWith('https://')) {
+      return pdfUrl;
+    }
+    // If relative, prepend base URL (remove /api/v1 from base URL for static files)
+    const cleanUrl = pdfUrl.startsWith('/') ? pdfUrl : `/${pdfUrl}`;
+    return `https://starhawk-backend-agriplatform.onrender.com${cleanUrl}`;
+  };
   
   // KML Upload State
   const [uploadingKML, setUploadingKML] = useState(false);
@@ -106,13 +123,113 @@ export default function RiskAssessmentSystem(): JSX.Element {
   const [generatingReport, setGeneratingReport] = useState(false);
   const [selectedPDFFile, setSelectedPDFFile] = useState<File | null>(null);
   const [uploadingPDF, setUploadingPDF] = useState(false);
+  const [deletingPDF, setDeletingPDF] = useState(false);
   
   // Data State
   const [fieldStatistics, setFieldStatistics] = useState<any>(null);
   const [weatherData, setWeatherData] = useState<any>(null);
   const [loadingData, setLoadingData] = useState(false);
+  
+  // Polling state for drone analysis data
+  const [pollingForDroneData, setPollingForDroneData] = useState(false);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingStartTimeRef = useRef<number | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
 
+  // Polling function to check for drone analysis data
+  const startPollingForDroneData = (assessmentId: string) => {
+    // Don't start polling if data already exists
+    if (assessment?.droneAnalysisData) {
+      console.log('✅ Drone analysis data already exists, skipping polling');
+      return;
+    }
+
+    // Clear any existing polling
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+    
+    setPollingForDroneData(true);
+    pollingStartTimeRef.current = Date.now();
+    const MAX_POLLING_TIME = 3 * 60 * 1000; // 3 minutes max
+    const POLL_INTERVAL = 15000; // Poll every 15 seconds (reduced frequency)
+    
+    console.log('🔄 Starting to poll for drone analysis data...');
+    
+    pollingIntervalRef.current = setInterval(async () => {
+      // Check if polling should continue
+      if (!pollingIntervalRef.current) {
+        return; // Polling was stopped
+      }
+
+      const elapsed = Date.now() - (pollingStartTimeRef.current || 0);
+      
+      // Stop polling if timeout reached
+      if (elapsed > MAX_POLLING_TIME) {
+        console.log('⏱️ Polling timeout reached, stopping...');
+        stopPollingForDroneData();
+        toast({
+          title: "Processing Timeout",
+          description: "Drone analysis data is taking longer than expected. Please refresh the page or contact support.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      try {
+        console.log('🔍 Polling for drone analysis data... (elapsed:', Math.round(elapsed / 1000), 's)');
+        const updated = await assessmentsApiService.getAssessmentById(assessmentId);
+        const updatedData = updated.data || updated;
+        
+        // Check if drone analysis data is now available
+        if (updatedData?.droneAnalysisData && (
+          updatedData.droneAnalysisData.cropHealth || 
+          updatedData.droneAnalysisData.coverage !== undefined || 
+          (updatedData.droneAnalysisData.anomalies && Array.isArray(updatedData.droneAnalysisData.anomalies) && updatedData.droneAnalysisData.anomalies.length > 0) ||
+          Object.keys(updatedData.droneAnalysisData).length > 0
+        )) {
+          console.log('✅ Drone analysis data found!', updatedData.droneAnalysisData);
+          setAssessment(updatedData);
+          stopPollingForDroneData();
+          toast({
+            title: "Analysis Complete",
+            description: "Drone analysis data has been processed and is now available.",
+          });
+        } else {
+          console.log('⏳ Drone analysis data not yet available, continuing to poll...');
+        }
+      } catch (err: any) {
+        console.error('❌ Error while polling for drone data:', err);
+        // Don't stop polling on error, just log it
+      }
+    }, POLL_INTERVAL);
+  };
+  
+  // Stop polling function
+  const stopPollingForDroneData = () => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    setPollingForDroneData(false);
+    pollingStartTimeRef.current = null;
+    console.log('🛑 Stopped polling for drone analysis data');
+  };
+  
+  // Cleanup polling on unmount or when assessment/viewMode changes
+  useEffect(() => {
+    return () => {
+      stopPollingForDroneData();
+    };
+  }, []);
+
+  // Stop polling when viewMode changes or assessment is cleared
+  useEffect(() => {
+    if (viewMode === "farmers" || !assessment) {
+      stopPollingForDroneData();
+    }
+  }, [viewMode, assessment]);
+  
   // Load assigned farmers
   useEffect(() => {
     loadFarmers();
@@ -394,6 +511,96 @@ export default function RiskAssessmentSystem(): JSX.Element {
     }
   };
 
+  // Delete drone PDF
+  const handleDeletePDF = async () => {
+    if (!assessment?._id) {
+      toast({
+        title: "Error",
+        description: "No assessment selected",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Confirm deletion
+    if (!window.confirm("Are you sure you want to delete the uploaded PDF? This action cannot be undone.")) {
+      return;
+    }
+
+    setDeletingPDF(true);
+    try {
+      // Try to delete using the delete endpoint
+      try {
+        await assessmentsApiService.deleteDronePDF(assessment._id);
+        
+        // Reload assessment to get updated data
+        const updated = await assessmentsApiService.getAssessmentById(assessment._id);
+        const updatedData = updated.data || updated;
+        setAssessment(updatedData);
+
+        // Stop polling if active
+        stopPollingForDroneData();
+
+        toast({
+          title: "PDF Deleted",
+          description: "The drone PDF has been deleted successfully. You can now upload a new one.",
+        });
+      } catch (deleteError: any) {
+        // If delete endpoint doesn't exist (404), the API doesn't support deletion
+        if (deleteError.message?.includes('404') || deleteError.message?.includes('not found')) {
+          // Since the API doesn't support deletion, we'll clear it from the UI state
+          // but warn the user that it may still exist on the server
+          setAssessment({
+            ...assessment,
+            droneAnalysisPdfUrl: null,
+            droneAnalysisData: null
+          });
+
+          // Stop polling if active
+          stopPollingForDroneData();
+
+          toast({
+            title: "PDF Removed from View",
+            description: "The PDF has been removed from this assessment view. Note: The file may still exist on the server. You can upload a new PDF to replace it.",
+            variant: "default",
+          });
+        } else {
+          // Other errors (validation, etc.)
+          throw deleteError;
+        }
+      }
+    } catch (err: any) {
+      console.error('Failed to delete PDF:', err);
+      
+      // Check if it's a validation error about fields not being allowed
+      if (err.message?.includes('should not exist') || err.message?.includes('Validation failed')) {
+        // API doesn't support deleting these fields via update
+        // Clear from UI state only
+        setAssessment({
+          ...assessment,
+          droneAnalysisPdfUrl: null,
+          droneAnalysisData: null
+        });
+
+        stopPollingForDroneData();
+
+        toast({
+          title: "PDF Removed from View",
+          description: "The PDF has been removed from this assessment view. Note: The API doesn't support permanent deletion. You can upload a new PDF to replace it.",
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Delete Failed",
+          description: err.message || "Failed to delete PDF. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setDeletingPDF(false);
+    }
+  };
+
   // Upload drone PDF
   const handleUploadPDF = async () => {
     if (!selectedPDFFile || !assessment?._id) {
@@ -414,14 +621,56 @@ export default function RiskAssessmentSystem(): JSX.Element {
       });
 
       const result = await assessmentsApiService.uploadDronePDF(assessment._id, selectedPDFFile);
-      console.log('📥 PDF upload API response:', JSON.stringify(result, null, 2));
+      
+      // Log the complete raw response
+      console.log('📥 RAW PDF upload API response:', result);
+      console.log('📥 RAW PDF upload API response (JSON):', JSON.stringify(result, null, 2));
+      console.log('📥 Response type:', typeof result);
+      console.log('📥 Response keys:', Object.keys(result || {}));
       
       // Extract data from response - handle different response structures
-      const responseData = result.data || result;
-      const extractedData = responseData?.droneAnalysisData || null;
-      const pdfUrl = responseData?.droneAnalysisPdfUrl || responseData?.droneAnalysisPdfUrl || null;
+      // Try multiple possible response structures
+      let responseData = result;
+      if (result?.data) {
+        responseData = result.data;
+        console.log('✅ Using result.data');
+      } else if (result?.response) {
+        responseData = result.response;
+        console.log('✅ Using result.response');
+      } else {
+        responseData = result;
+        console.log('✅ Using result directly');
+      }
+      
+      // Extract drone analysis data - try multiple paths
+      let extractedData = null;
+      if (responseData?.droneAnalysisData) {
+        extractedData = responseData.droneAnalysisData;
+        console.log('✅ Found droneAnalysisData in responseData');
+      } else if (result?.droneAnalysisData) {
+        extractedData = result.droneAnalysisData;
+        console.log('✅ Found droneAnalysisData in result');
+      } else if (result?.data?.droneAnalysisData) {
+        extractedData = result.data.droneAnalysisData;
+        console.log('✅ Found droneAnalysisData in result.data');
+      }
+      
+      // Extract PDF URL - try multiple paths
+      let pdfUrl = null;
+      if (responseData?.droneAnalysisPdfUrl) {
+        pdfUrl = responseData.droneAnalysisPdfUrl;
+        console.log('✅ Found droneAnalysisPdfUrl in responseData');
+      } else if (result?.droneAnalysisPdfUrl) {
+        pdfUrl = result.droneAnalysisPdfUrl;
+        console.log('✅ Found droneAnalysisPdfUrl in result');
+      } else if (result?.data?.droneAnalysisPdfUrl) {
+        pdfUrl = result.data.droneAnalysisPdfUrl;
+        console.log('✅ Found droneAnalysisPdfUrl in result.data');
+      }
       
       console.log('✅ Extracted drone analysis data:', JSON.stringify(extractedData, null, 2));
+      console.log('✅ Extracted PDF URL:', pdfUrl);
+      console.log('📊 Full responseData object:', JSON.stringify(responseData, null, 2));
       
       // Update assessment immediately with extracted data
       if (extractedData || pdfUrl) {
@@ -459,14 +708,24 @@ export default function RiskAssessmentSystem(): JSX.Element {
       const hasExtractedData = extractedData && (
         extractedData.cropHealth || 
         extractedData.coverage !== undefined || 
-        (extractedData.anomalies && extractedData.anomalies.length > 0)
+        (extractedData.anomalies && Array.isArray(extractedData.anomalies) && extractedData.anomalies.length > 0) ||
+        Object.keys(extractedData).length > 0
       );
+      
+      // If data is not available, start polling
+      if (!hasExtractedData && assessment._id) {
+        console.log('📊 No immediate analysis data, starting polling...');
+        startPollingForDroneData(assessment._id);
+      } else {
+        // Stop polling if we have data
+        stopPollingForDroneData();
+      }
       
       toast({
         title: "Upload Successful",
         description: hasExtractedData 
           ? "Drone PDF uploaded and analyzed successfully. Extracted data is displayed below."
-          : "Drone PDF uploaded successfully. Analysis data will be available shortly.",
+          : "Drone PDF uploaded successfully. Analysis data is being processed...",
       });
       
       setSelectedPDFFile(null);
@@ -602,18 +861,26 @@ export default function RiskAssessmentSystem(): JSX.Element {
     );
   });
 
+  // Calculate dashboard stats
+  const dashboardStats = {
+    totalFarmers: farmers.length,
+    totalFarms: farmers.reduce((sum, f) => sum + f.farms.length, 0),
+    pendingFarms: farmers.reduce((sum, f) => sum + f.farms.filter(farm => farm.status === "PENDING").length, 0),
+    registeredFarms: farmers.reduce((sum, f) => sum + f.farms.filter(farm => farm.status === "REGISTERED").length, 0),
+  };
+
   // Render Farmers List View
   if (viewMode === "farmers") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 shadow-sm">
-          <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+        {/* Dashboard Header */}
+        <div className="px-6 mb-6">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-5">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                  <Shield className="h-8 w-8 text-green-600" />
-                  Risk Assessment
+                <h1 className="text-2xl font-semibold text-gray-900 flex items-center gap-3">
+                  <Shield className="h-6 w-6 text-green-600" />
+                  Risk Assessment Dashboard
                 </h1>
                 <p className="text-sm text-gray-500 mt-1">Manage assigned farms and assessments</p>
               </div>
@@ -630,8 +897,69 @@ export default function RiskAssessmentSystem(): JSX.Element {
           </div>
         </div>
 
+        {/* Stats Grid */}
+        <div className="px-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-md">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-blue-600 mb-1">Total Farmers</p>
+                      <p className="text-3xl font-bold text-blue-900">{dashboardStats.totalFarmers}</p>
+                    </div>
+                    <div className="p-3 bg-blue-200 rounded-full">
+                      <Users className="h-6 w-6 text-blue-700" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-md">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-green-600 mb-1">Total Farms</p>
+                      <p className="text-3xl font-bold text-green-900">{dashboardStats.totalFarms}</p>
+                    </div>
+                    <div className="p-3 bg-green-200 rounded-full">
+                      <Sprout className="h-6 w-6 text-green-700" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 shadow-md">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-yellow-600 mb-1">Pending KML</p>
+                      <p className="text-3xl font-bold text-yellow-900">{dashboardStats.pendingFarms}</p>
+                    </div>
+                    <div className="p-3 bg-yellow-200 rounded-full">
+                      <Clock className="h-6 w-6 text-yellow-700" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 shadow-md">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-emerald-600 mb-1">Registered</p>
+                      <p className="text-3xl font-bold text-emerald-900">{dashboardStats.registeredFarms}</p>
+                    </div>
+                    <div className="p-3 bg-emerald-200 rounded-full">
+                      <CheckCircle className="h-6 w-6 text-emerald-700" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+          </div>
+        </div>
+
         {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="px-6">
           {loading ? (
             <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
               <CardContent className="p-16">
@@ -650,98 +978,130 @@ export default function RiskAssessmentSystem(): JSX.Element {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-6">
-              {filteredFarmers.map((farmer) => (
-                <Card key={farmer.id} className="bg-white border border-gray-200 shadow-lg rounded-xl overflow-hidden">
-                  <CardHeader className="bg-gradient-to-r from-green-50 to-white border-b border-gray-200 px-6 py-5">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-xl font-bold text-gray-900">
-                          {farmer.firstName} {farmer.lastName}
-                        </CardTitle>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {farmer.email} • {farmer.phoneNumber}
-                        </p>
-                        <p className="text-sm text-gray-500 mt-1">
-                          <MapPin className="h-3 w-3 inline mr-1" />
-                          {farmer.farmerProfile.farmProvince}, {farmer.farmerProfile.farmDistrict}, {farmer.farmerProfile.farmSector}
-                        </p>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Farms</h3>
-                      {farmer.farms.length === 0 ? (
-                        <p className="text-sm text-gray-500">No farms assigned</p>
-                      ) : (
-                        <div className="space-y-3">
-                          {farmer.farms.map((farm) => (
-                            <div
-                              key={farm.id}
-                              className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
-                            >
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3">
-                                  <Sprout className="h-5 w-5 text-green-600" />
-                                  <div>
-                                    <p className="text-sm font-semibold text-gray-900">
-                                      {farm.name || `Farm - ${farm.cropType}`}
-                                    </p>
-                                    <p className="text-xs text-gray-600">
-                                      {farm.cropType} • Sown: {new Date(farm.sowingDate).toLocaleDateString()}
-                                    </p>
-                                  </div>
-                                </div>
+            <Card className="bg-white border border-gray-200 shadow-lg rounded-xl overflow-hidden">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50 border-b-2 border-gray-200">
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase">Farmer</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase">Contact</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase">Location</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase">Farms</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase">Status</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700 text-sm uppercase">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredFarmers.map((farmer) => (
+                        <tr key={farmer.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="py-4 px-6">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-green-100 rounded-full">
+                                <User className="h-5 w-5 text-green-600" />
                               </div>
-                              <div className="flex items-center gap-3">
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900">
+                                  {farmer.firstName} {farmer.lastName}
+                                </p>
+                                <p className="text-xs text-gray-500">ID: {farmer.id.slice(-8)}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="text-sm text-gray-900">
+                              <p className="font-medium">{farmer.email}</p>
+                              <p className="text-xs text-gray-500 mt-0.5">{farmer.phoneNumber}</p>
+                            </div>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                              <MapPin className="h-4 w-4 text-gray-400" />
+                              <span className="text-xs">
+                                {farmer.farmerProfile.farmProvince}, {farmer.farmerProfile.farmDistrict}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="space-y-2">
+                              {farmer.farms.length === 0 ? (
+                                <span className="text-xs text-gray-400">No farms</span>
+                              ) : (
+                                farmer.farms.map((farm) => (
+                                  <div key={farm.id} className="flex items-center gap-2">
+                                    <Sprout className="h-3.5 w-3.5 text-green-600" />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs font-medium text-gray-900 truncate">
+                                        {farm.name || farm.cropType}
+                                      </p>
+                                      <p className="text-xs text-gray-500">
+                                        {farm.cropType} • {new Date(farm.sowingDate).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="space-y-2">
+                              {farmer.farms.map((farm) => (
                                 <Badge
+                                  key={farm.id}
                                   className={
                                     farm.status === "PENDING"
-                                      ? "bg-yellow-100 text-yellow-800 border-yellow-300"
-                                      : "bg-green-100 text-green-800 border-green-300"
+                                      ? "bg-yellow-100 text-yellow-800 border-yellow-300 text-xs"
+                                      : "bg-green-100 text-green-800 border-green-300 text-xs"
                                   }
                                 >
                                   {farm.status}
                                 </Badge>
-                                {farm.status === "PENDING" ? (
-                                  <Button
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedFarm(farm);
-                                      setSelectedFarmer(farmer);
-                                      setShowKMLUpload(farm.id);
-                                    }}
-                                    className="bg-green-600 hover:bg-green-700 text-white"
-                                  >
-                                    <Upload className="h-4 w-4 mr-2" />
-                                    Upload KML
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                      setSelectedFarm(farm);
-                                      setSelectedFarmer(farmer);
-                                      loadAssessmentForFarm(farm.id);
-                                    }}
-                                    className="border-green-600 text-green-600 hover:bg-green-50"
-                                  >
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    View Assessment
-                                  </Button>
-                                )}
-                              </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="space-y-2">
+                              {farmer.farms.map((farm) => (
+                                <div key={farm.id}>
+                                  {farm.status === "PENDING" ? (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedFarm(farm);
+                                        setSelectedFarmer(farmer);
+                                        setShowKMLUpload(farm.id);
+                                      }}
+                                      className="bg-green-600 hover:bg-green-700 text-white text-xs"
+                                    >
+                                      <Upload className="h-3 w-3 mr-1.5" />
+                                      Upload KML
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setSelectedFarm(farm);
+                                        setSelectedFarmer(farmer);
+                                        loadAssessmentForFarm(farm.id);
+                                      }}
+                                      className="border-green-600 text-green-600 hover:bg-green-50 text-xs"
+                                    >
+                                      <Eye className="h-3 w-3 mr-1.5" />
+                                      View
+                                    </Button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
 
@@ -815,10 +1175,10 @@ export default function RiskAssessmentSystem(): JSX.Element {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-6">
+    <div className="min-h-screen bg-gray-50 pt-6 pb-8">
+      {/* Dashboard Header */}
+      <div className="px-6 mb-6">
+        <div className="px-6 py-5">
           <div className="flex items-center gap-4 mb-4">
             <Button
               variant="ghost"
@@ -829,14 +1189,17 @@ export default function RiskAssessmentSystem(): JSX.Element {
                 setSelectedFarm(null);
                 setSelectedFarmer(null);
               }}
-              className="text-gray-600 hover:text-gray-900"
+              className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Farmers
+              Back to Dashboard
             </Button>
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Risk Assessment</h1>
+            <h1 className="text-2xl font-semibold text-gray-900 flex items-center gap-3">
+              <Shield className="h-6 w-6 text-green-600" />
+              Assessment Details
+            </h1>
             <p className="text-sm text-gray-500 mt-1">
               {selectedFarmer?.firstName} {selectedFarmer?.lastName} • {selectedFarm.cropType} • {selectedFarm.name || "Farm"}
             </p>
@@ -844,19 +1207,76 @@ export default function RiskAssessmentSystem(): JSX.Element {
         </div>
       </div>
 
+      {/* Assessment Stats */}
+      <div className="px-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-md">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-green-600 mb-1">Risk Score</p>
+                  <p className="text-2xl font-bold text-green-900">
+                    {riskScore !== null && riskScore !== undefined && typeof riskScore === 'number' 
+                      ? riskScore.toFixed(1) 
+                      : 'N/A'}
+                  </p>
+                </div>
+                <Activity className="h-5 w-5 text-green-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-md">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-blue-600 mb-1">Status</p>
+                  <p className="text-lg font-bold text-blue-900">{assessment.status || 'N/A'}</p>
+                </div>
+                <FileText className="h-5 w-5 text-blue-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className={`bg-gradient-to-br ${assessment.droneAnalysisPdfUrl ? 'from-purple-50 to-purple-100 border-purple-200' : 'from-gray-50 to-gray-100 border-gray-200'} shadow-md`}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium mb-1">Drone PDF</p>
+                  <p className="text-lg font-bold">{assessment.droneAnalysisPdfUrl ? 'Uploaded' : 'Not Uploaded'}</p>
+                </div>
+                <Upload className={`h-5 w-5 ${assessment.droneAnalysisPdfUrl ? 'text-purple-600' : 'text-gray-400'}`} />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className={`bg-gradient-to-br ${assessment.reportGenerated ? 'from-emerald-50 to-emerald-100 border-emerald-200' : 'from-gray-50 to-gray-100 border-gray-200'} shadow-md`}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium mb-1">Report</p>
+                  <p className="text-lg font-bold">{assessment.reportGenerated ? 'Generated' : 'Pending'}</p>
+                </div>
+                <FileText className={`h-5 w-5 ${assessment.reportGenerated ? 'text-emerald-600' : 'text-gray-400'}`} />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="px-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-white border border-gray-200 shadow-sm inline-flex h-12 items-center justify-center rounded-xl p-1.5 gap-1">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-green-600 data-[state=active]:text-white px-5 py-2.5 rounded-lg text-sm font-medium">
+          <TabsList className="bg-white border border-gray-200 shadow-md inline-flex h-12 items-center justify-center rounded-xl p-1.5 gap-1">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md px-5 py-2.5 rounded-lg text-sm font-medium transition-all">
               <FileText className="h-4 w-4 mr-2" />
               Overview
             </TabsTrigger>
-            <TabsTrigger value="field-data" className="data-[state=active]:bg-green-600 data-[state=active]:text-white px-5 py-2.5 rounded-lg text-sm font-medium">
+            <TabsTrigger value="field-data" className="data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md px-5 py-2.5 rounded-lg text-sm font-medium transition-all">
               <BarChart3 className="h-4 w-4 mr-2" />
               Field Data
             </TabsTrigger>
-            <TabsTrigger value="weather" className="data-[state=active]:bg-green-600 data-[state=active]:text-white px-5 py-2.5 rounded-lg text-sm font-medium">
+            <TabsTrigger value="weather" className="data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md px-5 py-2.5 rounded-lg text-sm font-medium transition-all">
               <CloudRain className="h-4 w-4 mr-2" />
               Weather
             </TabsTrigger>
@@ -935,20 +1355,59 @@ export default function RiskAssessmentSystem(): JSX.Element {
               </CardHeader>
               <CardContent className="p-6 space-y-4">
                 {assessment.droneAnalysisPdfUrl ? (
-                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      <p className="text-sm font-medium text-green-900">PDF uploaded successfully</p>
+                  <div className="space-y-4">
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center gap-2 mb-3">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        <p className="text-sm font-medium text-green-900">PDF uploaded successfully</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Button
+                          onClick={() => setPdfModalOpen(true)}
+                          className="text-sm text-green-700 hover:text-green-900 flex items-center gap-1 px-3 py-1.5 bg-white rounded border border-green-300 hover:bg-green-100 transition-colors"
+                        >
+                          <Eye className="h-4 w-4" />
+                          View PDF
+                        </Button>
+                        <a
+                          href={getFullPdfUrl(assessment.droneAnalysisPdfUrl)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download
+                          className="text-sm text-green-700 hover:text-green-900 hover:underline flex items-center gap-1 px-3 py-1.5 bg-white rounded border border-green-300 hover:bg-green-100 transition-colors"
+                        >
+                          <Download className="h-4 w-4" />
+                          Download PDF
+                        </a>
+                        <a
+                          href={getFullPdfUrl(assessment.droneAnalysisPdfUrl)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-green-700 hover:text-green-900 hover:underline flex items-center gap-1 px-3 py-1.5 bg-white rounded border border-green-300 hover:bg-green-100 transition-colors"
+                        >
+                          <Eye className="h-4 w-4" />
+                          Open in New Tab
+                        </a>
+                        <Button
+                          onClick={handleDeletePDF}
+                          disabled={deletingPDF}
+                          variant="outline"
+                          className="text-sm text-red-700 hover:text-red-900 flex items-center gap-1 px-3 py-1.5 bg-white rounded border border-red-300 hover:bg-red-50 transition-colors"
+                        >
+                          {deletingPDF ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-700"></div>
+                              Deleting...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="h-4 w-4" />
+                              Delete PDF
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </div>
-                    <a
-                      href={assessment.droneAnalysisPdfUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-green-700 hover:text-green-900 hover:underline flex items-center gap-1"
-                    >
-                      <Download className="h-4 w-4" />
-                      View PDF
-                    </a>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -1040,12 +1499,85 @@ export default function RiskAssessmentSystem(): JSX.Element {
                 
                 {/* Show message if PDF uploaded but analysis data is still processing */}
                 {assessment.droneAnalysisPdfUrl && !assessment.droneAnalysisData && !uploadingPDF && (
-                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg animate-pulse">
-                    <div className="flex items-center gap-2">
-                      <Activity className="h-5 w-5 text-blue-600" />
+                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Activity className={`h-5 w-5 text-blue-600 ${pollingForDroneData ? 'animate-spin' : ''}`} />
                       <p className="text-sm font-medium text-blue-900">
-                        Drone PDF uploaded. Analysis data is being processed...
+                        {pollingForDroneData 
+                          ? "Drone PDF uploaded. Analysis data is being processed (checking for updates)..."
+                          : "Drone PDF uploaded. Analysis data is being processed..."}
                       </p>
+                    </div>
+                    {pollingForDroneData && (
+                      <div className="mt-2 mb-3">
+                        <div className="flex items-center gap-2 text-xs text-blue-700 mb-2">
+                          <div className="flex-1 bg-blue-200 rounded-full h-1.5">
+                            <div 
+                              className="bg-blue-600 h-1.5 rounded-full transition-all duration-1000"
+                              style={{ 
+                                width: `${Math.min(100, ((Date.now() - (pollingStartTimeRef.current || Date.now())) / (3 * 60 * 1000)) * 100)}%` 
+                              }}
+                            />
+                          </div>
+                          <span>Checking for updates...</span>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      {!pollingForDroneData ? (
+                        <Button
+                          onClick={() => {
+                            if (assessment._id) {
+                              startPollingForDroneData(assessment._id);
+                              toast({
+                                title: "Processing Started",
+                                description: "Checking for drone analysis data...",
+                              });
+                            }
+                          }}
+                          className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
+                        >
+                          <Activity className="h-4 w-4 mr-2" />
+                          Process
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() => {
+                            stopPollingForDroneData();
+                            if (assessment._id) {
+                              // Manually refresh
+                              assessmentsApiService.getAssessmentById(assessment._id)
+                                .then((updated) => {
+                                  const updatedData = updated.data || updated;
+                                  setAssessment(updatedData);
+                                  if (updatedData?.droneAnalysisData) {
+                                    toast({
+                                      title: "Data Found",
+                                      description: "Drone analysis data is now available.",
+                                    });
+                                  } else {
+                                    toast({
+                                      title: "Processing Cancelled",
+                                      description: "Processing stopped. You can start it again when ready.",
+                                    });
+                                  }
+                                })
+                                .catch((err) => {
+                                  console.error('Failed to refresh:', err);
+                                  toast({
+                                    title: "Refresh Failed",
+                                    description: "Could not check for updates. Please try again later.",
+                                    variant: "destructive",
+                                  });
+                                });
+                            }
+                          }}
+                          variant="outline"
+                          className="border-red-300 text-red-700 hover:bg-red-50 text-sm"
+                        >
+                          Cancel Process
+                        </Button>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1263,6 +1795,28 @@ export default function RiskAssessmentSystem(): JSX.Element {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* PDF Viewer Modal */}
+      <Dialog open={pdfModalOpen} onOpenChange={setPdfModalOpen}>
+        <DialogContent className="max-w-5xl w-full h-[90vh] p-0">
+          <DialogHeader className="px-6 py-4 border-b">
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-gray-600" />
+              Drone Analysis PDF
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden bg-gray-100">
+            {assessment.droneAnalysisPdfUrl && (
+              <iframe
+                src={`${getFullPdfUrl(assessment.droneAnalysisPdfUrl)}#toolbar=0`}
+                className="w-full h-full border-0"
+                title="Drone Analysis PDF Viewer"
+                style={{ minHeight: 'calc(90vh - 100px)' }}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

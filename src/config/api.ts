@@ -1,6 +1,10 @@
 // API Configuration
 // Base URL for all API endpoints
-export const API_BASE_URL = 'https://starhawk-backend-agriplatform.onrender.com/api/v1';
+// In development, use relative path to go through Vite proxy (avoids CORS)
+// In production, use full URL
+export const API_BASE_URL = import.meta.env.DEV
+  ? '/api/v1' // Use proxy in development
+  : 'https://starhawk-backend-agriplatform.onrender.com/api/v1'; // Full URL in production
 
 // API Endpoints
 export const API_ENDPOINTS = {
