@@ -7,11 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import LeafletMap from "@/components/common/LeafletMap";
 import assessmentsApiService from "@/services/assessmentsApi";
 import { getFarms, uploadKML, getWeatherForecast, getHistoricalWeather, getAccumulatedWeather, getVegetationStats, getNDVITimeSeries } from "@/services/farmsApi";
 import { useToast } from "@/hooks/use-toast";
+import { API_BASE_URL, API_ENDPOINTS, getAuthToken } from "@/config/api";
 import { 
   MapPin,
   Search,
@@ -36,7 +37,12 @@ import {
   Eye,
   Map,
   Clock,
-  Trash2
+  Trash2,
+  Info,
+  FileImage,
+  Package,
+  Layers,
+  Percent
 } from "lucide-react";
 
 interface Farmer {
@@ -135,6 +141,9 @@ export default function RiskAssessmentSystem(): JSX.Element {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const pollingStartTimeRef = useRef<number | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [mapImageUrl, setMapImageUrl] = useState<string | null>(null);
+  const [loadingMapImage, setLoadingMapImage] = useState(false);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
 
   // Polling function to check for drone analysis data
   const startPollingForDroneData = (assessmentId: string) => {
@@ -229,6 +238,33 @@ export default function RiskAssessmentSystem(): JSX.Element {
       stopPollingForDroneData();
     }
   }, [viewMode, assessment]);
+
+  // Auto-load map image if data is available
+  useEffect(() => {
+    if (assessment?.droneAnalysisData?.map_image) {
+      const mapImage = assessment.droneAnalysisData.map_image;
+      // Auto-load if we have embedded data or URL
+      if (mapImage.data || mapImage.url) {
+        if (mapImage.data) {
+          setMapImageUrl(`data:image/${mapImage.format || 'png'};base64,${mapImage.data}`);
+        } else if (mapImage.url) {
+          setMapImageUrl(mapImage.url);
+        }
+      }
+    } else {
+      // Clear image URL when assessment changes
+      setMapImageUrl(null);
+    }
+  }, [assessment?.droneAnalysisData?.map_image]);
+
+  // Cleanup: revoke blob URLs when component unmounts or image changes
+  useEffect(() => {
+    return () => {
+      if (mapImageUrl && mapImageUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(mapImageUrl);
+      }
+    };
+  }, [mapImageUrl]);
   
   // Load assigned farmers
   useEffect(() => {
@@ -846,6 +882,316 @@ export default function RiskAssessmentSystem(): JSX.Element {
     if (score <= 30) return 'Low Risk';
     if (score <= 70) return 'Medium Risk';
     return 'High Risk';
+  };
+
+  // Generate PDF from drone analysis data
+  const generateDroneDataPDF = async () => {
+    if (!assessment?.droneAnalysisData) {
+      toast({
+        title: "No Data",
+        description: "No drone analysis data available to generate PDF",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGeneratingPDF(true);
+    try {
+      // Dynamic import to avoid bundling issues
+      const { default: jsPDF } = await import('jspdf');
+      
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      let yPosition = 20;
+      const margin = 20;
+      const lineHeight = 7;
+
+      // Header - Dual Banner
+      doc.setFillColor(220, 252, 231); // Light green
+      doc.rect(0, 0, pageWidth / 2, 15, 'F');
+      doc.setFillColor(15, 118, 110); // Dark teal
+      doc.rect(pageWidth / 2, 0, pageWidth / 2, 15, 'F');
+      
+      doc.setTextColor(22, 101, 52); // Green text
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PLANT HEALTH MONITORING', pageWidth / 4, 10, { align: 'center' });
+      
+      doc.setTextColor(255, 255, 255); // White text
+      doc.text('PLANT STRESS ANALYSIS', (pageWidth / 4) * 3, 10, { align: 'center' });
+      
+      yPosition = 25;
+
+      // Crop and Field Information
+      if (assessment.droneAnalysisData.field) {
+        const field = assessment.droneAnalysisData.field;
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        
+        // Left column
+        doc.text(`Crop: ${field.crop || 'N/A'}`, margin, yPosition);
+        yPosition += lineHeight;
+        doc.text(`Growing stage: ${field.growing_stage || 'N/A'}`, margin, yPosition);
+        
+        // Right column
+        yPosition -= lineHeight * 2;
+        doc.text(`Field area: ${field.area_hectares ? field.area_hectares.toFixed(2) + ' Hectare' : 'N/A'}`, pageWidth / 2 + margin, yPosition);
+        yPosition += lineHeight;
+        const analysisName = assessment.droneAnalysisData.report?.analysis_name || assessment.droneAnalysisData.report?.type || 'N/A';
+        doc.text(`Analysis name: ${analysisName}`, pageWidth / 2 + margin, yPosition);
+        
+        // Green line separator
+        yPosition += lineHeight + 3;
+        doc.setDrawColor(34, 197, 94); // Green
+        doc.setLineWidth(0.5);
+        doc.line(margin, yPosition, pageWidth - margin, yPosition);
+        yPosition += 5;
+      }
+
+      // Stress Levels Section
+      if (assessment.droneAnalysisData.weed_analysis?.stress_levels && Array.isArray(assessment.droneAnalysisData.weed_analysis.stress_levels)) {
+        const stressLevels = assessment.droneAnalysisData.weed_analysis.stress_levels;
+        
+        // Table Title
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(22, 101, 52); // Green
+        doc.text('STRESS LEVEL TABLE', margin, yPosition);
+        yPosition += lineHeight + 2;
+
+        // Table Header
+        doc.setFillColor(15, 118, 110); // Dark teal
+        doc.rect(margin, yPosition - 5, pageWidth - (margin * 2), 8, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Stress level', margin + 2, yPosition);
+        doc.text('%', margin + 80, yPosition);
+        doc.text('Hectare', margin + 100, yPosition);
+        yPosition += 8;
+
+        // Table Rows
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'normal');
+        stressLevels.forEach((level: any) => {
+          if (yPosition > pageHeight - 30) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          
+          // Color indicator circle
+          let color = [34, 197, 94]; // Green
+          if (level.severity === 'moderate' || level.level?.toLowerCase().includes('potential')) {
+            color = [245, 158, 11]; // Yellow
+          } else if (level.severity !== 'healthy' || level.level?.toLowerCase().includes('stress')) {
+            color = [239, 68, 68]; // Red
+          }
+          doc.setFillColor(color[0], color[1], color[2]);
+          doc.circle(margin + 3, yPosition, 1.5, 'F');
+          
+          doc.text(level.level || 'N/A', margin + 8, yPosition);
+          doc.text(`${level.percentage.toFixed(2)}%`, margin + 80, yPosition);
+          doc.text(level.area_hectares.toFixed(2), margin + 100, yPosition);
+          
+          yPosition += lineHeight;
+        });
+      }
+
+      // Summary Banner
+      if (assessment.droneAnalysisData.weed_analysis) {
+        const stressLevels = assessment.droneAnalysisData.weed_analysis.stress_levels || [];
+        const plantStressLevel = stressLevels.find((level: any) => 
+          level.level?.toLowerCase().includes('stress') && !level.level?.toLowerCase().includes('potential')
+        );
+        const totalStressArea = plantStressLevel?.area_hectares || assessment.droneAnalysisData.weed_analysis.total_stress_area_hectares || 0;
+        const totalStressPercent = plantStressLevel?.percentage || assessment.droneAnalysisData.weed_analysis.total_stress_percent || 0;
+
+        if (yPosition > pageHeight - 20) {
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        yPosition += 5;
+        // Green banner
+        doc.setFillColor(34, 197, 94); // Green
+        doc.rect(0, yPosition - 5, pageWidth, 12, 'F');
+        
+        // Dark green triangle accent (simplified as a small rectangle)
+        doc.setFillColor(22, 101, 52); // Dark green
+        doc.rect(0, yPosition - 5, 8, 12, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Total area PLANT STRESS:', margin + 10, yPosition + 2);
+        doc.text(`${totalStressArea.toFixed(2)} ha =`, margin + 70, yPosition + 2);
+        
+        // Dark teal box for percentage
+        doc.setFillColor(15, 118, 110); // Dark teal
+        doc.rect(margin + 85, yPosition - 1, 25, 6, 'F');
+        doc.text(`${totalStressPercent.toFixed(0)}% field`, margin + 97.5, yPosition + 2, { align: 'center' });
+      }
+
+      // Additional Information
+      if (assessment.droneAnalysisData.additional_info) {
+        yPosition += 15;
+        if (yPosition > pageHeight - 30) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Additional Information:', margin, yPosition);
+        yPosition += lineHeight;
+        doc.setFont('helvetica', 'normal');
+        const splitText = doc.splitTextToSize(assessment.droneAnalysisData.additional_info, pageWidth - (margin * 2));
+        doc.text(splitText, margin, yPosition);
+        yPosition += splitText.length * lineHeight;
+      }
+
+      // Report Information
+      if (assessment.droneAnalysisData.report) {
+        yPosition += 5;
+        if (yPosition > pageHeight - 40) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Report Information:', margin, yPosition);
+        yPosition += lineHeight;
+        doc.setFont('helvetica', 'normal');
+        if (assessment.droneAnalysisData.report.provider) {
+          doc.text(`Provider: ${assessment.droneAnalysisData.report.provider}`, margin, yPosition);
+          yPosition += lineHeight;
+        }
+        if (assessment.droneAnalysisData.report.type) {
+          doc.text(`Type: ${assessment.droneAnalysisData.report.type}`, margin, yPosition);
+          yPosition += lineHeight;
+        }
+        if (assessment.droneAnalysisData.report.survey_date) {
+          doc.text(`Survey Date: ${assessment.droneAnalysisData.report.survey_date}`, margin, yPosition);
+          yPosition += lineHeight;
+        }
+      }
+
+      // Generate filename
+      const dateStr = new Date().toISOString().split('T')[0];
+      const filename = `drone-analysis-report-${dateStr}.pdf`;
+
+      // Save PDF
+      doc.save(filename);
+
+      toast({
+        title: "PDF Generated",
+        description: "Drone analysis report PDF has been downloaded successfully",
+      });
+    } catch (err: any) {
+      console.error('Failed to generate PDF:', err);
+      toast({
+        title: "PDF Generation Failed",
+        description: err.message || "Failed to generate PDF. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingPDF(false);
+    }
+  };
+
+  // Fetch map image from API or use embedded data
+  const fetchMapImage = async () => {
+    if (!assessment?._id || !assessment.droneAnalysisData?.map_image) {
+      toast({
+        title: "No Image Data",
+        description: "Map image data is not available",
+        variant: "default",
+      });
+      return;
+    }
+
+    setLoadingMapImage(true);
+    try {
+      const mapImage = assessment.droneAnalysisData.map_image;
+      
+      // First, check if we have base64 data embedded
+      if (mapImage.data) {
+        setMapImageUrl(`data:image/${mapImage.format || 'png'};base64,${mapImage.data}`);
+        toast({
+          title: "Success",
+          description: "Map image displayed from embedded data",
+        });
+        setLoadingMapImage(false);
+        return;
+      }
+      
+      // Check if we have a URL
+      if (mapImage.url) {
+        setMapImageUrl(mapImage.url);
+        toast({
+          title: "Success",
+          description: "Map image loaded from URL",
+        });
+        setLoadingMapImage(false);
+        return;
+      }
+
+      // Try to fetch from API endpoint if available
+      const ASSESSMENTS_BASE_URL = import.meta.env.DEV 
+        ? `/api/v1${API_ENDPOINTS.ASSESSMENTS.BASE}`
+        : `${API_BASE_URL}${API_ENDPOINTS.ASSESSMENTS.BASE}`;
+      
+      const imageEndpoint = `${ASSESSMENTS_BASE_URL}/${assessment._id}/map-image`;
+      const token = getAuthToken();
+      const headers: HeadersInit = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(imageEndpoint, { headers });
+      
+      if (response.ok && response.headers.get('content-type')?.startsWith('image/')) {
+        // If API returns the image directly, create blob URL
+        const blob = await response.blob();
+        const imageUrl = URL.createObjectURL(blob);
+        setMapImageUrl(imageUrl);
+        toast({
+          title: "Success",
+          description: "Map image loaded from server",
+        });
+      } else if (response.status === 404) {
+        // Endpoint doesn't exist, try to use PDF as fallback
+        if (assessment.droneAnalysisPdfUrl) {
+          toast({
+            title: "Image in PDF",
+            description: "Map image is embedded in the PDF. Please view the PDF to see it.",
+            variant: "default",
+          });
+        } else {
+          throw new Error("Map image endpoint not available");
+        }
+      } else {
+        throw new Error(`Failed to fetch image: ${response.status}`);
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch map image:', err);
+      
+      // Final fallback: Check if image data exists in response
+      const mapImage = assessment.droneAnalysisData.map_image;
+      if (mapImage?.data) {
+        setMapImageUrl(`data:image/${mapImage.format || 'png'};base64,${mapImage.data}`);
+      } else {
+        toast({
+          title: "Image Not Available",
+          description: err.message || "Could not load map image. It may be embedded in the PDF.",
+          variant: "default",
+        });
+      }
+    } finally {
+      setLoadingMapImage(false);
+    }
   };
 
   // Filter farmers
@@ -1480,18 +1826,238 @@ export default function RiskAssessmentSystem(): JSX.Element {
                           </ul>
                         </div>
                       )}
-                      {/* Display any additional fields from the extracted data */}
-                      {Object.keys(assessment.droneAnalysisData).some(key => 
-                        !['cropHealth', 'coverage', 'anomalies'].includes(key)
-                      ) && (
-                        <details className="bg-white p-4 rounded-lg border-2 border-gray-200 shadow-sm">
-                          <summary className="text-xs font-semibold text-gray-600 cursor-pointer hover:text-gray-900 mb-2">
-                            View All Extracted Data
-                          </summary>
-                          <pre className="text-xs bg-gray-50 p-3 rounded border border-gray-200 overflow-auto mt-2 max-h-48">
-                            {JSON.stringify(assessment.droneAnalysisData, null, 2)}
-                          </pre>
-                        </details>
+                      {/* Display structured drone data matching the design */}
+                      {assessment.droneAnalysisData && (
+                        <div className="mt-4 bg-white rounded-lg border border-gray-300 shadow-lg overflow-hidden">
+                          {/* Header with Download Button */}
+                          <div className="flex items-center justify-between bg-gray-50 px-6 py-3 border-b border-gray-200">
+                            <div className="flex-1"></div>
+                            <Button
+                              onClick={generateDroneDataPDF}
+                              disabled={generatingPDF}
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              {generatingPDF ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                  Generating PDF...
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Download PDF Report
+                                </>
+                              )}
+                            </Button>
+                          </div>
+
+                          {/* Dual Header Banner */}
+                          <div className="flex">
+                            <div className="flex-1 bg-green-100 px-6 py-4">
+                              <h2 className="text-lg font-bold text-green-700 uppercase tracking-wide">PLANT HEALTH MONITORING</h2>
+                            </div>
+                            <div className="flex-1 bg-teal-700 px-6 py-4">
+                              <h2 className="text-lg font-bold text-white uppercase tracking-wide">PLANT STRESS ANALYSIS</h2>
+                            </div>
+                          </div>
+
+                          {/* Crop and Field Information */}
+                          {assessment.droneAnalysisData.field && (
+                            <div className="px-6 py-4 border-b-2 border-green-500">
+                              <div className="grid grid-cols-2 gap-8">
+                                <div className="space-y-3">
+                                  <div>
+                                    <span className="text-sm text-gray-600">Crop:</span>
+                                    <span className="ml-2 text-base font-bold text-gray-900">{assessment.droneAnalysisData.field.crop || 'N/A'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-sm text-gray-600">Growing stage:</span>
+                                    <span className="ml-2 text-base font-bold text-gray-900">{assessment.droneAnalysisData.field.growing_stage || 'N/A'}</span>
+                                  </div>
+                                </div>
+                                <div className="space-y-3">
+                                  <div>
+                                    <span className="text-sm text-gray-600">Field area:</span>
+                                    <span className="ml-2 text-base font-bold text-gray-900">
+                                      {assessment.droneAnalysisData.field.area_hectares ? `${assessment.droneAnalysisData.field.area_hectares.toFixed(2)} Hectare` : 'N/A'}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-sm text-gray-600">Analysis name:</span>
+                                    <span className="ml-2 text-base font-bold text-gray-900">
+                                      {assessment.droneAnalysisData.report?.analysis_name || assessment.droneAnalysisData.report?.type || 'N/A'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Stress Level Visualization - Pie Chart and Table */}
+                          {assessment.droneAnalysisData.weed_analysis?.stress_levels && Array.isArray(assessment.droneAnalysisData.weed_analysis.stress_levels) && assessment.droneAnalysisData.weed_analysis.stress_levels.length > 0 && (
+                            <div className="px-6 py-6">
+                              <div className="grid grid-cols-2 gap-8">
+                                {/* Pie Chart */}
+                                <div className="flex flex-col items-center justify-center">
+                                  <ResponsiveContainer width="100%" height={300}>
+                                    <PieChart>
+                                      <Pie
+                                        data={assessment.droneAnalysisData.weed_analysis.stress_levels.map((level: any) => ({
+                                          name: level.level,
+                                          value: level.percentage,
+                                          severity: level.severity
+                                        }))}
+                                        cx="50%"
+                                        cy="50%"
+                                        labelLine={false}
+                                        label={({ value }) => `${value.toFixed(2)}%`}
+                                        outerRadius={100}
+                                        fill="#8884d8"
+                                        dataKey="value"
+                                      >
+                                        {assessment.droneAnalysisData.weed_analysis.stress_levels.map((level: any, index: number) => {
+                                          let color = '#10B981'; // green default
+                                          if (level.severity === 'moderate' || level.level?.toLowerCase().includes('potential')) {
+                                            color = '#F59E0B'; // yellow
+                                          } else if (level.severity !== 'healthy' || level.level?.toLowerCase().includes('stress')) {
+                                            color = '#EF4444'; // red
+                                          }
+                                          return <Cell key={`cell-${index}`} fill={color} />;
+                                        })}
+                                      </Pie>
+                                      <Tooltip />
+                                    </PieChart>
+                                  </ResponsiveContainer>
+                                </div>
+
+                                {/* Stress Level Table */}
+                                <div>
+                                  <h3 className="text-sm font-bold text-green-700 uppercase tracking-wide mb-4">STRESS LEVEL TABLE</h3>
+                                  <table className="w-full border-collapse">
+                                    <thead>
+                                      <tr className="bg-teal-700 text-white">
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Stress level</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">%</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Hectare</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {assessment.droneAnalysisData.weed_analysis.stress_levels.map((level: any, index: number) => {
+                                        let iconColor = 'bg-green-500';
+                                        if (level.severity === 'moderate' || level.level?.toLowerCase().includes('potential')) {
+                                          iconColor = 'bg-yellow-500';
+                                        } else if (level.severity !== 'healthy' || level.level?.toLowerCase().includes('stress')) {
+                                          iconColor = 'bg-red-500';
+                                        }
+                                        return (
+                                          <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
+                                            <td className="px-4 py-3">
+                                              <div className="flex items-center gap-2">
+                                                <div className={`w-3 h-3 rounded-full ${iconColor}`}></div>
+                                                <span className="text-sm font-medium text-gray-900">{level.level}</span>
+                                              </div>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                              <span className="text-sm font-semibold text-gray-900">{level.percentage.toFixed(2)}%</span>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                              <span className="text-sm font-medium text-gray-900">{level.area_hectares.toFixed(2)}</span>
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Summary Banner */}
+                          {assessment.droneAnalysisData.weed_analysis && (() => {
+                            const stressLevels = assessment.droneAnalysisData.weed_analysis.stress_levels || [];
+                            const plantStressLevel = stressLevels.find((level: any) => 
+                              level.level?.toLowerCase().includes('stress') && !level.level?.toLowerCase().includes('potential')
+                            );
+                            const totalStressArea = plantStressLevel?.area_hectares || assessment.droneAnalysisData.weed_analysis.total_stress_area_hectares || 0;
+                            const totalStressPercent = plantStressLevel?.percentage || assessment.droneAnalysisData.weed_analysis.total_stress_percent || 0;
+                            
+                            return (
+                              <div className="relative bg-green-600 px-6 py-4">
+                                <div className="absolute top-0 left-0 w-0 h-0 border-l-[30px] border-l-green-800 border-t-[30px] border-t-green-800 border-r-[30px] border-r-transparent border-b-[30px] border-b-transparent"></div>
+                                <div className="flex items-center gap-3">
+                                  <span className="text-white font-semibold">Total area PLANT STRESS:</span>
+                                  <span className="text-white text-xl font-bold">
+                                    {totalStressArea.toFixed(2)} ha = 
+                                  </span>
+                                  <span className="bg-teal-700 px-3 py-1 rounded text-white text-xl font-bold">
+                                    {totalStressPercent.toFixed(0)}% field
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })()}
+
+                          {/* Additional Information */}
+                          {assessment.droneAnalysisData.additional_info && (
+                            <div className="px-6 py-4 border-t border-gray-200">
+                              <h3 className="text-sm font-semibold text-gray-700 mb-2">Additional Information</h3>
+                              <p className="text-sm text-gray-700 leading-relaxed">
+                                {assessment.droneAnalysisData.additional_info}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Map Image Section */}
+                          {assessment.droneAnalysisData.map_image && (
+                            <div className="px-6 py-4 border-t border-gray-200">
+                              <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-sm font-semibold text-gray-700">Map Image</h3>
+                                <Button
+                                  onClick={fetchMapImage}
+                                  disabled={loadingMapImage}
+                                  size="sm"
+                                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                                >
+                                  {loadingMapImage ? (
+                                    <>
+                                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                                      Loading...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Eye className="h-3 w-3 mr-2" />
+                                      Load Image
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                              {/* Display embedded image if available */}
+                              {(mapImageUrl || assessment.droneAnalysisData.map_image.data || assessment.droneAnalysisData.map_image.url) && (
+                                <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                                  <img
+                                    src={mapImageUrl || 
+                                      (assessment.droneAnalysisData.map_image.data 
+                                        ? `data:image/${assessment.droneAnalysisData.map_image.format || 'png'};base64,${assessment.droneAnalysisData.map_image.data}`
+                                        : assessment.droneAnalysisData.map_image.url)}
+                                    alt="Field Map"
+                                    className="w-full max-h-96 object-contain bg-white"
+                                    onError={(e) => {
+                                      console.error('Failed to load map image');
+                                      (e.target as HTMLImageElement).style.display = 'none';
+                                      toast({
+                                        title: "Image Load Error",
+                                        description: "Failed to display the map image",
+                                        variant: "destructive",
+                                      });
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                        </div>
                       )}
                     </div>
                   </div>
